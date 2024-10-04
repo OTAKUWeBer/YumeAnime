@@ -134,7 +134,7 @@ async def watch_link(episode_url):
                             break  # Exit once we find the desired resolution
                         else:
                             download_link = link['href']
-                            continue  # Continue to the next link if the resolution is not 1280x720
+                            
 
                     return download_link if download_link else None
                 else:
