@@ -79,6 +79,22 @@
             <p>Sorry, no video available to watch.</p>
         {% endif %}
     </div>
+    <script>
+        const video = document.getElementById('video');
+
+        // Enable fullscreen on video click
+        video.addEventListener('click', () => {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.mozRequestFullScreen) { // Firefox
+                video.mozRequestFullScreen();
+            } else if (video.webkitRequestFullscreen) { // Chrome, Safari, and Opera
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) { // IE/Edge
+                video.msRequestFullscreen();
+            }
+        });
+    </script>
     <a href="/">Back to Search</a>
 </body>
 </html>
