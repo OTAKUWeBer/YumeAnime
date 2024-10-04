@@ -108,17 +108,21 @@
     </div>
 
     <!-- Anime Suggestions List -->
-    <h3>Latest Anime</h3>
-    <div class="suggestions-container">
-        {% for title, info in suggestions.items() %}
-            <div class="anime-item">
-                <img src="{{ info.image_url }}" alt="{{ title }}">
-                <h3>{{ title }}</h3>
-                <form action="/episodes" method="post">
-                    <input type="hidden" name="selected_link" value="{{ info.link }}">
-                    <button type="submit">View Episodes</button>
-                </form>
-            </div>
-        {% endfor %}
-    </div>
+    {% if suggestions and suggestions|length > 0 %}
+        <h3>Latest Anime</h3>
+        <div class="suggestions-container">
+            {% for title, info in suggestions.items() %}
+                <div class="anime-item">
+                    <img src="{{ info.image_url }}" alt="{{ title }}">
+                    <h3>{{ title }}</h3>
+                    <form action="/episodes" method="post">
+                        <input type="hidden" name="selected_link" value="{{ info.link }}">
+                        <button type="submit">View Episodes</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No search result found.</p>
+    {% endif %}
 {% endblock %}
