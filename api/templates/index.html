@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .suggestions-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .search-container form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .search-container input {
+            padding: 10px;
+            width: 70%;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            font-size: 16px;
+            color: #121212;
+        }
+
+        .search-container button {
+            padding: 10px;
+            width: 30%;
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .search-container button:hover {
+            background-color: #9b70db;
+        }
+
+        .anime-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .anime-item {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            width: 150px;
+        }
+
+        .anime-item img {
+            width: 100px;
+            height: 150px;
+            border-radius: 5px;
+        }
+
+        .anime-item button {
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .anime-item button:hover {
+            background-color: #9b70db;
+        }
+
+    </style>
+{% endblock %}
+
+{% block body %}
+    <h1>Anime Search</h1>
+
+    <!-- Search Container -->
+    <div class="search-container">
+        <form action="/search" method="get">
+            <input type="text" name="q" placeholder="Search for an anime..." required>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <!-- Anime Suggestions List -->
+    <h3>Latest Anime</h3>
+    <div class="suggestions-container">
+        {% for title, info in suggestions.items() %}
+            <div class="anime-item">
+                <img src="{{ info.image_url }}" alt="{{ title }}">
+                <h3>{{ title }}</h3>
+                <form action="/episodes" method="post">
+                    <input type="hidden" name="selected_link" value="{{ info.link }}">
+                    <button type="submit">View Episodes</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

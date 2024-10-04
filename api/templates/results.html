@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #bb86fc;
+            margin-top: 40px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 40px auto;
+            max-width: 800px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        li {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-align: center;
+        }
+
+        li:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        h2 {
+            font-size: 1.5em;
+            color: #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        img {
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin: 0;
+        }
+
+        button {
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #9b70db;
+        }
+
+        p {
+            text-align: center;
+            margin: 40px 0;
+            font-size: 1.2em;
+        }
+
+        a {
+            color: #bb86fc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #9b70db;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Results for "{{ query }}"</h1>
+    <ul>
+        {% for title, info in results.items() %}
+            <li>
+                <h2>{{ title }}</h2>
+                <img src="{{ info.image_url }}" alt="{{ title }}" width="100">
+                <form action="{{ url_for('episodes') }}" method="post">
+                    <input type="hidden" name="selected_link" value="{{ info.link }}">
+                    <button type="submit">View Episodes</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+    <p><a href="{{ url_for('index') }}">Back to Search</a></p>
+</body>
+</html>

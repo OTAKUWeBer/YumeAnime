@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <title>Episode List</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #bb86fc;
+            margin-top: 40px;
+            font-size: 3em;
+            font-weight: 700;
+        }
+
+        .search-container {
+            text-align: left; /* Align search bar to the left */
+            margin: 20px auto; /* Center vertically */
+            width: 100%; /* Use full width */
+            max-width: 600px; /* Limit the max width */
+            padding-left: 20px; /* Add padding to the left */
+        }
+
+        .search-container input {
+            padding: 10px;
+            width: 40%; /* Smaller width for the search bar */
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 40px auto;
+            max-width: 600px;
+        }
+
+        li {
+            background-color: #1e1e1e;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        li:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        form {
+            margin: 0;
+        }
+
+        button {
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #9b70db;
+        }
+
+        a {
+            display: block;
+            text-align: center;
+            margin: 30px 0;
+            font-size: 1.2em;
+            text-decoration: none;
+            color: #bb86fc;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #9b70db;
+        }
+    </style>
+</head>
+<body>
+    <h1>Episodes</h1>
+
+    <!-- Search Bar for Filtering Episodes -->
+    <div class="search-container">
+        <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
+    </div>
+
+    <ul id="episodeList">
+        {% for episode, epn in episodes %}
+        <li>
+            {{ epn }}
+            <form action="/watch" method="post">
+                <input type="hidden" name="episode_url" value="{{ episode }}">
+                <button type="submit">Watch Episode</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <a href="/">Back to Search</a>
+
+    <script>
+        // JavaScript function to filter episodes by episode number
+        function filterEpisodes() {
+            var input, filter, ul, li, epn, i, txtValue;
+            input = document.getElementById('episodeSearch');
+            filter = input.value.toUpperCase();
+            ul = document.getElementById("episodeList");
+            li = ul.getElementsByTagName('li');
+
+            // Loop through all list items, and hide those that don't match the search query
+            for (i = 0; i < li.length; i++) {
+                epn = li[i].innerText || li[i].textContent;
+                if (epn.toUpperCase().indexOf(filter) > -1) {
+                    li[i].style.display = "";
+                } else {
+                    li[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
