@@ -91,6 +91,11 @@
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Darker shadow on hover */
         }
 
+        .watched {
+            background-color: #424242; /* Darker background for watched episodes */
+            color: #757575; /* Darker text color for watched episodes */
+        }
+
         a {
             display: block;
             text-align: center;
@@ -118,7 +123,7 @@
 
     <div class="episode-list" id="episodeList">
         {% for episode, epn in episodes %}
-        <div class="episode-card" onclick="watchEpisode('{{ episode }}')">
+        <div class="episode-card" onclick="watchEpisode(this, '{{ episode }}')">
             {{ epn }}
         </div>
         {% endfor %}
@@ -146,7 +151,10 @@
             }
         }
 
-        function watchEpisode(episodeUrl) {
+        function watchEpisode(card, episodeUrl) {
+            // Toggle the 'watched' class to mark the episode as watched
+            card.classList.toggle('watched');
+
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '/watch';

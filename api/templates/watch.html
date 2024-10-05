@@ -19,6 +19,7 @@
             background-color: #121212;
             color: #e0e0e0;
             font-family: 'Poppins', sans-serif;
+            position: relative; /* Position relative for absolute elements */
         }
 
         h1 {
@@ -89,9 +90,28 @@
         a:hover {
             color: #9b70db;
         }
+
+        /* Back to Episodes button style */
+        .back-button {
+            position: absolute; /* Position it absolutely within the body */
+            top: 20px; /* Adjust vertical position */
+            left: 20px; /* Adjust horizontal position */
+            background-color: #bb86fc;
+            color: #121212;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #9b70db;
+        }
     </style>
 </head>
 <body>
+    <button class="back-button" onclick="window.history.back()">Back to Episodes</button>
     <h1>Watch Episode {{ Episode }}</h1>
     <div class="video-container">
         {% if episode_link %}
