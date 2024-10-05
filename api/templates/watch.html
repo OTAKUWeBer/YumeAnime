@@ -49,6 +49,30 @@
             border-radius: 10px;
         }
 
+        .episode-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            width: 90%;
+        }
+
+        .episode-navigation button {
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            flex: 1; /* Allows buttons to expand and fill space */
+            margin: 0 5px; /* Space between buttons */
+        }
+
+        .episode-navigation button:hover {
+            background-color: #9b70db;
+        }
+
         p {
             color: #e0e0e0;
             font-size: 1.2em;
@@ -77,6 +101,28 @@
             </video>
         {% else %}
             <p>Sorry, no video available to watch.</p>
+        {% endif %}
+    </div>
+
+    <div class="episode-navigation">
+        {% if prev_episode_url %}
+            <form action="{{ url_for('watch') }}" method="post">
+                <input type="hidden" name="episode_url" value="{{ prev_episode_url }}">
+                <button type="submit">
+                    Previous Episode {% if prev_episode_number %}({{ prev_episode_number }}){% endif %}
+                </button>
+            </form>
+        {% else %}
+            <div style="flex: 1;"></div> <!-- Empty div to fill space if no previous episode -->
+        {% endif %}
+
+        {% if next_episode_url %}
+            <form action="{{ url_for('watch') }}" method="post">
+                <input type="hidden" name="episode_url" value="{{ next_episode_url }}">
+                <button type="submit">
+                    Next Episode {% if next_episode_number %}({{ next_episode_number }}){% endif %}
+                </button>
+            </form>
         {% endif %}
     </div>
 

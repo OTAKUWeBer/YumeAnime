@@ -174,13 +174,33 @@ async def episodes():
     
     return render_template('episodes.html', episodes=episodes)
 
-
 @app.route('/watch', methods=['POST'])
 async def watch():
     """Render the watch page for the selected episode."""
-    episode_url = request.form.get('episode_url')  # Retrieve the episode URL from the form
-    episode_link = await watch_link(episode_url)  # Call watch_link with the episode URL
-    return render_template('watch.html', episode_link=episode_link)
+    episode_url = request.form.get('episode_url')  # Get episode URL from the form
+    episode_link = await watch_link(episode_url)  # Retrieve the video link
+
+    # Extract current episode number
+    current_episode = int(episode_url.split("-")[-1])  # Assuming the URL contains the episode number at the end
+
+    # Total episodes in the series (for example)
+    total_episodes = 24  # Replace this with your actual total episode count
+
+    # Previous and Next episode numbers
+    prev_episode_number = current_episode - 1 if current_episode > 1 else None
+    next_episode_number = current_episode + 1 if current_episode < total_episodes else None
+
+    # Generate previous and next episode URLs
+    prev_episode_url = episode_url.replace(f"-{current_episode}", f"-{prev_episode_number}") if prev_episode_number else None
+    next_episode_url = episode_url.replace(f"-{current_episode}", f"-{next_episode_number}") if next_episode_number else None
+
+    return render_template('watch.html',
+                           episode_link=episode_link,
+                           prev_episode_url=prev_episode_url,
+                           next_episode_url=next_episode_url,
+                           prev_episode_number=prev_episode_number,
+                           next_episode_number=next_episode_number)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
