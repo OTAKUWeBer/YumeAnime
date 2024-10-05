@@ -28,10 +28,10 @@
 
         .header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            justify-content: center; /* Center all items */
+            align-items: center; /* Align items vertically */
             max-width: 100%;
-            margin: 20px auto;
+            margin: 6px auto;
             padding: 0 20px;
             width: 100%;
         }
@@ -39,18 +39,18 @@
         .total-episodes {
             font-size: 1.2em;
             color: #bb86fc;
-            padding-left: 20px;
+            padding-right: 20px; /* Space between total episodes and search bar */
         }
 
         .search-container {
-            text-align: left;
+            text-align: center; /* Center align text */
             width: 100%;
-            padding-right: 20px;
+            max-width: 300px; /* Limit the maximum width */
         }
 
         .search-container input {
             padding: 8px; /* Smaller padding */
-            width: 50%; /* Adjusted width for the search bar */
+            width: 80%; /* Take full width of container */
             border: none;
             border-radius: 5px;
             font-size: 1em; /* Smaller font size */
