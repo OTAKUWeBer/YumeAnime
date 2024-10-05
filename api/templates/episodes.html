@@ -13,6 +13,9 @@
             color: #e0e0e0;
             margin: 0;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         h1 {
@@ -23,63 +26,69 @@
             font-weight: 700;
         }
 
-        .search-container {
-            text-align: left; /* Align search bar to the left */
-            margin: 20px auto; /* Center vertically */
-            width: 100%; /* Use full width */
-            max-width: 600px; /* Limit the max width */
-            padding-left: 20px; /* Add padding to the left */
-        }
-
-        .search-container input {
-            padding: 10px;
-            width: 40%; /* Smaller width for the search bar */
-            border: none;
-            border-radius: 5px;
-            font-size: 1.2em;
-        }
-
-        ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 40px auto;
-            max-width: 600px;
-        }
-
-        li {
-            background-color: #1e1e1e;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            max-width: 100%;
+            margin: 20px auto;
+            padding: 0 20px;
+            width: 100%;
         }
 
-        li:hover {
-            transform: scale(1.02);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+        .total-episodes {
+            font-size: 1.2em;
+            color: #bb86fc;
+            padding-left: 20px;
         }
 
-        form {
-            margin: 0;
+        .search-container {
+            text-align: left;
+            width: 100%;
+            padding-right: 20px;
         }
 
-        button {
-            background-color: #bb86fc;
+        .search-container input {
+            padding: 8px; /* Smaller padding */
+            width: 50%; /* Adjusted width for the search bar */
             border: none;
-            color: #121212;
-            padding: 10px 20px;
-            font-size: 1em;
             border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+            font-size: 1em; /* Smaller font size */
+            background-color: #1e1e1e;
+            color: #e0e0e0;
         }
 
-        button:hover {
-            background-color: #9b70db;
+        .search-container input::placeholder {
+            color: #b0b0b0; /* Placeholder color */
+        }
+
+        .episode-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px auto;
+            max-width: 100%;
+            padding: 0 20px; /* Added padding for spacing */
+        }
+
+        .episode-card {
+            background-color: #1e1e1e;
+            padding: 10px 5px; /* Smaller padding */
+            margin: 5px; /* Smaller margin */
+            border-radius: 6px; /* Slightly rounded corners */
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-align: center;
+            font-size: 1.2em; /* Smaller font size for episode numbers */
+            color: #bb86fc; /* Text color */
+            min-width: 40px; /* Minimum width for uniformity */
+            max-width: 60px; /* Maximum width to maintain compactness */
+        }
+
+        .episode-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Darker shadow on hover */
         }
 
         a {
@@ -100,44 +109,59 @@
 <body>
     <h1>Episodes</h1>
 
-    <!-- Search Bar for Filtering Episodes -->
-    <div class="search-container">
-        <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
+    <div class="header">
+        <div class="total-episodes">Total Episodes: {{ total_episodes }}</div>
+        <div class="search-container">
+            <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
+        </div>
     </div>
 
-    <ul id="episodeList">
+    <div class="episode-list" id="episodeList">
         {% for episode, epn in episodes %}
-        <li>
+        <div class="episode-card" onclick="watchEpisode('{{ episode }}')">
             {{ epn }}
-            <form action="/watch" method="post">
-                <input type="hidden" name="episode_url" value="{{ episode }}">
-                <input type="hidden" name="total_episodes" value="{{ total_episodes }}">
-                <button type="submit">Watch Episode</button>
-            </form>
-        </li>
+        </div>
         {% endfor %}
-    </ul>
+    </div>
 
     <a href="/">Back to Search</a>
 
     <script>
         // JavaScript function to filter episodes by episode number
         function filterEpisodes() {
-            var input, filter, ul, li, epn, i, txtValue;
+            var input, filter, episodeList, episodeCards, epn, i;
             input = document.getElementById('episodeSearch');
             filter = input.value.toUpperCase();
-            ul = document.getElementById("episodeList");
-            li = ul.getElementsByTagName('li');
+            episodeList = document.getElementById("episodeList");
+            episodeCards = episodeList.getElementsByClassName('episode-card');
 
-            // Loop through all list items, and hide those that don't match the search query
-            for (i = 0; i < li.length; i++) {
-                epn = li[i].innerText || li[i].textContent;
+            // Loop through all episode cards, and hide those that don't match the search query
+            for (i = 0; i < episodeCards.length; i++) {
+                epn = episodeCards[i].innerText || episodeCards[i].textContent;
                 if (epn.toUpperCase().indexOf(filter) > -1) {
-                    li[i].style.display = "";
+                    episodeCards[i].style.display = "";
                 } else {
-                    li[i].style.display = "none";
+                    episodeCards[i].style.display = "none";
                 }
             }
+        }
+
+        function watchEpisode(episodeUrl) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/watch';
+            const input1 = document.createElement('input');
+            input1.type = 'hidden';
+            input1.name = 'episode_url';
+            input1.value = episodeUrl;
+            const input2 = document.createElement('input');
+            input2.type = 'hidden';
+            input2.name = 'total_episodes';
+            input2.value = '{{ total_episodes }}';
+            form.appendChild(input1);
+            form.appendChild(input2);
+            document.body.appendChild(form);
+            form.submit();
         }
     </script>
 </body>
