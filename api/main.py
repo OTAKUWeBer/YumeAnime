@@ -1,11 +1,13 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 import aiohttp
 from bs4 import BeautifulSoup
-import requests
+
 
 app = Flask(__name__)
 
 gogo_url = "https://www.anitaku.pe"
+
+app.secret_key = 'W#b%052441%animez'
 
 COOKIES = {
     '_ga_X2C65NWLE2': 'GS1.1.1718531678.3.0.1718531678.0.0.0',
@@ -14,12 +16,14 @@ COOKIES = {
     'auth': 'KhXMsD6IEey4qis2s%2F0Z4mnIjleMwfcORDZuXzqiXnhuF5Dnuq6iqNS4OrJ%2Bz1uqm1MJt%2BcgHZ0GKakQT1CapQ%3D%3D',
 }
 
-def grab_id(url):
-    """Grab the anime ID from the anime details page."""
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    anime_id = soup.find("input", {"id": "movie_id"})["value"]
-    return anime_id
+async def grab_id(url):
+    """Grab the anime ID from the anime details page asynchronously."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            response_content = await response.text()
+            soup = BeautifulSoup(response_content, "html.parser")
+            anime_id = soup.find("input", {"id": "movie_id"})["value"]
+            return anime_id
 
 async def home_page():
     results = {}
@@ -71,9 +75,33 @@ async def search_anime_query(search):
 
     return results
 
+
+async def total_episodes(selected_link):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(selected_link) as detail_response:
+                # Check if the request was successful
+                detail_response.raise_for_status()  # Raise an error for bad responses
+                detail_html = await detail_response.text()
+
+        detail_soup = BeautifulSoup(detail_html, "html.parser")
+        episode_page = detail_soup.find("ul", {"id": "episode_page"})
+        
+        if episode_page:
+            last_episode = episode_page.find_all("li")[-1]
+            total_episodes = int(last_episode.find("a")["ep_end"])  # Convert to integer
+        else:
+            total_episodes = 0
+            
+    except Exception:
+        total_episodes = 0  # Set to 0 or handle the error as needed
+
+    return total_episodes
+
+
 async def fetch_episode_links(selected_link):
     """Fetch episode links for the selected anime."""
-    ANIME_ID = grab_id(selected_link)
+    ANIME_ID = await grab_id(selected_link)
     anime_eps_url = f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end=1700&id={ANIME_ID}"
 
     episode_links = []
@@ -94,7 +122,7 @@ async def fetch_episode_links(selected_link):
 
 async def show_link(selected_link):
     """Fetch episode links for the selected anime."""
-    ANIME_ID = grab_id(selected_link)
+    ANIME_ID = await grab_id(selected_link)
     anime_eps_url = f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end=1700&id={ANIME_ID}"
 
     episode_num = []
@@ -168,11 +196,20 @@ async def episodes():
     selected_link = request.form.get('selected_link')
     episode_links = await fetch_episode_links(selected_link)
     episode_nums = await show_link(selected_link)
+
+    # Fetch the total number of episodes
+    total_eps = await total_episodes(selected_link)
     
+    # Store total episodes in session
+    session['total_episodes'] = total_eps
+
     # Zip episode_links and episode_nums together
     episodes = zip(episode_links, episode_nums)
     
-    return render_template('episodes.html', episodes=episodes)
+    return render_template('episodes.html', episodes=episodes, total_episodes=total_eps)
+
+
+
 
 @app.route('/watch', methods=['POST'])
 async def watch():
@@ -183,8 +220,8 @@ async def watch():
     # Extract current episode number
     current_episode = int(episode_url.split("-")[-1])  # Assuming the URL contains the episode number at the end
 
-    # Total episodes in the series (for example)
-    total_episodes = 24  # Replace this with your actual total episode count
+    # Get total episodes from the session
+    total_episodes = session.get('total_episodes', 0)  # Get total episodes from the session
 
     # Previous and Next episode numbers
     prev_episode_number = current_episode - 1 if current_episode > 1 else None
@@ -200,6 +237,9 @@ async def watch():
                            next_episode_url=next_episode_url,
                            prev_episode_number=prev_episode_number,
                            next_episode_number=next_episode_number)
+
+
+
 
 
 if __name__ == '__main__':

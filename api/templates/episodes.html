@@ -111,6 +111,7 @@
             {{ epn }}
             <form action="/watch" method="post">
                 <input type="hidden" name="episode_url" value="{{ episode }}">
+                <input type="hidden" name="total_episodes" value="{{ total_episodes }}">
                 <button type="submit">Watch Episode</button>
             </form>
         </li>

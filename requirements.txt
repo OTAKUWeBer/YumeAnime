@@ -1,4 +1,3 @@
 Flask[async]
-requests
 aiohttp
 beautifulsoup4
