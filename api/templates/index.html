@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block head %}
-
     <meta property="og:title" content="Animez" />
     <meta property="og:description" content="You can watch anime here. Easy to use and download. 
     Made by @weberz ." />
@@ -77,6 +76,11 @@
             border-radius: 8px;
             text-align: center;
             width: 150px;
+            transition: transform 0.3s; /* Transition for the scale effect */
+        }
+
+        .anime-item:hover {
+            transform: scale(1.1); /* Scale the item on hover */
         }
 
         .anime-item img {
