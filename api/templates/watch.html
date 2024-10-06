@@ -19,7 +19,7 @@
             background-color: #121212;
             color: #e0e0e0;
             font-family: 'Poppins', sans-serif;
-            position: relative; /* Position relative for absolute elements */
+            position: relative;
         }
 
         h1 {
@@ -66,8 +66,8 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
-            flex: 1; /* Allows buttons to expand and fill space */
-            margin: 0 5px; /* Space between buttons */
+            flex: 1;
+            margin: 0 5px;
         }
 
         .episode-navigation button:hover {
@@ -91,11 +91,10 @@
             color: #9b70db;
         }
 
-        /* Back to Episodes button style */
         .back-button {
-            position: absolute; /* Position it absolutely within the body */
-            top: 20px; /* Adjust vertical position */
-            left: 20px; /* Adjust horizontal position */
+            position: absolute;
+            top: 20px;
+            left: 20px;
             background-color: #bb86fc;
             color: #121212;
             padding: 10px 15px;
@@ -115,7 +114,7 @@
     <h1>Watch Episode {{ Episode }}</h1>
     <div class="video-container">
         {% if episode_link %}
-            <video controls>
+            <video id="video" controls>
                 <source src="{{ episode_link }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
@@ -133,7 +132,7 @@
                 </button>
             </form>
         {% else %}
-            <div style="flex: 1;"></div> <!-- Empty div to fill space if no previous episode -->
+            <div style="flex: 1;"></div>
         {% endif %}
 
         {% if next_episode_url %}
@@ -161,6 +160,26 @@
                 video.webkitRequestFullscreen();
             } else if (video.msRequestFullscreen) { // IE/Edge
                 video.msRequestFullscreen();
+            }
+        });
+
+        // Key event listeners for fullscreen and play/pause
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'f') { // Fullscreen toggle
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    video.requestFullscreen();
+                }
+            }
+
+            if (event.key === ' ') { // Play/pause toggle
+                event.preventDefault(); // Prevent scrolling down the page
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
             }
         });
     </script>
