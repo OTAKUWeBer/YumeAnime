@@ -18,7 +18,7 @@
         h1 {
             text-align: center;
             color: #bb86fc;
-            margin-top: 40px;
+            margin-top: 13px;
             font-size: 2.5em;
             font-weight: 700;
         }
@@ -92,10 +92,64 @@
         a:hover {
             color: #9b70db;
         }
+
+        .search-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 16vh; /* Takes full viewport height */
+            width: 100%;
+        }
+        
+        .search-container form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .search-container input {
+            padding: 10px;
+            width: 70%;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            font-size: 16px;
+            color: #121212;
+        }
+        
+        .search-container button {
+            padding: 10px;
+            width: 30%;
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .search-container button:hover {
+            background-color: #9b70db;
+        }
+        
     </style>
 </head>
 <body>
+
+    <!-- Search form -->
+    <div class="search-container">
+        <form action="{{ url_for('search') }}" method="get">
+            <input type="text" name="q" placeholder="Search for another anime..." required>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
     <h1>Search Results for "{{ query }}"</h1>
+
+
+    <!-- Results list -->
     <ul>
         {% for title, info in results.items() %}
             <li>
@@ -108,6 +162,7 @@
             </li>
         {% endfor %}
     </ul>
+
     <p><a href="{{ url_for('index') }}">Back to Search</a></p>
 </body>
 </html>
