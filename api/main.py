@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request, session, redirect
 import aiohttp
 from bs4 import BeautifulSoup
 
@@ -170,9 +170,15 @@ async def watch_link(episode_url):
             else:
                 return None  # Return None if the request fails
 
+
 @app.route('/', methods=["GET"])
 async def index():
-    suggestions = await home_page()  # Remove the selected_link as it's not needed
+    return redirect ("/home")
+
+
+@app.route('/home', methods=["GET"])
+async def home():
+    suggestions = await home_page() 
     return render_template('index.html', suggestions=suggestions)
 
 
