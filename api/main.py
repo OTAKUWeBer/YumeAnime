@@ -25,6 +25,7 @@ async def grab_id(url):
             anime_id = soup.find("input", {"id": "movie_id"})["value"]
             return anime_id
 
+
 async def home_page():
     results = {}
     url = f"{gogo_url}/home.html"
@@ -48,7 +49,6 @@ async def home_page():
 
     return results
 
-    
     
 async def search_anime_query(search):
     """Search for anime based on the user's query, including their images."""
@@ -196,6 +196,7 @@ async def search():
 
     return render_template('results.html', query=search_query, results=results)
 
+
 @app.route('/episodes', methods=['POST'])
 async def episodes():
     """Display episodes for the selected anime."""
@@ -213,8 +214,6 @@ async def episodes():
     episodes = zip(episode_links, episode_nums)
     
     return render_template('episodes.html', episodes=episodes, total_episodes=total_eps)
-
-
 
 
 @app.route('/watch', methods=['POST'])
