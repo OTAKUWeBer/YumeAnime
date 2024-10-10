@@ -237,6 +237,7 @@ async def watch():
 
     return render_template('watch.html',
                            episode_link=episode_link,
+                           Episode=current_episode,
                            prev_episode_url=prev_episode_url,
                            next_episode_url=next_episode_url,
                            prev_episode_number=prev_episode_number,

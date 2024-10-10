@@ -136,7 +136,7 @@
 </head>
 <body>
     <button class="back-button" onclick="window.history.back()">Back to Episodes</button>
-    <h1>Watch Episode {{ Episode }}</h1>
+    <h1>Watch Episode {{ Episode }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
     <div class="video-container">
         {% if episode_link %}
             <video id="video" controls>
