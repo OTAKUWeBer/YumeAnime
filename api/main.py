@@ -161,8 +161,7 @@ async def watch_link(episode_url):
                             download_link = link['href']
                             break  # Exit once we find the desired resolution
                         else:
-                            download_link = link['href']
-                            
+                            download_link = link['href']                            
 
                     return download_link if download_link else None
                 else:
