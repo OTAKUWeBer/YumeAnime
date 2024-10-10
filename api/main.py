@@ -185,7 +185,7 @@ async def home():
 @app.route('/search', methods=['GET'])
 async def search():
     """Handle the search request and display results."""
-    search_query = request.args.get('q')
+    search_query = request.args.get('search')
     if not search_query:
         return render_template('index.html', error="Please enter an anime name.")
 
