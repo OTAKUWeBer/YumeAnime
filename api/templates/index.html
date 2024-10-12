@@ -118,8 +118,7 @@
         </form>
     </div>
 
-<!-- Anime Suggestions List -->
-{% if suggestions and suggestions|length > 0 %}
+    {% if suggestions and suggestions|length > 0 %}
     <h3>Latest Anime</h3>
     <div class="suggestions-container">
         {% for title, info in suggestions.items() %}
@@ -131,6 +130,9 @@
             </div>
         {% endfor %}
     </div>
+{% else %}
+    <p>No search result found.</p>
 {% endif %}
+
 
 {% endblock %}
