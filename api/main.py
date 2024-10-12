@@ -244,7 +244,9 @@ async def episodes(anime_title):
 @app.route('/watch', methods=['POST'])
 async def watch():
     """Render the watch page for the selected episode."""
-    episode_url = request.form.get('episode_url')  # Get episode URL from the form
+    episode_url = request.form.get('episode_url') # Get episode URL from the form
+    back_to_ep = episode_url.split('/')[-1]
+    back_to_ep = back_to_ep.split('-episode')[0]
     episode_link = await watch_link(episode_url)  # Retrieve the video link
 
     # Extract current episode number
@@ -262,6 +264,7 @@ async def watch():
     next_episode_url = episode_url.replace(f"-{current_episode}", f"-{next_episode_number}") if next_episode_number else None
 
     return render_template('watch.html',
+                           back_to_ep=back_to_ep,
                            episode_link=episode_link,
                            Episode=current_episode,
                            prev_episode_url=prev_episode_url,
