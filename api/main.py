@@ -22,8 +22,14 @@ async def grab_id(url):
         async with session.get(url) as response:
             response_content = await response.text()
             soup = BeautifulSoup(response_content, "html.parser")
-            anime_id = soup.find("input", {"id": "movie_id"})["value"]
-            return anime_id
+            
+            # Check if the element with id="movie_id" exists
+            movie_id_input = soup.find("input", {"id": "movie_id"})
+            if movie_id_input and "value" in movie_id_input.attrs:
+                anime_id = movie_id_input["value"]
+                return anime_id
+            else:
+                raise ValueError(f"Could not find anime ID on the page: {url}")
 
 
 async def home_page():
@@ -65,15 +71,20 @@ async def search_anime_query(search):
     for ul in anime_list:
         items = ul.find_all("li")
         for item in items:
-            title = item.find("a").get("title")
-            link = item.find("a").get("href")
-            anime_page = f"{gogo_url}{link}"
+            # Extract title, link, and image URL
+            title = item.find("a").get("title", "No Title Available")
+            link = item.find("a").get("href", "")
+            anime_page = f"{gogo_url}{link}" if link else ""
 
-            # Fetch image for each anime
-            image_url = item.find("img").get("src")
-            results[title] = {"link": anime_page, "image_url": image_url}
+            # Fetch image for each anime, with a fallback if the image is missing
+            image_url = item.find("img").get("src", "default_image_url.png")  # Provide a default image URL if needed
+
+            # Only add to results if the title and link are valid
+            if title and anime_page:
+                results[title] = {"link": anime_page, "image_url": image_url}
 
     return results
+
 
 
 async def total_episodes(selected_link):
@@ -172,12 +183,12 @@ async def watch_link(episode_url):
 
 @app.route('/', methods=["GET"])
 async def index():
-    return redirect ("/home")
+    return redirect("/home")
 
 
 @app.route('/home', methods=["GET"])
 async def home():
-    suggestions = await home_page() 
+    suggestions = await home_page()
     return render_template('index.html', suggestions=suggestions)
 
 
@@ -196,23 +207,30 @@ async def search():
     return render_template('results.html', query=search_query, results=results)
 
 
-@app.route('/episodes', methods=['POST'])
-async def episodes():
-    """Display episodes for the selected anime."""
-    selected_link = request.form.get('selected_link')
+# Use dynamic route for episodes based on anime title
+@app.route('/episodes/<anime_title>', methods=['GET'])
+async def episodes(anime_title):
+    """Fetch and display episodes for the selected anime."""
+    # Reconstruct the selected link from the title
+    selected_link = f"https://anitaku.pe/category/{anime_title}"
+    
+    # Fetch episode links based on the title
     episode_links = await fetch_episode_links(selected_link)
+    
+    # Fetch the episode numbers if needed
     episode_nums = await show_link(selected_link)
-
-    # Fetch the total number of episodes
+    
+    # Get total episodes
     total_eps = await total_episodes(selected_link)
     
     # Store total episodes in session
     session['total_episodes'] = total_eps
-
+    
     # Zip episode_links and episode_nums together
     episodes = zip(episode_links, episode_nums)
     
     return render_template('episodes.html', episodes=episodes, total_episodes=total_eps)
+
 
 
 @app.route('/watch', methods=['POST'])

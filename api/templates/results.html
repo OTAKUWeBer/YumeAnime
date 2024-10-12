@@ -149,19 +149,24 @@
     <h1>Search Results for "{{ query }}"</h1>
 
 
-    <!-- Results list -->
-    <ul>
-        {% for title, info in results.items() %}
-            <li>
-                <h2>{{ title }}</h2>
-                <img src="{{ info.image_url }}" alt="{{ title }}" width="100">
-                <form action="{{ url_for('episodes') }}" method="post">
-                    <input type="hidden" name="selected_link" value="{{ info.link }}">
-                    <button type="submit">View Episodes</button>
-                </form>
-            </li>
-        {% endfor %}
+   <!-- Results list -->
+   <ul>
+    {% for title, info in results.items() %}
+        <li>
+            <h2>{{ title }}</h2>
+            <img src="{{ info.image_url }}" alt="{{ title }}" width="100">
+            <!-- Link to episodes page using the part from the source link -->
+            {% set anime_slug = info.link.split('/')[-1] %}
+            <button onclick="window.location.href='/episodes/{{ anime_slug }}'">View Episodes</button>
+        </li>
+    {% endfor %}
     </ul>
+
+
+
+
+
+
 
     <p><a href="{{ url_for('index') }}">Back to Search</a></p>
 </body>
