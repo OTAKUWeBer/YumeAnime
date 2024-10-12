@@ -241,10 +241,13 @@ async def episodes(anime_title):
 
 
 
-@app.route('/watch', methods=['POST'])
-async def watch():
-    """Render the watch page for the selected episode."""
-    episode_url = request.form.get('episode_url') # Get episode URL from the form
+@app.route('/watch/<eps_title>', methods=['GET', 'POST'])
+async def watch(eps_title):
+
+    """Render the watch page for the episode episode."""
+    episode_url = f"https://anitaku.pe/{eps_title}"
+    print(episode_url)
+    
     back_to_ep = episode_url.split('/')[-1]
     back_to_ep = back_to_ep.split('-episode')[0]
     episode_link = await watch_link(episode_url)  # Retrieve the video link

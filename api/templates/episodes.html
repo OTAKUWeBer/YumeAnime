@@ -118,20 +118,22 @@
 <body>
     <h1>Episodes</h1>
 
-    <div class="header">
-        <div class="total-episodes">Total Episodes: {{ total_episodes }}</div>
-        <div class="search-container">
-            <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
-        </div>
+<div class="header">
+    <div class="total-episodes">Total Episodes: {{ total_episodes }}</div>
+    <div class="search-container">
+        <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
     </div>
+</div>
 
-    <div class="episode-list" id="episodeList">
-        {% for episode, epn in episodes %}
-        <div class="episode-card" onclick="watchEpisode(this, '{{ episode }}')">
-            {{ epn }}
-        </div>
-        {% endfor %}
+<div class="episode-list" id="episodeList">
+    {% for episode, epn in episodes %}
+    <!-- Extract the episode title from the URL -->
+    {% set episode_title = episode.split('/')[-1] %}
+    <div class="episode-card" onclick="window.location.href='{{ url_for('watch', eps_title=episode_title) }}'">
+        {{ epn }}
     </div>
+    {% endfor %}
+</div>
 
     <a href="javascript:void(0);" class="back-button" onclick="goBack()">Go back to results</a>
 

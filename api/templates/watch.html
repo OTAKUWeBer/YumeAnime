@@ -135,7 +135,7 @@
     </style>
 </head>
 <body>
-    <button class="back-button" onclick="window.location.href='episodes/{{ back_to_ep }}'">Back to Episodes</button>
+    <button class="back-button" onclick="window.location.href='/episodes/{{ back_to_ep }}'">Back to Episodes</button>
     <h1>Watch Episode {{ Episode }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
     <div class="video-container">
         {% if episode_link %}
@@ -150,7 +150,7 @@
 
     <div class="episode-navigation">
         {% if prev_episode_url %}
-            <form action="{{ url_for('watch') }}" method="post">
+            <form action="{{ url_for('watch', eps_title=prev_episode_url.split('/')[-1]) }}" method="post">
                 <input type="hidden" name="episode_url" value="{{ prev_episode_url }}">
                 <button type="submit">
                     Previous Episode {% if prev_episode_number %}({{ prev_episode_number }}){% endif %}
@@ -161,7 +161,7 @@
         {% endif %}
 
         {% if next_episode_url %}
-            <form action="{{ url_for('watch') }}" method="post">
+            <form action="{{ url_for('watch', eps_title=next_episode_url.split('/')[-1]) }}" method="post">
                 <input type="hidden" name="episode_url" value="{{ next_episode_url }}">
                 <button type="submit">
                     Next Episode {% if next_episode_number %}({{ next_episode_number }}){% endif %}
@@ -169,6 +169,7 @@
             </form>
         {% endif %}
     </div>
+
 
     <a href="/">Back to Search</a>
 
