@@ -33,27 +33,35 @@ async def grab_id(url):
 
 
 async def home_page():
+    """Fetch the home page for the anime site and scrape the latest anime titles and images."""
     results = {}
-    url = f"{gogo_url}/home.html"
+    url = f"{gogo_url}/home.html"  # URL of the home page
+
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
+            if response.status != 200:
+                return results  # Return empty results if the response is not OK
+
             html = await response.text()
 
     soup = BeautifulSoup(html, "html.parser")
-    anime_list = soup.find_all("ul", {"class": "items"})
+    anime_list = soup.find_all("ul", {"class": "items"})  # Adjust the class based on actual HTML structure
 
     for ul in anime_list:
         items = ul.find_all("li")
         for item in items:
             title = item.find("a").get("title")
             link = item.find("a").get("href")
-            anime_page = f"{gogo_url}{link}"
+            anime_page = f"{gogo_url}{link}"  # Complete link to the anime page
 
             # Fetch image for each anime
             image_url = item.find("img").get("src")
+
+            # Store results in a structured way
             results[title] = {"link": anime_page, "image_url": image_url}
 
     return results
+
 
     
 async def search_anime_query(search):

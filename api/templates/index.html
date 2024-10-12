@@ -118,22 +118,19 @@
         </form>
     </div>
 
-    <!-- Anime Suggestions List -->
-    {% if suggestions and suggestions|length > 0 %}
-        <h3>Latest Anime</h3>
-        <div class="suggestions-container">
-            {% for title, info in suggestions.items() %}
-                <div class="anime-item">
-                    <img src="{{ info.image_url }}" alt="{{ title }}">
-                    <h3>{{ title }}</h3>
-                    <form action="/episodes" method="post">
-                        <input type="hidden" name="selected_link" value="{{ info.link }}">
-                        <button type="submit">View Episodes</button>
-                    </form>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>No search result found.</p>
-    {% endif %}
+<!-- Anime Suggestions List -->
+{% if suggestions and suggestions|length > 0 %}
+    <h3>Latest Anime</h3>
+    <div class="suggestions-container">
+        {% for title, info in suggestions.items() %}
+            <div class="anime-item">
+                <img src="{{ info.image_url }}" alt="{{ title }}">
+                <h3>{{ title }}</h3>
+                {% set anime_slug = info.link.split('/')[-1].split('-episode')[0] %}
+                <button onclick="window.location.href='/episodes/{{ anime_slug }}'">View Episodes</button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
 {% endblock %}
