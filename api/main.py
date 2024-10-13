@@ -62,7 +62,6 @@ async def home_page():
 
     return results
 
-
     
 async def search_anime_query(search):
     """Search for anime based on the user's query, including their images."""
@@ -93,6 +92,7 @@ async def search_anime_query(search):
 
     return results
 
+
 async def get_title(search):
     """Search for anime based on the user's query, including their images."""
 
@@ -106,7 +106,8 @@ async def get_title(search):
         return title_tag.text.strip()  # This will return only the text, removing any surrounding whitespace
     else:
         return "Title not found"
-    
+  
+  
 async def fetch_anime_status(selected_link):
     """Display details of the selected anime."""
     async with aiohttp.ClientSession() as session:
@@ -129,6 +130,7 @@ async def fetch_anime_status(selected_link):
                 anime_info[key] = p.text.strip()
     
         return anime_info.get('status')
+
 
 async def total_episodes(selected_link):
     try:
@@ -155,8 +157,9 @@ async def total_episodes(selected_link):
 
 async def fetch_episode_links(selected_link):
     """Fetch episode links for the selected anime."""
-    ANIME_ID = await grab_id(selected_link)
-    anime_eps_url = f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end=1700&id={ANIME_ID}"
+    anime_id = await grab_id(selected_link)
+    end_episode = await total_episodes(selected_link)
+    anime_eps_url = f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end={end_episode}&id={anime_id}"
 
     episode_links = []
     async with aiohttp.ClientSession() as session:
@@ -174,10 +177,11 @@ async def fetch_episode_links(selected_link):
     return reversed(episode_links)
 
 
-async def show_link(selected_link):
+async def show_eps(selected_link):
     """Fetch episode links for the selected anime."""
-    ANIME_ID = await grab_id(selected_link)
-    anime_eps_url = f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end=1700&id={ANIME_ID}"
+    anime_id = await grab_id(selected_link)
+    end_episode = await total_episodes(selected_link)
+    anime_eps_url = f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end={end_episode}&id={anime_id}"
 
     episode_num = []
     async with aiohttp.ClientSession() as session:
@@ -224,6 +228,7 @@ async def watch_link(episode_url):
                 return None  # Return None if the request fails
 
 
+
 @app.route('/', methods=["GET"])
 async def index():
     return redirect("/home")
@@ -267,7 +272,7 @@ async def episodes(anime_title):
     status = await fetch_anime_status(selected_link)
     
     # Fetch the episode numbers if needed
-    episode_nums = await show_link(selected_link)
+    episode_nums = await show_eps(selected_link)
     
     # Get total episodes
     total_eps = await total_episodes(selected_link)
