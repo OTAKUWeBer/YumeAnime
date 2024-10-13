@@ -93,7 +93,19 @@ async def search_anime_query(search):
 
     return results
 
+async def get_title(search):
+    """Search for anime based on the user's query, including their images."""
 
+    async with aiohttp.ClientSession() as session:
+        async with session.get(search) as response:
+            html = await response.text()
+
+    soup = BeautifulSoup(html, "html.parser")
+    title_tag = soup.find('h1')
+    if title_tag:
+        return title_tag.text.strip()  # This will return only the text, removing any surrounding whitespace
+    else:
+        return "Title not found"
 
 async def total_episodes(selected_link):
     try:
@@ -222,6 +234,8 @@ async def episodes(anime_title):
     # Reconstruct the selected link from the title
     selected_link = f"https://anitaku.pe/category/{anime_title}"
     
+    title = await get_title(selected_link)
+    
     # Fetch episode links based on the title
     episode_links = await fetch_episode_links(selected_link)
     
@@ -237,7 +251,7 @@ async def episodes(anime_title):
     # Zip episode_links and episode_nums together
     episodes = zip(episode_links, episode_nums)
     
-    return render_template('episodes.html', episodes=episodes, total_episodes=total_eps)
+    return render_template('episodes.html', episodes=episodes, total_episodes=total_eps, title=title)
 
 
 
