@@ -26,6 +26,22 @@
             font-weight: 700;
         }
 
+        p {
+            text-align: center;
+            margin: 40px 0;
+            font-size: 1.2em;
+        }
+
+        a {
+            color: #bb86fc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #9b70db;
+        }
+
         .header {
             display: flex;
             justify-content: center; /* Center all items */
@@ -135,7 +151,7 @@
     {% endfor %}
 </div>
 
-    <a href="javascript:void(0);" class="back-button" onclick="goBack()">Go back to results</a>
+    <p><a href="{{ url_for('index') }}">Back to Search</a></p>
 
     <script>
         // JavaScript function to filter episodes by episode number
@@ -178,9 +194,6 @@
             form.submit();
         }
 
-        function goBack() {
-            window.history.back();
-        }
     </script>
 </body>
 </html>

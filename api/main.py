@@ -234,6 +234,7 @@ async def episodes(anime_title):
     # Reconstruct the selected link from the title
     selected_link = f"https://anitaku.pe/category/{anime_title}"
     
+    # Fetch the title of the selected anime
     title = await get_title(selected_link)
     
     # Fetch episode links based on the title
