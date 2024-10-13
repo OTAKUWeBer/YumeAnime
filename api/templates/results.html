@@ -40,6 +40,10 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         li:hover {
@@ -56,10 +60,8 @@
         img {
             border-radius: 5px;
             margin-bottom: 20px;
-        }
-
-        form {
-            margin: 0;
+            max-width: 100%;
+            height: auto;
         }
 
         button {
@@ -148,20 +150,20 @@
 
     <h1>Search Results for "{{ query }}"</h1>
 
-
-   <!-- Results list -->
-   <ul>
-    {% for title, info in results.items() %}
-        <li>
-            <h2>{{ title }}</h2>
-            <img src="{{ info.image_url }}" alt="{{ title }}" width="100">
-            <!-- Link to episodes page using the part from the source link -->
-            {% set anime_slug = info.link.split('/')[-1] %}
-            <button onclick="window.location.href='/episodes/{{ anime_slug }}'">View Episodes</button>
-        </li>
-    {% endfor %}
+    <!-- Results list -->
+    <ul>
+        {% for title, info in results.items() %}
+            <li>
+                <h2>{{ title }}</h2>
+                <img src="{{ info.image_url }}" alt="{{ title }}" width="100">
+                <!-- Link to episodes page using the part from the source link -->
+                {% set anime_slug = info.link.split('/')[-1] %}
+                <button onclick="window.location.href='/episodes/{{ anime_slug }}'">View Episodes</button>
+            </li>
+        {% endfor %}
     </ul>
 
     <p><a href="{{ url_for('index') }}">Back to Search</a></p>
+
 </body>
 </html>
