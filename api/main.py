@@ -106,6 +106,29 @@ async def get_title(search):
         return title_tag.text.strip()  # This will return only the text, removing any surrounding whitespace
     else:
         return "Title not found"
+    
+async def fetch_anime_status(selected_link):
+    """Display details of the selected anime."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(selected_link) as detail_response:
+            detail_html = await detail_response.text()
+
+    detail_soup = BeautifulSoup(detail_html, "html.parser")
+    anime_info_body = detail_soup.find("div", {"class": "anime_info_body"})
+    
+    if anime_info_body:
+        anime_info = {
+            "image_url": anime_info_body.find("img")["src"]
+        }
+
+        for p in anime_info_body.find_all("p", {"class": "type"}):
+            span_tag = p.find("span")
+            if span_tag:
+                key = span_tag.text.lower().strip().replace(" ", "_").replace(":", "")
+                span_tag.extract()  # Remove the span tag to get the remaining text
+                anime_info[key] = p.text.strip()
+    
+        return anime_info.get('status')
 
 async def total_episodes(selected_link):
     try:
@@ -240,6 +263,9 @@ async def episodes(anime_title):
     # Fetch episode links based on the title
     episode_links = await fetch_episode_links(selected_link)
     
+    # Status of anime
+    status = await fetch_anime_status(selected_link)
+    
     # Fetch the episode numbers if needed
     episode_nums = await show_link(selected_link)
     
@@ -252,7 +278,7 @@ async def episodes(anime_title):
     # Zip episode_links and episode_nums together
     episodes = zip(episode_links, episode_nums)
     
-    return render_template('episodes.html', episodes=episodes, total_episodes=total_eps, title=title)
+    return render_template('episodes.html', episodes=episodes, total_episodes=total_eps, title=title, status=status)
 
 
 
