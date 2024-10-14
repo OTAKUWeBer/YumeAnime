@@ -1,2 +1,3 @@
 *.pyc
 __pycache__/
+api/scrapes/__pycache__/
