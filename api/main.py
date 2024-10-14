@@ -63,7 +63,6 @@ async def episodes(anime_title):
     return render_template('episodes.html', episodes=episodes, total_episodes=total_eps, title=title, status=status)
 
 
-
 @app.route('/watch/<eps_title>', methods=['GET', 'POST'])
 async def watch(eps_title):
 
