@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, session, redirect
-from .scrapes.backends import *
+from .scrapes import *
 
 
 app = Flask(__name__)
