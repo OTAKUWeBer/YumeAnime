@@ -68,7 +68,6 @@ async def watch(eps_title):
 
     """Render the watch page for the episode episode."""
     episode_url = f"{gogo_url}/{eps_title}"
-    print(episode_url)
     
     back_to_ep = episode_url.split('/')[-1]
     back_to_ep = back_to_ep.split('-episode')[0]
