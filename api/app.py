@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, session, redirect
-from .scrapes import *
+import re
+from scrapes import *
+
 
 
 app = Flask(__name__)
@@ -65,16 +67,22 @@ async def episodes(anime_title):
 
 @app.route('/watch/<eps_title>', methods=['GET', 'POST'])
 async def watch(eps_title):
-
-    """Render the watch page for the episode episode."""
+    """Render the watch page for the episode."""
     episode_url = f"{gogo_url}/{eps_title}"
     
     back_to_ep = episode_url.split('/')[-1]
     back_to_ep = back_to_ep.split('-episode')[0]
-    episode_link = await watch_link(episode_url)  # Retrieve the video link
 
-    # Extract current episode number
-    current_episode = int(episode_url.split("-")[-1])  # Assuming the URL contains the episode number at the end
+    # Retrieve the video link
+    episode_link = await watch_link(episode_url)
+
+
+    episode_match = re.search(r'-episode-(\d+)$', episode_url)
+    if not episode_match:
+        # Handle case where episode number is not found
+        return "Invalid episode URL format."
+
+    current_episode = int(episode_match.group(1))  # Get the episode number
 
     # Get total episodes from the session
     total_episodes = session.get('total_episodes', 0)  # Get total episodes from the session
@@ -83,9 +91,9 @@ async def watch(eps_title):
     prev_episode_number = current_episode - 1 if current_episode > 1 else None
     next_episode_number = current_episode + 1 if current_episode < total_episodes else None
 
-    # Generate previous and next episode URLs
-    prev_episode_url = episode_url.replace(f"-{current_episode}", f"-{prev_episode_number}") if prev_episode_number else None
-    next_episode_url = episode_url.replace(f"-{current_episode}", f"-{next_episode_number}") if next_episode_number else None
+    # Generate previous and next episode URLs, replacing only the episode number part
+    prev_episode_url = re.sub(r'-episode-(\d+)$', f'-episode-{prev_episode_number}', episode_url) if prev_episode_number else None
+    next_episode_url = re.sub(r'-episode-(\d+)$', f'-episode-{next_episode_number}', episode_url) if next_episode_number else None
 
     return render_template('watch.html',
                            back_to_ep=back_to_ep,
@@ -95,6 +103,7 @@ async def watch(eps_title):
                            next_episode_url=next_episode_url,
                            prev_episode_number=prev_episode_number,
                            next_episode_number=next_episode_number)
+
 
 
 if __name__ == '__main__':
