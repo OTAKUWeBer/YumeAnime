@@ -6,9 +6,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
-    <!-- Plyr CSS -->
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-
     <style>
         body, html {
             margin: 0;
@@ -31,13 +28,25 @@
             font-size: 2.2em;
         }
 
-        .plyr--video {
+        .video-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             width: 90%;
-            height: auto;
-            max-width: 100%;
-            max-height: 100%;
+            height: 70%;
+            margin: 0;
+            overflow: hidden;
+            border-radius: 10px;
             background-color: #1e1e1e;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             border-radius: 10px;
         }
 
@@ -128,16 +137,16 @@
 <body>
     <button class="back-button" onclick="window.location.href='/episodes/{{ back_to_ep }}'">Back to Episodes</button>
     <h1>Watch Episode {{ Episode }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
-
-    {% if episode_link %}
-        <!-- Plyr Video Element -->
-        <video id="plyr-video" controls>
-            <source src="{{ episode_link }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-    {% else %}
-        <p>Sorry, no video available to watch.</p>
-    {% endif %}
+    <div class="video-container">
+        {% if episode_link %}
+            <video id="video" controls>
+                <source src="{{ episode_link }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        {% else %}
+            <p>Sorry, no video available to watch.</p>
+        {% endif %}
+    </div>
 
     <div class="episode-navigation">
         {% if prev_episode_url %}
@@ -161,32 +170,45 @@
         {% endif %}
     </div>
 
+
     <a href="/home">Back to Search</a>
 
-    <!-- Plyr JavaScript -->
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-
     <script>
-        // Initialize Plyr
-        const player = new Plyr('#plyr-video', {
-            controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
-        });
+        const video = document.getElementById('video');
 
-        // Fullscreen toggle on video click
-        document.getElementById('plyr-video').addEventListener('click', () => {
-            player.fullscreen.toggle();
-        });
-
-        // Key event listeners for play/pause and fullscreen
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'f') {
-                player.fullscreen.toggle();
+        // Enable fullscreen on video click
+        video.addEventListener('click', () => {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.mozRequestFullScreen) { // Firefox
+                video.mozRequestFullScreen();
+            } else if (video.webkitRequestFullscreen) { // Chrome, Safari, and Opera
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) { // IE/Edge
+                video.msRequestFullscreen();
             }
-            if (event.key === ' ') {
-                event.preventDefault();
-                player.togglePlay();
+        });
+
+        // Key event listeners for fullscreen and play/pause
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'f') { // Fullscreen toggle
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    video.requestFullscreen();
+                }
+            }
+
+            if (event.key === ' ') { // Play/pause toggle
+                event.preventDefault(); // Prevent scrolling down the page
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
             }
         });
     </script>
+    
 </body>
 </html>
