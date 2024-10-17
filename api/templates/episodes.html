@@ -17,13 +17,32 @@
             flex-direction: column;
             align-items: center;
         }
-        
+
+        /* Container for title and logo */
+        .title-logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative; /* Allow the logo to be positioned in absolute terms */
+            margin-top: 40px;
+            width: 100%; /* Take up full width */
+        }
+
         h1 {
             text-align: center;
             color: #bb86fc;
-            margin-top: 40px;
+            margin: 0;
             font-size: 3em;
             font-weight: 700;
+            max-width: 90%; /* Limit the width of the title to prevent it from stretching too wide */
+            word-wrap: break-word; /* Ensure long titles break to a new line */
+        }
+
+        /* Adjust title for smaller screens */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em; /* Reduce title size on smaller screens */
+            }
         }
 
         p {
@@ -42,10 +61,23 @@
             color: #9b70db;
         }
 
+        /* Added styles for the logo */
+        .logo-container {
+            position: absolute;
+            top: 4px;
+            left: 15px;
+        }
+
+        .logo-container img {
+            width: 100px;
+            height: auto;
+            cursor: pointer;
+        }
+
         .header {
             display: flex;
-            justify-content: center; /* Center all items */
-            align-items: center; /* Align items vertically */
+            justify-content: center;
+            align-items: center;
             max-width: 100%;
             margin: 6px auto;
             padding: 0 20px;
@@ -55,27 +87,27 @@
         .total-episodes {
             font-size: 1.2em;
             color: #bb86fc;
-            padding-right: 20px; /* Space between total episodes and search bar */
+            padding-right: 20px;
         }
 
         .search-container {
-            text-align: center; /* Center align text */
+            text-align: center;
             width: 100%;
-            max-width: 300px; /* Limit the maximum width */
+            max-width: 300px;
         }
 
         .search-container input {
-            padding: 8px; /* Smaller padding */
-            width: 80%; /* Take full width of container */
+            padding: 8px;
+            width: 80%;
             border: none;
             border-radius: 5px;
-            font-size: 1em; /* Smaller font size */
+            font-size: 1em;
             background-color: #1e1e1e;
             color: #e0e0e0;
         }
 
         .search-container input::placeholder {
-            color: #b0b0b0; /* Placeholder color */
+            color: #b0b0b0;
         }
 
         .episode-list {
@@ -84,32 +116,32 @@
             justify-content: center;
             margin: 20px auto;
             max-width: 100%;
-            padding: 0 20px; /* Added padding for spacing */
+            padding: 0 20px;
         }
 
         .episode-card {
             background-color: #1e1e1e;
-            padding: 10px 5px; /* Smaller padding */
-            margin: 5px; /* Smaller margin */
-            border-radius: 6px; /* Slightly rounded corners */
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+            padding: 10px 5px;
+            margin: 5px;
+            border-radius: 6px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-align: center;
-            font-size: 1.2em; /* Smaller font size for episode numbers */
-            color: #bb86fc; /* Text color */
-            min-width: 40px; /* Minimum width for uniformity */
-            max-width: 60px; /* Maximum width to maintain compactness */
+            font-size: 1.2em;
+            color: #bb86fc;
+            min-width: 40px;
+            max-width: 60px;
         }
 
         .episode-card:hover {
             transform: scale(1.05);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Darker shadow on hover */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
         }
 
         .watched {
-            background-color: #424242; /* Darker background for watched episodes */
-            color: #757575; /* Darker text color for watched episodes */
+            background-color: #424242;
+            color: #757575;
         }
 
         .back-button {
@@ -126,32 +158,48 @@
         }
 
         .back-button:hover {
-            background-color: #bb86fc; /* Change background on hover */
-            color: #121212; /* Change text color on hover */
+            background-color: #bb86fc;
+            color: #121212;
         }
+
+        @media (max-width: 768px) {
+            .logo-container {
+                top: -10px;
+                left: 3px;
+        }
+    }
+
     </style>
 </head>
 <body>
-    <h1>Episodes of {{ title }}</h1>
 
-<div class="header">
-    <div class="total-episodes">Total Episodes: {{ total_episodes }} | Status: {{ status }}</div>
-    <div class="search-container">
-        <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
+    <div class="title-logo-container">
+        <!-- Logo container stays at top left -->
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='images/rm_logo.png') }}" alt="Logo">
+        </div>
+
+        <!-- Main title of the page -->
+        <h1>Episodes of {{ title }}</h1>
     </div>
-</div>
 
-<div class="episode-list" id="episodeList">
-    {% for episode, epn in episodes %}
-    <!-- Extract the episode title from the URL -->
-    {% set episode_title = episode.split('/')[-1] %}
-    <div class="episode-card" onclick="window.location.href='{{ url_for('watch', eps_title=episode_title) }}'">
-        {{ epn }}
+    <div class="header">
+        <div class="total-episodes">Total Episodes: {{ total_episodes }} | Status: {{ status }}</div>
+        <div class="search-container">
+            <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
+        </div>
     </div>
-    {% endfor %}
-</div>
 
-    <p><a href="{{ url_for('home') }}">Back to Search</a></p>
+    <div class="episode-list" id="episodeList">
+        {% for episode, epn in episodes %}
+        {% set episode_title = episode.split('/')[-1] %}
+        <div class="episode-card" onclick="window.location.href='{{ url_for('watch', eps_title=episode_title) }}'">
+            {{ epn }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <p><a href="{{ url_for('index') }}">Back to Search</a></p>
 
     <script>
         // JavaScript function to filter episodes by episode number
@@ -162,7 +210,6 @@
             episodeList = document.getElementById("episodeList");
             episodeCards = episodeList.getElementsByClassName('episode-card');
 
-            // Loop through all episode cards, and hide those that don't match the search query
             for (i = 0; i < episodeCards.length; i++) {
                 epn = episodeCards[i].innerText || episodeCards[i].textContent;
                 if (epn.toUpperCase().indexOf(filter) > -1) {
@@ -174,7 +221,6 @@
         }
 
         function watchEpisode(card, episodeUrl) {
-            // Toggle the 'watched' class to mark the episode as watched
             card.classList.toggle('watched');
 
             const form = document.createElement('form');
@@ -193,7 +239,6 @@
             document.body.appendChild(form);
             form.submit();
         }
-
     </script>
 </body>
 </html>
