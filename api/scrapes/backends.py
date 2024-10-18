@@ -2,7 +2,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 
-gogo_url = "https://www.anitaku.pe"
+gogo_url = "https://gogoanime3.co"
 
 
 COOKIES = {
@@ -31,7 +31,7 @@ async def grab_id(url):
 async def home_page():
     """Fetch the home page for the anime site and scrape the latest anime titles and images."""
     results = {}
-    url = f"{gogo_url}/home.html"  # URL of the home page
+    url = f"{gogo_url}"  # URL of the home page
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:

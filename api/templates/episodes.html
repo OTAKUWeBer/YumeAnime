@@ -176,8 +176,12 @@
     <div class="title-logo-container">
         <!-- Logo container stays at top left -->
         <div class="logo-container">
-            <img src="{{ url_for('static', filename='images/rm_logo.png') }}" alt="Logo">
+            <a href="{{ url_for('home') }}">
+                <img src="{{ url_for('static', filename='images/rm_logo.png') }}" alt="Logo">
+            </a>
         </div>
+    </div>
+    
 
         <!-- Main title of the page -->
         <h1>Episodes of {{ title }}</h1>

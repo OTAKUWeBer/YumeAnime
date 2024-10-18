@@ -39,7 +39,7 @@ async def search():
 async def episodes(anime_title):
     """Fetch and display episodes for the selected anime."""
     # Reconstruct the selected link from the title
-    selected_link = f"https://anitaku.pe/category/{anime_title}"
+    selected_link = f"https://gogoanime3.co/category/{anime_title}"
     
     # Fetch the title of the selected anime
     title = await get_title(selected_link)
