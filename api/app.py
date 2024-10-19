@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect
 import re
+from markupsafe import escape
 from .scrapers import GogoAnimeScraper
 
 
@@ -66,45 +67,68 @@ async def episodes(anime_title):
 
 @app.route('/watch/<eps_title>', methods=['GET', 'POST'])
 async def watch(eps_title):
-    """Render the watch page for the episode."""
+    """Render the watch page for the episode or series/season."""
     try:
         # Construct the episode URL
-        episode_url = f"{GS.gogo_url}/{eps_title}"
+        episode_url = f"{GS.gogo_url}/{escape(eps_title)}"
         
-        # Extract the base anime title (for 'back to episodes' link)
-        back_to_ep = re.split(r'-episode-\d+', eps_title)[0]
+        # Check if the URL contains an episode pattern (e.g., `-episode-X`)
+        episode_match = re.search(r'-episode-(\d+([.-]\d+)?)$', eps_title)
 
-        # Retrieve the video link
-        video_link = await GS.video_link(episode_url)
+        if episode_match:
+            # It's an episode URL, handle episode-specific logic
+            current_episode = episode_match.group(1)  # e.g., '1', '13-5', etc.
 
-        # Extract episode number
-        episode_match = re.search(r'-episode-(\d+)$', episode_url)
-        if not episode_match:
-            return render_template('404.html', error_message="Invalid episode URL format.")
+            # Extract the base anime title (for 'back to episodes' link)
+            back_to_ep = re.split(r'-episode-\d+([.-]\d+)?$', eps_title)[0]
 
-        current_episode = int(episode_match.group(1))  # Get the episode number
+            # Retrieve the video link
+            video_link = await GS.video_link(episode_url)
 
-        # Get total episodes from the session
-        total_episodes = await GS.total_episodes(episode_url)
+            # Get total episodes from the session, excluding special episodes like 0, 13-5, etc.
+            total_episodes = await GS.total_episodes(episode_url)
 
-        # Calculate previous and next episode numbers
-        prev_episode_number = current_episode - 1 if current_episode > 1 else None
-        next_episode_number = current_episode + 1 if current_episode < total_episodes else None
+            # Handle next and previous episode logic (only for integer episodes)
+            if re.match(r'^\d+$', current_episode):  # Regular integer episode
+                current_episode_number = int(current_episode)
 
-        # Generate previous and next episode URLs
-        prev_episode_url = re.sub(r'-episode-(\d+)$', f'-episode-{prev_episode_number}', episode_url) if prev_episode_number else None
-        next_episode_url = re.sub(r'-episode-(\d+)$', f'-episode-{next_episode_number}', episode_url) if next_episode_number else None
+                # Calculate previous and next episode numbers
+                prev_episode_number = current_episode_number - 1 if current_episode_number > 1 else None
+                next_episode_number = current_episode_number + 1 if current_episode_number < total_episodes else None
+
+                # Generate previous and next episode URLs
+                prev_episode_url = re.sub(r'-episode-\d+$', f'-episode-{prev_episode_number}', eps_title) if prev_episode_number else None
+                next_episode_url = re.sub(r'-episode-\d+$', f'-episode-{next_episode_number}', eps_title) if next_episode_number else None
+            else:
+                # For special episodes (like 13-5, 0, etc.), no next/previous buttons
+                prev_episode_number = None
+                next_episode_number = None
+                prev_episode_url = None
+                next_episode_url = None
+
+        else:
+            # If no episode pattern is found, treat it as an episode without navigation (e.g., `kimi-ni-todoke-3rd-season`)
+            current_episode = None
+            back_to_ep = eps_title  # Keep the full title for back navigation
+            video_link = await GS.video_link(episode_url)
+            
+            # No next/previous for season-like URLs
+            prev_episode_url = None
+            next_episode_url = None
+            prev_episode_number = None
+            next_episode_number = None
 
         return render_template('watch.html',
                                back_to_ep=back_to_ep,
                                video_link=video_link,
-                               Episode=current_episode,
+                               Episode=current_episode if current_episode else "Special",
                                prev_episode_url=prev_episode_url,
                                next_episode_url=next_episode_url,
                                prev_episode_number=prev_episode_number,
                                next_episode_number=next_episode_number)
     except Exception as e:
         return render_template('404.html', error_message="An error occurred while fetching the episode.")
+
 
 @app.errorhandler(404)
 def page_not_found(e):
