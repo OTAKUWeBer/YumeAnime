@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, redirect
 import re
 from markupsafe import escape
+import os
 from .scrapers import GogoAnimeScraper
 
 
 
 app = Flask(__name__)
-app.secret_key = 'W#b%052441%animez'
+app.secret_key = os.urandom(24)
 
 GS = GogoAnimeScraper()
 
