@@ -146,7 +146,10 @@
 </head>
 <body>
     <button class="back-button" onclick="window.location.href='/episodes/{{ back_to_ep }}'">Back to Episodes</button>
-    <h1>Watch Episode {{ Episode }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
+    <h1>Watch Episode {{ Episode|replace('-', '.') }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
+    {% if '-' in Episode or 'Special' in Episode or '.' in Episode%}
+    <p style="color: red;">Warning: You can't navigate to next or previous on .5 and special episodes.</p>
+    {% endif %}
     <div class="video-container">
         {% if video_link %}
             <video id="video" controls>
