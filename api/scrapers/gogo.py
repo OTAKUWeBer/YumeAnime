@@ -193,7 +193,7 @@ class GogoAnimeScraper:
                                     return link['href']
                             links = container.find_all("a")
                             if links:
-                                return links[-1]['href'] # use the highest resulation if no 720p not found
+                                return links[-1]['href'] # use the highest resulation if 720p not found
             return None
         except Exception as e:
             print(f"Error in video_link: {e}")
