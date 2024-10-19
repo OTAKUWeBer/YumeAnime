@@ -22,8 +22,8 @@
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/yume-animez.git
-   cd yume-animez
+   git clone https://github.com/OTAKUWeBer/YumeAnime
+   cd YumeAnime
    ```
 
 2. **Create and Activate a Virtual Environment**
