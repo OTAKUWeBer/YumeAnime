@@ -109,6 +109,16 @@
             background-color: #9b70db;
         }
 
+        .no-video-message {
+            text-align: center;
+            font-size: 18px;
+            color: #ffffff;
+            padding: 20px;
+            background-color: #000000;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
         /* Add media query for smaller screens */
         @media (max-width: 768px) {
             h1 {
@@ -144,7 +154,9 @@
                 Your browser does not support the video tag.
             </video>
         {% else %}
-            <p>Sorry, no video available to watch.</p>
+        <div class="no-video-message">
+            Sorry, no video available to watch. Please check if the URL is correct if you entered it manually. If you came here from the episodes page, please contact the admin (weber).
+        </div>
         {% endif %}
     </div>
 
