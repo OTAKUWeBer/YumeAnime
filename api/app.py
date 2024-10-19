@@ -78,7 +78,7 @@ async def watch(eps_title):
         back_to_ep = re.split(r'-episode-\d+', eps_title)[0]
 
         # Retrieve the video link
-        episode_link = await GS.watch_link(episode_url)
+        watch_link = await GS.watch_link(episode_url)
 
         # Extract episode number
         episode_match = re.search(r'-episode-(\d+)$', episode_url)
@@ -88,7 +88,7 @@ async def watch(eps_title):
         current_episode = int(episode_match.group(1))  # Get the episode number
 
         # Get total episodes from the session
-        total_episodes = session.get('total_episodes', 0)
+        total_episodes = await GS.total_episodes(episode_url)
 
         # Calculate previous and next episode numbers
         prev_episode_number = current_episode - 1 if current_episode > 1 else None
@@ -100,7 +100,7 @@ async def watch(eps_title):
 
         return render_template('watch.html',
                                back_to_ep=back_to_ep,
-                               episode_link=episode_link,
+                               watch_link=watch_link,
                                Episode=current_episode,
                                prev_episode_url=prev_episode_url,
                                next_episode_url=next_episode_url,

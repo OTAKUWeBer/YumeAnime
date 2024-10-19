@@ -148,9 +148,9 @@
     <button class="back-button" onclick="window.location.href='/episodes/{{ back_to_ep }}'">Back to Episodes</button>
     <h1>Watch Episode {{ Episode }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
     <div class="video-container">
-        {% if episode_link %}
+        {% if watch_link %}
             <video id="video" controls>
-                <source src="{{ episode_link }}" type="video/mp4">
+                <source src="{{ watch_link }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         {% else %}
