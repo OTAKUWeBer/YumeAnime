@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect
+from flask import Flask, render_template, request, redirect
 import re
 from .scrapers import GogoAnimeScraper
 
@@ -54,9 +54,6 @@ async def episodes(anime_title):
         status = await GS.fetch_anime_status(selected_link)
         episode_number = await GS.show_episode_number(selected_link)
         total_episodes = await GS.total_episodes(selected_link)
-
-        # Store total episodes in session
-        session['total_episodes'] = total_episodes
 
         # Zip episode_links and episode_nums together
         episodes = zip(episode_links, episode_number)
