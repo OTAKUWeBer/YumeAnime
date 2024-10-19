@@ -75,7 +75,7 @@ async def watch(eps_title):
         back_to_ep = re.split(r'-episode-\d+', eps_title)[0]
 
         # Retrieve the video link
-        watch_link = await GS.watch_link(episode_url)
+        video_link = await GS.video_link(episode_url)
 
         # Extract episode number
         episode_match = re.search(r'-episode-(\d+)$', episode_url)
@@ -97,7 +97,7 @@ async def watch(eps_title):
 
         return render_template('watch.html',
                                back_to_ep=back_to_ep,
-                               watch_link=watch_link,
+                               video_link=video_link,
                                Episode=current_episode,
                                prev_episode_url=prev_episode_url,
                                next_episode_url=next_episode_url,

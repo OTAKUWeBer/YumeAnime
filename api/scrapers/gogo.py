@@ -164,7 +164,7 @@ class GogoAnimeScraper:
             print(f"Error in show_eps: {e}")
             return []
 
-    async def watch_link(self, episode_url):
+    async def video_link(self, episode_url):
         """Fetch the download link for 1280x720 resolution."""
         try:
             async with aiohttp.ClientSession(cookies=self.cookies) as session:
@@ -180,5 +180,5 @@ class GogoAnimeScraper:
                             return container.find("a")['href']  # Fallback to first link
             return None
         except Exception as e:
-            print(f"Error in watch_link: {e}")
+            print(f"Error in video_link: {e}")
             return None
