@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session, redirect
 import re
-from scrapers import GogoAnimeScraper
+from .scrapers import GogoAnimeScraper
 
 
 
