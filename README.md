@@ -52,7 +52,6 @@
 ## Project Structure
 
 ```
-
 .
 ├── api/
 │   ├── app.py                   # Main Flask application
@@ -74,7 +73,6 @@
 ├── README.md                    # Project documentation
 ├── requirements.txt             # Python dependencies
 └── vercel.json                  # Vercel deployment configuration
-
 ```
 
 ## API Routes
