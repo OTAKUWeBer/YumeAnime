@@ -1,6 +1,6 @@
-# Yume Animez
+# Yume Anime
 
-**Yume Animez** is a Python-based web application built using Flask that allows users to search, browse, and stream anime episodes. It scrapes data from the **GogoAnime** website, providing users with an intuitive interface to explore anime series, view available episodes, and watch them directly within the app.
+**Yume Anime** is a Python-based web application built using Flask that allows users to search, browse, and stream anime episodes. It scrapes data from the **GogoAnime** website, providing users with an intuitive interface to explore anime series, view available episodes, and watch them directly within the app.
 
 ## Website URL
 - Live Site: [Yume Animez](https://yume-animez.vercel.app/home)
