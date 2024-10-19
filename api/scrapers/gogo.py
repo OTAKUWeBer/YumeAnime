@@ -157,12 +157,26 @@ class GogoAnimeScraper:
                 for list_item in container.find_all("li"):
                     link = list_item.find("a")
                     if link and link['href']:
-                        episode = link['href'].split("-")[-1]
-                        episode_num.append(episode)
+                        href = link['href']
+
+                        # Check if there's no episode number after the anime name
+                        if 'episode-' not in href:
+                            episode_num.append('0')
+                        else:
+                            # Extract the episode number
+                            episode = href.split("episode-")[-1]
+
+                            # Convert "12-5" to "12.5"
+                            if '-' in episode:
+                                episode = episode.replace('-', '.')
+
+                            episode_num.append(episode)
+
             return list(reversed(episode_num))
         except Exception as e:
             print(f"Error in show_eps: {e}")
             return []
+
 
     async def video_link(self, episode_url):
         """Fetch the download link for 1280x720 resolution."""
