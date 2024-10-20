@@ -102,8 +102,6 @@
 - Displays a custom error message if the requested page is not found.
 
 ## Future Enhancements
-- User authentication for tracking watched episodes.
-- Commenting and rating system for anime episodes.
 - Improved mobile responsiveness.
 
 ## License
