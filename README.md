@@ -3,7 +3,7 @@
 **Yume Anime** is a Python-based web application built using Flask that allows users to search, browse, and stream anime episodes. It scrapes data from the **GogoAnime** website, providing users with an intuitive interface to explore anime series, view available episodes, and watch them directly within the app.
 
 ## Website URL
-- Live Site: [Yume Animez](https://yume-animez.vercel.app/home)
+- Live Site: [YumeAnime](https://yume-animez.vercel.app/home)
 
 ## Features
 - **Anime Search**: Users can search for their favorite anime and view available episodes.
@@ -17,37 +17,6 @@
 - **Frontend**: HTML, CSS, Jinja2 for templating
 - **Web Scraping**: Custom scraper using `GogoAnimeScraper`
 - **Deployment**: Vercel
-
-## Installation & Setup
-
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/OTAKUWeBer/YumeAnime
-   cd YumeAnime
-   ```
-
-2. **Create and Activate a Virtual Environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate   # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up Environment Variables** (Optional)
-   - Update the Flask `secret_key` if needed in `app.py`:
-     ```python
-     app.secret_key = 'YourSecretKey'
-     ```
-
-5. **Run the Application**
-   ```bash
-   flask run
-   ```
-   The app will run locally at `http://127.0.0.1:5000`.
 
 ## Project Structure
 
