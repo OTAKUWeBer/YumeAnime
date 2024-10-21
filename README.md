@@ -25,9 +25,8 @@
 ├── api/
 │   ├── app.py                   # Main Flask application
 │   ├── scrapers/                # Directory for web scraping logic
-│   │   ├── gogo.py              # GogoAnimeScraper implementation
 │   │   ├── __init__.py          # Scraper initialization
-│   │   └── __pycache__/         # Compiled Python files (ignored in version control)
+│   │   └── gogo.py              # GogoAnimeScraper implementation
 │   ├── static/                  # Static assets (CSS, images, etc.)
 │   │   └── images/              # Directory for images
 │   │       ├── logo.png         # Site logo
@@ -41,6 +40,7 @@
 │       └── watch.html           # Episode streaming template
 ├── README.md                    # Project documentation
 ├── requirements.txt             # Python dependencies
+├── LICENSE                      # MIT license
 └── vercel.json                  # Vercel deployment configuration
 ```
 
