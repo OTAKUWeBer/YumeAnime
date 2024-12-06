@@ -11,6 +11,10 @@
         "src": "/(.*)",
         "dest": "api/app.py"
       }
-    ]
+    ],
+    "env": {
+      "MY_VARIABLE": "value",
+      "SECRET_KEY": "mysecretkey"
+    }
   }
   
