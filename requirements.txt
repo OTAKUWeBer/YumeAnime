@@ -1,0 +1,6 @@
+Flask[async]
+aiohttp
+beautifulsoup4
+bcrypt
+pymongo
+cryptography

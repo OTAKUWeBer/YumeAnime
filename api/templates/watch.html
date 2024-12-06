@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Watch Episode</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Poppins', sans-serif;
+            position: relative;
+        }
+
+        h1 {
+            color: #bb86fc;
+            margin: 80px 0 20px;
+            font-size: 2.2em;
+            text-align: center;
+        }
+
+        .video-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 90%;
+            height: 70%;
+            margin: 0;
+            overflow: hidden;
+            border-radius: 10px;
+            background-color: #1e1e1e;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+
+        .episode-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            width: 90%;
+        }
+
+        .episode-navigation button {
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        .episode-navigation button:hover {
+            background-color: #9b70db;
+        }
+
+        p {
+            color: #e0e0e0;
+            font-size: 1.2em;
+        }
+
+        a {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #bb86fc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: #9b70db;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin: 30px 0;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            text-decoration: none;
+            color: #bb86fc;
+            background-color: transparent;
+            border: 2px solid #bb86fc;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .back-button:hover {
+            background-color: #bb86fc;
+            color: #121212;
+        }
+
+        .no-video-message {
+            text-align: center;
+            font-size: 18px;
+            color: #ffffff;
+            padding: 20px;
+            background-color: #000000;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        /* Add media query for smaller screens */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+                margin-top: 100px;
+            }
+
+            .back-button {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+            }
+
+            .episode-navigation {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .episode-navigation button {
+                margin: 10px 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.location.href='/episodes/{{ back_to_ep }}'">Back to Episodes</button>
+    <h1>Watch Episode {{ Episode|replace('-', '.') }}{% if episode_number %} (Episode {{ episode_number }}){% endif %}</h1>
+    {% if '-' in Episode or 'Special' in Episode or '.' in Episode %}
+    <p style="color: red;">Warning: You can't navigate to next or previous on .5 and special episodes.</p>
+    {% endif %}
+    <div class="video-container">
+        {% if video_link %}
+            <video id="video" controls>
+                <source src="{{ video_link }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        {% else %}
+        <div class="no-video-message">
+            Sorry, no video available to watch. Please check if the URL is correct if you entered it manually. If you came here from the episodes page, please contact the admin (weber).
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="episode-navigation">
+        {% if prev_episode_url %}
+            <form action="{{ url_for('watch', eps_title=prev_episode_url.split('/')[-1]) }}" method="post">
+                <input type="hidden" name="episode_url" value="{{ prev_episode_url }}">
+                <button type="submit">
+                    Previous Episode {% if prev_episode_number %}({{ prev_episode_number }}){% endif %}
+                </button>
+            </form>
+        {% else %}
+            <div style="flex: 1;"></div>
+        {% endif %}
+
+        {% if next_episode_url %}
+            <form action="{{ url_for('watch', eps_title=next_episode_url.split('/')[-1]) }}" method="post">
+                <input type="hidden" name="episode_url" value="{{ next_episode_url }}">
+                <button type="submit">
+                    Next Episode {% if next_episode_number %}({{ next_episode_number }}){% endif %}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
+    <a href="/home">Back to Search</a>
+
+    <script>
+    
+        // Get the unique episode title or identifier
+        const episodeKey = "{{ eps_title }}"; // Use the unique title passed from the backend
+        const storageKey = `video-progress-${episodeKey}`; // Create a unique key for each episode
+
+        // Access the video element
+        const video = document.getElementById('video');
+
+        // Restore the last saved playback position
+        video.addEventListener('loadedmetadata', () => {
+            const savedPosition = localStorage.getItem(storageKey);
+            if (savedPosition) {
+                video.currentTime = parseFloat(savedPosition);
+            }
+        });
+
+        // Save the playback position periodically (every 1.5 seconds)
+        const savePlaybackPosition = () => {
+            localStorage.setItem(storageKey, video.currentTime);
+        };
+        const intervalId = setInterval(savePlaybackPosition, 1500);
+
+        // Clear the interval and saved position when the video ends
+        video.addEventListener('ended', () => {
+            localStorage.removeItem(storageKey);
+            clearInterval(intervalId); // Stop the interval when the video ends
+            console.log(`Video ended for ${episodeKey}. Cleared saved position.`);
+        });
+
+        // Clear the interval if the video element is no longer needed
+        window.addEventListener('beforeunload', () => {
+            clearInterval(intervalId);
+        });
+    
+        // Add optional fullscreen toggle on click
+        video.addEventListener('click', () => {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) { // Chrome, Safari
+                video.webkitRequestFullscreen();
+            } else if (video.mozRequestFullScreen) { // Firefox
+                video.mozRequestFullScreen();
+            } else if (video.msRequestFullscreen) { // IE/Edge
+                video.msRequestFullscreen();
+            }
+        });
+
+        // Key event listeners for fullscreen and play/pause
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'f') { // Fullscreen toggle
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    video.requestFullscreen();
+                }
+            }
+
+            if (event.key === ' ') { // Play/pause toggle
+                event.preventDefault(); // Prevent scrolling down the page
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+        });
+    </script>
+    
+</body>
+</html>

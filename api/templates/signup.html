@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Animez - Sign Up</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta property="og:title" content="Animez Sign Up" />
+    <meta property="og:description" content="Create your Animez account to watch and download anime." />
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo.png') }}" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh; /* Full height to center vertically */
+            justify-content: center; /* Center vertically */
+        }
+
+        .form-container {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .form-container input {
+            width: calc(100% - 20px); /* Make width less than 100% to account for padding */
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #121212;
+            background-color: #e0e0e0; /* Background color for better visibility */
+        }
+
+        .form-container button {
+            padding: 8px; /* Smaller padding for a smaller button */
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            cursor: pointer;
+            font-size: 14px; /* Smaller font size */
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            width: 60%; /* Center the button and make it smaller */
+            margin: 10px auto 0; /* Center the button with auto margins */
+            display: block; /* Ensure the button is a block element */
+        }
+
+        .form-container button:hover {
+            background-color: #9b70db;
+        }
+
+        .form-container p {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .form-container .error {
+            color: red;
+            text-align: center;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="form-container">
+        <h2>Sign Up</h2>
+        <form action="{{ url_for('signup') }}" method="POST">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required minlength="6">
+            <button type="submit">Sign Up</button> <!-- Centered smaller button -->
+        </form>
+        <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a>.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul>
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    </div>
+{% endblock %}

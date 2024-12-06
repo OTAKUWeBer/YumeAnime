@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>YumeAnime - Dive into Anime</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta property="og:title" content="YumeAnime" />
+    <meta property="og:description" content="Watch and download your favorite anime effortlessly. Created by @weberz." />
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo.png') }}" />
+    <style>
+        /* Announcement Bar Styling */
+        .announcement-bar {
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: center;
+            font-size: 1.2rem;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .announcement-bar p {
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .announcement-bar .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .announcement-bar .close-btn:hover {
+            color: #bb86fc;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Navigation bar with glass effect */
+        .navbar {
+            display: flex;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            padding: 15px 0;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar a {
+            color: #bb86fc;
+            padding: 10px 20px;
+            margin: 0 10px;
+            text-decoration: none;
+            font-size: 1rem;
+            border-radius: 20px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: rgba(187, 134, 252, 0.2);
+            color: #f5f5f5;
+            transform: scale(1.1);
+        }
+
+        /* Title Styling */
+        h1 {
+            font-weight: 700;
+            text-align: center;
+            margin: 40px 0 30px;
+            font-size: 2.5rem;
+            color: #bb86fc;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Search container styling */
+        .search-container {
+            margin-bottom: 50px;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .search-container form {
+            display: flex;
+            width: 100%;
+            border-radius: 50px;
+            overflow: hidden;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .search-container input {
+            padding: 15px;
+            width: 70%;
+            background-color: rgba(44, 47, 72, 0.9);
+            border: none;
+            font-size: 16px;
+            color: #f5f5f5;
+            outline: none;
+            transition: background-color 0.3s;
+        }
+
+        .search-container input:focus {
+            background-color: rgba(44, 47, 72, 1);
+        }
+
+        .search-container button {
+            padding: 15px;
+            width: 30%;
+            background-color: #bb86fc;
+            border: none;
+            color: #121212;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-container button:hover {
+            background-color: #a371e9;
+        }
+
+        /* Suggestions styling */
+        .suggestions-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+        }
+
+        /* Anime list item with card effect */
+        .anime-item {
+            background: rgba(45, 45, 68, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            width: 160px;
+            transition: transform 0.4s ease, box-shadow 0.3s;
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .anime-item:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.7);
+        }
+
+        .anime-item img {
+            width: 100px;
+            height: 150px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
+        .anime-item h3 {
+            font-size: 1rem;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            color: #f5f5f5;
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        }
+
+        .anime-item button {
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .anime-item button:hover {
+            background-color: #a371e9;
+            transform: scale(1.05);
+        }
+
+        .dropdown {
+            position: absolute; /* Positioning for the dropdown */
+            top: 20px; /* Adjust for top position */
+            right: 20px; /* Adjust for right position */
+        }
+
+        .dropdown-button {
+            background: none; /* Remove background */
+            color: white; /* Set text color to white */
+            border: none;
+            cursor: pointer;
+            font-size: 20px; /* Emoji size */
+            transition: color 0.3s;
+        }
+
+        .dropdown-button:hover {
+            color: #bb86fc; /* Change color on hover */
+        }
+
+        /* Dropdown content */
+        .dropdown-content {
+            display: none; /* Hidden by default */
+            position: absolute;
+            background-color: #1e1e1e;
+            min-width: 160px;
+            z-index: 1;
+            border-radius: 5px; /* Rounded borders */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            right: 0; /* Align to the right of the dropdown button */
+        }
+
+        .dropdown-content a {
+            color: #e0e0e0;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #bb86fc; /* Change background on hover */
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block; /* Show dropdown on hover */
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+                margin-top: 20px;
+            }
+
+            .navbar a {
+                font-size: 0.9rem;
+                padding: 8px;
+                margin: 0 5px;
+            }
+
+            .search-container input, .search-container button {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .anime-item {
+                width: 120px;
+            }
+
+            .anime-item img {
+                width: 80px;
+                height: 120px;
+            }
+
+            .anime-item h3 {
+                font-size: 0.9rem;
+            }
+
+            .anime-item button {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <!-- Announcement Bar -->
+    <div class="announcement-bar" id="announcement-bar">
+        <p>This website scrapes content from Gogo. Unfortunately, Gogo hasn't uploaded new episodes since November 24, 2024. If Gogo goes down, this website may cease to function as well. I will attempt to scrape from another website, but it will take time. Let's hope for the best. Many similar websites rely on Gogo.</p>
+        <button class="close-btn" onclick="closeAnnouncement()">×</button>
+    </div>
+
+    <!-- Navigation Bar -->
+    <div class="navbar">
+        <a href="/home">Home</a>
+        <a href="/new-seasons">New Season</a>
+        <a href="/movies">Movies</a>
+        <a href="/trending">Trending</a>
+        <div class="dropdown">
+            <button class="dropdown-button">⚙️</button> <!-- Settings emoji -->
+            <div class="dropdown-content">
+                <a href="/settings">Settings</a>
+                {% if session.get('username') %}
+                    <a href="/profile">Account</a>
+                    <a href="/logout">Logout</a>
+                {% else %}
+                    <a href="/login">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <h1>Welcome to YumeAnime</h1>
+
+    <!-- Search Container -->
+    <div class="search-container">
+        <form action="/search" method="get">
+            <input type="text" name="q" placeholder="Search anime..." required>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    {% if suggestions and suggestions|length > 0 %}
+    <h3>{{ info }}</h3>
+    <div class="suggestions-container">
+        {% for title, info in suggestions.items() %}
+            <div class="anime-item">
+                <img src="{{ info.image_url }}" alt="{{ title }}">
+                <h3>{{ title }}</h3>
+                {% set anime_slug = info.link.split('/')[-1].split('-episode')[0] %}
+                <button onclick="window.location.href='/episodes/{{ anime_slug }}'">View Episodes</button>
+            </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="text-align: center; font-size: 1.1rem; margin-top: 20px;">No anime found. Try searching for something else!</p>
+    {% endif %}
+    
+    <script>
+        // Function to close the announcement bar
+        function closeAnnouncement() {
+            document.getElementById('announcement-bar').style.display = 'none';
+        }
+
+        let prevScrollPos = window.pageYOffset;
+        const navbar = document.querySelector('.navbar');
+    
+        window.onscroll = () => {
+            let currentScrollPos = window.pageYOffset;
+            if (prevScrollPos > currentScrollPos) {
+                navbar.style.top = "0"; // Show navbar when scrolling up
+            } else {
+                navbar.style.top = "-100px"; // Hide navbar when scrolling down
+            }
+            prevScrollPos = currentScrollPos;
+        };
+    </script>
+{% endblock %}

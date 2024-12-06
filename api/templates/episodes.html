@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Episode List</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px auto;
+            width: 90%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #bb86fc;
+            font-size: 2em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        @media (min-width: 768px) {
+            h1 {
+                font-size: 2.5em;
+            }
+        }
+
+        .header {
+            width: 100%;
+            margin: 10px auto;
+            text-align: center;
+        }
+
+        .total-episodes {
+            font-size: 1em;
+            color: #bb86fc;
+            margin-bottom: 10px;
+        }
+
+        .search-container {
+            width: 90%;
+            margin: 0 auto;
+        }
+
+        .search-container input {
+            padding: 10px;
+            width: 100%;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            background-color: #1e1e1e;
+            color: #c9d1d9;
+            outline: none;
+        }
+
+        .search-container input::placeholder {
+            color: #b0b0b0;
+        }
+
+        .episode-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px auto;
+            padding: 0 10px;
+        }
+
+        .episode-card {
+            background-color: rgba(45, 45, 68, 0.9);
+            padding: 15px;
+            margin: 5px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s;
+            font-size: 1.2em;
+            color: #bb86fc;
+            text-align: center;
+            min-width: 40px;
+            max-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .episode-card:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+        }
+
+        .watched {
+            background-color: #424242;
+            color: #757575;
+        }
+
+        .back-button {
+            margin: 20px 0;
+            padding: 10px 20px;
+            font-size: 1em;
+            text-decoration: none;
+            color: #bb86fc;
+            border: 2px solid #bb86fc;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #bb86fc;
+            color: #121212;
+        }
+
+        /* Adjusting for desktop */
+        @media (min-width: 768px) {
+            .search-container input {
+                width: 60%; /* Adjust the width to 60% for desktop */
+                max-width: 400px; /* Set a max width to prevent it from being too long */
+            }
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .episode-card {
+                font-size: 1.2em;
+                padding: 10px;
+                min-width: 40px;
+                max-height: 50px;
+            }
+
+            .back-button {
+                font-size: 0.9em;
+                padding: 8px 16px;
+            }
+
+            .total-episodes {
+                font-size: 0.9em;
+            }
+
+            .search-container input {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-container">
+        <h1>Episodes of {{ title }}</h1>
+    </div>
+
+    <div class="header">
+        <div class="total-episodes">Total Episodes: {{ total_episodes }} | Status: {{ status }} | Genre: {{ genre }}</div>
+        <div class="search-container">
+            <input type="text" id="episodeSearch" placeholder="Search by episode number..." onkeyup="filterEpisodes()">
+        </div>
+    </div>
+
+    <div class="episode-list" id="episodeList">
+        {% for episode, epn in episodes %}
+        {% set episode_title = episode.split('/')[-1] %}
+        <div class="episode-card" onclick="window.location.href='{{ url_for('watch', eps_title=episode_title) }}'">
+            {{ epn }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <p><a href="{{ url_for('index') }}" class="back-button">Back to Search</a></p>
+
+    <script>
+        function filterEpisodes() {
+            var input, filter, episodeList, episodeCards, epn, i;
+            input = document.getElementById('episodeSearch');
+            filter = input.value.toUpperCase();
+            episodeList = document.getElementById("episodeList");
+            episodeCards = episodeList.getElementsByClassName('episode-card');
+
+            for (i = 0; i < episodeCards.length; i++) {
+                epn = episodeCards[i].innerText || episodeCards[i].textContent;
+                if (epn.toUpperCase().indexOf(filter) > -1) {
+                    episodeCards[i].style.display = "";
+                } else {
+                    episodeCards[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+</html>

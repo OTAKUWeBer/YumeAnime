@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>YumeAnime - Page Not Found</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta property="og:title" content="YumeAnime - Page Not Found" />
+    <meta property="og:description" content="The page you are looking for does not exist. Created by @weberz." />
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo.png') }}" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center;
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #bb86fc;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        p {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #f5f5f5;
+        }
+
+        .back-home-button {
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background-color 0.3s;
+        }
+
+        .back-home-button:hover {
+            background-color: #a371e9;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            p {
+                font-size: 1.2rem;
+            }
+
+            .back-home-button {
+                padding: 12px 24px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="error-container">
+        <h1>404 - Page Not Found</h1>
+        {% if error_message %}
+            <p>{{ error_message }}</p>
+        {% else %}
+            <p>The page you are looking for does not exist.</p>
+        {% endif %}
+        <button class="back-home-button" onclick="window.location.href='/home'">Go back to Home</button>
+    </div>
+{% endblock %}
