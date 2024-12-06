@@ -4,4 +4,4 @@ beautifulsoup4
 bcrypt
 pymongo
 cryptography
-dotenv
+python-dotenv
