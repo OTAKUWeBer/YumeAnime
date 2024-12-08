@@ -250,6 +250,10 @@ def page_not_found(e):
 def internal_server_error(e):
     """Redirect 500 errors to urgent-announcement."""
     return redirect("/urgent-announcement")
+@app.errorhandler(504)
+def gateway_timeout_error(e):
+    return redirect("/urgent-announcement")
+
 
 
 
