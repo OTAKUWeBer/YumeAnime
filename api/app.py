@@ -3,8 +3,8 @@ import re
 from markupsafe import escape
 from dotenv import load_dotenv
 import os
-from .scrapers import GogoAnimeScraper
-from .utils import create_user, get_user, user_exists
+from scrapers import GogoAnimeScraper
+from utils import create_user, get_user, user_exists
 
 load_dotenv()
 
@@ -12,6 +12,13 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_KEY")
 
 GS = GogoAnimeScraper()
+
+@app.before_request
+def redirect_to_urgent():
+    # Define the paths that should be redirected
+    redirect_paths = ['/home', '/search', '/movies', '/trending', '/new-seasons','/login', '/signup', '/profile']
+    if request.path in redirect_paths:
+        return redirect("/urgent-announcement")
 
 @app.route('/', methods=["GET"])
 async def index():
@@ -231,16 +238,6 @@ def logout():
     flash('You have been logged out.')
     return redirect(url_for('home'))
 
-@app.route("/urgent-announcement")
-def urgent_announcement():
-    return render_template("urgent-announcement.html")
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-async def catch_all(path):
-    """Redirect all routes to urgent-announcement."""
-    return redirect("/urgent-announcement")
-
 @app.errorhandler(404)
 def page_not_found(e):
     """Redirect 404 errors to urgent-announcement."""
@@ -250,12 +247,10 @@ def page_not_found(e):
 def internal_server_error(e):
     """Redirect 500 errors to urgent-announcement."""
     return redirect("/urgent-announcement")
-@app.errorhandler(504)
-def gateway_timeout_error(e):
-    return redirect("/urgent-announcement")
 
-
-
+@app.route("/urgent-announcement")
+def urgent_announcement():
+    return render_template("urgent-announcement.html")
 
 if __name__ == '__main__':
     app.run(debug=True)
