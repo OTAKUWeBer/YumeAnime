@@ -240,6 +240,7 @@ def urgent_announcement():
 def catch_all(path):
     """Redirect all routes to urgent-announcement."""
     return redirect("/urgent-announcement")
+
 @app.errorhandler(404)
 def page_not_found(e):
     """Redirect 404 errors to urgent-announcement."""
