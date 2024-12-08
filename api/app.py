@@ -231,6 +231,10 @@ def logout():
     flash('You have been logged out.')
     return redirect(url_for('home'))
 
+@app.route("/urgent-announcement")
+def urgent_announcement():
+    return render_template("urgent-announcement.html")
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def catch_all(path):
@@ -245,9 +249,7 @@ def internal_server_error(e):
     """Redirect 500 errors to urgent-announcement."""
     return redirect("/urgent-announcement")
 
-@app.route("/urgent-announcement")
-def urgent_announcement():
-    return render_template("urgent-announcement.html")
+
 
 if __name__ == '__main__':
     app.run(debug=True)
