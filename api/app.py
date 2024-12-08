@@ -3,8 +3,8 @@ import re
 from markupsafe import escape
 from dotenv import load_dotenv
 import os
-from scrapers import GogoAnimeScraper
-from utils import create_user, get_user, user_exists
+from .scrapers import GogoAnimeScraper
+from .utils import create_user, get_user, user_exists
 
 load_dotenv()
 
