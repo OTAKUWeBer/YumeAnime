@@ -15,8 +15,7 @@ GS = GogoAnimeScraper()
 
 @app.route('/', methods=["GET"])
 async def index():
-    # return redirect("/home")
-    return redirect("urgent-announcement")
+    return redirect("/home")
 
 
 @app.route('/home', methods=["GET"])
@@ -25,8 +24,7 @@ async def home():
     info = "Latest Episodes"
     try:
         suggestions = await GS.home_page()
-        # return render_template('index.html', suggestions=suggestions, info=info)
-        return redirect("urgent-announcement")
+        return render_template('index.html', suggestions=suggestions, info=info)
     except Exception as e:
         return render_template('index.html', error=f"Error fetching home page data: {e}", info=info)
   
@@ -37,8 +35,7 @@ async def new_season():
     info = "Latest Seasons"
     try:
         suggestions = await GS.new_season()
-        # return render_template('index.html', suggestions=suggestions, info=info)
-        return redirect("urgent-announcement")
+        return render_template('index.html', suggestions=suggestions, info=info)
     except Exception as e:
         return render_template('index.html', error=f"Error fetching home page data: {e}", info=info)
  
@@ -49,10 +46,9 @@ async def movies():
     info = "Latest Movies"
     try:
         suggestions = await GS.movies_page()
-        # return render_template('index.html', suggestions=suggestions, info=info)
-        return redirect("urgent-announcement")
+        return render_template('index.html', suggestions=suggestions, info=info)
     except Exception as e:
-        return render_template('index.html', error=f"Error fetching home page data: {e}", info=info) 
+        return render_template('index.html', error=f"Error fetching home page data: {e}", info=info)   
     
     
 @app.route('/trending', methods=["GET"])
@@ -61,8 +57,7 @@ async def trending_anime():
     info = "Popular Animes"
     try:
         suggestions = await GS.trending()
-        # return render_template('index.html', suggestions=suggestions, info=info)
-        return redirect("urgent-announcement")
+        return render_template('index.html', suggestions=suggestions, info=info)
     except Exception as e:
         return render_template('index.html', error=f"Error fetching home page data: {e}", info=info)    
 
@@ -72,16 +67,14 @@ async def search():
     """Handle the search request and display results."""
     search_query = request.args.get('q')
     if not search_query:
-        # return render_template('index.html', error="Please enter an anime name.")
-        return redirect("urgent-announcement")
+        return render_template('index.html', error="Please enter an anime name.")
 
     try:
         results = await GS.search_anime_query(search_query)
         if not results:
             return render_template('index.html', error="No results found.")
 
-        # return render_template('results.html', query=search_query, results=results)
-        return redirect("urgent-announcement")
+        return render_template('results.html', query=search_query, results=results)
     except Exception as e:
         return render_template('index.html', error=f"Error fetching search results: {e}")
 
@@ -104,8 +97,7 @@ async def episodes(anime_title):
         # Zip episode_links and episode_nums together
         episodes = zip(episode_links, episode_number)
 
-        # return render_template('episodes.html', episodes=episodes, total_episodes=total_episodes, title=title, status=status, genre=genre)
-        return redirect("urgent-announcement")
+        return render_template('episodes.html', episodes=episodes, total_episodes=total_episodes, title=title, status=status, genre=genre)
 
     except Exception as e:
         return render_template('index.html', error=f"Error fetching episodes: {e}")
@@ -164,16 +156,15 @@ async def watch(eps_title):
             prev_episode_number = None
             next_episode_number = None
 
-        # return render_template('watch.html',
-        #                        back_to_ep=back_to_ep,
-        #                        video_link=video_link,
-        #                        Episode=current_episode if current_episode else "Special",
-        #                        prev_episode_url=prev_episode_url,
-        #                        next_episode_url=next_episode_url,
-        #                        prev_episode_number=prev_episode_number,
-        #                        next_episode_number=next_episode_number,
-        #                        eps_title=eps_title)
-        return redirect("urgent-announcement")
+        return render_template('watch.html',
+                               back_to_ep=back_to_ep,
+                               video_link=video_link,
+                               Episode=current_episode if current_episode else "Special",
+                               prev_episode_url=prev_episode_url,
+                               next_episode_url=next_episode_url,
+                               prev_episode_number=prev_episode_number,
+                               next_episode_number=next_episode_number,
+                               eps_title=eps_title)
     except Exception as e:
         return render_template('404.html', error_message="An error occurred while fetching the episode.")
 
@@ -192,23 +183,19 @@ def signup():
         # Check if the username already exists
         if user_exists(username):
             flash('Username already exists!')
-            # return redirect(url_for('signup'))
-            return redirect("urgent-announcement")
+            return redirect(url_for('signup'))
         
         # Enforce password length requirement
         if len(password) < 6:
             flash('Password must be at least 6 characters long.')
-            # return redirect(url_for('signup'))
-            return redirect("urgent-announcement")
+            return redirect(url_for('signup'))
         
         # Create the user if validations pass
         create_user(username, password)
         flash('Signup successful! You can now log in.')
-        # return redirect(url_for('login'))
-        return redirect("urgent-announcement")
+        return redirect(url_for('login'))
     
-    # return render_template('signup.html')
-    return redirect("urgent-announcement")
+    return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -226,8 +213,7 @@ def login():
         else:
             flash('Invalid username or password.')
     
-    # return render_template('login.html')
-    return redirect("urgent-announcement")
+    return render_template('login.html')
 
 @app.route('/profile')
 def profile():
@@ -236,8 +222,7 @@ def profile():
         user_id = session['_id']
         user = "hold"
         return render_template('profile.html', username=username, user_id=user_id, user=user)
-    # return redirect(url_for('login'))
-    return redirect("urgent-announcement")
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
@@ -245,6 +230,20 @@ def logout():
     session.pop('_id', None)
     flash('You have been logged out.')
     return redirect(url_for('home'))
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    """Redirect all routes to urgent-announcement."""
+@app.errorhandler(404)
+def page_not_found(e):
+    """Redirect 404 errors to urgent-announcement."""
+    return redirect("/urgent-announcement")
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    """Redirect 500 errors to urgent-announcement."""
+    return redirect("/urgent-announcement")
 
 @app.route("/urgent-announcement")
 def urgent_announcement():
