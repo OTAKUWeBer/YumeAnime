@@ -237,7 +237,7 @@ def urgent_announcement():
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def catch_all(path):
+async def catch_all(path):
     """Redirect all routes to urgent-announcement."""
     return redirect("/urgent-announcement")
 
