@@ -13,12 +13,12 @@ app.secret_key = os.getenv("FLASK_KEY")
 
 GS = GogoAnimeScraper()
 
-@app.before_request
-def redirect_to_urgent():
-    # Define the paths that should be redirected
-    redirect_paths = ['/home', '/search', '/movies', '/trending', '/new-seasons','/login', '/signup', '/profile']
-    if request.path in redirect_paths:
-        return redirect("/urgent-announcement")
+# @app.before_request
+# def redirect_to_urgent():
+#     # Define the paths that should be redirected
+#     redirect_paths = ['/home', '/search', '/movies', '/trending', '/new-seasons','/login', '/signup', '/profile']
+#     if request.path in redirect_paths:
+#         return redirect("/urgent-announcement")
 
 @app.route('/', methods=["GET"])
 async def index():
@@ -238,19 +238,19 @@ def logout():
     flash('You have been logged out.')
     return redirect(url_for('home'))
 
-@app.errorhandler(404)
-def page_not_found(e):
-    """Redirect 404 errors to urgent-announcement."""
-    return redirect("/urgent-announcement")
+# @app.errorhandler(404)
+# def page_not_found(e):
+#     """Redirect 404 errors to urgent-announcement."""
+#     return redirect("/urgent-announcement")
 
-@app.errorhandler(500)
-def internal_server_error(e):
-    """Redirect 500 errors to urgent-announcement."""
-    return redirect("/urgent-announcement")
+# @app.errorhandler(500)
+# def internal_server_error(e):
+#     """Redirect 500 errors to urgent-announcement."""
+#     return redirect("/urgent-announcement")
 
-@app.route("/urgent-announcement")
-def urgent_announcement():
-    return render_template("urgent-announcement.html")
+# @app.route("/urgent-announcement")
+# def urgent_announcement():
+#     return render_template("urgent-announcement.html")
 
 if __name__ == '__main__':
     app.run(debug=True)
