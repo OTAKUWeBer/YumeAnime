@@ -180,7 +180,6 @@ async def watch(eps_title):
 def page_not_found(e):
     return render_template('404.html'), 404
 
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
