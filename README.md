@@ -18,32 +18,6 @@
 - **Web Scraping**: Custom scraper using `GogoAnimeScraper`
 - **Deployment**: Vercel
 
-## Project Structure
-
-```
-.
-├── api/
-│   ├── app.py                   # Main Flask application
-│   ├── scrapers/                # Directory for web scraping logic
-│   │   ├── __init__.py          # Scraper initialization
-│   │   └── gogo.py              # GogoAnimeScraper implementation
-│   ├── static/                  # Static assets (CSS, images, etc.)
-│   │   └── images/              # Directory for images
-│   │       ├── logo.png         # Site logo
-│   │       └── rm_logo.png      # Additional logo
-│   └── templates/               # HTML templates for the site
-│       ├── 404.html             # Custom 404 error page
-│       ├── base.html            # Base HTML template
-│       ├── episodes.html        # Episode listing template
-│       ├── index.html           # Homepage template
-│       ├── results.html         # Search results template
-│       └── watch.html           # Episode streaming template
-├── README.md                    # Project documentation
-├── requirements.txt             # Python dependencies
-├── LICENSE                      # MIT license
-└── vercel.json                  # Vercel deployment configuration
-```
-
 ## API Routes
 
 ### Home Page
