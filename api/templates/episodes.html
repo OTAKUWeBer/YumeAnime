@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Episodes - {{ title }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Updated to a more modern dark gradient */
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+        }
+        
+        /* Enhanced episode card animations and styling */
+        .episode-grid {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .episode-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* Improved card styling with better colors */
+            background: linear-gradient(145deg, #1e293b, #334155);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .episode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            /* Updated shimmer effect color */
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .episode-card:hover::before {
+            left: 100%;
+        }
+        
+        .episode-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            /* Enhanced hover shadow */
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.4);
+            border-color: rgba(59, 130, 246, 0.6);
+        }
+        
+        .list-view .episode-card {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            transform: none !important;
+        }
+        
+        .list-view .episode-number {
+            min-width: 4rem;
+            margin-right: 1rem;
+        }
+        
+        .list-view .episode-title {
+            flex: 1;
+        }
+
+        /* Added genre tag styling */
+        .genre-tag {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .genre-tag:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Added glass morphism effect for header */
+        .header-glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Simplified header with logo -->
+    <div class="fixed top-4 left-4 z-50">
+    {% include 'nav_base.html' %}
+    </div>
+
+    <div class="container mx-auto px-4 pt-20 pb-8">
+        <!-- Made header section more compact with reduced padding and spacing -->
+        <div class="mb-6 header-glass rounded-xl p-4 mb-6">
+            <!-- Reduced gap and made layout more compact -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <!-- Reduced title size significantly -->
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent leading-tight">{{ title }}</h1>
+                <!-- Made anime info button smaller and more subtle -->
+                <a href="/anime/{{ anime_id }}" 
+                   class="inline-flex items-center justify-center px-4 py-2 bg-slate-700/80 hover:bg-slate-600/80 text-white font-medium rounded-lg transition-all duration-300 text-sm min-h-[36px] w-auto shadow-sm hover:shadow-md">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Info
+                </a>
+            </div>
+            
+            <!-- Made status badges smaller and more compact -->
+            <div class="flex flex-wrap items-center gap-2 text-xs mb-4">
+                <span class="bg-purple-600/80 px-3 py-1.5 rounded-full font-medium">
+                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4z"></path>
+                    </svg>
+                    {{ total_episodes }} Episodes
+                </span>
+                <span class="bg-green-600/80 px-3 py-1.5 rounded-full font-medium">
+                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {{ status }}
+                </span>
+                
+                <!-- Made genre tags smaller and more compact -->
+                <div class="flex flex-wrap gap-1.5">
+                    {% if genre %}
+                        {% set genres = genre.split(',') %}
+                        {% for single_genre in genres %}
+                            {% set clean_genre = single_genre.strip() %}
+                            {% set genre_url = clean_genre.lower().replace(' ', '-') %}
+                            <a href="/genre/{{ genre_url }}" 
+                               class="bg-blue-600/80 hover:bg-blue-500/80 px-3 py-1.5 rounded-full font-medium transition-all duration-200 inline-flex items-center group">
+                                <svg class="w-3 h-3 mr-1 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                </svg>
+                                {{ clean_genre }}
+                            </a>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Made search and controls section more compact -->
+            <div class="flex flex-col gap-3 max-w-2xl">
+                <!-- Search bar -->
+                <div class="flex-1 relative">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input 
+                        type="text" 
+                        id="episodeSearch" 
+                        placeholder="Search episodes..." 
+                        onkeyup="filterEpisodes()"
+                        class="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 min-h-[40px] backdrop-blur-sm text-sm"
+                    >
+                </div>
+                
+                <!-- Updated toggle to switch between grid and list view -->
+                <div class="flex items-center justify-center sm:justify-start">
+                    <label class="flex items-center cursor-pointer min-h-[40px] group">
+                        <input 
+                            type="checkbox" 
+                            id="showTitles" 
+                            onchange="toggleViewMode()"
+                            class="sr-only"
+                        >
+                        <div class="relative">
+                            <div class="block bg-slate-600 w-14 h-7 rounded-full shadow-inner transition-colors duration-300"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-all duration-300 shadow-lg"></div>
+                        </div>
+                        <span class="ml-3 text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                            </svg>
+                            List View
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Improved mobile grid layout and touch targets -->
+        <div class="episode-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 sm:gap-4" id="episodeList">
+            {% for episode_id, episode_number, episode_title in episodes %}
+            <!-- Reduced padding from p-6 to p-4 and made cards more compact -->
+            {% set parts = episode_id.split('?') %}
+            {% set path = parts[0] %}
+            {% set query = parts[1] if parts|length > 1 else '' %}
+            {% if 'ep=' in query %}
+            {% set ep_value = query.split('ep=')[1] %}
+            {% else %}
+            {% set ep_value = query %}
+            {% endif %}
+
+            <!-- Enhanced episode cards with better styling -->
+            <div class="episode-card rounded-xl p-4 sm:p-5 cursor-pointer group text-center relative z-10 min-h-[70px] sm:min-h-[90px] flex flex-col justify-center shadow-lg"
+                onclick="window.location.href='{{ url_for("main.watch", eps_title=path, ep=ep_value) }}'">
+
+                <div class="episode-number text-lg sm:text-xl font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{{ episode_number }}</div>
+                <div class="episode-title text-xs text-gray-300 leading-tight hidden font-medium group-hover:text-gray-200 transition-colors">
+                    {{ episode_title }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Enhanced back button -->
+        <div class="text-center mt-12">
+            <a href="{{ url_for('main.index') }}" 
+               class="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-xl transition-all duration-300 min-h-[44px] w-full sm:w-auto max-w-xs shadow-lg hover:shadow-xl hover:scale-105">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Home
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function filterEpisodes() {
+            const input = document.getElementById('episodeSearch');
+            const filter = input.value.toLowerCase();
+            const episodeCards = document.querySelectorAll('#episodeList > div');
+            
+            episodeCards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+
+        function toggleViewMode() {
+            const checkbox = document.getElementById('showTitles');
+            const titles = document.querySelectorAll('.episode-title');
+            const dot = document.querySelector('.dot');
+            const toggle = document.querySelector('.relative > div:first-child');
+            const episodeList = document.getElementById('episodeList');
+            
+            if (checkbox.checked) {
+                // Switch to list view
+                titles.forEach(title => title.classList.remove('hidden'));
+                dot.style.transform = 'translateX(28px)';
+                toggle.classList.remove('bg-slate-600');
+                toggle.classList.add('bg-blue-600');
+                
+                episodeList.classList.remove('grid', 'grid-cols-3', 'sm:grid-cols-4', 'md:grid-cols-6', 'lg:grid-cols-8', 'xl:grid-cols-10', 'gap-3', 'sm:gap-4');
+                episodeList.classList.add('list-view', 'space-y-3');
+            } else {
+                // Switch to grid view
+                titles.forEach(title => title.classList.add('hidden'));
+                dot.style.transform = 'translateX(0px)';
+                toggle.classList.remove('bg-blue-600');
+                toggle.classList.add('bg-slate-600');
+                
+                // Remove list view classes and restore grid
+                episodeList.classList.remove('list-view', 'space-y-3');
+                episodeList.classList.add('grid', 'grid-cols-3', 'sm:grid-cols-4', 'md:grid-cols-6', 'lg:grid-cols-8', 'xl:grid-cols-10', 'gap-3', 'sm:gap-4');
+            }
+        }
+    </script>
+</body>
+</html>

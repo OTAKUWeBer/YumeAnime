@@ -1,0 +1,25 @@
+<!-- Current Episode Banner Component -->
+{% if episodes and episodes.episodes %}
+    {% for episode in episodes.episodes %}
+        {% if episode_number and episode.number == episode_number|int %}
+        <div class="current-episode-banner">
+            <div class="flex items-center gap-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                        {{ episode.number }}
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-semibold text-white mb-1">
+                        Now Watching: {{ episode.title if episode.title else 'Episode ' + episode.number|string }}
+                    </h2>
+                    <p class="text-purple-300 text-sm">Episode {{ episode.number }} of {{ episodes.episodes|length }}</p>
+                </div>
+                <div class="text-sm text-gray-400 hidden sm:block" id="currentProgress">
+                    <!-- Progress will be shown here -->
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}

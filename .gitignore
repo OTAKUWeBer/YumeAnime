@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+api/scrapes/__pycache__/
+api/utils/__pycache__/
+.env
+*.zip

@@ -1,0 +1,17 @@
+<div id="load-more-container" class="text-center py-8 hidden">
+    <button id="load-more-btn" onclick="loadMoreItems()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-semibold transition-colors">
+        Load More
+    </button>
+    <div id="loading-more" class="hidden mt-4">
+        <div class="flex justify-center items-center space-x-1 mb-2">
+            <div class="animate-bounce text-2xl" style="animation-delay: 0ms;">⭐</div>
+            <div class="animate-bounce text-2xl" style="animation-delay: 100ms;">⭐</div>
+            <div class="animate-bounce text-2xl" style="animation-delay: 200ms;">⭐</div>
+        </div>
+        <p class="text-gray-400 animate-pulse">Loading more anime...</p>
+    </div>
+</div>
+
+<div id="pagination-info" class="text-center py-4 text-gray-400 hidden">
+    Showing <span id="items-shown">0</span> of <span id="total-items">0</span> items
+</div>

@@ -1,0 +1,34 @@
+<!-- Video Player Component -->
+<div class="video-container mb-6 md:mb-8 relative" id="videoContainer">
+    {% if video_link %}
+        <!-- Added crossorigin="anonymous" to fix CORS issues with subtitle loading -->
+        <video id="videoPlayer" class="video-player" controls preload="metadata" crossorigin="anonymous"
+               data-video-url="{{ video_link }}"
+               data-subtitles='{{ subtitles | tojson | safe }}'
+               data-intro='{{ intro | tojson | safe }}'
+               data-outro='{{ outro | tojson | safe }}'>
+            Your browser does not support the video tag.
+        </video>
+        
+        <!-- Skip Buttons -->
+        <div class="skip-buttons" id="skipButtons">
+            <button id="skipIntroBtn" class="skip-button" style="display: none;">
+                Skip Intro
+            </button>
+            <button id="skipOutroBtn" class="skip-button" style="display: none;">
+                Skip Outro
+            </button>
+        </div>
+    {% else %}
+        <div class="flex items-center justify-center h-full bg-gray-900 text-gray-400">
+            <div class="text-center">
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <p class="text-lg">Video not available</p>
+                <p class="text-sm opacity-75">Please try again later</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+ 

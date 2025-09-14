@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YumeAnime - Your Profile</title>
+  <link rel="icon" type="image/png" href="/static/images/logo.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta property="og:title" content="YumeAnime - Your Profile" />
+  <meta property="og:description" content="Manage your anime preferences and watch history." />
+  <meta property="og:image" content="/static/images/logo.png" />
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/global-styles.css') }}">
+</head>
+<body class="bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-gray-200 min-h-screen flex flex-col items-center">
+
+
+  {% include 'nav_base.html' %}
+
+  <!-- Profile Section -->
+  <div class="w-full max-w-4xl mt-24 px-4 animate-fadeIn">
+
+    <!-- Avatar + Name -->
+    <div class="flex flex-col items-center text-center mb-10">
+      <div class="w-32 h-32 rounded-full border-4 border-purple-400 shadow-xl overflow-hidden">
+        <img src="/static/images/default-avatar.png" alt="Profile Avatar" class="w-full h-full object-cover">
+      </div>
+      <h1 class="text-3xl md:text-4xl font-bold text-purple-400 mt-4 drop-shadow-lg">{{ username }}</h1>
+      <p class="text-gray-400 text-sm">Anime Enthusiast ✨</p>
+    </div>
+
+    <!-- Profile Information Grid -->
+    <div class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-purple-400/30">
+      <h2 class="text-2xl font-semibold text-purple-300 mb-6 text-center">Profile Information</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white/5 p-5 rounded-xl border-l-4 border-purple-400 hover:scale-105 hover:bg-white/10 transition">
+          <p class="text-xs uppercase text-purple-400 font-semibold">User ID</p>
+          <p class="text-lg font-medium">{{ user_id }}</p>
+        </div>
+
+        <div class="bg-white/5 p-5 rounded-xl border-l-4 border-purple-400 hover:scale-105 hover:bg-white/10 transition">
+          <p class="text-xs uppercase text-purple-400 font-semibold">Email</p>
+          <p class="text-lg font-medium">{{ user.email if user.email else 'Not provided' }}</p>
+        </div>
+
+        <div class="bg-white/5 p-5 rounded-xl border-l-4 border-purple-400 hover:scale-105 hover:bg-white/10 transition">
+          <p class="text-xs uppercase text-purple-400 font-semibold">Joined Date</p>
+          <p class="text-lg font-medium">{{ user.joined_date }}</p>
+        </div>
+
+        <div class="bg-white/5 p-5 rounded-xl border-l-4 border-purple-400 hover:scale-105 hover:bg-white/10 transition">
+          <p class="text-xs uppercase text-purple-400 font-semibold">Account Status</p>
+          <p class="text-lg font-medium">Active</p>
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      {% if error %}
+      <div class="mt-6 bg-red-500/20 text-red-300 px-4 py-3 rounded-lg border-l-4 border-red-500">
+        {{ error }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Replaced inline JavaScript with external file references -->
+  <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new NavbarManager();
+    });
+  </script>
+
+</body>
+</html>

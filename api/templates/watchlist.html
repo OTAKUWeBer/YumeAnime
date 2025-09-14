@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Watchlist - YumeAnime</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/anti-flicker.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/watchlist-hover.css') }}">
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white min-h-screen">
+    {% include 'nav_base.html' %}
+
+    <main class="pt-24 max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-4">My Watchlist</h1>
+            
+            {% include 'partials/watchlist-filters.html' %}
+            {% include 'partials/watchlist-stats.html' %}
+        </div>
+
+        {% include 'partials/watchlist-states.html' %}
+
+        <div id="watchlist-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6 hidden">
+        </div>
+
+        {% include 'partials/watchlist-pagination.html' %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/modules/watchlist-filters.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modules/watchlist-stats.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modules/watchlist-ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/watchlist.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+/* Simple Hover Effects for Watchlist Cards */
+.anime-card {
+  transition: transform 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Simplified hover to just scale up */
+.anime-card:hover {
+  transform: scale(1.05);
+}
+
+/* Updated play button to match index page purple style with triangle icon */
+.anime-card .play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  background: #9333ea; /* Purple-600 to match index page */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Replaced text arrow with CSS triangle to match index page */
+.anime-card .play-button::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 8px solid white;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  margin-left: 2px;
+}
+
+.anime-card:hover .play-button {
+  opacity: 1;
+}
+
+/* Removed all complex animations, shimmer effects, and excessive styling */

@@ -1,0 +1,60 @@
+<!-- Created new settings panel component for auto skip controls -->
+<div class="settings-panel fixed top-20 left-4 z-40 bg-black/80 backdrop-blur-sm border border-purple-500/30 rounded-lg p-4 hidden" id="settingsPanel">
+    <h3 class="text-lg font-semibold text-purple-400 mb-4">Player Settings</h3>
+    
+    <div class="space-y-3">
+        <!-- Skip Intro Setting -->
+        <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-300">Show Skip Buttons</label>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="skipIntroToggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+        </div>
+
+        <!-- Auto Skip Intro Setting -->
+        <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-300">Auto Skip Intro</label>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="autoSkipIntroToggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+        </div>
+
+        <!-- Auto Skip Outro Setting -->
+        <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-300">Auto Skip Outro</label>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="autoSkipOutroToggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+        </div>
+
+        <!-- Autoplay Next Setting -->
+        <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-300">Autoplay Next Episode</label>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="autoplayNextToggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+        </div>
+
+        <!-- Volume Setting -->
+        <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-300">Default Volume</label>
+            <input type="range" id="volumeSlider" min="0" max="100" value="80" class="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider">
+        </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-gray-600">
+        <p class="text-xs text-gray-400">Auto skip delays: Intro (3s), Outro (2s)</p>
+    </div>
+</div>
+
+<!-- Settings Toggle Button -->
+<button id="settingsToggle" class="fixed top-20 left-4 z-50 p-2 bg-black/20 backdrop-blur-sm border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/10 transition-all duration-300">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+</button>

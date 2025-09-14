@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Search Results - YumeAnime</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-config.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global-styles.css') }}">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    {% include 'nav_base.html' %}
+
+    <main class="pt-16">
+        <section class="px-4 pb-16">
+            <br></br>
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 md:mb-8 gap-2">
+                    <h1 class="text-2xl md:text-3xl font-bold text-white">Search Results for "{{ query }}"</h1>
+                    <span class="text-gray-400 text-sm md:text-base">{{ results|length }} results</span>
+                </div>
+
+                {% if results %}
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6">
+                    {% for title, info in results.items() %}
+                    <div class="group cursor-pointer block">
+                        {% set anime_slug = info.link.split('/')[-1] %}
+                        <a href="/episodes/{{ anime_slug }}" class="block">
+                            <div class="relative overflow-hidden rounded-lg bg-gray-800/50 backdrop-blur-sm border border-white/10 transition-all duration-300 group-hover:scale-105 group-hover:border-purple-400/50 group-hover:shadow-2xl group-hover:shadow-purple-500/20">
+                                <div class="aspect-[3/4] relative">
+                                    <img src="{{ info.image_url }}" alt="{{ title }}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                                    {% if info.rating %}
+                                    <div class="absolute top-2 right-2 bg-red-600/90 text-white px-2 py-1 rounded text-xs font-bold">
+                                        {{ info.rating }}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if info.episodes %}
+                                    <div class="absolute bottom-2 right-2 flex gap-1">
+                                        {% if info.episodes.sub %}
+                                        <div class="bg-indigo-500/90 text-white px-2 py-1 rounded flex items-center gap-1 text-xs font-bold">
+                                            <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                                                <path d="M18 11H6V9h12v2zm4-6v14c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h16c1.1 0 2 .9 2 2zm-2 0H4v14h16V5z"/>
+                                                <path d="M7 15h2v-2H7v2zm4 0h2v-2h-2v2zm4 0h2v-2h-2v2z"/>
+                                            </svg>
+                                            {{ info.episodes.sub }}
+                                        </div>
+                                        {% endif %}
+                                        {% if info.episodes.dub %}
+                                        <div class="bg-emerald-500/90 text-white px-2 py-1 rounded flex items-center gap-1 text-xs font-bold">
+                                            <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                                            </svg>
+                                            {{ info.episodes.dub }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div class="w-10 h-10 md:w-12 md:h-12 bg-purple-600 rounded-full flex items-center justify-center shadow-lg min-h-[44px] min-w-[44px]">
+                                            <div class="w-0 h-0 border-l-[6px] md:border-l-[8px] border-l-white border-t-[4px] md:border-t-[6px] border-t-transparent border-b-[4px] md:border-b-[6px] border-b-transparent ml-1"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 md:mt-3">
+                                <h3 class="text-white font-medium line-clamp-2 group-hover:text-purple-400 transition-colors text-xs md:text-sm leading-tight">
+                                    {{ title }}
+                                </h3>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-12 md:py-16">
+                    <div class="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 md:mb-6 bg-gray-800/50 rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 md:w-12 md:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg md:text-xl font-semibold text-white mb-2">No results found</h3>
+                    <p class="text-gray-400 mb-4 md:mb-6 text-sm md:text-base px-4">Try searching with different keywords or check your spelling.</p>
+                    <a href="{{ url_for('main.home') }}" class="inline-flex items-center px-4 md:px-6 py-2 md:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors text-sm md:text-base min-h-[44px]">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        Back to Home
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+    
+    <script src="{{ url_for('static', filename='js/search-validation.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            new SearchValidator();
+        });
+    </script>
+</body>
+</html>

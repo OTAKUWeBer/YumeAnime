@@ -1,0 +1,32 @@
+<!-- Login Button Component -->
+<div class="flex items-center space-x-4">
+    <button id="loginBtnWidget" class="transparent-btn opacity-0">Login</button>
+
+    <div id="profileBoxWidget" class="opacity-0 items-center space-x-2 relative">
+    </div>
+    
+    <!-- Static profile dropdown (will be hidden when dynamic one is created) -->
+    <div id="profileDropdown" class="hidden absolute top-full right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-50">
+        <div class="py-2">
+            <a href="/profile" class="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors">
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                Profile
+            </a>
+            <a href="/watchlist" class="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors">
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                </svg>
+                Watchlist
+            </a>
+            <hr class="border-white/10 my-2">
+            <button id="logoutBtn" class="flex items-center w-full px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors">
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3v1"></path>
+                </svg>
+                Logout
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,1 @@
+from .hianime import HianimeScraper

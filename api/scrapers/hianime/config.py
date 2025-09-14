@@ -1,0 +1,1 @@
+API_URL = "https://hianime-ts-api.vercel.app/api/v2/hianime"

@@ -1,0 +1,30 @@
+<!-- Episode Navigation Component -->
+<div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 md:gap-4 mb-6 md:mb-8">
+    {% if prev_episode_url %}
+        <a href="{{ prev_episode_url }}" class="nav-button order-1 sm:order-none">
+            <span class="hidden sm:inline">← Previous Episode</span>
+            <span class="sm:hidden">← Prev</span>
+            {% if prev_episode_number %}<span class="ml-1">{{ prev_episode_number }}</span>{% endif %}
+        </a>
+    {% else %}
+        <button class="nav-button order-1 sm:order-none" disabled>
+            <span class="hidden sm:inline">← Previous Episode</span>
+            <span class="sm:hidden">← Prev</span>
+        </button>
+    {% endif %}
+
+    {% if next_episode_url %}
+        <a href="{{ next_episode_url }}" class="nav-button order-2 sm:order-none" id="nextEpisodeBtn">
+            <span class="hidden sm:inline">Next Episode</span>
+            <span class="sm:hidden">Next</span>
+            {% if next_episode_number %}<span class="ml-1">{{ next_episode_number }}</span>{% endif %}
+            <span class="ml-1">→</span>
+        </a>
+    {% else %}
+        <button class="nav-button order-2 sm:order-none" disabled>
+            <span class="hidden sm:inline">Next Episode</span>
+            <span class="sm:hidden">Next</span>
+            <span class="ml-1">→</span>
+        </button>
+    {% endif %}
+</div>

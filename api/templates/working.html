@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YumeAnime - Working On It...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-config.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global-styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    {% include 'nav_base.html' %}
+
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+
+    <main class="relative min-h-screen flex items-center justify-center pt-32">
+        <div class="text-center px-4 max-w-2xl mx-auto">
+            <div class="mb-8 flex justify-center">
+                <div class="relative">
+                    <div class="w-24 h-24 border-4 border-purple-600/30 rounded-full animate-spin-slow"></div>
+                    <div class="absolute top-2 left-2 w-20 h-20 border-4 border-t-purple-400 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                    <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-purple-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse-slow"></div>
+                </div>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-bold text-white mb-6 animate-glow">
+                Working On It
+            </h1>
+
+            <div class="flex items-center justify-center space-x-2 mb-8">
+                <p class="text-xl sm:text-2xl text-gray-300">We're building something amazing</p>
+                <div class="loading-dots flex space-x-1">
+                    <span class="w-2 h-2 bg-purple-400 rounded-full inline-block"></span>
+                    <span class="w-2 h-2 bg-purple-400 rounded-full inline-block"></span>
+                    <span class="w-2 h-2 bg-purple-400 rounded-full inline-block"></span>
+                </div>
+            </div>
+
+            <p class="text-gray-400 text-lg mb-12 leading-relaxed animate-float">
+                This project is a solo endeavor, thoughtfully designed to deliver a unique and engaging anime experience. 
+                Thank you for your patience — something exceptional is on the way.
+            </p>
+
+            <div class="space-y-4 mb-12">
+                <div class="flex items-center justify-between text-sm text-gray-400 max-w-md mx-auto">
+                    <span>Design</span>
+                    <span>70%</span>
+                </div>
+                <div class="w-full max-w-md mx-auto bg-gray-700 rounded-full h-2">
+                    <div class="bg-gradient-to-r from-purple-600 to-purple-400 h-2 rounded-full animate-pulse" style="width: 85%"></div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm text-gray-400 max-w-md mx-auto">
+                    <span>Development</span>
+                    <span>60%</span>
+                </div>
+                <div class="w-full max-w-md mx-auto bg-gray-700 rounded-full h-2">
+                    <div class="bg-gradient-to-r from-purple-600 to-purple-400 h-2 rounded-full animate-pulse" style="width: 72%"></div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm text-gray-400 max-w-md mx-auto">
+                    <span>Testing</span>
+                    <span>45%</span>
+                </div>
+                <div class="w-full max-w-md mx-auto bg-gray-700 rounded-full h-2">
+                    <div class="bg-gradient-to-r from-purple-600 to-purple-400 h-2 rounded-full animate-pulse" style="width: 45%"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/working-page.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            new WorkingPageManager();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="anilist-client-id" content="{{ config.ANILIST_CLIENT_ID }}">
+    
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global-styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/anti-flicker.css') }}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-gray-900 text-white" style="background-color: #111827 !important;">
+
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
+    
+    <script src="{{ url_for('static', filename='js/navbar.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            new NavbarManager();
+        });
+    </script>
+</body>
+</html>

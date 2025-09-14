@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Watch {% if eps_title %}{{ eps_title }}{% else %}Anime{% endif %}{% if Episode %} - Episode {{ Episode }}{% endif %}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type=\"image/png\" href="{{ url_for('static', filename='images/logo.png') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+    
+    <!-- Added modular CSS file for watch page styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/watch-styles.css') }}">
+</head>
+<body class="min-h-screen text-white">
+    <!-- Navigation -->
+    {% include 'nav_base.html' %}
+
+    <!-- Removed extra settings panel component -->
+
+    <!-- Info Button -->
+    <a href="/anime/{{ eps_title if eps_title else 'unknown' }}"
+    class="fixed top-20 right-4 md:right-8 z-40 inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-black/20 backdrop-blur-sm border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/10 transition-all duration-300 text-sm md:text-base">
+        <span class="font-semibold truncate max-w-[150px] sm:max-w-xs">
+            {{ 'Anime Info' }}
+        </span>
+        <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    </a>
+
+    <div class="container mx-auto px-4 md:px-6 py-24 md:py-24 max-w-6xl">
+        <!-- Title Section -->
+        <div class="text-center mb-6 md:mb-8 pt-4 md:pt-0">
+            <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-purple-400 mb-2 px-2 leading-tight">
+                {% if eps_title %}
+                    {{ eps_title.rsplit('-', 1)[0].replace('-', ' ').title() }}
+                {% else %}
+                    Loading...
+                {% endif %}
+            </h1>
+            <p class="text-lg md:text-xl text-gray-300">
+                {% if Episode %}
+                    Episode {{ Episode }}
+                {% else %}
+                    Episode not found
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Replaced inline components with modular includes -->
+        <!-- Current Episode Banner -->
+        {% include 'components/current-episode-banner.html' %}
+
+        <!-- Video Player -->
+        {% include 'components/video-player.html' %}
+
+        <!-- Episode Navigation -->
+        {% include 'components/episode-navigation.html' %}
+
+        <!-- Language Toggle -->
+        {% include 'components/language-toggle.html' %}
+
+        <!-- Episodes Grid -->
+        {% include 'components/episodes-grid.html' %}
+    </div>
+
+    <!-- Load JavaScript files in correct order without ES6 modules -->
+    <script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/hls-player.js') }}"></script>
+    <!-- Removed extra settings manager script -->
+    
+    <!-- Removed settings manager initialization -->
+</body>
+</html>
