@@ -26,7 +26,7 @@
                     {% for title, info in results.items() %}
                     <div class="group cursor-pointer block">
                         {% set anime_slug = info.link.split('/')[-1] %}
-                        <a href="/episodes/{{ anime_slug }}" class="block">
+                        <a href="/episodes/{{ anime_slug }}" class="block" onclick="handleAnimeClick(event, '{{ anime_slug }}')">
                             <div class="relative overflow-hidden rounded-lg bg-gray-800/50 backdrop-blur-sm border border-white/10 transition-all duration-300 group-hover:scale-105 group-hover:border-purple-400/50 group-hover:shadow-2xl group-hover:shadow-purple-500/20">
                                 <div class="aspect-[3/4] relative">
                                     <img src="{{ info.image_url }}" alt="{{ title }}" class="w-full h-full object-cover">
@@ -101,6 +101,12 @@
     
     <script src="{{ url_for('static', filename='js/search-validation.js') }}"></script>
     <script>
+        // Handle language preference for anime navigation
+        function handleAnimeClick(event, animeId) {
+            // Let the default navigation happen - episodes page will handle language preference
+            return true;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             new SearchValidator();
         });

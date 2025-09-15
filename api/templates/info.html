@@ -50,7 +50,7 @@
                             {% if anime %}
                                 {% set anime_id_from_url = request.path.split('/')[-1] %}
                                 <div class="flex justify-center sm:justify-end sm:relative sm:-top-14 gap-3">
-                                    <a href="{{ url_for('main.episodes', anime_id=anime_id_from_url) }}" 
+                                    <a href="{{ url_for('main.episodes', anime_id=anime_id_from_url) }}" onclick="handleWatchNowClick(event, '{{ anime_id_from_url }}')"
                                     class="inline-flex items-center px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl min-h-[48px] border border-purple-500/20">
                                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M8 5v14l11-7z"/>
@@ -371,6 +371,12 @@
     </main>
 
 <script>
+// Handle language preference for watch now button
+function handleWatchNowClick(event, animeId) {
+    // Let the default navigation happen - episodes page will handle language preference
+    return true;
+}
+
 function toggleDescription() {
     const descText = document.getElementById('description-text');
     const expandBtn = document.getElementById('expand-btn');

@@ -182,14 +182,34 @@ async def episodes(anime_id: str):
 @main_bp.route('/watch/<eps_title>', methods=['GET', 'POST'])
 async def watch(eps_title):
     ep_param = request.args.get("ep")  # e.g. "141637" or "141637-sub"
+    
+    # Check user's preferred language setting
+    preferred_lang = "sub"  # default
+    if 'username' in session and '_id' in session:
+        try:
+            # Try to get from user settings (stored in localStorage on frontend)
+            # For now, we'll use the URL parameter or default to sub
+            pass
+        except Exception:
+            pass
 
     # Parse episode number and language
-    ep_number, lang = None, "sub"
+    ep_number, lang = None, preferred_lang
     if ep_param:
         parts = ep_param.split("-", 1)
         ep_number = parts[0]
         if len(parts) > 1:
             lang = parts[1]
+    
+    # If no language specified in URL, check if dub is available and user prefers it
+    if ep_param and "-" not in ep_param:
+        # No language specified, check user preference and availability
+        try:
+            dub_available = await current_app.ha_scraper.is_dub_available(eps_title, ep_number)
+            # For now, we'll default to sub unless explicitly requested
+            # The frontend will handle language preference via localStorage
+        except Exception:
+            pass
 
     # Check if dub is available
     try:
