@@ -71,7 +71,7 @@
     <main class="pt-16">
         <!-- Added genre hero section with description -->
         <!-- Genre Hero Section -->
-        <section class="px-4 py-8 genre-gradient">
+        <section class="px-4 py-6 genre-gradient">
             <div class="max-w-7xl mx-auto text-center">
                 <div class="inline-flex items-center px-4 py-2 bg-purple-600/20 rounded-full border border-purple-400/30 mb-4">
                     <svg class="w-5 h-5 text-purple-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +88,7 @@
         <!-- Results Section -->
         <section class="px-4 pb-16">
             <div class="max-w-7xl mx-auto">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 md:mb-8 gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 md:mb-8 gap-2" style="padding-top: 20px;">
                     <h2 class="text-2xl md:text-3xl font-bold text-white">{{ genreName or (query|title + ' Anime') }}</h2>
                     <span class="text-gray-400 text-sm md:text-base">{{ animes|length if animes else 0 }} anime found</span>
                 </div>
