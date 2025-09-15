@@ -101,7 +101,7 @@
                     <!-- Removed float-animation class from the card -->
                     <div class="group cursor-pointer block">
                         <!-- Use anime.id for the link -->
-                        <a href="/episodes/{{ anime.id }}" class="block">
+                        <a href="/episodes/{{ anime.id }}" class="block" onclick="handleAnimeClick(event, '{{ anime.id }}')">
                             <div class="relative overflow-hidden rounded-lg bg-gray-800/50 backdrop-blur-sm border border-white/10 transition-all duration-300 group-hover:scale-105 group-hover:border-purple-400/50 group-hover:shadow-2xl group-hover:shadow-purple-500/20">
                                 <div class="aspect-[3/4] relative">
                                     <!-- Use anime.poster instead of info.image_url -->
@@ -183,6 +183,12 @@
         </section>
     </main>
     <script>
+        // Handle language preference for anime navigation
+        function handleAnimeClick(event, animeId) {
+            // Let the default navigation happen - episodes page will handle language preference
+            return true;
+        }
+
         // Search validation: prevent empty submissions
         const searchForm = document.getElementById('search-form');
         const searchInput = document.getElementById('search-input');

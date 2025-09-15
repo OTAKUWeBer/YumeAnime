@@ -202,9 +202,10 @@
             {% set ep_value = query %}
             {% endif %}
 
+            {% set user_lang = 'sub' %}
             <!-- Enhanced episode cards with better styling -->
             <div class="episode-card rounded-xl p-4 sm:p-5 cursor-pointer group text-center relative z-10 min-h-[70px] sm:min-h-[90px] flex flex-col justify-center shadow-lg"
-                onclick="window.location.href='{{ url_for("main.watch", eps_title=path, ep=ep_value) }}'">
+                onclick="navigateToEpisode('{{ path }}', '{{ ep_value }}')">
 
                 <div class="episode-number text-lg sm:text-xl font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{{ episode_number }}</div>
                 <div class="episode-title text-xs text-gray-300 leading-tight hidden font-medium group-hover:text-gray-200 transition-colors">
@@ -227,6 +228,25 @@
     </div>
 
     <script>
+        // Check user's preferred language and navigate accordingly
+        async function navigateToEpisode(path, epValue) {
+            try {
+                const settings = JSON.parse(localStorage.getItem('yumeAnimeSettings') || '{}');
+                const preferredLang = settings.preferredLanguage || 'sub';
+                
+                // If user prefers dub, check if it's available
+                if (preferredLang === 'dub') {
+                    // For now, we'll try dub and let the server redirect to sub if not available
+                    window.location.href = `/watch/${path}?ep=${epValue}-dub`;
+                } else {
+                    window.location.href = `/watch/${path}?ep=${epValue}-sub`;
+                }
+            } catch (error) {
+                // Fallback to sub
+                window.location.href = `/watch/${path}?ep=${epValue}-sub`;
+            }
+        }
+
         function filterEpisodes() {
             const input = document.getElementById('episodeSearch');
             const filter = input.value.toLowerCase();

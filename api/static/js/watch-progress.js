@@ -23,14 +23,16 @@ class WatchProgressManager {
         autoplayNext: true,
         skipIntro: true,
         rememberPosition: true,
-        defaultVolume: 80
+        defaultVolume: 80,
+        preferredLanguage: 'sub'
       };
     } catch (error) {
       return {
         autoplayNext: true,
         skipIntro: true,
         rememberPosition: true,
-        defaultVolume: 80
+        defaultVolume: 80,
+        preferredLanguage: 'sub'
       };
     }
   }
