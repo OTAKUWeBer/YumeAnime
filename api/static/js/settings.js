@@ -238,6 +238,117 @@ class SettingsManager {
         }
     }
 
+    // Password Change Modal Functions
+    showPasswordModal() {
+        const modal = document.getElementById('password-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+    }
+
+    hidePasswordModal() {
+        const modal = document.getElementById('password-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = ''; // Restore scrolling
+            // Clear form fields
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+            this.hidePasswordMessage();
+        }
+    }
+
+    setPasswordChangeLoading(loading) {
+        const button = document.querySelector('#password-modal button[onclick="submitPasswordChange()"]');
+        const text = document.getElementById('password-change-text');
+        const spinner = document.getElementById('password-change-spinner');
+        
+        if (button && text && spinner) {
+            button.disabled = loading;
+            if (loading) {
+                text.classList.add('hidden');
+                spinner.classList.remove('hidden');
+            } else {
+                text.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        }
+    }
+
+    showPasswordMessage(message, type = 'error') {
+        const messageEl = document.getElementById('password-change-message');
+        if (messageEl) {
+            messageEl.textContent = message;
+            messageEl.className = `mt-4 text-center text-sm ${type === 'success' ? 'text-green-400' : 'text-red-400'}`;
+            messageEl.classList.remove('hidden');
+        }
+    }
+
+    hidePasswordMessage() {
+        const messageEl = document.getElementById('password-change-message');
+        if (messageEl) {
+            messageEl.classList.add('hidden');
+        }
+    }
+
+    async submitPasswordChange() {
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        // Validation
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            this.showPasswordMessage('Please fill in all fields');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            this.showPasswordMessage('New passwords do not match');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            this.showPasswordMessage('New password must be at least 6 characters long');
+            return;
+        }
+
+        this.setPasswordChangeLoading(true);
+        this.hidePasswordMessage();
+
+        try {
+            const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showPasswordMessage('Password changed successfully!', 'success');
+                setTimeout(() => {
+                    this.hidePasswordModal();
+                    this.showNotification('Password changed successfully!', 'success');
+                }, 1500);
+            } else {
+                this.showPasswordMessage(data.message || 'Failed to change password');
+            }
+        } catch (error) {
+            console.error('Password change error:', error);
+            this.showPasswordMessage('Network error occurred. Please try again.');
+        } finally {
+            this.setPasswordChangeLoading(false);
+        }
+    }
+
     clearCache() {
         try {
             // Clear various caches
@@ -346,7 +457,43 @@ function saveAllSettings() {
     }
 }
 
+// Password Modal Functions
+function changePassword() {
+    if (window.settingsManager) {
+        window.settingsManager.showPasswordModal();
+    }
+}
+
+function closePasswordModal() {
+    if (window.settingsManager) {
+        window.settingsManager.hidePasswordModal();
+    }
+}
+
+function submitPasswordChange() {
+    if (window.settingsManager) {
+        window.settingsManager.submitPasswordChange();
+    }
+}
+
 // Initialize settings manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.settingsManager = new SettingsManager();
+    
+    // Close modal when clicking outside of it
+    const modal = document.getElementById('password-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closePasswordModal();
+            }
+        });
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !document.getElementById('password-modal').classList.contains('hidden')) {
+            closePasswordModal();
+        }
+    });
 });
