@@ -42,7 +42,7 @@
                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
                             <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 {% for genre in anime.genres %}
-                                    <a href="{{ url_for('main.genre', genre_name=genre|lower) }}" class="inline-block bg-purple-700 px-2 py-1 rounded-full text-xs text-white hover:bg-purple-800 no-underline">
+                                    <a href="{{ url_for('main.genre', genre_name=genre|lower|replace(' ', '-')) }}" class="inline-block bg-purple-700 px-2 py-1 rounded-full text-xs text-white hover:bg-purple-800 no-underline">
                                         {{ genre }}
                                     </a>
                                 {% endfor %}
