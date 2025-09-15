@@ -23,17 +23,21 @@
             box-shadow: 0 8px 32px rgba(147, 51, 234, 0.1);
         }
         
+        /* Mobile-optimized toggle switch */
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 48px;
-            height: 24px;
+            width: 56px;  /* Increased from 48px */
+            height: 28px; /* Increased from 24px */
+            flex-shrink: 0;
+            margin-left: 16px;
         }
         
         .toggle-switch input {
             opacity: 0;
             width: 0;
             height: 0;
+            position: absolute;
         }
         
         .slider {
@@ -44,20 +48,23 @@
             right: 0;
             bottom: 0;
             background-color: #374151;
-            transition: 0.3s;
-            border-radius: 24px;
+            transition: all 0.3s ease;
+            border-radius: 28px;
+            min-width: 56px;
+            min-height: 28px;
         }
         
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px;
-            width: 18px;
+            height: 22px;  /* Increased from 18px */
+            width: 22px;   /* Increased from 18px */
             left: 3px;
             bottom: 3px;
             background-color: white;
-            transition: 0.3s;
+            transition: all 0.3s ease;
             border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         input:checked + .slider {
@@ -65,7 +72,49 @@
         }
         
         input:checked + .slider:before {
-            transform: translateX(24px);
+            transform: translateX(28px); /* Adjusted for larger size */
+        }
+        
+        /* Hover and focus states for better accessibility */
+        .slider:hover {
+            background-color: #4B5563;
+        }
+        
+        input:checked + .slider:hover {
+            background-color: #A855F7;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.5);
+        }
+        
+        /* Active state for better touch feedback */
+        .toggle-switch:active .slider:before {
+            width: 26px;
+        }
+        
+        /* Media query for very small devices */
+        @media (max-width: 480px) {
+            .toggle-switch {
+                width: 52px;
+                height: 26px;
+                margin-left: 12px;
+            }
+            
+            .slider {
+                border-radius: 26px;
+                min-width: 52px;
+                min-height: 26px;
+            }
+            
+            .slider:before {
+                height: 20px;
+                width: 20px;
+            }
+            
+            input:checked + .slider:before {
+                transform: translateX(26px);
+            }
         }
         
         .range-slider {
@@ -144,7 +193,7 @@
                     
                     <div class="space-y-6">
                         <div class="flex items-center justify-between">
-                            <div>
+                            <div class="flex-1 pr-4">
                                 <h3 class="text-white font-medium">Auto-play Next Episode</h3>
                                 <p class="text-sm text-gray-400">Automatically play the next episode when current one ends</p>
                             </div>
@@ -155,7 +204,7 @@
                         </div>
                         
                         <div class="flex items-center justify-between">
-                            <div>
+                            <div class="flex-1 pr-4">
                                 <h3 class="text-white font-medium">Skip Intro/Outro</h3>
                                 <p class="text-sm text-gray-400">Show skip buttons for intro and outro sequences</p>
                             </div>
@@ -314,7 +363,7 @@
                     </div>
                     
                     <div class="space-y-3 text-sm text-gray-300">
-                        <p><strong>Version:</strong> v1.7.3 — Akatsuki 🌸</p>
+                        <p><strong>Version:</strong> v1.7.3 – Akatsuki 🌸</p>
                         <p><strong>Last Updated:</strong> September 2025</p>
                         <p><strong>Developer:</strong> @OTAKUWeBer</p>
                         <div class="pt-3 border-t border-gray-700/50">
