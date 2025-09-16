@@ -6,7 +6,10 @@ from typing import Dict
 import asyncio
 
 from ..utils.helpers import verify_turnstile
-from ..models.user import create_user, get_user, user_exists, email_exists, get_user_by_id
+from ..models.user import (
+    create_user, get_user, user_exists, email_exists, get_user_by_id,
+    get_anilist_connection_info
+)
 from ..core.config import Config
 from ..utils.helpers import (
     sync_anilist_watchlist_blocking, store_sync_progress, 
@@ -150,12 +153,17 @@ def me():
         if username and user_id:
             user = get_user_by_id(user_id)
             if user:
+                # Get comprehensive AniList connection info
+                anilist_info = get_anilist_connection_info(user_id)
+                
                 return jsonify({
                     'username': username,
                     '_id': str(user['_id']),
-                    'anilist_authenticated': bool(user.get('anilist_id')),  # Check if user has anilist_id
+                    'anilist_authenticated': anilist_info.get('connected', False),
                     'avatar': user.get('avatar'),
-                    'anilist_id': user.get('anilist_id')
+                    'anilist_id': user.get('anilist_id'),
+                    'anilist_stats': user.get('anilist_stats', {}),
+                    'auth_method': user.get('auth_method', 'local')
                 }), 200
         
         # No valid session
@@ -164,6 +172,35 @@ def me():
     except Exception as e:
         current_app.logger.error(f"Error checking session: {e}")
         return jsonify(None), 401
+
+@api_bp.route('/anilist/status', methods=['GET'])
+def get_anilist_status():
+    """Get detailed AniList connection status for the current user."""
+    if 'username' not in session or '_id' not in session:
+        return jsonify({'connected': False, 'message': 'Not logged in.'}), 401
+    
+    try:
+        user_id = session.get('_id')
+        connection_info = get_anilist_connection_info(user_id)
+        
+        return jsonify(connection_info), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting AniList status: {e}")
+        return jsonify({
+            'connected': False, 
+            'error': 'Failed to check AniList connection status'
+        }), 500
+
+@api_bp.route('/anilist/disconnect', methods=['POST'])
+def disconnect_anilist():
+    """API endpoint to disconnect AniList account."""
+    if 'username' not in session or '_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in.'}), 401
+    
+    # Import the auth blueprint function
+    from ..routes.auth import unlink_anilist_account
+    return unlink_anilist_account()
 
 @api_bp.route('/sync-progress', methods=['GET'])
 def sync_progress():

@@ -2,16 +2,19 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from urllib.parse import urlencode
 import secrets
 import requests
+import logging
 
 from ..utils.helpers import verify_turnstile, get_anilist_user_info
 from ..models.user import (
     get_user, user_exists, email_exists, create_user, get_user_by_id,
     get_user_by_anilist_id, create_anilist_user, update_anilist_user,
-    link_anilist_to_existing_user, unlink_anilist_from_user
+    link_anilist_to_existing_user, unlink_anilist_from_user, delete_anilist_data,
+    connect_anilist_to_user
 )
 from ..core.config import Config
 
 auth_bp = Blueprint('auth', __name__)
+logger = logging.getLogger(__name__)
 
 @auth_bp.route('/anilist/link')
 def link_anilist_account():
@@ -100,18 +103,19 @@ def anilist_callback():
                     flash('This AniList account is already linked to your account.', 'info')
                 else:
                     flash('This AniList account is already linked to another user account.', 'error')
-                return redirect(url_for('auth.profile'))
+                return redirect(url_for('main.settings'))
             
-            # Link AniList account to existing user
-            result = link_anilist_to_existing_user(current_user_id, user_info, access_token)
+            # Connect AniList account to existing user
+            result = connect_anilist_to_user(current_user_id, user_info, access_token)
             if result:
                 session['anilist_authenticated'] = True
+                session['anilist_id'] = user_info['id']
                 current_app.logger.info(f"AniList account linked to user {current_username}")
-                flash('AniList account successfully linked to your account!', 'success')
+                flash('AniList account successfully connected! You can now sync your watchlist.', 'success')
             else:
-                flash('Failed to link AniList account. Please try again.', 'error')
+                flash('Failed to connect AniList account. It may already be linked to another account.', 'error')
             
-            return redirect(url_for('auth.profile'))
+            return redirect(url_for('main.settings'))
         
         else:
             # NORMAL LOGIN/SIGNUP MODE (user is not logged in)
@@ -130,6 +134,7 @@ def anilist_callback():
             session['username'] = username
             session['_id'] = user_id
             session['anilist_authenticated'] = True
+            session['anilist_id'] = user_info['id']
             session.permanent = True
             
             current_app.logger.info(f"User {username} logged in via AniList successfully")
@@ -150,14 +155,103 @@ def unlink_anilist_account():
     
     try:
         user_id = session.get('_id')
-        result = unlink_anilist_from_user(user_id)
+        
+        # Get user data before unlinking to log the action
+        user = get_user_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found.'}), 404
+        
+        anilist_id = user.get('anilist_id')
+        username = user.get('username', 'Unknown')
+        
+        # Delete all AniList-related data from the user
+        result = delete_anilist_data(user_id)
         
         if result:
+            # Update session to reflect the change
             session['anilist_authenticated'] = False
-            return jsonify({'success': True, 'message': 'AniList account unlinked successfully.'})
+            if 'anilist_id' in session:
+                del session['anilist_id']
+            
+            logger.info(f"AniList account (ID: {anilist_id}) disconnected from user {username} (ID: {user_id})")
+            return jsonify({
+                'success': True, 
+                'message': 'AniList account disconnected successfully. All AniList data has been removed from your account.'
+            })
         else:
-            return jsonify({'success': False, 'message': 'Failed to unlink AniList account.'})
+            logger.error(f"Failed to disconnect AniList account for user {username} (ID: {user_id})")
+            return jsonify({'success': False, 'message': 'Failed to disconnect AniList account. Please try again.'})
             
     except Exception as e:
-        current_app.logger.error(f"Error unlinking AniList account: {e}")
-        return jsonify({'success': False, 'message': 'An error occurred.'})
+        logger.error(f"Error disconnecting AniList account for user {session.get('username', 'Unknown')}: {e}")
+        return jsonify({'success': False, 'message': 'An unexpected error occurred. Please try again.'})
+
+@auth_bp.route('/anilist/connect', methods=['GET'])
+def connect_anilist_account():
+    """Connect AniList account - same as link but with different messaging."""
+    # Check if user is already logged in
+    if 'username' not in session or '_id' not in session:
+        flash('Please log in first to connect your AniList account.', 'warning')
+        return redirect(url_for('main.home'))
+    
+    # Check if already connected
+    user_id = session.get('_id')
+    user = get_user_by_id(user_id)
+    if user and user.get('anilist_id'):
+        flash('Your AniList account is already connected.', 'info')
+        return redirect(url_for('main.settings'))
+    
+    # Generate a random state parameter for security
+    state = secrets.token_urlsafe(32)
+    session['oauth_state'] = state
+    session['connecting_account'] = True  # Flag to indicate we're connecting
+    
+    # Build the authorization URL
+    params = {
+        'client_id': Config.ANILIST_CLIENT_ID,
+        'redirect_uri': Config.ANILIST_REDIRECT_URI,
+        'response_type': 'code',
+        'state': state
+    }
+    
+    auth_url = f"https://anilist.co/api/v2/oauth/authorize?{urlencode(params)}"
+    return redirect(auth_url)
+
+@auth_bp.route('/anilist/disconnect', methods=['POST'])
+def disconnect_anilist_account():
+    """Disconnect AniList account from current user (alternative endpoint)."""
+    return unlink_anilist_account()
+
+@auth_bp.route('/anilist/status', methods=['GET'])
+def anilist_status():
+    """Get current AniList connection status for the user."""
+    if 'username' not in session or '_id' not in session:
+        return jsonify({'connected': False, 'message': 'Not logged in.'}), 401
+    
+    try:
+        user_id = session.get('_id')
+        user = get_user_by_id(user_id)
+        
+        if not user:
+            return jsonify({'connected': False, 'message': 'User not found.'}), 404
+        
+        is_connected = bool(user.get('anilist_id'))
+        anilist_data = {}
+        
+        if is_connected:
+            anilist_data = {
+                'anilist_id': user.get('anilist_id'),
+                'avatar': user.get('avatar'),
+                'anilist_stats': user.get('anilist_stats', {}),
+                'connected_at': user.get('updated_at')
+            }
+        
+        return jsonify({
+            'connected': is_connected,
+            'anilist_data': anilist_data if is_connected else None,
+            'message': 'Connected to AniList' if is_connected else 'Not connected to AniList'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error checking AniList status for user {session.get('username', 'Unknown')}: {e}")
+        return jsonify({'connected': False, 'message': 'Error checking connection status.'}), 500
