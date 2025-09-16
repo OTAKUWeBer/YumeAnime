@@ -661,21 +661,6 @@ class LoginWidget {
           </svg>
           Watchlist
         </a>
-        ${isAniListUser ? `
-          <button id="syncAnilistBtnDropdown" class="flex items-center w-full px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors" role="menuitem">
-            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            Sync AniList
-          </button>
-        ` : `
-          <a href="/auth/anilist/connect" class="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors" role="menuitem">
-            <svg class="w-4 h-4 mr-3" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6.361 2.943 0 21.056h4.06l1.077-3.133h6.875l1.077 3.133H17.15L10.789 2.943zm1.77 5.392 2.18 6.336H5.951zm10.365 9.794V8.113c3.02.501 4.473 2.273 4.473 4.728 0 2.456-1.453 4.227-4.473 4.728z"/>
-            </svg>
-            Connect AniList
-          </a>
-        `}
         <a href="/settings" class="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors" role="menuitem">
           <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
