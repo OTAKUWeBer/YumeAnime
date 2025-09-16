@@ -508,7 +508,6 @@ def add_to_watchlist_route():
     anime_id = data.get('anime_id')
     anime_title = data.get('anime_title')
     status = data.get('status', 'watching')
-    total_episodes = data.get('total_episodes', 0)
     
     if not anime_id or not anime_title:
         return jsonify({'success': False, 'message': 'Missing anime information.'}), 400
