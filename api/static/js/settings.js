@@ -112,15 +112,30 @@ class SettingsManager {
         const syncBtn = document.getElementById('sync-anilist-btn');
         const disconnectBtn = document.getElementById('disconnect-anilist-btn');
 
-        if (this.currentUser && this.currentUser.anilist_authenticated) {
+        const isConnected = this.currentUser && this.currentUser.anilist_authenticated;
+        
+        if (isConnected) {
             // Connected state
+            const anilistStats = this.currentUser.anilist_stats || {};
+            const statsText = anilistStats.anime_count ? 
+                `${anilistStats.anime_count} anime • ${Math.round(anilistStats.minutes_watched / 60) || 0} hours watched` : 
+                'Stats not available';
+            
             statusContainer.innerHTML = `
                 <div class="flex items-center justify-between p-4 rounded-lg anilist-connected">
                     <div class="flex items-center">
                         <div class="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse"></div>
                         <div>
-                            <span class="font-medium">Connected</span>
-                            ${this.currentUser.anilist_id ? `<p class="text-xs opacity-80">ID: ${this.currentUser.anilist_id}</p>` : ''}
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">Connected</span>
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6.361 2.943 0 21.056h4.06l1.077-3.133h6.875l1.077 3.133H17.15L10.789 2.943zm1.77 5.392 2.18 6.336H5.951zm10.365 9.794V8.113c3.02.501 4.473 2.273 4.473 4.728 0 2.456-1.453 4.227-4.473 4.728z"/>
+                                </svg>
+                            </div>
+                            ${this.currentUser.anilist_id ? `
+                                <p class="text-xs opacity-80">ID: ${this.currentUser.anilist_id}</p>
+                                <p class="text-xs opacity-70">${statsText}</p>
+                            ` : ''}
                         </div>
                     </div>
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,7 +153,10 @@ class SettingsManager {
                 <div class="flex items-center justify-between p-4 rounded-lg anilist-disconnected">
                     <div class="flex items-center">
                         <div class="w-3 h-3 bg-gray-500 rounded-full mr-3"></div>
-                        <span class="font-medium">Not Connected</span>
+                        <div>
+                            <span class="font-medium">Not Connected</span>
+                            <p class="text-xs opacity-70">Connect to sync your watchlist</p>
+                        </div>
                     </div>
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -158,8 +176,14 @@ class SettingsManager {
             return;
         }
 
-        // Redirect to AniList OAuth
-        window.location.href = '/auth/anilist/link';
+        // Check if already connected
+        if (this.currentUser.anilist_authenticated) {
+            this.showNotification('Your AniList account is already connected.', 'info');
+            return;
+        }
+
+        // Redirect to AniList OAuth connect endpoint
+        window.location.href = '/auth/anilist/connect';
     }
 
     async syncAniList() {
@@ -212,6 +236,52 @@ class SettingsManager {
                 this.currentUser.anilist_authenticated = false;
                 this.updateAniListStatus();
                 this.showNotification('AniList account disconnected successfully.', 'success');
+            } else {
+                this.showNotification(data.message || 'Failed to disconnect AniList account.', 'error');
+            }
+        } catch (error) {
+            console.error('Disconnect error:', error);
+            this.showNotification('Network error occurred. Please try again.', 'error');
+        }
+    }
+
+    async disconnectAniList() {
+        if (!this.currentUser || !this.currentUser.anilist_authenticated) {
+            this.showNotification('No AniList account is currently connected.', 'error');
+            return;
+        }
+
+        // Show confirmation dialog with detailed warning
+        const confirmed = confirm(
+            'Are you sure you want to disconnect your AniList account?\n\n' +
+            'This will:\n' +
+            '• Remove your AniList profile information\n' +
+            '• Remove your AniList avatar and stats\n' +
+            '• Disable AniList watchlist sync\n\n' +
+            'Your local watchlist will NOT be affected.\n\n' +
+            'Click OK to proceed or Cancel to keep your connection.'
+        );
+        
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/auth/anilist/disconnect', {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update local user state
+                this.currentUser.anilist_authenticated = false;
+                delete this.currentUser.anilist_id;
+                delete this.currentUser.anilist_stats;
+                
+                this.updateAniListStatus();
+                this.showNotification(data.message || 'AniList account disconnected successfully.', 'success');
             } else {
                 this.showNotification(data.message || 'Failed to disconnect AniList account.', 'error');
             }

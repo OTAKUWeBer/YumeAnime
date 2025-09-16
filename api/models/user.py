@@ -1,8 +1,10 @@
 import random
 from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw
+import logging
 from ..core.db_connector import users_collection 
 
+logger = logging.getLogger(__name__)
 
 def generate_unique_id():
     """Generate a unique 6-digit ID for a user."""
@@ -213,7 +215,7 @@ def link_anilist_to_existing_user(user_id, anilist_user_info, access_token):
     Link an AniList account to an existing user.
 
     Args:
-        user_id (int): Existing user’s internal ID (_id).
+        user_id (int): Existing user's internal ID (_id).
         anilist_user_info (dict): AniList user information (from AniList API).
         access_token (str): AniList OAuth access token.
 
@@ -267,3 +269,132 @@ def unlink_anilist_from_user(user_id: str) -> bool:
         }}
     )
     return result.modified_count > 0
+
+def delete_anilist_data(user_id: int) -> bool:
+    """Completely remove all AniList-related data from a user account."""
+    try:
+        # First, get the current user data to log what we're removing
+        user = get_user_by_id(user_id)
+        if not user:
+            logger.warning(f"User {user_id} not found when trying to delete AniList data")
+            return False
+        
+        anilist_id = user.get('anilist_id')
+        username = user.get('username', 'Unknown')
+        
+        # Remove all AniList-related fields from the user document
+        result = users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$unset": {
+                    "anilist_id": "",
+                    "anilist_access_token": "",
+                    "anilist_refresh_token": "",
+                    "anilist_expires_at": "",
+                    "anilist_stats": "",
+                    "banner_image": "",  # Remove AniList banner
+                    "about": ""  # Remove AniList about text
+                },
+                "$set": {
+                    "updated_at": datetime.utcnow(),
+                    "auth_method": "local"  # Reset to local authentication only
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Successfully deleted AniList data for user {username} (ID: {user_id}, AniList ID: {anilist_id})")
+            return True
+        else:
+            logger.warning(f"No AniList data found to delete for user {username} (ID: {user_id})")
+            # Return True anyway since the goal (no AniList data) is achieved
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error deleting AniList data for user {user_id}: {e}")
+        return False
+
+def connect_anilist_to_user(user_id: int, anilist_user_info: dict, access_token: str) -> bool:
+    """Connect an AniList account to an existing user."""
+    try:
+        user = get_user_by_id(user_id)
+        if not user:
+            logger.error(f"User {user_id} not found")
+            return False
+        
+        # Check if AniList account is already connected to another user
+        existing = get_user_by_anilist_id(anilist_user_info['id'])
+        if existing and existing['_id'] != user_id:
+            logger.error(f"AniList account {anilist_user_info['id']} already connected to user {existing['_id']}")
+            return False
+        
+        avatar = anilist_user_info.get('avatar', {}).get('large') or anilist_user_info.get('avatar', {}).get('medium')
+        
+        stats = {}
+        if 'statistics' in anilist_user_info and 'anime' in anilist_user_info['statistics']:
+            anime_stats = anilist_user_info['statistics']['anime']
+            stats = {
+                'anime_count': anime_stats.get('count', 0),
+                'mean_score': anime_stats.get('meanScore', 0),
+                'minutes_watched': anime_stats.get('minutesWatched', 0)
+            }
+        
+        update_doc = {
+            "$set": {
+                "anilist_id": anilist_user_info['id'],
+                "anilist_access_token": access_token,
+                "avatar": avatar,
+                "anilist_stats": stats,
+                "banner_image": anilist_user_info.get('bannerImage'),
+                "about": anilist_user_info.get('about'),
+                "updated_at": datetime.utcnow(),
+                "auth_method": "anilist_linked"
+            }
+        }
+        
+        result = users_collection.update_one({"_id": user_id}, update_doc)
+        
+        if result.modified_count > 0:
+            logger.info(f"Successfully connected AniList account {anilist_user_info['id']} to user {user_id}")
+            return True
+        else:
+            logger.error(f"Failed to update user {user_id} with AniList data")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error connecting AniList account to user {user_id}: {e}")
+        return False
+
+def get_anilist_connection_info(user_id: int) -> dict:
+    """Get detailed AniList connection information for a user."""
+    try:
+        user = get_user_by_id(user_id)
+        if not user:
+            return {'connected': False, 'error': 'User not found'}
+        
+        is_connected = bool(user.get('anilist_id'))
+        
+        if not is_connected:
+            return {
+                'connected': False,
+                'user_id': user_id,
+                'username': user.get('username')
+            }
+        
+        return {
+            'connected': True,
+            'user_id': user_id,
+            'username': user.get('username'),
+            'anilist_id': user.get('anilist_id'),
+            'avatar': user.get('avatar'),
+            'anilist_stats': user.get('anilist_stats', {}),
+            'banner_image': user.get('banner_image'),
+            'about': user.get('about'),
+            'auth_method': user.get('auth_method'),
+            'connected_at': user.get('updated_at'),
+            'has_access_token': bool(user.get('anilist_access_token'))
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting AniList connection info for user {user_id}: {e}")
+        return {'connected': False, 'error': str(e)}
