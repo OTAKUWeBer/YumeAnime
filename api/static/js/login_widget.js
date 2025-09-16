@@ -626,7 +626,7 @@ class LoginWidget {
         <div class="px-4 py-3 border-b border-white/10">
                 // Show notification that progress will persist
                 this.showSyncResult(
-                    `Sync started! You can close this page - progress will be shown in notifications.`,
+                    \`Sync started! You can close this page - progress will be shown in notifications.`,
                     'info'
                 );
                 
