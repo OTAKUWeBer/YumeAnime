@@ -15,6 +15,7 @@ from ..utils.helpers import (
     sync_anilist_watchlist_blocking, store_sync_progress, 
     get_sync_progress, clear_sync_progress, enrich_watchlist_item
 )
+from ..utils.auto_sync import get_auto_sync_status
 from ..models.watchlist import (
     add_to_watchlist, get_watchlist_entry, update_watchlist_status,
     update_watched_episodes, remove_from_watchlist, get_user_watchlist,
@@ -213,12 +214,23 @@ def sync_progress():
         progress = get_sync_progress(user_id)
         
         if not progress:
-            return jsonify({'status': 'none', 'message': 'No sync in progress'})
+            # Check if auto-sync is available
+            auto_status = get_auto_sync_status(user_id)
+            return jsonify({
+                'status': 'none', 
+                'message': 'No sync in progress',
+                'auto_sync': auto_status
+            })
         
         # Clean up old progress (older than 1 hour)
         if time.time() - progress.get('timestamp', 0) > 3600:
             clear_sync_progress(user_id)
-            return jsonify({'status': 'none', 'message': 'No sync in progress'})
+            auto_status = get_auto_sync_status(user_id)
+            return jsonify({
+                'status': 'none', 
+                'message': 'No sync in progress',
+                'auto_sync': auto_status
+            })
         
         return jsonify(progress)
         

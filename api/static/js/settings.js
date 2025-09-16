@@ -147,6 +147,12 @@ class SettingsManager {
             connectBtn.classList.add('hidden');
             syncBtn.classList.remove('hidden');
             disconnectBtn.classList.remove('hidden');
+            
+            // Show auto-sync info
+            const autoSyncInfo = document.getElementById('auto-sync-info');
+            if (autoSyncInfo) {
+                autoSyncInfo.classList.remove('hidden');
+            }
         } else {
             // Disconnected state
             statusContainer.innerHTML = `
@@ -167,6 +173,12 @@ class SettingsManager {
             connectBtn.classList.remove('hidden');
             syncBtn.classList.add('hidden');
             disconnectBtn.classList.add('hidden');
+            
+            // Hide auto-sync info
+            const autoSyncInfo = document.getElementById('auto-sync-info');
+            if (autoSyncInfo) {
+                autoSyncInfo.classList.add('hidden');
+            }
         }
     }
 

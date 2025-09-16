@@ -624,6 +624,12 @@ class LoginWidget {
     if (this.currentUser) {
       userInfoSection = `
         <div class="px-4 py-3 border-b border-white/10">
+                // Show notification that progress will persist
+                this.showSyncResult(
+                    `Sync started! You can close this page - progress will be shown in notifications.`,
+                    'info'
+                );
+                
           <div class="flex items-center space-x-3">
             ${this.currentUser.avatar ? 
               `<img src="${this.currentUser.avatar}" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-white/20">` :
