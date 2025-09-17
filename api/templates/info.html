@@ -38,13 +38,15 @@
                             {% endif %}
                         </div>
 
-        {% if anime.genres %}
-                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
+                        {% if anime.genres %}
+                        <!-- Genres section - cleaner layout -->
+                        <div class="mb-6">
                             <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 {% for genre in anime.genres %}
-                                    <a href="{{ url_for('main.genre', genre_name=genre|lower|replace(' ', '-')) }}" class="inline-block bg-purple-700 px-2 py-1 rounded-full text-xs text-white hover:bg-purple-800 no-underline">
-                                        {{ genre }}
-                                    </a>
+                                <a href="{{ url_for('main.genre', genre_name=genre|lower|replace(' ', '-')) }}"
+                                   class="inline-block bg-purple-700 hover:bg-purple-800 px-3 py-1 rounded-full text-xs text-white transition-all duration-300 hover:scale-105 hover:shadow-md no-underline">
+                                    {{ genre }}
+                                </a>
                                 {% endfor %}
                             </div>
                             {% if anime %}
@@ -128,7 +130,8 @@
                         </div>
                         {% endif %}
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                        <!-- Info Grid with External Links -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm mb-6">
                             {% if anime.duration %}
                             <div><span class="font-semibold text-gray-400">Duration:</span> <span class="text-white">{{ anime.duration }}</span></div>
                             {% endif %}
@@ -143,6 +146,28 @@
                             {% endif %}
                             {% if anime.producers %}
                             <div class="col-span-1 sm:col-span-2"><span class="font-semibold text-gray-400">Producers:</span> <span class="text-white">{{ anime.producers | join(', ') }}</span></div>
+                            {% endif %}
+                            
+                            <!-- External Links in Info Grid (Alternative placement) -->
+                            {% if (anime.anilistId and anime.anilistId != 0) or (anime.malId and anime.malId != 0) %}
+                            <div class="col-span-1 sm:col-span-3">
+                                <span class="font-semibold text-gray-400">External Links:</span>
+                                <div class="flex flex-wrap gap-3 mt-1">
+                                    {% if anime.anilistId and anime.anilistId != 0 %}
+                                        <a href="https://anilist.co/anime/{{ anime.anilistId }}" target="_blank"
+                                        class="">
+                                            <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" class="w-6 h-auto">
+                                        </a>
+                                    {% endif %}
+
+                                    {% if anime.malId and anime.malId != 0 %}
+                                        <a href="https://myanimelist.net/anime/{{ anime.malId }}" target="_blank"
+                                        class="">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" class="h-6 w-auto">
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
                     </div>

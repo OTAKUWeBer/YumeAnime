@@ -188,6 +188,7 @@ class HianimeScraper:
                 "id": r.get("id"),
                 "name": r.get("name"),
                 "anilistId": r.get("anilistId"),
+                "malId": r.get("malId"),
                 "jname": r.get("jname"),
                 "poster": r.get("poster"),
                 "type": r.get("type"),
@@ -247,6 +248,7 @@ class HianimeScraper:
 
         return {
             "anilistId": info.get("anilistId"),
+            "malId": info.get("malId"),
             "title": info.get("name") or anime_data.get("name") or "Unknown Title",
             "poster": info.get("poster") or anime_data.get("poster"),
             "description": info.get("description", ""),
