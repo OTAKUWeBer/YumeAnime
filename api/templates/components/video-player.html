@@ -1,14 +1,20 @@
 <!-- Video Player Component -->
 <div class="video-container mb-6 md:mb-8 relative" id="videoContainer">
     {% if video_link %}
-        <!-- Added crossorigin="anonymous" to fix CORS issues with subtitle loading -->
-        <video id="videoPlayer" class="video-player" controls preload="metadata" crossorigin="anonymous"
-               data-video-url="{{ video_link }}"
-               data-subtitles='{{ subtitles | tojson | safe }}'
-               data-intro='{{ intro | tojson | safe }}'
-               data-outro='{{ outro | tojson | safe }}'>
-            Your browser does not support the video tag.
-        </video>
+        <!-- Replaced custom video element with Video.js video element -->
+        <video-js id="videoPlayer" 
+                  class="vjs-default-skin video-player" 
+                  controls 
+                  preload="auto" 
+                  width="100%" 
+                  height="100%"
+                  data-setup="{}"
+                  crossorigin="anonymous"
+                  data-video-url="{{ video_link }}"
+                  data-subtitles='{{ subtitles | tojson | safe }}'
+                  data-intro='{{ intro | tojson | safe }}'
+                  data-outro='{{ outro | tojson | safe }}'>
+        </video-js>
         
         <!-- Skip Buttons -->
         <div class="skip-buttons" id="skipButtons">
@@ -31,4 +37,3 @@
         </div>
     {% endif %}
 </div>
- 

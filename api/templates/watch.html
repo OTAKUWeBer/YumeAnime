@@ -7,7 +7,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type=\"image/png\" href="{{ url_for('static', filename='images/logo.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+    
+    <!-- Replaced HLS.js with Video.js CDN -->
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@videojs/http-streaming@3.0.2/dist/videojs-http-streaming.min.js"></script>
     
     <!-- Added modular CSS file for watch page styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/watch-styles.css') }}">
@@ -15,8 +19,6 @@
 <body class="min-h-screen text-white">
     <!-- Navigation -->
     {% include 'nav_base.html' %}
-
-    <!-- Removed extra settings panel component -->
 
     <!-- Info Button -->
     <a href="/anime/{{ eps_title if eps_title else 'unknown' }}"
@@ -49,7 +51,6 @@
             </p>
         </div>
 
-        <!-- Replaced inline components with modular includes -->
         <!-- Current Episode Banner -->
         {% include 'components/current-episode-banner.html' %}
 
@@ -66,11 +67,8 @@
         {% include 'components/episodes-grid.html' %}
     </div>
 
-    <!-- Load JavaScript files in correct order without ES6 modules -->
+    <!-- Replaced HLS player scripts with Video.js player script -->
     <script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/hls-player.js') }}"></script>
-    <!-- Removed extra settings manager script -->
-    
-    <!-- Removed settings manager initialization -->
+    <script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
 </body>
 </html>
