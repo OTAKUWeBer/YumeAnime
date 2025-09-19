@@ -30,6 +30,79 @@ body {
   background: #000;
 }
 
+/* Video.js specific styling to integrate with existing design */
+.video-js {
+  width: 100% !important;
+  height: 100% !important;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.video-js .vjs-tech {
+  border-radius: 16px;
+}
+
+/* Hide Video.js default loading spinner */
+.video-js .vjs-loading-spinner {
+  display: none !important;
+}
+
+/* Style Video.js controls to match existing theme */
+.video-js .vjs-control-bar {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+  border-radius: 0 0 16px 16px;
+}
+
+.video-js .vjs-button > .vjs-icon-placeholder:before {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.video-js .vjs-button:hover > .vjs-icon-placeholder:before {
+  color: #bb86fc;
+}
+
+.video-js .vjs-progress-control .vjs-progress-holder {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.video-js .vjs-progress-control .vjs-play-progress {
+  background: #bb86fc;
+}
+
+.video-js .vjs-progress-control .vjs-load-progress {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.video-js .vjs-volume-level {
+  background: #bb86fc;
+}
+
+/* Fullscreen Video.js styling */
+.video-container.fullscreen-active .video-js {
+  border-radius: 0;
+}
+
+.video-container.fullscreen-active .video-js .vjs-tech {
+  border-radius: 0;
+}
+
+.video-container.fullscreen-active .video-js .vjs-control-bar {
+  border-radius: 0;
+}
+
+/* Video.js subtitle styling - now handled dynamically by JavaScript */
+.video-js .vjs-text-track-display {
+  pointer-events: none;
+}
+
+/* Default fallback styling - will be overridden by JavaScript */
+.video-js .vjs-text-track-cue {
+  color: white !important;
+  font-family: "Inter", sans-serif !important;
+  font-weight: 500 !important;
+}
+
 /* Loading Screen Styles */
 .loading-overlay {
   position: absolute;
@@ -115,11 +188,6 @@ body {
 .buffer-text {
   font-size: 0.95rem;
   font-weight: 500;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 /* Added control indicator styles */
@@ -355,7 +423,6 @@ body {
   gap: 12px;
   animation: slideDown 0.3s ease-out;
 }
-
 
 /* Added missing showError method styles */
 .error-message {
@@ -713,7 +780,6 @@ body {
   margin-bottom: 24px;
 }
 
-
 /* Enhanced mobile responsiveness */
 @media (max-width: 768px) {
   .episodes-grid {
@@ -848,33 +914,6 @@ body {
     font-size: 0.85rem;
   }
 
-  /* UPDATED: Bigger subtitles for mobile regular and fullscreen */
-  .video-player::cue {
-    font-size: 16px !important;
-    line-height: 1.4 !important;
-    background: rgba(0, 0, 0, 0.85) !important;
-    color: white !important;
-    padding: 4px 8px !important;
-    border-radius: 4px !important;
-  }
-
-  /* Much larger subtitles in fullscreen mode */
-  .video-container.fullscreen-active .video-player::cue {
-    font-size: 22px !important;
-    line-height: 1.5 !important;
-    padding: 6px 10px !important;
-    border-radius: 5px !important;
-  }
-
-  /* Remove duplicate control indicators on mobile */
-  .control-indicator.youtube-style .control-text {
-    display: none;
-  }
-
-  .seek-indicator.youtube-seek .seek-time {
-    display: none;
-  }
-
   /* Loading screen mobile adjustments */
   .loading-spinner {
     width: 50px;
@@ -955,23 +994,6 @@ body {
     font-size: 0.8rem;
   }
 
-  /* UPDATED: Even better subtitles for small phones */
-  .video-player::cue {
-    font-size: 18px !important;
-    line-height: 1.3 !important;
-    background: rgba(0, 0, 0, 0.9) !important;
-    padding: 4px 7px !important;
-    border-radius: 3px !important;
-  }
-
-  /* Extra large subtitles for fullscreen on small phones */
-  .video-container.fullscreen-active .video-player::cue {
-    font-size: 26px !important;
-    line-height: 1.5 !important;
-    padding: 6px 12px !important;
-    border-radius: 6px !important;
-  }
-
   /* Small phone loading adjustments */
   .loading-spinner {
     width: 45px;
@@ -1031,12 +1053,13 @@ body {
     width: 18px;
     height: 18px;
   }
+}
 
-  /* Landscape fullscreen subtitle sizing */
-  .video-container.fullscreen-active .video-player::cue {
-    font-size: 20px !important;
-    line-height: 1.4 !important;
-    padding: 5px 10px !important;
-    border-radius: 5px !important;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
