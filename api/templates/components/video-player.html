@@ -1,22 +1,35 @@
-<!-- Video Player Component -->
 <div class="video-container mb-6 md:mb-8 relative" id="videoContainer">
     {% if video_link %}
-        <!-- Replaced custom video element with Video.js video element -->
-        <video-js id="videoPlayer" 
-                  class="vjs-default-skin video-player" 
-                  controls 
-                  preload="auto" 
-                  width="100%" 
-                  height="100%"
-                  data-setup="{}"
-                  crossorigin="anonymous"
-                  data-video-url="{{ video_link }}"
-                  data-subtitles='{{ subtitles | tojson | safe }}'
-                  data-intro='{{ intro | tojson | safe }}'
-                  data-outro='{{ outro | tojson | safe }}'>
+        <!-- Video.js player -->
+        <video-js id="videoPlayer"
+                class="vjs-default-skin video-player vjs-big-play-centered"
+                controls
+                preload="auto"
+                width="100%"
+                height="100%"
+                playsinline
+                crossorigin="anonymous"
+                data-video-url="{{ video_link }}"
+                data-subtitles='{{ subtitles | tojson | safe }}'
+                data-intro='{{ intro | tojson | safe }}'
+                data-outro='{{ outro | tojson | safe }}'
+                data-setup='{}'>
+
+            <!-- real source for Chromium fallback -->
+            <source src="{{ video_link }}" type="application/x-mpegURL" />
+
+            {% if subtitles %}
+                {% for sub in subtitles %}
+                    <track kind="subtitles"
+                        src="{{ sub.file or sub.src }}"
+                        srclang="{{ sub.lang }}"
+                        label="{{ sub.label }}"
+                        {% if sub.default %} default {% endif %}>
+                {% endfor %}
+            {% endif %}
         </video-js>
-        
-        <!-- Skip Buttons -->
+
+        <!-- Skip Intro/Outro buttons -->
         <div class="skip-buttons" id="skipButtons">
             <button id="skipIntroBtn" class="skip-button" style="display: none;">
                 Skip Intro
@@ -26,10 +39,13 @@
             </button>
         </div>
     {% else %}
+        <!-- Video not available fallback -->
         <div class="flex items-center justify-center h-full bg-gray-900 text-gray-400">
             <div class="text-center">
                 <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14
+                             M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
                 <p class="text-lg">Video not available</p>
                 <p class="text-sm opacity-75">Please try again later</p>
