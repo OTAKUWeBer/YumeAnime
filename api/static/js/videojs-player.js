@@ -542,6 +542,41 @@ class VideoJSPlayer {
 
     const videoContainer = this.player.el().parentElement
 
+    if (this.isMobileDevice()) {
+      // On mobile, ensure video doesn't autoplay without user interaction
+      this.player.ready(() => {
+        // Disable autoplay on mobile to prevent issues
+        this.player.autoplay(false)
+
+        // Add user interaction detection for mobile resume
+        const handleFirstInteraction = () => {
+          console.log("[v0] User interaction detected on mobile")
+          // Check if we need to resume from saved position
+          if (window.progressManager) {
+            const currentProgress = window.progressManager.getCurrentProgress()
+            if (currentProgress.watchTime > 30) {
+              // Small delay to ensure video is ready
+              setTimeout(() => {
+                if (this.player.currentTime() < 5) {
+                  this.player.currentTime(currentProgress.watchTime)
+                  console.log(
+                    `[v0] Mobile resume applied: ${window.progressManager.formatTime(currentProgress.watchTime)}`,
+                  )
+                }
+              }, 200)
+            }
+          }
+
+          // Remove listeners after first interaction
+          videoContainer.removeEventListener("touchstart", handleFirstInteraction)
+          videoContainer.removeEventListener("click", handleFirstInteraction)
+        }
+
+        videoContainer.addEventListener("touchstart", handleFirstInteraction, { once: true })
+        videoContainer.addEventListener("click", handleFirstInteraction, { once: true })
+      })
+    }
+
     videoContainer.addEventListener(
       "touchstart",
       (e) => {
@@ -1014,7 +1049,7 @@ class VideoJSPlayer {
   isMobileDevice() {
     return (
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2)
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform))
     )
   }
 

@@ -18,22 +18,24 @@ class WatchProgressManager {
 
   loadSettings() {
     try {
-      const saved = localStorage.getItem('yumeAnimeSettings');
-      return saved ? JSON.parse(saved) : {
-        autoplayNext: true,
-        skipIntro: true,
-        rememberPosition: true,
-        defaultVolume: 80,
-        preferredLanguage: 'sub'
-      };
+      const saved = localStorage.getItem("yumeAnimeSettings")
+      return saved
+        ? JSON.parse(saved)
+        : {
+            autoplayNext: true,
+            skipIntro: true,
+            rememberPosition: true,
+            defaultVolume: 80,
+            preferredLanguage: "sub",
+          }
     } catch (error) {
       return {
         autoplayNext: true,
         skipIntro: true,
         rememberPosition: true,
         defaultVolume: 80,
-        preferredLanguage: 'sub'
-      };
+        preferredLanguage: "sub",
+      }
     }
   }
   loadWatchData() {
@@ -178,9 +180,7 @@ class WatchProgressManager {
     const currentProgressElement = document.getElementById("currentProgress")
     if (currentProgressElement && progress.watchTime > 0) {
       const watchTimeFormatted = this.formatTime(Math.floor(progress.watchTime))
-      const totalTimeFormatted = progress.totalTime
-        ? `/${this.formatTime(Math.floor(progress.totalTime))}`
-        : ""
+      const totalTimeFormatted = progress.totalTime ? `/${this.formatTime(Math.floor(progress.totalTime))}` : ""
       currentProgressElement.textContent = `${watchTimeFormatted}${totalTimeFormatted}`
     }
   }
@@ -235,7 +235,25 @@ class WatchProgressManager {
     if (notification) notification.remove()
 
     if (this.video) {
-      this.video.currentTime = this.resumeTime
+      const resumeTime = this.resumeTime
+
+      // Try to resume immediately
+      this.video.currentTime = resumeTime
+
+      // If video is paused (likely on mobile), add play event listener to resume
+      if (this.video.paused) {
+        const handlePlay = () => {
+          // Set time again when user actually plays the video
+          setTimeout(() => {
+            if (Math.abs(this.video.currentTime - resumeTime) > 5) {
+              this.video.currentTime = resumeTime
+              console.log(`[v0] Resumed from ${this.formatTime(resumeTime)} after user interaction`)
+            }
+          }, 100)
+          this.video.removeEventListener("play", handlePlay)
+        }
+        this.video.addEventListener("play", handlePlay)
+      }
     }
   }
 
@@ -252,16 +270,29 @@ class WatchProgressManager {
     // Check if we should show resume notification or auto-resume
     const currentProgress = this.getCurrentProgress()
     if (this.settings.rememberPosition && currentProgress.watchTime > 30) {
-      setTimeout(() => {
-        if (this.video && this.video.readyState >= 2) {
-          this.video.currentTime = currentProgress.watchTime
-          console.log(`[v0] Auto-resumed from ${this.formatTime(currentProgress.watchTime)}`)
-        }
-      }, 1000) // Wait 1 second for video to be ready
+      if (this.isMobileDevice()) {
+        // On mobile, show resume notification instead of auto-resuming
+        this.showResumeNotification(currentProgress.watchTime)
+      } else {
+        // On desktop, auto-resume as before
+        setTimeout(() => {
+          if (this.video && this.video.readyState >= 2) {
+            this.video.currentTime = currentProgress.watchTime
+            console.log(`[v0] Auto-resumed from ${this.formatTime(currentProgress.watchTime)}`)
+          }
+        }, 1000) // Wait 1 second for video to be ready
+      }
     }
 
     // Start progress tracking
     this.startProgressTracking()
+  }
+
+  isMobileDevice() {
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform))
+    )
   }
 
   startProgressTracking() {
