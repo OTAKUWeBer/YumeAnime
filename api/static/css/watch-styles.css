@@ -39,43 +39,8 @@ body {
   overflow: hidden;
 }
 
-.video-js .vjs-tech {
-  border-radius: 16px;
-}
-
-/* Hide Video.js default loading spinner */
-.video-js .vjs-loading-spinner {
-  display: none !important;
-}
-
-/* Style Video.js controls to match existing theme */
-.video-js .vjs-control-bar {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
-  border-radius: 0 0 16px 16px;
-}
-
 .video-js .vjs-button > .vjs-icon-placeholder:before {
   color: rgba(255, 255, 255, 0.9);
-}
-
-.video-js .vjs-button:hover > .vjs-icon-placeholder:before {
-  color: #bb86fc;
-}
-
-.video-js .vjs-progress-control .vjs-progress-holder {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.video-js .vjs-progress-control .vjs-play-progress {
-  background: #bb86fc;
-}
-
-.video-js .vjs-progress-control .vjs-load-progress {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.video-js .vjs-volume-level {
-  background: #bb86fc;
 }
 
 /* Fullscreen Video.js styling */
