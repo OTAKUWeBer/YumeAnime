@@ -1005,7 +1005,7 @@ body {
 
   /* Hide subtitle selector in landscape fullscreen for better viewing */
   .video-container.fullscreen-active .subtitle-selector {
-    top: 10px;
+    top: 20px;
     right: 10px;
   }
 
