@@ -53,6 +53,7 @@ def megaplay_infos(megaplay_url: str) -> Dict[str, Any]:
         "Sec-Fetch-Dest": "empty",
     }
 
+
     # first request to get ID
     resp = requests.get(megaplay_url, headers=headers)
     resp.raise_for_status()
