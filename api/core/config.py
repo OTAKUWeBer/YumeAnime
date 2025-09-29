@@ -1,7 +1,10 @@
 # config.py
 import os
 import secrets
+import logging
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 class Config:
     """Base configuration class"""
@@ -28,6 +31,26 @@ class Config:
 
     # Application settings
     DEBUG = os.getenv("FLASK_ENV") == "development"
+
+    @classmethod
+    def validate(cls):
+        """Validate that required environment variables are set."""
+        missing = []
+        
+        # Check AniList OAuth credentials
+        if not cls.ANILIST_CLIENT_ID:
+            missing.append("ANILIST_CLIENT_ID")
+        if not cls.ANILIST_CLIENT_SECRET:
+            missing.append("ANILIST_CLIENT_SECRET")
+        if not cls.ANILIST_REDIRECT_URI:
+            missing.append("ANILIST_REDIRECT_URI")
+        
+        if missing:
+            logger.warning(f"Missing environment variables: {', '.join(missing)}")
+            logger.warning("AniList OAuth will not work without these variables.")
+        else:
+            logger.info("All required AniList OAuth environment variables are set.")
+            logger.info(f"AniList Redirect URI: {cls.ANILIST_REDIRECT_URI}")
 
 
 class DevelopmentConfig(Config):

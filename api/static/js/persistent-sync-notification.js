@@ -52,51 +52,7 @@ class PersistentSyncNotification {
         this.isPolling = false;
     }
     
-    async checkSyncProgress() {
-        try {
-            const response = await fetch('/api/sync-progress', {
-                method: 'GET',
-                credentials: 'same-origin'
-            });
-            
-            if (!response.ok) {
-                // User not logged in or error - stop polling
-                this.stopPolling();
-                this.hideNotification();
-                return;
-            }
-            
-            const data = await response.json();
-            
-            if (data.status === 'none') {
-                // No sync in progress
-                this.hideNotification();
-                return;
-            }
-            
-            // Show notification for active syncs
-            if (['starting', 'syncing', 'auto_syncing'].includes(data.status)) {
-                this.showSyncProgress(data);
-            } else if (['completed', 'auto_sync_completed'].includes(data.status)) {
-                this.showSyncCompleted(data);
-                // Auto-hide completed notification after 5 seconds
-                setTimeout(() => {
-                    this.hideNotification();
-                    this.clearProgress();
-                }, 5000);
-            } else if (['error', 'auto_sync_error'].includes(data.status)) {
-                this.showSyncError(data);
-                // Auto-hide error notification after 8 seconds
-                setTimeout(() => {
-                    this.hideNotification();
-                    this.clearProgress();
-                }, 8000);
-            }
-            
-        } catch (error) {
-            console.warn('Error checking sync progress:', error);
-        }
-    }
+
     
     showSyncProgress(data) {
         const isAutoSync = data.auto_sync || data.status === 'auto_syncing';
@@ -269,17 +225,6 @@ class PersistentSyncNotification {
                 this.notification = null;
             }
         }, 300);
-    }
-    
-    async clearProgress() {
-        try {
-            await fetch('/api/sync-progress/clear', {
-                method: 'POST',
-                credentials: 'same-origin'
-            });
-        } catch (error) {
-            console.warn('Error clearing sync progress:', error);
-        }
     }
 }
 
