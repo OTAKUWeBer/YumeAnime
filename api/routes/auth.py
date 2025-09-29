@@ -11,7 +11,6 @@ from ..models.user import (
     link_anilist_to_existing_user, unlink_anilist_from_user, delete_anilist_data,
     connect_anilist_to_user
 )
-from ..utils.auto_sync import trigger_auto_sync
 from ..core.config import Config
 
 auth_bp = Blueprint('auth', __name__)
@@ -99,6 +98,18 @@ def anilist_callback():
         
         if is_linking and current_user_id:
             # ACCOUNT LINKING MODE (user is already logged in)
+            
+            # Check if current user already has an AniList account connected
+            current_user = get_user_by_id(current_user_id)
+            if current_user and current_user.get('anilist_id'):
+                if current_user.get('anilist_id') == user_info['id']:
+                    flash('This AniList account is already linked to your account.', 'info')
+                    return redirect(url_for('main.settings'))
+                else:
+                    flash('You already have a different AniList account connected. Please disconnect it first.', 'error')
+                    return redirect(url_for('main.settings'))
+            
+            # Check if this AniList account is linked to another user
             if existing_anilist_user:
                 if existing_anilist_user['_id'] == current_user_id:
                     flash('This AniList account is already linked to your account.', 'info')
@@ -106,22 +117,15 @@ def anilist_callback():
                     flash('This AniList account is already linked to another user account.', 'error')
                 return redirect(url_for('main.settings'))
             
-            # Connect AniList account to existing user
+            # ✅ ADD THIS: Actually connect the AniList account
             result = connect_anilist_to_user(current_user_id, user_info, access_token)
             if result:
                 session['anilist_authenticated'] = True
                 session['anilist_id'] = user_info['id']
                 current_app.logger.info(f"AniList account linked to user {current_username}")
                 flash('AniList account successfully connected! You can now sync your watchlist.', 'success')
-                
-                # Trigger auto-sync in background
-                try:
-                    trigger_auto_sync(current_user_id)
-                    current_app.logger.info(f"Auto-sync triggered for user {current_username}")
-                except Exception as e:
-                    current_app.logger.warning(f"Failed to trigger auto-sync for user {current_username}: {e}")
             else:
-                flash('Failed to connect AniList account. It may already be linked to another account.', 'error')
+                flash('Failed to connect AniList account. Please try again.', 'error')
             
             return redirect(url_for('main.settings'))
         
@@ -147,13 +151,6 @@ def anilist_callback():
             
             current_app.logger.info(f"User {username} logged in via AniList successfully")
             flash(f'Welcome, {username}!', 'success')
-            
-            # Trigger auto-sync for new AniList users
-            try:
-                trigger_auto_sync(user_id)
-                current_app.logger.info(f"Auto-sync triggered for new AniList user {username}")
-            except Exception as e:
-                current_app.logger.warning(f"Failed to trigger auto-sync for new user {username}: {e}")
             
             return redirect(url_for('main.home'))
         

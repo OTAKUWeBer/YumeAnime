@@ -18,10 +18,7 @@ __all__ = [
     'get_sync_progress',
     'clear_sync_progress',
     'enrich_watchlist_item',
-    
-    # Auto-sync functions
-    'trigger_auto_sync',
-    'get_auto_sync_status',
+
 ]
 
 # Import from ani_to_yume
@@ -41,10 +38,4 @@ from .helpers import (
     get_sync_progress,
     clear_sync_progress,
     enrich_watchlist_item,
-)
-
-# Import from auto_sync
-from .auto_sync import (
-    trigger_auto_sync,
-    get_auto_sync_status,
 )

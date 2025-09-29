@@ -61,14 +61,14 @@ def profile():
     
     if not username or not user_id:
         flash('Please log in to view your profile.', 'warning')
-        return redirect(url_for('main.home'))
+        return redirect('/home')
     
     try:
         user = get_user_by_id(user_id)
         if not user:
             session.clear()
             flash('User session expired. Please log in again.', 'error')
-            return redirect(url_for('main.home'))
+            return redirect('/home')
         
         # Prepare user data for template
         created = user.get('created_at')
@@ -109,14 +109,14 @@ def settings():
     
     if not username or not user_id:
         flash('Please log in to access settings.', 'warning')
-        return redirect(url_for('main.home'))
+        return redirect('/home')
     
     try:
         user = get_user_by_id(user_id)
         if not user:
             session.clear()
             flash('User session expired. Please log in again.', 'error')
-            return redirect(url_for('main.home'))
+            return redirect('/home')
         
         # Prepare user data for template
         user_data = {
@@ -133,4 +133,4 @@ def settings():
     except Exception as e:
         current_app.logger.error(f"Error loading settings for user {username}: {e}")
         flash('Error loading settings. Please try again.', 'error')
-        return redirect(url_for('main.home'))
+        return redirect('/home')

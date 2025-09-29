@@ -11,7 +11,6 @@ from ...utils.helpers import (
     sync_anilist_watchlist_blocking, store_sync_progress, 
     get_sync_progress, clear_sync_progress
 )
-from ...utils.auto_sync import get_auto_sync_status
 
 anilist_api_bp = Blueprint('anilist_api', __name__)
 logger = logging.getLogger(__name__)
@@ -155,41 +154,6 @@ def sync_anilist():
         })
         
         return jsonify({'success': False, 'message': 'Sync failed due to unexpected error. Please try again.'}), 500
-
-
-@anilist_api_bp.route('/sync-progress', methods=['GET'])
-def sync_progress():
-    """Get current sync progress"""
-    if 'username' not in session or '_id' not in session:
-        return jsonify({'error': 'Not logged in.'}), 401
-    
-    try:
-        user_id = session.get('_id')
-        progress = get_sync_progress(user_id)
-        
-        if not progress:
-            auto_status = get_auto_sync_status(user_id)
-            return jsonify({
-                'status': 'none', 
-                'message': 'No sync in progress',
-                'auto_sync': auto_status
-            })
-        
-        # Clean up old progress (older than 1 hour)
-        if time.time() - progress.get('timestamp', 0) > 3600:
-            clear_sync_progress(user_id)
-            auto_status = get_auto_sync_status(user_id)
-            return jsonify({
-                'status': 'none', 
-                'message': 'No sync in progress',
-                'auto_sync': auto_status
-            })
-        
-        return jsonify(progress)
-        
-    except Exception as e:
-        logger.error(f"Error getting sync progress: {e}")
-        return jsonify({'status': 'error', 'message': 'Failed to get progress'})
 
 
 @anilist_api_bp.route('/sync-progress/clear', methods=['POST'])

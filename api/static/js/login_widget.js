@@ -200,7 +200,7 @@ class LoginWidget {
     const hostname = window.location.hostname;
     const port = window.location.port;
     const portSuffix = port ? `:${port}` : '';
-    return `${protocol}//${hostname}${portSuffix}/auth/anilist/callback`;
+    return `${protocol}//${hostname}${portSuffix}/anilist/callback`;
   }
 
   showLoginModal() {
@@ -430,52 +430,7 @@ class LoginWidget {
     }
   }
 
-  startSyncProgressPolling() {
-    if (this.syncProgressInterval) {
-      clearInterval(this.syncProgressInterval);
-    }
-    
-    this.syncProgressInterval = setInterval(async () => {
-      if (!this.syncInProgress) {
-        this.stopSyncProgressPolling();
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/sync-progress', {
-          method: 'GET',
-          credentials: 'same-origin'
-        });
-        
-        if (response.ok) {
-          const progress = await response.json();
-          
-          if (progress.status === 'syncing' || progress.status === 'starting') {
-            const percentage = progress.percentage || 0;
-            const message = this.formatProgressMessage(progress);
-            this.updateSyncProgress(percentage, message);
-          } else if (progress.status === 'completed') {
-            const message = `Completed! Synced ${progress.synced || 0}, skipped ${progress.skipped || 0}, failed ${progress.failed || 0}`;
-            this.updateSyncProgress(100, message);
-            this.stopSyncProgressPolling();
-          } else if (progress.status === 'error') {
-            this.updateSyncProgress(0, `Error: ${progress.message || 'Unknown error'}`);
-            this.stopSyncProgressPolling();
-          }
-        }
-      } catch (error) {
-        // Silently continue - the main request will handle final error display
-        console.warn('Progress polling error:', error);
-      }
-    }, 1000); // Poll every second
-  }
 
-  stopSyncProgressPolling() {
-    if (this.syncProgressInterval) {
-      clearInterval(this.syncProgressInterval);
-      this.syncProgressInterval = null;
-    }
-  }
 
   formatProgressMessage(progress) {
     const processed = progress.processed || 0;
