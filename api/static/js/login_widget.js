@@ -200,7 +200,7 @@ class LoginWidget {
     const hostname = window.location.hostname;
     const port = window.location.port;
     const portSuffix = port ? `:${port}` : '';
-    return `${protocol}//${hostname}${portSuffix}/anilist/callback`;
+    return `${protocol}//${hostname}${portSuffix}/auth/anilist/callback`;
   }
 
   showLoginModal() {
