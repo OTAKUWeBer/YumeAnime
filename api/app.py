@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from flask import Flask, render_template, request
 
-from dotenv import load_dotenv  # pip install python-dotenv (dev convenience)
+from dotenv import load_dotenv
 from api.core.config import Config
 from api.scrapers import HianimeScraper
 
@@ -15,7 +15,6 @@ from api.routes.main import main_bp
 from api.routes.auth import auth_bp
 from api.routes.watchlist import watchlist_bp
 from api.routes.api import api_bp
-from api.routes import aniwatch_bp  # Imported aniwatch_bp
 
 
 # Load .env (optional; safe to call in production if python-dotenv isn't installed it'll fail — install it for dev)
@@ -89,7 +88,6 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(aniwatch_bp)  # Registered aniwatch blueprint
 
     # Error handlers
     @app.errorhandler(404)
