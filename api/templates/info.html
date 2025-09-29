@@ -41,9 +41,9 @@
                         {% if anime.genres %}
                         <!-- Genres section - cleaner layout -->
                         <div class="mb-6">
-                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start mb-4">
+                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start mb-4 relative z-20">
                                 {% for genre in anime.genres %}
-                                <a href="{{ url_for('main.catalog_routes.genre', genre_name=genre|lower|replace(' ', '-')) }}"
+                                <a href="/genre/{{ genre|lower|replace(' ', '-') }}"
                                    class="inline-block bg-purple-700 hover:bg-purple-800 px-3 py-1 rounded-full text-xs text-white transition-all duration-300 hover:scale-105 hover:shadow-md no-underline">
                                     {{ genre }}
                                 </a>
