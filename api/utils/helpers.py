@@ -1,3 +1,8 @@
+"""
+Helper utility functions for the application.
+Includes Turnstile verification, AniList API interactions, and watchlist enrichment.
+"""
+
 import requests
 import logging
 import time
@@ -6,11 +11,14 @@ import inspect
 from threading import Lock
 from typing import Dict, Any
 
+logger = logging.getLogger(__name__)
+
 # Global storage for sync progress
 sync_progress_storage = {}
 sync_progress_lock = Lock()
 
-logger = logging.getLogger(__name__)
+
+# === Turnstile Verification ===
 
 def verify_turnstile(token, secret, remoteip=None):
     """Verify Turnstile token with Cloudflare - Vercel compatible version"""
@@ -70,6 +78,9 @@ def verify_turnstile(token, secret, remoteip=None):
         logger.error(f"Turnstile verification unexpected error: {e}")
         return False
 
+
+# === AniList API Functions ===
+
 def get_anilist_user_info(access_token):
     """Get user information from AniList GraphQL API."""
     query = '''
@@ -119,12 +130,31 @@ def get_anilist_user_info(access_token):
         logger.error(f"Error getting AniList user info: {e}")
         return None
 
-import asyncio
-import inspect
-import logging
-from typing import Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
+# === Sync Progress Management ===
+
+def store_sync_progress(user_id: str, progress_data: dict):
+    """Store sync progress for a user"""
+    with sync_progress_lock:
+        sync_progress_storage[user_id] = {
+            **progress_data,
+            'timestamp': time.time()
+        }
+
+
+def get_sync_progress(user_id: str) -> dict:
+    """Get sync progress for a user"""
+    with sync_progress_lock:
+        return sync_progress_storage.get(user_id, {})
+
+
+def clear_sync_progress(user_id: str):
+    """Clear sync progress for a user"""
+    with sync_progress_lock:
+        sync_progress_storage.pop(user_id, None)
+
+
+# === Sync Wrapper Function ===
 
 def sync_anilist_watchlist_blocking(user_id: str, access_token: str, progress_callback=None) -> Dict[str, Any]:
     """
@@ -190,23 +220,7 @@ def sync_anilist_watchlist_blocking(user_id: str, access_token: str, progress_ca
         return {"error": str(e)}
 
 
-def store_sync_progress(user_id: str, progress_data: dict):
-    """Store sync progress for a user"""
-    with sync_progress_lock:
-        sync_progress_storage[user_id] = {
-            **progress_data,
-            'timestamp': time.time()
-        }
-
-def get_sync_progress(user_id: str) -> dict:
-    """Get sync progress for a user"""
-    with sync_progress_lock:
-        return sync_progress_storage.get(user_id, {})
-
-def clear_sync_progress(user_id: str):
-    """Clear sync progress for a user"""
-    with sync_progress_lock:
-        sync_progress_storage.pop(user_id, None)
+# === Watchlist Enrichment ===
 
 from ..scrapers.hianime import HianimeScraper
 
@@ -215,8 +229,10 @@ HA = HianimeScraper()
 anime_cache: Dict[str, dict] = {}
 CACHE_TTL = 60 * 60 * 24  # 24 hours
         
+
 def _now_ts() -> int:
     return int(time.time())
+
 
 async def enrich_watchlist_item(item: dict) -> dict:
     """
