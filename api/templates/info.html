@@ -43,7 +43,7 @@
                         <div class="mb-6">
                             <div class="flex flex-wrap gap-2 justify-center sm:justify-start mb-4">
                                 {% for genre in anime.genres %}
-                                <a href="{{ url_for('main.genre', genre_name=genre|lower|replace(' ', '-')) }}"
+                                <a href="{{ url_for('main.catalog_routes.genre', genre_name=genre|lower|replace(' ', '-')) }}"
                                    class="inline-block bg-purple-700 hover:bg-purple-800 px-3 py-1 rounded-full text-xs text-white transition-all duration-300 hover:scale-105 hover:shadow-md no-underline">
                                     {{ genre }}
                                 </a>
@@ -52,7 +52,7 @@
                             {% if anime %}
                                 {% set anime_id_from_url = request.path.split('/')[-1] %}
                                 <div class="flex justify-center sm:justify-end sm:relative sm:-top-14 gap-3">
-                                    <a href="{{ url_for('main.episodes', anime_id=anime_id_from_url) }}" onclick="handleWatchNowClick(event, '{{ anime_id_from_url }}')"
+                                    <a href="{{ url_for('main.anime_routes.episodes', anime_id=anime_id_from_url) }}" onclick="handleWatchNowClick(event, '{{ anime_id_from_url }}')"
                                     class="inline-flex items-center px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl min-h-[48px] border border-purple-500/20">
                                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M8 5v14l11-7z"/>

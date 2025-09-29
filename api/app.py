@@ -15,6 +15,7 @@ from api.routes.main import main_bp
 from api.routes.auth import auth_bp
 from api.routes.watchlist import watchlist_bp
 from api.routes.api import api_bp
+from api.routes import aniwatch_bp  # Imported aniwatch_bp
 
 
 # Load .env (optional; safe to call in production if python-dotenv isn't installed it'll fail — install it for dev)
@@ -70,6 +71,7 @@ def create_app():
         app.config.update(
             SESSION_COOKIE_HTTPONLY=True,
             SESSION_COOKIE_SAMESITE="Lax",
+            TEMPLATES_AUTO_RELOAD=True  # Enable template auto-reload in development
         )
     else:
         # production recommended options
@@ -82,10 +84,12 @@ def create_app():
     # Initialize scraper
     app.ha_scraper = HianimeScraper()
 
+    # Register blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(aniwatch_bp)  # Registered aniwatch blueprint
 
     # Error handlers
     @app.errorhandler(404)
