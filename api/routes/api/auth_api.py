@@ -8,7 +8,7 @@ import logging
 
 from ...utils.helpers import verify_turnstile
 from ...models.user import (
-    create_user, get_user, user_exists, email_exists, get_user_by_id
+    create_user, get_user, user_exists, email_exists, get_user_by_id, change_password
 )
 from ...core.config import Config
 
@@ -169,6 +169,10 @@ def change_password_route():
     data = request.get_json()
     current_password = data.get('current_password', '')
     new_password = data.get('new_password', '')
+    turnstile_token = data.get('cf_turnstile_response')
+    
+    if not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, request.remote_addr):
+        return jsonify({'success': False, 'message': 'Please verify you are not a robot.'}), 403
     
     if not current_password or not new_password:
         return jsonify({'success': False, 'message': 'Current and new passwords are required.'}), 400
@@ -177,7 +181,6 @@ def change_password_route():
         return jsonify({'success': False, 'message': 'New password must be at least 6 characters long.'}), 400
     
     try:
-        from ...models.user import change_password
         user_id = session.get('_id')
         
         result = change_password(user_id, current_password, new_password)

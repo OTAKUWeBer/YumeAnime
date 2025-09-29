@@ -1,36 +1,50 @@
-from .ani_to_yume import *
-
-# Re-export all functions so they can be imported from utils
-__all__ = [
-    'create_user', 
-    'get_user', 
-    'user_exists', 
-    'get_user_by_id', 
-    'email_exists',
-    'update_user_avatar',
-    'update_user_email', 
-    'change_password',
-    'delete_user',
-    'get_all_users',
-    'get_user_count',
-    'search_users',
-    'get_recent_users'
-]
-
-from .ani_to_yume import sync_anilist_watchlist_to_local
+"""
+Utils package initialization.
+Re-exports commonly used utility functions for easier imports.
+"""
 
 __all__ = [
-    # User management
-    'create_user', 'get_user', 'user_exists', 'get_user_by_id', 'email_exists',
-    'update_user_email', 'update_user_avatar', 'get_user_by_anilist_id',
-    'create_anilist_user', 'update_anilist_user', 'link_anilist_to_existing_user',
-    'unlink_anilist_from_user',
+    # AniList sync functions
+    'sync_anilist_watchlist_to_local',
+    'BatchConfig',
+    'SyncProgress',
+    'clear_caches',
     
-    # Watchlist management
-    'add_to_watchlist', 'get_watchlist_entry', 'update_watchlist_status',
-    'update_watched_episodes', 'remove_from_watchlist', 'get_user_watchlist',
-    'get_user_watchlist_paginated', 'get_watchlist_stats', 'warm_cache',
+    # Helper functions
+    'verify_turnstile',
+    'get_anilist_user_info',
+    'sync_anilist_watchlist_blocking',
+    'store_sync_progress',
+    'get_sync_progress',
+    'clear_sync_progress',
+    'enrich_watchlist_item',
     
-    # AniList sync
-    'sync_anilist_watchlist_to_local'
+    # Auto-sync functions
+    'trigger_auto_sync',
+    'get_auto_sync_status',
 ]
+
+# Import from ani_to_yume
+from .ani_to_yume import (
+    sync_anilist_watchlist_to_local,
+    BatchConfig,
+    SyncProgress,
+    clear_caches,
+)
+
+# Import from helpers
+from .helpers import (
+    verify_turnstile,
+    get_anilist_user_info,
+    sync_anilist_watchlist_blocking,
+    store_sync_progress,
+    get_sync_progress,
+    clear_sync_progress,
+    enrich_watchlist_item,
+)
+
+# Import from auto_sync
+from .auto_sync import (
+    trigger_auto_sync,
+    get_auto_sync_status,
+)
