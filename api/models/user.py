@@ -60,7 +60,6 @@ def create_anilist_user(anilist_user_info, access_token):
         "avatar": avatar,
         "anilist_stats": stats,
         "banner_image": anilist_user_info.get('bannerImage'),
-        "about": anilist_user_info.get('about'),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
         "auth_method": "anilist"
@@ -89,7 +88,6 @@ def update_anilist_user(user_id, anilist_user_info, access_token):
             "avatar": avatar,
             "anilist_stats": stats,
             "banner_image": anilist_user_info.get('bannerImage'),
-            "about": anilist_user_info.get('about'),
             "updated_at": datetime.utcnow()
         }
     }
@@ -249,7 +247,6 @@ def link_anilist_to_existing_user(user_id, anilist_user_info, access_token):
             "avatar": avatar,
             "anilist_stats": stats,
             "banner_image": anilist_user_info.get('bannerImage'),
-            "about": anilist_user_info.get('about'),
             "updated_at": datetime.utcnow(),
             "auth_method": "anilist_linked"
         }
@@ -293,7 +290,6 @@ def delete_anilist_data(user_id: int) -> bool:
                     "anilist_expires_at": "",
                     "anilist_stats": "",
                     "banner_image": "",  # Remove AniList banner
-                    "about": ""  # Remove AniList about text
                 },
                 "$set": {
                     "updated_at": datetime.utcnow(),
@@ -346,7 +342,6 @@ def connect_anilist_to_user(user_id: int, anilist_user_info: dict, access_token:
                 "avatar": avatar,
                 "anilist_stats": stats,
                 "banner_image": anilist_user_info.get('bannerImage'),
-                "about": anilist_user_info.get('about'),
                 "updated_at": datetime.utcnow(),
                 "auth_method": "anilist_linked"
             }
@@ -389,7 +384,6 @@ def get_anilist_connection_info(user_id: int) -> dict:
             'avatar': user.get('avatar'),
             'anilist_stats': user.get('anilist_stats', {}),
             'banner_image': user.get('banner_image'),
-            'about': user.get('about'),
             'auth_method': user.get('auth_method'),
             'connected_at': user.get('updated_at'),
             'has_access_token': bool(user.get('anilist_access_token'))
