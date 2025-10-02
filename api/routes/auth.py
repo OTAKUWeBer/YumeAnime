@@ -22,7 +22,7 @@ def link_anilist_account():
     # Check if user is already logged in
     if 'username' not in session or '_id' not in session:
         flash('Please log in first to link your AniList account.', 'warning')
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
     
     # Generate a random state parameter for security
     state = secrets.token_urlsafe(32)
@@ -53,7 +53,7 @@ def anilist_callback():
     if error:
         current_app.logger.error(f"AniList OAuth error: {error}")
         flash('Login failed. Please try again.', 'error')
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
 
     # Check if we're linking to existing account (only if user is logged in)
     is_linking = 'username' in session and '_id' in session
@@ -65,14 +65,14 @@ def anilist_callback():
     if not code:
         current_app.logger.error("No authorization code received from AniList")
         flash('Login cancelled or failed.', 'error')
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
     
     try:
         # Validate configuration
         if not Config.ANILIST_CLIENT_ID or not Config.ANILIST_CLIENT_SECRET:
             current_app.logger.error("AniList OAuth credentials not configured")
             flash('AniList integration is not properly configured. Please contact the administrator.', 'error')
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.home_routes.home'))
 
         # Exchange code for access token
         token_data = {
@@ -89,14 +89,14 @@ def anilist_callback():
         if token_response.status_code != 200:
             current_app.logger.error(f"Token exchange failed with status {token_response.status_code}: {token_response.text}")
             flash('Login failed. Unable to get access token.', 'error')
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.home_routes.home'))
         
         token_info = token_response.json()
         access_token = token_info.get('access_token')
         
         if not access_token:
             flash('Login failed. No access token received.', 'error')
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.home_routes.home'))
         
         # Get user info from AniList
         current_app.logger.info("Fetching user info from AniList")
@@ -105,7 +105,7 @@ def anilist_callback():
         if not user_info:
             current_app.logger.error("Failed to get user info from AniList")
             flash('Login failed. Unable to get user information.', 'error')
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.home_routes.home'))
 
         current_app.logger.info(f"AniList user info retrieved: {user_info.get('name')} (ID: {user_info.get('id')})")
         
@@ -173,12 +173,12 @@ def anilist_callback():
             current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")
             flash(f'Welcome, {username}!', 'success')
 
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.home_routes.home'))
         
     except Exception as e:
         current_app.logger.error(f"AniList OAuth error: {e}")
         flash('Login failed. Please try again.', 'error')
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
 
 @auth_bp.route('/anilist/unlink', methods=['POST'])
 def unlink_anilist_account():
@@ -225,7 +225,7 @@ def connect_anilist_account():
     # Check if user is already logged in
     if 'username' not in session or '_id' not in session:
         flash('Please log in first to connect your AniList account.', 'warning')
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
     
     # Check if already connected
     user_id = session.get('_id')
