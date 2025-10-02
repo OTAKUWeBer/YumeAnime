@@ -7,6 +7,7 @@
     <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white min-h-screen">
 {% include 'nav_base.html' %}
 
@@ -41,7 +42,7 @@
                         {% if anime.genres %}
                         <!-- Genres section - cleaner layout -->
                         <div class="mb-6">
-                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start mb-4 relative z-20">
+                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start mb-4 relative z-30">
                                 {% for genre in anime.genres %}
                                 <a href="/genre/{{ genre|lower|replace(' ', '-') }}"
                                    class="inline-block bg-purple-700 hover:bg-purple-800 px-3 py-1 rounded-full text-xs text-white transition-all duration-300 hover:scale-105 hover:shadow-md no-underline">
@@ -51,7 +52,7 @@
                             </div>
                             {% if anime %}
                                 {% set anime_id_from_url = request.path.split('/')[-1] %}
-                                <div class="flex justify-center sm:justify-end sm:relative sm:-top-14 gap-3">
+                                <div class="flex justify-center sm:justify-end sm:relative sm:-top-14 gap-3 relative z-30">
                                     <a href="{{ url_for('main.anime_routes.episodes', anime_id=anime_id_from_url) }}" onclick="handleWatchNowClick(event, '{{ anime_id_from_url }}')"
                                     class="inline-flex items-center px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl min-h-[48px] border border-purple-500/20">
                                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -728,6 +729,127 @@ function showNotification(message, type = 'info') {
         }, 300);
     }, 4000);
 }
+(function(){
+  // DEFAULT: restrict to genre links area so we don't override other overlays.
+  // Change to null to enable across the whole page.
+  const SCOPE_SELECTOR = '.mb-6'; // e.g. '.mb-6' for genres, or null for global
+
+  let raf = null;
+  const coords = { x: 0, y: 0 };
+  let lastWasClickable = false;
+
+  function isClickable(el) {
+    if (!el || el.nodeType !== 1) return false;
+    const tag = el.tagName;
+    if (tag === 'A' && el.getAttribute('href')) return true;
+    if (tag === 'BUTTON') return true;
+    if (el.hasAttribute && el.hasAttribute('onclick')) return true;
+    const role = el.getAttribute && el.getAttribute('role');
+    if (role === 'button') return true;
+    // treat elements with an href-like data-attr or tabindex + onclick sparingly; avoid inputs
+    return false;
+  }
+
+  function findClickableUnder(x, y) {
+    if (typeof document.elementsFromPoint !== 'function') return null;
+    const stack = document.elementsFromPoint(x, y) || [];
+    for (const node of stack) {
+      // check the node or its closest interactive ancestor
+      let candidate = null;
+      if (node.nodeType === 1 && isClickable(node)) candidate = node;
+      if (!candidate && node.closest) candidate = node.closest('a[href], button, [role="button"], [onclick]');
+      if (!candidate) continue;
+      if (SCOPE_SELECTOR) {
+        if (!candidate.closest || !candidate.closest(SCOPE_SELECTOR)) continue;
+      }
+      return candidate;
+    }
+    return null;
+  }
+
+  function processHover() {
+    raf = null;
+    const el = findClickableUnder(coords.x, coords.y);
+    const clickable = !!el;
+    if (clickable !== lastWasClickable) {
+      lastWasClickable = clickable;
+      document.documentElement.style.cursor = clickable ? 'pointer' : '';
+    }
+  }
+
+  function onMove(e) {
+    coords.x = e.clientX;
+    coords.y = e.clientY;
+    if (!raf) raf = requestAnimationFrame(processHover);
+  }
+
+  // Click forwarding: capture phase so we run before overlays intercept
+  document.addEventListener('click', function (e) {
+    try {
+      // If click is already on a clickable element (or inside one), let it proceed
+      if (e.target.closest && e.target.closest('a[href], button, [role="button"], [onclick]')) {
+        return;
+      }
+
+      const x = (e.clientX !== undefined) ? e.clientX : (coords.x || 0);
+      const y = (e.clientY !== undefined) ? e.clientY : (coords.y || 0);
+      const target = findClickableUnder(x, y);
+      if (!target) return; // nothing to forward to
+
+      // Prevent overlay handlers from swallowing this click
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (target.tagName === 'A') {
+        const href = target.getAttribute('href');
+        const targetAttr = target.getAttribute('target');
+        if (!href) {
+          // fallback to programmatic click
+          target.click();
+          return;
+        }
+        if (href.startsWith('javascript:')) {
+          // execute anchor's click as fallback
+          target.click();
+          return;
+        }
+        if (targetAttr === '_blank') {
+          window.open(href, '_blank');
+        } else if (href.startsWith('#')) {
+          // same-page anchor
+          // try native behavior
+          target.click();
+          // also update hash if needed
+          try { location.hash = href; } catch(_) {}
+        } else {
+          // normal navigation (preserves history)
+          window.location.assign(href);
+        }
+        return;
+      }
+
+      // If it's a button or element with onclick, call click()
+      if (typeof target.click === 'function') {
+        target.click();
+      }
+    } catch (err) {
+      // Fail silently to avoid breaking other scripts
+      console.error('click-forward error:', err);
+    }
+  }, true); // capture = true
+
+  // cleanup handlers
+  function clearCursor() {
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    lastWasClickable = false;
+    document.documentElement.style.cursor = '';
+  }
+
+  document.addEventListener('mousemove', onMove, { passive: true });
+  document.addEventListener('mouseleave', clearCursor);
+  window.addEventListener('blur', clearCursor);
+
+})();
 </script>
 
     <style>
