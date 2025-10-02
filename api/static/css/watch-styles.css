@@ -611,29 +611,34 @@ body {
   border: 1px solid rgba(187, 134, 252, 0.2);
   border-radius: 16px;
   padding: 24px;
+  box-sizing: border-box;
 }
 
 .episodes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
-  overflow-y: auto;
+  overflow: visible;
   scrollbar-width: thin;
   scrollbar-color: #bb86fc rgba(255, 255, 255, 0.1);
+
+  /* prevent grid from stretching/forcing card heights when the parent is constrained */
+  align-content: start;
+  grid-auto-rows: minmax(0, auto);
 }
 
-.episodes-grid::-webkit-scrollbar {
-  width: 6px;
-}
+/* desktop-only: limit the container height and make it scroll */
+@media (min-width: 1024px) {
+  .episodes-container {
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+  }
 
-.episodes-grid::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-}
-
-.episodes-grid::-webkit-scrollbar-thumb {
-  background: #bb86fc;
-  border-radius: 3px;
+  .episodes-grid {
+    max-height: none;
+    align-content: start;
+  }
 }
 
 .episode-card {
