@@ -46,23 +46,34 @@ def anilist_callback():
     code = request.args.get('code')
     state = request.args.get('state')
     error = request.args.get('error')
-    
+
+    current_app.logger.info(f"AniList callback received - code: {bool(code)}, state: {bool(state)}, error: {error}")
+
     # Check for errors
     if error:
         current_app.logger.error(f"AniList OAuth error: {error}")
         flash('Login failed. Please try again.', 'error')
         return redirect(url_for('main.home'))
-    
+
     # Check if we're linking to existing account (only if user is logged in)
     is_linking = 'username' in session and '_id' in session
     current_user_id = session.get('_id') if is_linking else None
     current_username = session.get('username') if is_linking else None
-    
+
+    current_app.logger.info(f"Is linking: {is_linking}, User ID: {current_user_id}")
+
     if not code:
+        current_app.logger.error("No authorization code received from AniList")
         flash('Login cancelled or failed.', 'error')
         return redirect(url_for('main.home'))
     
     try:
+        # Validate configuration
+        if not Config.ANILIST_CLIENT_ID or not Config.ANILIST_CLIENT_SECRET:
+            current_app.logger.error("AniList OAuth credentials not configured")
+            flash('AniList integration is not properly configured. Please contact the administrator.', 'error')
+            return redirect(url_for('main.home'))
+
         # Exchange code for access token
         token_data = {
             'grant_type': 'authorization_code',
@@ -71,11 +82,12 @@ def anilist_callback():
             'redirect_uri': Config.ANILIST_REDIRECT_URI,
             'code': code
         }
-        
-        token_response = requests.post('https://anilist.co/api/v2/oauth/token', json=token_data)
-        
+
+        current_app.logger.info(f"Exchanging code for token with redirect_uri: {Config.ANILIST_REDIRECT_URI}")
+        token_response = requests.post('https://anilist.co/api/v2/oauth/token', json=token_data, timeout=10)
+
         if token_response.status_code != 200:
-            current_app.logger.error(f"Token exchange failed: {token_response.text}")
+            current_app.logger.error(f"Token exchange failed with status {token_response.status_code}: {token_response.text}")
             flash('Login failed. Unable to get access token.', 'error')
             return redirect(url_for('main.home'))
         
@@ -87,11 +99,15 @@ def anilist_callback():
             return redirect(url_for('main.home'))
         
         # Get user info from AniList
+        current_app.logger.info("Fetching user info from AniList")
         user_info = get_anilist_user_info(access_token)
-        
+
         if not user_info:
+            current_app.logger.error("Failed to get user info from AniList")
             flash('Login failed. Unable to get user information.', 'error')
             return redirect(url_for('main.home'))
+
+        current_app.logger.info(f"AniList user info retrieved: {user_info.get('name')} (ID: {user_info.get('id')})")
         
         # Check if this AniList account is already linked to another user
         existing_anilist_user = get_user_by_anilist_id(user_info['id'])
@@ -117,30 +133,35 @@ def anilist_callback():
                     flash('This AniList account is already linked to another user account.', 'error')
                 return redirect(url_for('main.settings'))
             
-            # ✅ ADD THIS: Actually connect the AniList account
+            # Connect the AniList account
+            current_app.logger.info(f"Connecting AniList account {user_info['id']} to user {current_user_id}")
             result = connect_anilist_to_user(current_user_id, user_info, access_token)
             if result:
                 session['anilist_authenticated'] = True
                 session['anilist_id'] = user_info['id']
-                current_app.logger.info(f"AniList account linked to user {current_username}")
+                current_app.logger.info(f"AniList account {user_info['id']} successfully linked to user {current_username}")
                 flash('AniList account successfully connected! You can now sync your watchlist.', 'success')
             else:
+                current_app.logger.error(f"Failed to connect AniList account to user {current_user_id}")
                 flash('Failed to connect AniList account. Please try again.', 'error')
-            
+
             return redirect(url_for('main.settings'))
         
         else:
             # NORMAL LOGIN/SIGNUP MODE (user is not logged in)
+            current_app.logger.info("Processing AniList login/signup")
             if existing_anilist_user:
                 # Update existing user with latest AniList info
+                current_app.logger.info(f"Updating existing user {existing_anilist_user['_id']} with AniList info")
                 update_anilist_user(existing_anilist_user['_id'], user_info, access_token)
                 user_id = existing_anilist_user['_id']
                 username = existing_anilist_user['username']
             else:
                 # Create new user
+                current_app.logger.info(f"Creating new user from AniList: {user_info['name']}")
                 user_id = create_anilist_user(user_info, access_token)
                 username = user_info['name']
-            
+
             # Set session
             session.clear()
             session['username'] = username
@@ -148,10 +169,10 @@ def anilist_callback():
             session['anilist_authenticated'] = True
             session['anilist_id'] = user_info['id']
             session.permanent = True
-            
-            current_app.logger.info(f"User {username} logged in via AniList successfully")
+
+            current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")
             flash(f'Welcome, {username}!', 'success')
-            
+
             return redirect(url_for('main.home'))
         
     except Exception as e:
