@@ -45,7 +45,7 @@ def disconnect_anilist():
     return unlink_anilist_account()
 
 
-@anilist_api_bp.route('/sync', methods=['POST'])
+@anilist_api_bp.route('/sync-anilist', methods=['POST'])
 def sync_anilist():
     """Sync AniList watchlist to local database"""
     if 'username' not in session or '_id' not in session:
