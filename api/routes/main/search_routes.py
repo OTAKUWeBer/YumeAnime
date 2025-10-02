@@ -11,7 +11,7 @@ async def search():
     """Handle search request and display results"""
     search_query = request.args.get('q', '').strip()
     if not search_query:
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
     
     try:
         results = await current_app.ha_scraper.search(search_query)
@@ -42,7 +42,7 @@ async def search():
     
     except Exception as e:
         print("Search error:", e)
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.home_routes.home'))
 
 
 @search_routes_bp.route('/search/suggestions', methods=['GET'])

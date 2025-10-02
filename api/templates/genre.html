@@ -171,7 +171,7 @@
                     <!-- Use genreName if available, otherwise use query -->
                     <h3 class="text-lg md:text-xl font-semibold text-white mb-2">No anime found in {{ genreName or (query|title) }}</h3>
                     <p class="text-gray-400 mb-4 md:mb-6 text-sm md:text-base px-4">This genre might not be available or try exploring other genres.</p>
-                    <a href="{{ url_for('main.home_routes.home') }}" class="inline-flex items-center px-4 md:px-6 py-2 md:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors text-sm md:text-base min-h-[44px]">
+                    <a href="{{ url_for('main.home_routes.home_routes.home') }}" class="inline-flex items-center px-4 md:px-6 py-2 md:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors text-sm md:text-base min-h-[44px]">
                         <svg class="w-4 h-4 md:w-5 md:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>

@@ -3,7 +3,7 @@ Main blueprint - aggregates all main route sub-blueprints
 """
 from flask import Blueprint
 
-from .main.home_routes import home_routes_bp
+from .main.home_routes.home_routes import home_routes_bp
 from .main.search_routes import search_routes_bp
 from .main.anime_routes import anime_routes_bp
 from .main.watch_routes import watch_routes_bp
