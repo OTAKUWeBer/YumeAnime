@@ -617,7 +617,6 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
-  max-height: 400px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #bb86fc rgba(255, 255, 255, 0.1);
