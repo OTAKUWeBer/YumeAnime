@@ -269,8 +269,6 @@
                 // Switch to list view
                 titles.forEach(title => title.classList.remove('hidden'));
                 dot.style.transform = 'translateX(28px)';
-                toggle.classList.remove('bg-slate-600');
-                toggle.classList.add('bg-blue-600');
                 
                 episodeList.classList.remove('grid', 'grid-cols-3', 'sm:grid-cols-4', 'md:grid-cols-6', 'lg:grid-cols-8', 'xl:grid-cols-10', 'gap-3', 'sm:gap-4');
                 episodeList.classList.add('list-view', 'space-y-3');
@@ -278,8 +276,6 @@
                 // Switch to grid view
                 titles.forEach(title => title.classList.add('hidden'));
                 dot.style.transform = 'translateX(0px)';
-                toggle.classList.remove('bg-blue-600');
-                toggle.classList.add('bg-slate-600');
                 
                 // Remove list view classes and restore grid
                 episodeList.classList.remove('list-view', 'space-y-3');
