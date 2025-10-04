@@ -21,7 +21,6 @@
         }
         
         .episode-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             /* Improved card styling with better colors */
             background: linear-gradient(145deg, #1e293b, #334155);
             border: 1px solid rgba(59, 130, 246, 0.2);
@@ -262,13 +261,17 @@
             const checkbox = document.getElementById('showTitles');
             const titles = document.querySelectorAll('.episode-title');
             const dot = document.querySelector('.dot');
-            const toggle = document.querySelector('.relative > div:first-child');
+            const toggle = document.querySelector('.relative > .block');
             const episodeList = document.getElementById('episodeList');
             
             if (checkbox.checked) {
                 // Switch to list view
                 titles.forEach(title => title.classList.remove('hidden'));
                 dot.style.transform = 'translateX(28px)';
+                
+                // Change toggle background to purple
+                toggle.classList.remove('bg-slate-600');
+                toggle.classList.add('bg-purple-600');
                 
                 episodeList.classList.remove('grid', 'grid-cols-3', 'sm:grid-cols-4', 'md:grid-cols-6', 'lg:grid-cols-8', 'xl:grid-cols-10', 'gap-3', 'sm:gap-4');
                 episodeList.classList.add('list-view', 'space-y-3');
@@ -277,7 +280,10 @@
                 titles.forEach(title => title.classList.add('hidden'));
                 dot.style.transform = 'translateX(0px)';
                 
-                // Remove list view classes and restore grid
+                // Revert toggle background to default slate
+                toggle.classList.remove('bg-purple-600');
+                toggle.classList.add('bg-slate-600');
+                
                 episodeList.classList.remove('list-view', 'space-y-3');
                 episodeList.classList.add('grid', 'grid-cols-3', 'sm:grid-cols-4', 'md:grid-cols-6', 'lg:grid-cols-8', 'xl:grid-cols-10', 'gap-3', 'sm:gap-4');
             }
