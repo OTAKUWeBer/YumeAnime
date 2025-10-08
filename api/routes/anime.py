@@ -133,7 +133,7 @@ async def watch(eps_title):
     Watch episode page with video player
     GET /anime/watch/<eps_title>?ep=<episode_param>
     """
-    ep_param = request.args.get("ep")  # e.g. "141637" or "141637-sub"
+    ep_param = request.args.get("")  # e.g. "141637" or "141637-sub"
 
     # Parse episode number and language
     ep_number, lang = None, "sub"

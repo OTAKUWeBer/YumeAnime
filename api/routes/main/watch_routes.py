@@ -10,10 +10,15 @@ watch_routes_bp = Blueprint('watch_routes', __name__)
 @watch_routes_bp.route('/watch/<eps_title>', methods=['GET', 'POST'])
 async def watch(eps_title):
     """Watch episode page with video player"""
-    ep_param = request.args.get("ep")  # e.g. "141637" or "141637-sub"
+    ep_param = request.args.get("ep")
+
+    # full slug + query
+    full_slug = f"{eps_title}?{request.query_string.decode()}" if request.query_string else eps_title
     
     # Check user's preferred language setting
     preferred_lang = "sub"  # default
+    last_server = session.get("last_used_server", "hd-1")
+    
     if 'username' in session and '_id' in session:
         try:
             # Try to get from user settings (stored in localStorage on frontend)
@@ -46,8 +51,11 @@ async def watch(eps_title):
     if lang == "dub" and not dub_available:
         return redirect(url_for('main.watch_routes.watch', eps_title=eps_title, ep=f"{ep_number}-sub"))
 
-    # Get video data
-    raw = await current_app.ha_scraper.video(ep_number, lang)
+    # --- Determine which server to use ---
+    selected_server = request.args.get("server") or last_server
+
+    # --- Fetch video data from the API ---
+    raw = await current_app.ha_scraper.video(full_slug, lang, selected_server)
 
     video_link = None
     subtitle_tracks = []
@@ -65,6 +73,10 @@ async def watch(eps_title):
         # Intro/outro markers
         intro = raw.get("intro")
         outro = raw.get("outro")
+
+    # ✅ --- Save last used server in cache (session) ---
+    if selected_server:
+        session["last_used_server"] = selected_server
 
     # Fetch episodes list
     eps_title_clean = eps_title.split('?', 1)[0]
@@ -135,6 +147,7 @@ async def watch(eps_title):
             dub_available=dub_available,
             sub_url=sub_url,
             dub_url=dub_url,
+            selected_server=selected_server,  # send to template
         )
     except Exception as e:
         print("watch error:", e)

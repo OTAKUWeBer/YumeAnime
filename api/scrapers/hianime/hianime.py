@@ -13,7 +13,7 @@ from .anime_info import HianimeAnimeInfoService
 from .episodes import HianimeEpisodesService
 from .search import HianimeSearchService
 from .catalog import HianimeCatalogService
-from .video import get_and_play_m3u8_and_vtt
+from .video import HianimeVideoService
 
 load_dotenv()
 
@@ -123,10 +123,21 @@ class HianimeScraper:
         """Get detailed anime info"""
         return await self.catalog_service.anime_about(anime_id)
     
-    async def video(self, ep_id: Union[str, int], language: str) -> Dict[str, Any]:
-        """Get video streaming data"""
-        result = await asyncio.to_thread(get_and_play_m3u8_and_vtt, ep_id, language)
-        return result
+    async def video(self, ep_id: Union[str, int], language: str = "sub", server: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get video streaming data for an episode
+
+        Args:
+            ep_id: Episode ID (string or int)
+            language: "sub" or "dub"
+            server: Optional specific server name
+
+        Returns:
+            Dict containing streaming links, qualities, and metadata
+        """
+        video_service = HianimeVideoService(self.client)
+        return await video_service.get_video(ep_id, language, server)
+
     
     # Utility method
     async def raw(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
