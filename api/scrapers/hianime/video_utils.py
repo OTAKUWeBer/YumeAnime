@@ -1,118 +1,198 @@
 """
 Video scraper utility functions
-Handles URL encoding, episode ID extraction, and subtitle sorting
+Handles URL encoding, episode ID extraction, subtitle sorting, and proxying.
 """
 import base64
 import re
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from bs4 import BeautifulSoup
 
 
-def encode_proxy(url: str) -> str:
+def encode_proxy(url: Optional[str]) -> Optional[str]:
     """
-    Return proxied URL through Vercel http-proxy-zai (base64-encoded)
-    
-    Args:
-        url: Original URL to proxy
-        
-    Returns:
-        Proxied URL
+    Return proxied URL through Vercel http-proxy-zai (base64-encoded).
+    If url is falsy, returns it unchanged.
     """
-    encoded = base64.b64encode(url.encode()).decode()
-    return f"https://http-proxy-zai.vercel.app/proxy/{encoded}"
+    if not url:
+        return url
+    try:
+        encoded = base64.b64encode(url.encode()).decode()
+        return f"https://http-proxy-zai.vercel.app/proxy/{encoded}"
+    except Exception:
+        # If encoding fails, return original URL rather than crash
+        return url
 
 
-def extract_episode_id(html: str, soup: BeautifulSoup) -> Optional[str]:
+def extract_episode_id(data: Union[str, Dict[str, Any], BeautifulSoup]) -> Optional[str]:
     """
-    Try multiple methods to extract numeric episode ID from the page
-    
-    Args:
-        html: Raw HTML content
-        soup: BeautifulSoup parsed HTML
-        
-    Returns:
-        Episode ID string or None if not found
+    Try multiple methods to extract numeric episode ID.
+
+    Accepts:
+      - dict (the `result` from episode_sources)
+      - raw HTML string
+      - BeautifulSoup object
+
+    If a dict is passed, will set data['episode_id'] when found.
+
+    Returns episode id string or None.
     """
-    # Method A: title contains a numeric token
-    if soup.title and soup.title.string:
-        title_text = soup.title.string.strip()
-        m = re.search(r"\d{3,}", title_text)
+    def find_in_text(text: Optional[str]) -> Optional[str]:
+        if not text:
+            return None
+        # try query param style ?ep=12345 or &ep=12345
+        m = re.search(r"[?&]ep=(\d+)", text)
         if m:
-            return m.group(0)
+            return m.group(1)
+        # /ep/12345 or /episode/12345
+        m = re.search(r"/(?:ep|episode)/(\d+)", text)
+        if m:
+            return m.group(1)
+        # look for long numeric tokens (5+ digits)
+        m = re.search(r"(\d{5,})", text)
+        if m:
+            return m.group(1)
+        return None
 
-    # Method B: search for getSources?id= in page/JS
-    m2 = re.search(r"getSources\?id=(\d+)", html)
-    if m2:
-        return m2.group(1)
+    # If dict: inspect known fields first
+    if isinstance(data, dict):
+        # 1) direct episode id fields (prefer ep param in episodeId)
+        for key in ("episodeId", "episode_id", "ep_id", "id"):
+            if key in data and data[key]:
+                val = str(data[key])
+                ep = find_in_text(val)
+                if ep:
+                    data["episode_id"] = ep
+                    return ep
+                # if value itself is numeric-ish, use it
+                m = re.search(r"^\d+$", val)
+                if m:
+                    data["episode_id"] = val
+                    return val
 
-    # Method C: look for patterns like id: 12345 or "id" = "12345"
-    m3 = re.search(r"['\" ]id['\"]\s*[:=]\s*['\"]?(\d{3,})['\"]?", html)
-    if m3:
-        return m3.group(1)
+        # 2) inspect sources & tracks for urls that contain ?ep=
+        candidates: List[str] = []
+        sources = data.get("sources")
+        if isinstance(sources, dict):
+            candidates.extend([str(sources.get(k)) for k in ("url", "file") if sources.get(k)])
+        elif isinstance(sources, list):
+            for s in sources:
+                if isinstance(s, dict):
+                    candidates.extend([str(s.get(k)) for k in ("url", "file") if s.get(k)])
+                elif isinstance(s, str):
+                    candidates.append(s)
+
+        tracks = data.get("tracks", [])
+        if isinstance(tracks, list):
+            for t in tracks:
+                if isinstance(t, dict):
+                    candidates.extend([str(t.get(k)) for k in ("url", "file") if t.get(k)])
+                elif isinstance(t, str):
+                    candidates.append(t)
+
+        for c in candidates:
+            ep = find_in_text(c)
+            if ep:
+                data["episode_id"] = ep
+                return ep
+
+        # 3) fallback to IDs like anilistID/malID if nothing else found (less ideal but useful)
+        for key in ("anilistID", "anilistId", "malID", "malId"):
+            if key in data and data[key]:
+                val = str(data[key])
+                data["episode_id"] = val
+                return val
+
+        return None
+
+    # If BeautifulSoup or HTML string, search the markup/text
+    html_text = ""
+    if isinstance(data, BeautifulSoup):
+        html_text = str(data)
+    elif isinstance(data, str):
+        html_text = data
+
+    # patterns to try
+    patterns = [
+        r"[?&]ep=(\d+)",
+        r"getSources\?id=(\d+)",
+        r'["\']ep["\']\s*[:=]\s*["\']?(\d+)["\']?',
+        r'["\']id["\']\s*[:=]\s*["\']?(\d{3,})["\']?',
+        r"/(?:ep|episode)/(\d+)"
+    ]
+    for patt in patterns:
+        m = re.search(patt, html_text)
+        if m:
+            return m.group(1)
+
+    # fallback: any long numeric token
+    m = re.search(r"(\d{5,})", html_text)
+    if m:
+        return m.group(1)
 
     return None
 
 
 def sort_subtitle_priority(track: Dict[str, Any]) -> int:
     """
-    Sort function to prioritize English subtitles
-    
-    Args:
-        track: Subtitle track dictionary
-        
-    Returns:
-        Priority value (0=highest, 2=lowest)
+    Sort function to prioritize English subtitles and deprioritize thumbnails.
+    Lower return value = higher priority.
     """
     if not isinstance(track, dict):
-        return 2
-    
-    # Check language field
-    lang = track.get("lang", "").lower()
-    if lang in ("en", "eng", "english"):
+        return 50
+
+    lang_label = (track.get("lang") or track.get("label") or "").lower()
+
+    # thumbnails last
+    if "thumbnail" in lang_label or "thumbnails" in lang_label:
+        return 100
+
+    # English first
+    if any(k in lang_label for k in ("english", "eng", "en")):
         return 0
-    
-    # Check label field
-    label = track.get("label", "").lower()
-    if "english" in label or "eng" in label:
-        return 0
-    
-    # Check if explicitly marked as default
+
+    # explicit default
     if track.get("default") is True:
         return 1
-    
-    # All other languages come last
-    return 2
+
+    # others
+    return 10
 
 
 def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Patch all file links in video data to go through proxy
-    
-    Args:
-        data: Video data dictionary with sources and tracks
-        
-    Returns:
-        Modified data with proxied URLs
+    Patch all file/url links in video data to go through proxy.
+    Handles both 'file' and 'url' keys for sources and tracks.
+    Also sorts subtitle tracks by priority.
     """
     if not isinstance(data, dict):
         return data
-    
-    # Proxy video sources
+
+    # Proxy sources (dict or list)
     sources = data.get("sources")
-    if isinstance(sources, dict) and "file" in sources:
-        sources["file"] = encode_proxy(sources["file"])
+    if isinstance(sources, dict):
+        for k in ("file", "url"):
+            if sources.get(k):
+                sources[k] = encode_proxy(sources[k])
     elif isinstance(sources, list):
         for s in sources:
-            if isinstance(s, dict) and s.get("file"):
-                s["file"] = encode_proxy(s["file"])
+            if isinstance(s, dict):
+                for k in ("file", "url"):
+                    if s.get(k):
+                        s[k] = encode_proxy(s[k])
 
-    # Proxy subtitle tracks
+    # Proxy tracks
     if "tracks" in data and isinstance(data["tracks"], list):
         for track in data["tracks"]:
-            if isinstance(track, dict) and "file" in track:
-                track["file"] = encode_proxy(track["file"])
-        
-        # Sort tracks with English first
-        data["tracks"].sort(key=sort_subtitle_priority)
+            if not isinstance(track, dict):
+                continue
+            for k in ("file", "url"):
+                if track.get(k):
+                    track[k] = encode_proxy(track[k])
+
+        # Sort tracks: english first, thumbnails last
+        try:
+            data["tracks"].sort(key=sort_subtitle_priority)
+        except Exception:
+            pass
 
     return data
