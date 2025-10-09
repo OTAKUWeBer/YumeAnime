@@ -5,11 +5,12 @@ Handles URL encoding, episode ID extraction, subtitle sorting, and proxying.
 import base64
 import re
 from typing import Optional, List, Dict, Any, Union
+import os
 import dotenv
 from bs4 import BeautifulSoup
 
 dotenv.load_dotenv()
-proxy_url = dotenv.get_key(dotenv.find_dotenv(), "PROXY_URL")
+proxy_url = os.getenv("PROXY_URL")
 
 def encode_proxy(url: Optional[str]) -> Optional[str]:
     """
