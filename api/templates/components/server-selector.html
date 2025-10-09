@@ -28,13 +28,13 @@
             <label class="text-gray-300 font-medium text-sm md:text-base">Audio:</label>
             <div class="flex gap-2 language-toggle">
                 {% if sub_url %}
-                <a href="{{ sub_url }}{% if selected_server %}&server={{ selected_server }}{% endif %}"
+                <a href="{{ sub_url }}"
                    class="language-btn px-4 py-2 rounded-lg border-2 transition-all duration-300 text-sm md:text-base min-w-[60px] text-center {% if lang == 'sub' %}bg-purple-500 border-purple-500 text-white active{% else %}border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-purple-500/10{% endif %}">
                     SUB
                 </a>
                 {% endif %}
                 {% if dub_url %}
-                <a href="{{ dub_url }}{% if selected_server %}&server={{ selected_server }}{% endif %}"
+                <a href="{{ dub_url }}"
                    class="language-btn px-4 py-2 rounded-lg border-2 transition-all duration-300 text-sm md:text-base min-w-[60px] text-center {% if lang == 'dub' %}bg-purple-500 border-purple-500 text-white active{% else %}border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-purple-500/10{% endif %}">
                     DUB
                 </a>
@@ -47,11 +47,7 @@
 
 <script>
 function switchServer(serverName) {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('server', serverName);
-
-    localStorage.setItem('preferredServer', serverName);
-
-    window.location.href = currentUrl.toString();
+    localStorage.setItem('yumePreferredServer', serverName);
+    window.location.reload();
 }
 </script>
