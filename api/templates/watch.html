@@ -53,20 +53,21 @@
         <!-- Current Episode Banner -->
         {% include 'components/current-episode-banner.html' %}
 
+        <!-- Server and Language Selector -->
+        {% include 'components/server-selector.html' %}
+
         <!-- Video Player -->
         {% include 'components/video-player.html' %}
 
         <!-- Episode Navigation -->
         {% include 'components/episode-navigation.html' %}
 
-        <!-- Language Toggle -->
-        {% include 'components/language-toggle.html' %}
-
         <!-- Episodes Grid -->
         {% include 'components/episodes-grid.html' %}
     </div>
 
     <!-- Replaced HLS player scripts with Video.js player script -->
+    <script src="{{ url_for('static', filename='js/server-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
     <script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
 </body>

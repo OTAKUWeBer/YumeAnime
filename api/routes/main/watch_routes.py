@@ -51,8 +51,25 @@ async def watch(eps_title):
     if lang == "dub" and not dub_available:
         return redirect(url_for('main.watch_routes.watch', eps_title=eps_title, ep=f"{ep_number}-sub"))
 
-    # --- Determine which server to use ---
+    # --- Fetch available servers first ---
+    available_servers = []
+    try:
+        servers_data = await current_app.ha_scraper.episode_servers(full_slug)
+        if servers_data:
+            available_servers = servers_data.get(lang, [])
+    except Exception as e:
+        print(f"Error fetching servers: {e}")
+
+    # --- Determine which server to use with fallback logic ---
     selected_server = request.args.get("server") or last_server
+
+    # If selected server not in available servers, use first available or fallback to hd-1
+    if available_servers:
+        server_names = [s.get("serverName") for s in available_servers if s.get("serverName")]
+        if selected_server not in server_names and server_names:
+            selected_server = server_names[0]
+    else:
+        selected_server = "hd-1"
 
     # --- Fetch video data from the API ---
     raw = await current_app.ha_scraper.video(full_slug, lang, selected_server)
@@ -147,7 +164,8 @@ async def watch(eps_title):
             dub_available=dub_available,
             sub_url=sub_url,
             dub_url=dub_url,
-            selected_server=selected_server,  # send to template
+            selected_server=selected_server,
+            available_servers=available_servers,
         )
     except Exception as e:
         print("watch error:", e)
