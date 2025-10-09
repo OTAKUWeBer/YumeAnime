@@ -61,7 +61,8 @@ async def watch(eps_title):
         print(f"Error fetching servers: {e}")
 
     # --- Determine which server to use with fallback logic ---
-    selected_server = request.args.get("server") or last_server
+    # Server is stored in localStorage on frontend, so we use session fallback
+    selected_server = last_server
 
     # If selected server not in available servers, use first available or fallback to hd-1
     if available_servers:
