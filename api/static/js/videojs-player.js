@@ -197,25 +197,36 @@ formatSubtitlesForVideoJS(subtitles) {
       .join('')
   }
 
-  // Filter valid subtitle tracks
+  // ENHANCED: Filter valid subtitle tracks with stricter validation
   const candidates = subtitles.filter((subtitle) => {
     const subFile = subtitle.file || subtitle.url
     if (!subFile || subFile === 'null' || subFile === '') return false
 
     const labelOrLang = (subtitle.lang || subtitle.label || '').toString().toLowerCase()
+    const kind = (subtitle.kind || '').toString().toLowerCase()
     
-    // Skip thumbnails, posters, images
+    // CRITICAL: Skip any track that's explicitly NOT subtitles/captions
+    if (kind && kind !== 'subtitles' && kind !== 'captions' && kind !== '') {
+      console.warn('[Subtitles] Skipping non-subtitle track (wrong kind):', subtitle)
+      return false
+    }
+    
+    // Skip thumbnails, posters, images, sprites
     if (labelOrLang.includes('thumb') || 
         labelOrLang.includes('thumbnail') || 
         labelOrLang.includes('poster') || 
-        labelOrLang.includes('image')) {
+        labelOrLang.includes('image') ||
+        labelOrLang.includes('sprite') ||
+        labelOrLang.includes('preview')) {
       console.warn('[Subtitles] Skipping non-subtitle track:', subtitle)
       return false
     }
 
-    // Skip image files
-    if (/\.(jpe?g|png|gif|webp)(\?.*)?$/i.test(subFile)) return false
-
+    // Skip image files and common sprite formats
+    if (/\.(jpe?g|png|gif|webp|bmp|svg|vtt\.jpg|vtt\.png)(\?.*)?$/i.test(subFile)) {
+      console.warn('[Subtitles] Skipping image file:', subFile)
+      return false
+    }
     return true
   })
 
