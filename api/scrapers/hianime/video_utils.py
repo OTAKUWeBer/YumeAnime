@@ -182,17 +182,29 @@ def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Proxy tracks
     if "tracks" in data and isinstance(data["tracks"], list):
-        for track in data["tracks"]:
+        print(f"[Proxy] Processing {len(data['tracks'])} subtitle tracks")
+        for idx, track in enumerate(data["tracks"]):
             if not isinstance(track, dict):
                 continue
+
+            original_file = track.get("file")
+            original_url = track.get("url")
+
             for k in ("file", "url"):
                 if track.get(k):
-                    track[k] = encode_proxy(track[k])
+                    proxied = encode_proxy(track[k])
+                    track[k] = proxied
+                    print(f"[Proxy] Track {idx} ({track.get('label', 'unknown')}): {k} proxied")
+
+            if not original_file and not original_url:
+                print(f"[Proxy] Warning: Track {idx} has no file or url: {track}")
 
         # Sort tracks: english first, thumbnails last
         try:
             data["tracks"].sort(key=sort_subtitle_priority)
-        except Exception:
+            print(f"[Proxy] Sorted {len(data['tracks'])} tracks by priority")
+        except Exception as e:
+            print(f"[Proxy] Error sorting tracks: {e}")
             pass
 
     return data

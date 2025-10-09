@@ -101,6 +101,9 @@ async def watch(eps_title):
 
         # Subtitles
         subtitle_tracks = raw.get("tracks", [])
+        print(f"[Watch] Subtitle tracks received: {len(subtitle_tracks)} tracks")
+        if subtitle_tracks:
+            print(f"[Watch] First track sample: {subtitle_tracks[0] if subtitle_tracks else 'none'}")
 
         # Intro/outro markers
         intro = raw.get("intro")
