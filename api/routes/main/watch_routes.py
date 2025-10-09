@@ -61,16 +61,20 @@ async def watch(eps_title):
         print(f"Error fetching servers: {e}")
 
     # --- Determine which server to use with fallback logic ---
-    # Server is stored in localStorage on frontend, so we use session fallback
-    selected_server = last_server
+    # Check if frontend sent a preferred server via cookie/header
+    preferred_server = request.cookies.get('preferred_server', last_server)
+    selected_server = preferred_server
 
     # If selected server not in available servers, use first available or fallback to hd-1
     if available_servers:
         server_names = [s.get("serverName") for s in available_servers if s.get("serverName")]
         if selected_server not in server_names and server_names:
             selected_server = server_names[0]
+            print(f"Server {preferred_server} not available, using {selected_server}")
     else:
         selected_server = "hd-1"
+
+    print(f"Selected server: {selected_server}, Available: {[s.get('serverName') for s in available_servers]}")
 
     # --- Fetch video data from the API ---
     raw = await current_app.ha_scraper.video(full_slug, lang, selected_server)
