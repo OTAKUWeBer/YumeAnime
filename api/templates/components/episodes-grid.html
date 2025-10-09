@@ -33,7 +33,7 @@
                 {% set ep_query = ep_parts[1] if ep_parts|length > 1 else '' %}
                 {% set ep_param = ep_query.split('ep=')[1].split('&')[0] if 'ep=' in ep_query else '' %}
                 
-                <a href="/watch/{{ ep_slug }}?ep={{ ep_param }}-{{ lang if lang else 'sub' }}" 
+                <a href="/watch/{{ ep_slug }}?ep={{ ep_param }}-{{ lang if lang else 'sub' }}{% if selected_server %}&server={{ selected_server }}{% endif %}"
                    class="episode-card {% if episode_number and episode.number == episode_number|int %}current{% endif %}"
                    data-episode="{{ episode.number }}"
                    data-anime-id="{{ ep_slug }}"

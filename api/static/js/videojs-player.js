@@ -970,13 +970,24 @@ class VideoJSPlayer {
     const nextBtn = document.getElementById("nextEpisodeBtn")
     if (nextBtn && nextBtn.href && !nextBtn.disabled) {
       console.log("Auto next enabled - showing notification")
-      this.showAutoNextNotification(nextBtn.href)
+
+      // Preserve server selection in next episode URL
+      let nextUrl = nextBtn.href
+      const params = new URLSearchParams(window.location.search)
+      const currentServer = params.get('server')
+
+      if (currentServer && !nextUrl.includes('server=')) {
+        const separator = nextUrl.includes('?') ? '&' : '?'
+        nextUrl += `${separator}server=${currentServer}`
+      }
+
+      this.showAutoNextNotification(nextUrl)
       setTimeout(() => {
         // Double check settings before navigating
         const currentSettings = this.loadSettings()
         if (currentSettings.autoplayNext) {
-          console.log("Navigating to next episode:", nextBtn.href)
-          window.location.href = nextBtn.href
+          console.log("Navigating to next episode:", nextUrl)
+          window.location.href = nextUrl
         } else {
           console.log("Auto next was disabled during countdown")
         }
