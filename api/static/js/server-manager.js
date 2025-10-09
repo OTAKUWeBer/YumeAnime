@@ -18,6 +18,14 @@ class ServerManager {
       localStorage.setItem(this.storageKey, serverName);
       this.preferredServer = serverName;
       console.log(`Preferred server saved: ${serverName}`);
+
+      fetch('/api/set-server', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ server: serverName })
+      }).catch(err => console.error('Failed to sync server to backend:', err));
     } catch (error) {
       console.error('Error saving preferred server:', error);
     }
@@ -64,8 +72,7 @@ class ServerManager {
 
   switchServer(serverName) {
     this.savePreferredServer(serverName);
-    const newUrl = this.applyServerToURL(serverName);
-    window.location.href = newUrl;
+    window.location.reload();
   }
 
   initializeServerButtons() {
@@ -83,22 +90,10 @@ class ServerManager {
   }
 
   ensureCorrectServerOnLoad(currentServer, availableServers) {
-    const params = new URLSearchParams(window.location.search);
-    const urlServer = params.get('server');
-
-    if (urlServer && this.isServerAvailable(urlServer, availableServers)) {
-      this.savePreferredServer(urlServer);
-      return;
-    }
-
     const bestServer = this.selectBestServer(availableServers);
 
-    if (!urlServer || urlServer !== bestServer) {
-      const newUrl = this.applyServerToURL(bestServer);
-
-      if (window.location.href !== newUrl) {
-        window.location.href = newUrl;
-      }
+    if (currentServer !== bestServer) {
+      this.savePreferredServer(bestServer);
     }
   }
 }
@@ -115,10 +110,8 @@ function switchServer(serverName) {
   if (window.serverManager) {
     window.serverManager.switchServer(serverName);
   } else {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('server', serverName);
     localStorage.setItem('yumePreferredServer', serverName);
-    window.location.href = currentUrl.toString();
+    window.location.reload();
   }
 }
 
