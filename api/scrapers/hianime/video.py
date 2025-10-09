@@ -100,7 +100,6 @@ class HianimeVideoService:
             result["episode_id"] = ep_extracted
 
         # Proxy all file/url fields and sort subtitles
-        print(f"result before proxying: {result}")
         result = proxy_video_sources(result)
 
         # Choose canonical video_link (first source url/file)
