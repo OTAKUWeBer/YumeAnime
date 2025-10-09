@@ -17,7 +17,7 @@ async def watch(eps_title):
     
     # Check user's preferred language setting
     preferred_lang = "sub"  # default
-    last_server = session.get("last_used_server", "hd-1")
+    last_server = session.get("last_used_server", "hd-2")
     
     if 'username' in session and '_id' in session:
         try:
@@ -160,7 +160,6 @@ async def watch(eps_title):
     # Language switch URLs
     sub_url = url_for('main.watch_routes.watch', eps_title=eps_title_clean, ep=f"{ep_number}-sub") if ep_number else None
     dub_url = url_for('main.watch_routes.watch', eps_title=eps_title_clean, ep=f"{ep_number}-dub") if ep_number and dub_available else None
-
     # Render watch page
     try:
         return render_template(
