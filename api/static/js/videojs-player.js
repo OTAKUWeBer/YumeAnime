@@ -156,29 +156,36 @@ class VideoJSPlayer {
   }
 
   formatSubtitlesForVideoJS(subtitles) {
-    if (!subtitles || subtitles.length === 0) return []
+    if (!subtitles || subtitles.length === 0) {
+      console.log('[Subtitles] No subtitles provided')
+      return []
+    }
 
-    return subtitles
+    const tracks = subtitles
       .map((subtitle, index) => {
-        // Ensure we have a valid subtitle file URL
         if (!subtitle.file || subtitle.file === "null" || subtitle.file === "") {
-          console.warn(`Invalid subtitle file for track ${index}:`, subtitle)
+          console.warn(`[Subtitles] Invalid subtitle file for track ${index}:`, subtitle)
           return null
         }
 
         const isEnglish = subtitle.label && subtitle.label.toLowerCase().includes("english")
-        const isDefault = isEnglish && this.settings.subtitleLanguage === "English"
+        const shouldBeDefault = isEnglish && this.settings.subtitleLanguage === "English" && this.currentLanguage === "sub"
+
+        console.log(`[Subtitles] Track ${index}: ${subtitle.label}, file: ${subtitle.file}, default: ${shouldBeDefault}`)
 
         return {
           kind: "subtitles",
           src: subtitle.file,
           srclang: subtitle.lang || "en",
           label: subtitle.label || `Subtitle ${index + 1}`,
-          default: isDefault, // Set English as default if it matches settings
-          mode: isDefault ? "showing" : "disabled", // Show default track immediately
+          default: shouldBeDefault,
+          mode: shouldBeDefault ? "showing" : "disabled",
         }
       })
-      .filter((track) => track !== null) // Remove invalid tracks
+      .filter((track) => track !== null)
+
+    console.log(`[Subtitles] Formatted ${tracks.length} subtitle tracks`)
+    return tracks
   }
 
   applySubtitleStyling() {
@@ -237,16 +244,14 @@ class VideoJSPlayer {
   setupPlayerEvents() {
     // Track progress for resume functionality
     this.player.on("loadedmetadata", () => {
-      console.log("Video metadata loaded")
+      console.log("[Player] Video metadata loaded")
       if (window.progressManager) {
         window.progressManager.startTracking(this.player.el().querySelector("video"))
       }
 
-      setTimeout(() => {
-        this.detectCurrentLanguage()
-        this.updateSubtitleVisibility()
-        this.setDefaultSubtitleTrack()
-      }, 1000)
+      this.detectCurrentLanguage()
+      this.updateSubtitleVisibility()
+      this.setDefaultSubtitleTrack()
     })
 
     this.player.on("error", (error) => {
@@ -286,58 +291,69 @@ class VideoJSPlayer {
   }
 
   setDefaultSubtitleTrack() {
+    if (!this.player || !this.player.textTracks) {
+      console.warn('[Subtitles] Player not ready for subtitle setup')
+      return
+    }
+
     const textTracks = this.player.textTracks()
+    console.log(`[Subtitles] Total tracks available: ${textTracks.length}`)
+
     let englishTrack = null
     let firstTrack = null
 
-    // Find English track or first available track
     for (let i = 0; i < textTracks.length; i++) {
       const track = textTracks[i]
+      console.log(`[Subtitles] Track ${i}: kind=${track.kind}, label=${track.label}, mode=${track.mode}`)
+
       if (track.kind === "subtitles" || track.kind === "captions") {
         if (!firstTrack) firstTrack = track
         if (track.label && track.label.toLowerCase().includes("english")) {
           englishTrack = track
-          break
         }
       }
     }
 
-    // Enable the appropriate track based on language preference
     if (this.currentLanguage === "sub") {
       const defaultTrack = englishTrack || firstTrack
       if (defaultTrack) {
-        // Disable all tracks first
         for (let i = 0; i < textTracks.length; i++) {
           textTracks[i].mode = "disabled"
         }
-        // Enable the default track
         defaultTrack.mode = "showing"
-        console.log(`[v0] Enabled default subtitle track: ${defaultTrack.label}`)
+        console.log(`[Subtitles] Enabled subtitle track: ${defaultTrack.label}`)
+      } else {
+        console.warn('[Subtitles] No subtitle tracks found to enable')
+      }
+    } else {
+      console.log('[Subtitles] Dub mode - subtitles disabled')
+      for (let i = 0; i < textTracks.length; i++) {
+        textTracks[i].mode = "disabled"
       }
     }
   }
 
   setupSubtitleHandling(subtitles) {
-    console.log("[v0] Setting up subtitle handling")
+    console.log("[Subtitles] Setting up subtitle handling with", subtitles ? subtitles.length : 0, "tracks")
 
-    // Wait for player to be fully ready before handling subtitles
     this.player.ready(() => {
-      // Initial language detection and subtitle setup
       this.detectCurrentLanguage()
 
       setTimeout(() => {
         this.updateSubtitleVisibility()
         this.setDefaultSubtitleTrack()
-      }, 500)
+      }, 200)
 
-      // Monitor text track changes
       this.player.textTracks().on("change", () => {
-        console.log("[v0] Text tracks changed")
+        console.log("[Subtitles] Text tracks changed")
         this.handleTextTrackChange()
+      })
+
+      this.player.on("texttrackchange", () => {
+        console.log("[Subtitles] Text track change event fired")
       })
     })
 
-    // Monitor for language changes
     const languageToggle = document.querySelector(".language-toggle")
     if (languageToggle) {
       const observer = new MutationObserver(() => {
@@ -349,14 +365,27 @@ class VideoJSPlayer {
   }
 
   detectCurrentLanguage() {
+    const urlParams = new URLSearchParams(window.location.search)
+    const epParam = urlParams.get('ep')
+
+    if (epParam && epParam.includes('-dub')) {
+      this.currentLanguage = "dub"
+      console.log(`[Language] Detected from URL: dub`)
+      return
+    }
+
     const languageToggle = document.querySelector(".language-toggle")
     if (languageToggle) {
       const activeButton = languageToggle.querySelector(".active")
       if (activeButton) {
         this.currentLanguage = activeButton.textContent.toLowerCase().includes("dub") ? "dub" : "sub"
-        console.log(`[v0] Detected language: ${this.currentLanguage}`)
+        console.log(`[Language] Detected from UI: ${this.currentLanguage}`)
+        return
       }
     }
+
+    this.currentLanguage = "sub"
+    console.log(`[Language] Default: sub`)
   }
 
   handleTextTrackChange() {
