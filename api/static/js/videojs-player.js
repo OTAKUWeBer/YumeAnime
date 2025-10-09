@@ -163,7 +163,7 @@ formatSubtitlesForVideoJS(subtitles) {
 
   console.log('[Subtitles] Raw subtitle data:', JSON.stringify(subtitles, null, 2))
 
-  // quick language name -> code map for common languages
+  // Language name to code mapping
   const langToCode = {
     english: 'en',
     'chinese - traditional': 'zh-Hant',
@@ -175,59 +175,87 @@ formatSubtitlesForVideoJS(subtitles) {
     spanish: 'es',
     french: 'fr',
     german: 'de',
+    japanese: 'ja',
+    arabic: 'ar',
+    portuguese: 'pt',
+    russian: 'ru',
+    italian: 'it',
+    vietnamese: 'vi',
   }
 
   const normalizeLabel = (s) => {
-    if (!s) return ''
+    if (!s || s === 'null' || s === 'undefined') return ''
     s = String(s).trim()
-    // keep existing hyphen sections (e.g. "Chinese - Traditional")
-    // simple title-case per word
+    
+    // Title case each word while preserving separators
     return s
-      .split(/(\s|-)/) // keep separators
-      .map(part => (part.match(/^\s*$/) || part === '-') ? part : (part.charAt(0).toUpperCase() + part.slice(1)))
+      .split(/(\s+|-)/)
+      .map(part => {
+        if (!part || /^\s*$/.test(part) || part === '-') return part
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      })
       .join('')
-      .replace(/-/g, ' - ')
   }
 
-  // 1) prefilter valid subtitle candidates (remove thumbnails/images/misplaced entries)
+  // Filter valid subtitle tracks
   const candidates = subtitles.filter((subtitle) => {
     const subFile = subtitle.file || subtitle.url
     if (!subFile || subFile === 'null' || subFile === '') return false
 
-    // If the 'lang' or label indicates it's a thumbnail or poster, skip it
-    const maybe = (subtitle.lang || subtitle.label || '').toString().toLowerCase()
-    if (maybe.includes('thumb') || maybe.includes('thumbnail') || maybe.includes('poster') || maybe.includes('image')) {
-      console.warn('[Subtitles] Skipping non-subtitle track (thumbnail/poster):', subtitle)
+    const labelOrLang = (subtitle.lang || subtitle.label || '').toString().toLowerCase()
+    
+    // Skip thumbnails, posters, images
+    if (labelOrLang.includes('thumb') || 
+        labelOrLang.includes('thumbnail') || 
+        labelOrLang.includes('poster') || 
+        labelOrLang.includes('image')) {
+      console.warn('[Subtitles] Skipping non-subtitle track:', subtitle)
       return false
     }
 
-    // Also skip obvious image URLs
+    // Skip image files
     if (/\.(jpe?g|png|gif|webp)(\?.*)?$/i.test(subFile)) return false
 
     return true
   })
 
-  // 2) map filtered candidates into final tracks (index now contiguous)
+  console.log(`[Subtitles] Filtered ${candidates.length} valid subtitle tracks from ${subtitles.length} total`)
+
+  // Map to Video.js format
   const tracks = candidates.map((subtitle, index) => {
     const subFile = subtitle.file || subtitle.url
 
-    // label preference: label -> lang -> fallback
-    const rawLabel = subtitle.label || subtitle.lang || `Subtitle ${index + 1}`
-    const label = normalizeLabel(rawLabel)
+    // Get the raw label/lang value
+    const rawLabel = subtitle.label || subtitle.lang || ''
+    
+    // IMPORTANT: Only use "Subtitle N" if we truly have no label/lang
+    const label = rawLabel && rawLabel !== 'null' && rawLabel !== 'undefined'
+      ? normalizeLabel(rawLabel)
+      : `Subtitle ${index + 1}`
 
-    // try to get a srclang code from map, else use srclang field, else infer first 2 letters
+    // Get language code
     const langKey = (subtitle.lang || subtitle.label || '').toString().toLowerCase()
-    let srclang = subtitle.srclang || langToCode[langKey] || langToCode[normalizeLabel(langKey).toLowerCase()]
+    let srclang = subtitle.srclang || langToCode[langKey]
+    
     if (!srclang) {
-      // fallback: take first two letters (safe-ish)
-      const inferred = langKey.split(/[^a-z]/i)[0] || ''
-      srclang = inferred.slice(0, 2) || 'en'
+      // Try normalized version
+      const normalizedKey = normalizeLabel(langKey).toLowerCase()
+      srclang = langToCode[normalizedKey]
+    }
+    
+    if (!srclang) {
+      // Fallback: extract first two letters
+      const inferred = langKey.replace(/[^a-z]/gi, '').slice(0, 2) || 'en'
+      srclang = inferred
     }
 
+    // Check if this should be the default track
     const isEnglish = label.toLowerCase().includes('english') || srclang.startsWith('en')
-    const shouldBeDefault = isEnglish && this.settings.subtitleLanguage === 'English' && this.currentLanguage === 'sub'
+    const shouldBeDefault = isEnglish && 
+                           this.settings.subtitleLanguage === 'English' && 
+                           this.currentLanguage === 'sub'
 
-    console.log(`[Subtitles] Track ${index}: ${label}, file: ${subFile}, srclang: ${srclang}, default: ${shouldBeDefault}`)
+    console.log(`[Subtitles] Track ${index}: label="${label}", srclang="${srclang}", file="${subFile}", default=${shouldBeDefault}`)
 
     return {
       kind: 'subtitles',
@@ -242,7 +270,6 @@ formatSubtitlesForVideoJS(subtitles) {
   console.log(`[Subtitles] Formatted ${tracks.length} subtitle tracks`)
   return tracks
 }
-
 
   applySubtitleStyling() {
     const existingStyle = document.getElementById("videojs-subtitle-custom-style")
