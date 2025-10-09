@@ -1,49 +1,66 @@
 <div class="mb-8 md:mb-10">
     <div class="bg-gradient-to-br from-gray-900/50 to-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 shadow-xl">
-    <div class="flex flex-col lg:flex-row items-center justify-center gap-6">
-        <div class="flex items-center gap-4 w-full lg:w-auto justify-center">
-            <label class="text-gray-400 font-semibold text-sm uppercase tracking-wider">Server</label>
-            <div class="flex flex-wrap gap-3 justify-center" id="serverSelector">
-                {% if available_servers %}
-                    {% for server in available_servers %}
-                        <button
-                            data-server="{{ server.serverName }}"
-                            class="server-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[80px] shadow-lg {% if server.serverName == selected_server %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}"
-                            onclick="switchServer('{{ server.serverName }}')">
-                            {{ server.serverName.upper() }}
-                        </button>
-                    {% endfor %}
-                {% else %}
-                    <button
-                        data-server="hd-1"
-                        class="server-btn px-5 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 transition-all duration-300 text-sm min-w-[80px] shadow-lg scale-105"
-                        onclick="switchServer('hd-1')">
-                        HD-1
-                    </button>
-                {% endif %}
-            </div>
-        </div>
+        <div class="flex flex-col lg:flex-row items-center justify-center gap-6">
+            <div class="flex items-center gap-4 w-full lg:w-auto justify-center">
+                <label class="text-gray-400 font-semibold text-sm uppercase tracking-wider">Server</label>
+                    <div class="flex flex-wrap gap-3 justify-center" id="serverSelector">
+                        {% if available_servers %}
+                            {# Render hd-2 and hd-1 first in explicit order #}
+                            {% set server_order = ['hd-2', 'hd-1'] %}
+                            {% for server_name in server_order %}
+                                {% set server = available_servers | selectattr("serverName", "equalto", server_name) | first %}
+                                {% if server %}
+                                    <button
+                                        data-server="{{ server.serverName }}"
+                                        class="server-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[80px] shadow-lg {% if server.serverName == selected_server %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}"
+                                        onclick="switchServer('{{ server.serverName }}')">
+                                        {% if server.serverName == 'hd-2' %}HD-1{% elif server.serverName == 'hd-1' %}HD-2{% else %}{{ server.serverName.upper() }}{% endif %}
+                                    </button>
+                                {% endif %}
+                            {% endfor %}
 
-        {% if dub_available %}
-        <div class="flex items-center gap-4 w-full lg:w-auto justify-center lg:border-l lg:border-gray-700/50 lg:pl-6">
-            <label class="text-gray-400 font-semibold text-sm uppercase tracking-wider">Audio</label>
-            <div class="flex gap-3 language-toggle">
-                {% if sub_url %}
-                <a href="{{ sub_url }}"
-                   class="language-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[70px] text-center shadow-lg {% if lang == 'sub' %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105 active{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}">
-                    SUB
-                </a>
-                {% endif %}
-                {% if dub_url %}
-                <a href="{{ dub_url }}"
-                   class="language-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[70px] text-center shadow-lg {% if lang == 'dub' %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105 active{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}">
-                    DUB
-                </a>
-                {% endif %}
+                            {# Render remaining servers in original order #}
+                            {% for server in available_servers %}
+                                {% if server.serverName not in server_order %}
+                                    <button
+                                        data-server="{{ server.serverName }}"
+                                        class="server-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[80px] shadow-lg {% if server.serverName == selected_server %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}"
+                                        onclick="switchServer('{{ server.serverName }}')">
+                                        {{ server.serverName.upper() }}
+                                    </button>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <button
+                                data-server="hd-2"
+                                class="server-btn px-5 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 transition-all duration-300 text-sm min-w-[80px] shadow-lg scale-105"
+                                onclick="switchServer('hd-2')">
+                                HD-1
+                            </button>
+                        {% endif %}
+                    </div>
             </div>
+
+            {% if dub_available %}
+            <div class="flex items-center gap-4 w-full lg:w-auto justify-center lg:border-l lg:border-gray-700/50 lg:pl-6">
+                <label class="text-gray-400 font-semibold text-sm uppercase tracking-wider">Audio</label>
+                <div class="flex gap-3 language-toggle">
+                    {% if sub_url %}
+                    <a href="{{ sub_url }}"
+                       class="language-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[70px] text-center shadow-lg {% if lang == 'sub' %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105 active{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}">
+                        SUB
+                    </a>
+                    {% endif %}
+                    {% if dub_url %}
+                    <a href="{{ dub_url }}"
+                       class="language-btn px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm min-w-[70px] text-center shadow-lg {% if lang == 'dub' %}bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900 scale-105 active{% else %}bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-purple-500 hover:bg-gray-700 hover:scale-105{% endif %}">
+                        DUB
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
-    </div>
     </div>
 </div>
 
@@ -54,9 +71,7 @@ function switchServer(serverName) {
 
     fetch('/api/set-server', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ server: serverName })
     }).then(() => {
         console.log('Server preference saved:', serverName);
