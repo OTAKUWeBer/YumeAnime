@@ -16,6 +16,7 @@ class ServerManager {
   savePreferredServer(serverName) {
     try {
       localStorage.setItem(this.storageKey, serverName);
+      document.cookie = `preferred_server=${serverName}; path=/; max-age=31536000`;
       this.preferredServer = serverName;
       console.log(`Preferred server saved: ${serverName}`);
 
