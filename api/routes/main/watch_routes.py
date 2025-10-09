@@ -79,10 +79,20 @@ async def watch(eps_title):
     intro = outro = None
 
     if isinstance(raw, dict):
-        # Video source
-        sources = raw.get("sources")
-        if isinstance(sources, dict):
-            video_link = sources.get("file")
+        # Video source - prioritize video_link if available (already proxied)
+        video_link = raw.get("video_link")
+
+        # Fallback to sources if video_link not available
+        if not video_link:
+            sources = raw.get("sources")
+            if isinstance(sources, dict):
+                video_link = sources.get("file") or sources.get("url")
+            elif isinstance(sources, list) and sources:
+                first_source = sources[0]
+                if isinstance(first_source, dict):
+                    video_link = first_source.get("file") or first_source.get("url")
+                elif isinstance(first_source, str):
+                    video_link = first_source
 
         # Subtitles
         subtitle_tracks = raw.get("tracks", [])
