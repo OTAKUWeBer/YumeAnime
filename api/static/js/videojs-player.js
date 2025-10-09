@@ -161,9 +161,12 @@ class VideoJSPlayer {
       return []
     }
 
+    console.log('[Subtitles] Raw subtitle data:', JSON.stringify(subtitles, null, 2))
+
     const tracks = subtitles
       .map((subtitle, index) => {
-        if (!subtitle.file || subtitle.file === "null" || subtitle.file === "") {
+        const subFile = subtitle.file || subtitle.url
+        if (!subFile || subFile === "null" || subFile === "") {
           console.warn(`[Subtitles] Invalid subtitle file for track ${index}:`, subtitle)
           return null
         }
@@ -171,12 +174,12 @@ class VideoJSPlayer {
         const isEnglish = subtitle.label && subtitle.label.toLowerCase().includes("english")
         const shouldBeDefault = isEnglish && this.settings.subtitleLanguage === "English" && this.currentLanguage === "sub"
 
-        console.log(`[Subtitles] Track ${index}: ${subtitle.label}, file: ${subtitle.file}, default: ${shouldBeDefault}`)
+        console.log(`[Subtitles] Track ${index}: ${subtitle.label}, file: ${subFile}, default: ${shouldBeDefault}`)
 
         return {
           kind: "subtitles",
-          src: subtitle.file,
-          srclang: subtitle.lang || "en",
+          src: subFile,
+          srclang: subtitle.lang || subtitle.srclang || "en",
           label: subtitle.label || `Subtitle ${index + 1}`,
           default: shouldBeDefault,
           mode: shouldBeDefault ? "showing" : "disabled",

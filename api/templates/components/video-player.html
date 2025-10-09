@@ -20,11 +20,13 @@
 
             {% if subtitles %}
                 {% for sub in subtitles %}
+                    {% if sub.file or sub.url %}
                     <track kind="subtitles"
-                        src="{{ sub.file or sub.src }}"
-                        srclang="{{ sub.lang }}"
-                        label="{{ sub.label }}"
+                        src="{{ sub.file or sub.url }}"
+                        srclang="{{ sub.lang or 'en' }}"
+                        label="{{ sub.label or 'Subtitle' }}"
                         {% if sub.default %} default {% endif %}>
+                    {% endif %}
                 {% endfor %}
             {% endif %}
         </video-js>
