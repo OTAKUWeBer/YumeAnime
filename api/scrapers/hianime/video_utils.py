@@ -5,8 +5,11 @@ Handles URL encoding, episode ID extraction, subtitle sorting, and proxying.
 import base64
 import re
 from typing import Optional, List, Dict, Any, Union
+import dotenv
 from bs4 import BeautifulSoup
 
+dotenv.load_dotenv()
+proxy_url = dotenv.get_key(dotenv.find_dotenv(), "PROXY_URL")
 
 def encode_proxy(url: Optional[str]) -> Optional[str]:
     """
@@ -17,7 +20,7 @@ def encode_proxy(url: Optional[str]) -> Optional[str]:
         return url
     try:
         encoded = base64.b64encode(url.encode()).decode()
-        return f"https://http-proxy-zai.vercel.app/proxy/{encoded}"
+        return f'{proxy_url}{encoded}'
     except Exception:
         # If encoding fails, return original URL rather than crash
         return url
