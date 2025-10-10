@@ -56,6 +56,7 @@ class HianimeVideoService:
                     server=selected_server,
                     category=language,
                 )
+                print(f"------------\n[sources_data]\n------------\n{sources_data}\n------------")
             except Exception as e:
                 # log and try next
                 print(f"[HianimeVideoService] error fetching sources from {selected_server}: {e}")
