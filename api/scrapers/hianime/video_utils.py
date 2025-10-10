@@ -184,7 +184,7 @@ def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
                     if s.get(k):
                         s[k] = encode_proxy(s[k])
 
-    # Proxy tracks
+# Proxy tracks
     if "tracks" in data and isinstance(data["tracks"], list):
         print(f"[Proxy] Processing {len(data['tracks'])} subtitle tracks")
         for idx, track in enumerate(data["tracks"]):
@@ -193,6 +193,21 @@ def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
 
             original_file = track.get("file")
             original_url = track.get("url")
+
+            # Ensure 'label' field exists for frontend compatibility
+            # If track has 'lang' but not 'label', copy lang to label
+            if track.get("lang") and not track.get("label"):
+                track["label"] = track["lang"]
+                print(f"[Proxy] Track {idx}: Added label from lang: {track['label']}")
+            
+            # Also ensure 'kind' is set for subtitle tracks
+            if not track.get("kind"):
+                # Check if this is a thumbnail track
+                lang_or_label = (track.get("lang") or track.get("label") or "").lower()
+                if "thumbnail" in lang_or_label or "thumbnails" in lang_or_label:
+                    track["kind"] = "metadata"
+                else:
+                    track["kind"] = "subtitles"
 
             for k in ("file", "url"):
                 if track.get(k):
@@ -207,8 +222,11 @@ def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             data["tracks"].sort(key=sort_subtitle_priority)
             print(f"[Proxy] Sorted {len(data['tracks'])} tracks by priority")
+            
+            # Log final track order
+            for idx, track in enumerate(data["tracks"]):
+                print(f"[Proxy] Final track {idx}: label={track.get('label')}, kind={track.get('kind')}")
         except Exception as e:
             print(f"[Proxy] Error sorting tracks: {e}")
             pass
-
     return data

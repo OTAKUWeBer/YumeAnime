@@ -197,6 +197,43 @@ formatSubtitlesForVideoJS(subtitles) {
       .join('')
   }
 
+  // Try to extract language from filename
+  const extractLanguageFromFilename = (filename) => {
+    if (!filename) return null
+    
+    // Remove query params and extension
+    const cleanName = filename.split('?')[0].replace(/\.(vtt|srt|ass|ssa)$/i, '')
+    
+    // Common patterns: en.vtt, english.vtt, en-US.vtt, subtitle-en.vtt
+    const patterns = [
+      /[._-](en|english)[._-]?/i,
+      /[._-](zh[-_]?hant|chinese[-_]?traditional)[._-]?/i,
+      /[._-](zh[-_]?hans|chinese[-_]?simplified)[._-]?/i,
+      /[._-](id|indonesian)[._-]?/i,
+      /[._-](ko|korean)[._-]?/i,
+      /[._-](ms|malay)[._-]?/i,
+      /[._-](th|thai)[._-]?/i,
+      /[._-](es|spanish)[._-]?/i,
+      /[._-](fr|french)[._-]?/i,
+      /[._-](de|german)[._-]?/i,
+      /[._-](ja|japanese)[._-]?/i,
+      /[._-](ar|arabic)[._-]?/i,
+      /[._-](pt|portuguese)[._-]?/i,
+      /[._-](ru|russian)[._-]?/i,
+      /[._-](it|italian)[._-]?/i,
+      /[._-](vi|vietnamese)[._-]?/i,
+    ]
+    
+    for (const pattern of patterns) {
+      const match = cleanName.match(pattern)
+      if (match) {
+        return match[1].toLowerCase()
+      }
+    }
+    
+    return null
+  }
+
   // ENHANCED: Filter valid subtitle tracks with stricter validation
   const candidates = subtitles.filter((subtitle) => {
     const subFile = subtitle.file || subtitle.url
@@ -237,21 +274,40 @@ formatSubtitlesForVideoJS(subtitles) {
     const subFile = subtitle.file || subtitle.url
 
     // Get the raw label/lang value
-    const rawLabel = subtitle.label || subtitle.lang || ''
+    let rawLabel = subtitle.label || subtitle.lang || ''
     
-    // IMPORTANT: Only use "Subtitle N" if we truly have no label/lang
+    // If no label/lang, try to extract from filename
+    if (!rawLabel || rawLabel === 'null' || rawLabel === 'undefined') {
+      const extractedLang = extractLanguageFromFilename(subFile)
+      if (extractedLang) {
+        rawLabel = extractedLang
+        console.log(`[Subtitles] Extracted language from filename: ${extractedLang}`)
+      }
+    }
+    
+    // Create readable label
     const label = rawLabel && rawLabel !== 'null' && rawLabel !== 'undefined'
       ? normalizeLabel(rawLabel)
       : `Subtitle ${index + 1}`
 
     // Get language code
-    const langKey = (subtitle.lang || subtitle.label || '').toString().toLowerCase()
+    const langKey = (rawLabel || '').toString().toLowerCase()
     let srclang = subtitle.srclang || langToCode[langKey]
     
     if (!srclang) {
       // Try normalized version
       const normalizedKey = normalizeLabel(langKey).toLowerCase()
       srclang = langToCode[normalizedKey]
+    }
+    
+    if (!srclang) {
+      // Try partial match (e.g., "english" in "english-us")
+      for (const [key, code] of Object.entries(langToCode)) {
+        if (langKey.includes(key)) {
+          srclang = code
+          break
+        }
+      }
     }
     
     if (!srclang) {
