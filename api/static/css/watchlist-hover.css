@@ -45,3 +45,53 @@
 }
 
 /* Removed all complex animations, shimmer effects, and excessive styling */
+
+/* Added modal animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+/* Status option hover effects */
+.status-option {
+  cursor: pointer;
+  transition: all 0.2s ease; /* Smooth transitions for all interactive elements */
+}
+
+.status-option:active {
+  transform: scale(0.95);
+}
+
+/* Enhanced focus states */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
