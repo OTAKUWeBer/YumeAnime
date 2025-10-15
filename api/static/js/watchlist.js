@@ -13,11 +13,11 @@ class WatchlistManager {
 
     this.statusColors = {
       watching: "bg-purple-600",
-      completed: "bg-blue-600",
+      completed: "bg-green-600",
       paused: "bg-yellow-600",
       on_hold: "bg-yellow-600",
       dropped: "bg-red-600",
-      plan_to_watch: "bg-orange-600",
+      plan_to_watch: "bg-blue-600",
     }
 
     this.statusDisplayNames = {
@@ -44,7 +44,7 @@ class WatchlistManager {
     // Close modal when clicking outside
     document.addEventListener("click", (event) => {
       if (event.target.classList.contains("fixed") && event.target.classList.contains("inset-0")) {
-        this.closeEditModal()
+        this.closeStatusModal()
       }
     })
   }
@@ -189,23 +189,23 @@ class WatchlistManager {
     const progressPercentage = totalEpisodes !== "?" ? Math.round((watchedEpisodes / totalEpisodes) * 100) : 0
 
     return `
-        <div class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow" data-anime-id="${item.anime_id}" data-status="${item.status}">
-            <div class="relative">
+        <div class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300" data-anime-id="${item.anime_id}" data-status="${item.status}">
+            <div class="relative group">
                 <a href="/anime/${item.anime_id}">
-                    <div class="anime-poster aspect-[2/3] sm:aspect-[3/4] bg-gray-700 overflow-hidden">
+                    <div class="anime-poster aspect-[2/3] bg-gray-700 overflow-hidden">
                         ${
                           item.poster_url
                             ? `
                             <img src="${item.poster_url}" 
                                  alt="${item.anime_title}" 
-                                 class="w-full h-full object-cover"
+                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            <div class="w-full h-full bg-gray-700 flex items-center justify-center text-2xl sm:text-4xl" style="display: none;">
+                            <div class="w-full h-full bg-gray-700 flex items-center justify-center text-4xl" style="display: none;">
                                 📺
                             </div>
                         `
                             : `
-                            <div class="w-full h-full bg-gray-700 flex items-center justify-center text-2xl sm:text-4xl">
+                            <div class="w-full h-full bg-gray-700 flex items-center justify-center text-4xl">
                                 📺
                             </div>
                         `
@@ -213,112 +213,58 @@ class WatchlistManager {
                     </div>
                 </a>
                 
-                <div class="play-button">
-                </div>
+                <div class="play-button"></div>
                 
                 ${
                   item.rating
                     ? `
-                    <div class="rating-badge absolute top-2 left-2 bg-red-600/90 text-white px-2 py-1 rounded text-xs font-bold">
+                    <div class="absolute top-2 left-2 bg-yellow-500/90 backdrop-blur-sm text-gray-900 px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                        <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
                         ${item.rating}
                     </div>
                 `
                     : ""
                 }
                 
-                ${
-                  item.episodes && (item.episodes.sub || item.episodes.dub)
-                    ? `
-                    <div class="absolute bottom-2 right-2 flex gap-1">
-                        ${
-                          item.episodes.sub
-                            ? `
-                            <div class="episode-badge bg-indigo-500/90 text-white px-2 py-1 rounded flex items-center gap-1 text-xs font-bold">
-                                <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                                    <path d="M18 11H6V9h12v2zm4-6v14c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h16c1.1 0 2 .9 2 2zm-2 0H4v14h16V5z"/>
-                                    <path d="M7 15h2v-2H7v2zm4 0h2v-2h-2v2zm4 0h2v-2h-2v2z"/>
-                                </svg>
-                                ${item.episodes.sub}
-                            </div>
-                        `
-                            : ""
-                        }
-                        ${
-                          item.episodes.dub
-                            ? `
-                            <div class="episode-badge bg-emerald-500/90 text-white px-2 py-1 rounded flex items-center gap-1 text-xs font-bold">
-                                <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                                </svg>
-                                ${item.episodes.dub}
-                            </div>
-                        `
-                            : ""
-                        }
-                    </div>
-                `
-                    : ""
-                }
-                
-                <div class="status-badge absolute top-1 right-1 sm:top-2 sm:right-2 ${this.statusColors[item.status]} text-white px-1 py-0.5 sm:px-2 sm:py-1 rounded-full text-xs font-semibold">
+                <div class="status-badge absolute top-2 right-2 ${this.statusColors[item.status]} backdrop-blur-sm text-white px-2.5 py-1 rounded-md text-xs font-semibold shadow-lg">
                     ${this.statusDisplayNames[item.status] || item.status.charAt(0).toUpperCase() + item.status.slice(1).replace("_", " ")}
                 </div>
             </div>
             
-            <div class="p-2 sm:p-4">
-                <a href="/anime/${item.anime_id}" class="hover:text-purple-400 transition-colors">
-                    <h3 class="anime-title font-semibold mb-1 sm:mb-2 line-clamp-2 text-sm sm:text-base">${item.anime_title}</h3>
-                </a>
-                
-                <div class="flex items-center justify-between text-xs sm:text-sm text-gray-400 mb-2 sm:mb-3">
-                    <span>Progress:</span>
-                    <span class="font-semibold">${watchedEpisodes}/${totalEpisodes}</span>
+            <div class="p-3">
+                <div class="flex items-start justify-between gap-2 mb-3">
+                    <a href="/anime/${item.anime_id}" class="hover:text-purple-400 transition-colors flex-1">
+                        <h3 class="font-semibold line-clamp-2 text-sm leading-tight">${item.anime_title}</h3>
+                    </a>
+                    <button onclick="watchlistManager.openStatusModal('${item.anime_id}', '${item.anime_title.replace(/'/g, "\\'")}', '${item.status}', ${watchedEpisodes}, ${item.total_episodes}, '${item.poster_url || ""}')" 
+                            class="flex-shrink-0 w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all hover:scale-105 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                        </svg>
+                    </button>
                 </div>
                 
-                <div class="progress-bar w-full bg-gray-700 rounded-full h-2 sm:h-3 mb-2 sm:mb-3 overflow-hidden">
-                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 h-2 sm:h-2 rounded-full transition-all duration-500 ease-out relative" 
-                         style="width: ${progressPercentage}%">
+                <div class="mb-2">
+                    <div class="flex items-baseline justify-between mb-2">
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="text-2xl font-bold text-purple-400">${watchedEpisodes}</span>
+                            <span class="text-gray-500 text-sm">/</span>
+                            <span class="text-lg font-semibold text-gray-400">${totalEpisodes}</span>
+                        </div>
                         ${
-                          progressPercentage > 0
-                            ? `
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse"></div>
-                        `
+                          totalEpisodes !== "?"
+                            ? `<span class="text-xs font-medium text-gray-400">${progressPercentage}%</span>`
                             : ""
                         }
                     </div>
-                </div>
-                
-                ${
-                  totalEpisodes !== "?"
-                    ? `
-                    <div class="text-xs text-center text-gray-400 mb-2 sm:mb-3">
-                        ${progressPercentage}% Complete
+                    
+                    <div class="progress-bar w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-500 ease-out" 
+                             style="width: ${progressPercentage}%">
+                        </div>
                     </div>
-                `
-                    : ""
-                }
-                
-                <div class="flex flex-col sm:flex-row gap-1 sm:gap-2 mb-2">
-                    <button onclick="watchlistManager.quickUpdateEpisodes('${item.anime_id}', ${watchedEpisodes + 1}, ${item.total_episodes})" 
-                            class="action-button bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded text-xs font-semibold transition-colors"
-                            ${watchedEpisodes >= (item.total_episodes || 999) ? "disabled" : ""}>
-                        +1 Episode
-                    </button>
-                    <button onclick="watchlistManager.openEditModal('${item.anime_id}', '${item.anime_title.replace(/'/g, "\\'")}', '${item.status}', ${watchedEpisodes}, ${item.total_episodes})" 
-                            class="action-button bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded text-xs font-semibold transition-colors">
-                        Edit
-                    </button>
-                </div>
-                
-                <div class="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                    <a href="/episodes/${item.anime_id}" class="action-button text-center bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded text-xs font-semibold transition-colors">
-                        Watch
-                    </a>
-                    <button onclick="watchlistManager.removeFromWatchlist('${item.anime_id}', '${item.anime_title.replace(/'/g, "\\'")}', this)" 
-                            class="action-button bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs font-semibold transition-colors">
-                        Remove
-                    </button>
                 </div>
             </div>
         </div>
@@ -413,71 +359,173 @@ class WatchlistManager {
     }
   }
 
-  openEditModal(animeId, animeTitle, status, watchedEps, totalEps) {
+  openStatusModal(animeId, animeTitle, status, watchedEps, totalEps, posterUrl) {
     const modal = document.createElement("div")
-    modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    modal.id = "status-modal"
+    modal.className =
+      "fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+    modal.onclick = (e) => {
+      if (e.target === modal) this.closeStatusModal()
+    }
+
+    const statusOptions = [
+      { value: "watching", label: "Watching", color: "purple" },
+      { value: "completed", label: "Completed", color: "green" },
+      { value: "paused", label: "On Hold", color: "yellow" },
+      { value: "dropped", label: "Dropped", color: "red" },
+      { value: "plan_to_watch", label: "Plan to Watch", color: "blue" },
+    ]
+
     modal.innerHTML = `
-            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 class="text-xl font-bold mb-4">${animeTitle}</h3>
-                
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">Status:</label>
-                    <select id="edit-status" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                        <option value="watching" ${status === "watching" ? "selected" : ""}>Watching</option>
-                        <option value="completed" ${status === "completed" ? "selected" : ""}>Completed</option>
-                        <option value="paused" ${status === "paused" || status === "on_hold" ? "selected" : ""}>Paused</option>
-                        <option value="dropped" ${status === "dropped" ? "selected" : ""}>Dropped</option>
-                        <option value="plan_to_watch" ${status === "plan_to_watch" ? "selected" : ""}>Plan to watch</option>
-                    </select>
-                </div>
-                
-                <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2">Episodes Watched:</label>
-                    <input type="number" id="edit-episodes" min="0" max="${totalEps || 999}" value="${watchedEps || 0}" 
-                        class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                    <div class="text-xs text-gray-400 mt-1">Total: ${totalEps || "?"} episodes</div>
-                </div>
-                
-                <div class="flex gap-3">
-                    <button onclick="watchlistManager.saveEdit('${animeId}')" 
-                        class="flex-1 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold transition-colors">
-                        Save Changes
-                    </button>
-                    <button onclick="watchlistManager.closeEditModal()" 
-                        class="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors">
-                        Cancel
-                    </button>
-                </div>
+      <div class="bg-gray-900 rounded-xl max-w-md w-full shadow-2xl animate-scale-in overflow-hidden border border-gray-800">
+        <div class="relative bg-gradient-to-br from-purple-600 to-pink-600 p-4">
+          <button onclick="watchlistManager.closeStatusModal()" 
+                  class="absolute top-3 right-3 w-8 h-8 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center transition-all">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+          <h3 class="text-lg font-bold text-white pr-8 line-clamp-2">${animeTitle}</h3>
+        </div>
+        
+        <div class="p-5 space-y-5">
+          <div>
+            <label class="block text-xs font-bold mb-2 text-gray-400 uppercase tracking-wide">Status</label>
+            <div class="grid grid-cols-2 gap-2">
+              ${statusOptions
+                .map(
+                  (opt) => `
+                <button onclick="watchlistManager.selectStatus('${opt.value}')" 
+                        data-status="${opt.value}"
+                        class="status-option p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
+                          status === opt.value || (status === "on_hold" && opt.value === "paused")
+                            ? `border-${opt.color}-500 bg-${opt.color}-500/20`
+                            : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                        }">
+                  ${opt.label}
+                </button>
+              `,
+                )
+                .join("")}
             </div>
-        `
+          </div>
+          
+          <div>
+            <label class="block text-xs font-bold mb-2 text-gray-400 uppercase tracking-wide">Episodes</label>
+            <div class="flex items-center gap-3">
+              <button onclick="watchlistManager.adjustEpisodes(-1)" 
+                      class="w-10 h-10 bg-gray-800 hover:bg-purple-600 border border-gray-700 rounded-lg flex items-center justify-center transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/>
+                </svg>
+              </button>
+              <div class="flex-1 text-center">
+                <input type="number" 
+                       id="modal-episodes" 
+                       min="0" 
+                       max="${totalEps || 999}" 
+                       value="${watchedEps || 0}"
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                       class="w-full text-center text-2xl font-bold p-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none transition-all">
+                <div class="text-xs text-gray-500 mt-1">of ${totalEps || "?"}</div>
+              </div>
+              <button onclick="watchlistManager.adjustEpisodes(1)" 
+                      class="w-10 h-10 bg-gray-800 hover:bg-purple-600 border border-gray-700 rounded-lg flex items-center justify-center transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex gap-2 pt-2">
+            <button onclick="watchlistManager.saveStatusChanges('${animeId}')" 
+                    class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 px-4 py-3 rounded-lg font-semibold transition-all">
+              Save
+            </button>
+            <button onclick="watchlistManager.deleteFromModal('${animeId}', '${animeTitle.replace(/'/g, "\\'")}')" 
+                    class="px-4 py-3 bg-red-600/90 hover:bg-red-600 rounded-lg font-semibold transition-all">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `
 
     document.body.appendChild(modal)
+    this.currentModalAnimeId = animeId
+    this.currentModalStatus = status === "on_hold" ? "paused" : status
+    this.currentModalTotalEps = totalEps
   }
 
-  async saveEdit(animeId) {
-    const newStatus = document.getElementById("edit-status").value
-    const newEpisodes = Number.parseInt(document.getElementById("edit-episodes").value) || 0
+  selectStatus(status) {
+    this.currentModalStatus = status
+    const colorMap = {
+      watching: "purple",
+      completed: "green",
+      paused: "yellow",
+      on_hold: "yellow",
+      dropped: "red",
+      plan_to_watch: "blue",
+    }
+
+    document.querySelectorAll(".status-option").forEach((btn) => {
+      const btnStatus = btn.dataset.status
+      const color = colorMap[btnStatus]
+      btn.className =
+        "status-option p-3 rounded-lg border-2 transition-all text-sm font-semibold " +
+        (btnStatus === status
+          ? `border-${color}-500 bg-${color}-500/20`
+          : "border-gray-700 bg-gray-800/50 hover:border-gray-600")
+    })
+  }
+
+  adjustEpisodes(delta) {
+    const input = document.getElementById("modal-episodes")
+    const current = Number.parseInt(input.value) || 0
+    const max = Number.parseInt(input.max) || 999
+    const newValue = Math.max(0, Math.min(max, current + delta))
+    input.value = newValue
+  }
+
+  async saveStatusChanges(animeId) {
+    const input = document.getElementById("modal-episodes")
+    const newEpisodes = Number.parseInt(input.value) || 0
+    const maxEpisodes = Number.parseInt(input.max) || 999
+    const newStatus = this.currentModalStatus
+
+    // Validate episode count doesn't exceed maximum
+    if (newEpisodes > maxEpisodes) {
+      alert(`Episode count cannot exceed ${maxEpisodes}`)
+      input.value = maxEpisodes
+      return
+    }
 
     try {
-      const statusResponse = await fetch("/api/watchlist/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          anime_id: animeId,
-          action: "status",
-          status: newStatus,
+      const [statusResponse, episodesResponse] = await Promise.all([
+        fetch("/api/watchlist/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            anime_id: animeId,
+            action: "status",
+            status: newStatus,
+          }),
         }),
-      })
-
-      const episodesResponse = await fetch("/api/watchlist/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          anime_id: animeId,
-          action: "episodes",
-          watched_episodes: newEpisodes,
+        fetch("/api/watchlist/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            anime_id: animeId,
+            action: "episodes",
+            watched_episodes: newEpisodes,
+          }),
         }),
-      })
+      ])
 
       if (statusResponse.ok && episodesResponse.ok) {
         const item = this.watchlistData.find((item) => item.anime_id === animeId)
@@ -486,7 +534,7 @@ class WatchlistManager {
           item.watched_episodes = newEpisodes
         }
 
-        this.closeEditModal()
+        this.closeStatusModal()
 
         if (this.currentFilter !== "all" && this.currentFilter !== newStatus) {
           this.loadWatchlist(true)
@@ -504,8 +552,46 @@ class WatchlistManager {
     }
   }
 
-  closeEditModal() {
-    const modal = document.querySelector(".fixed.inset-0")
+  async deleteFromModal(animeId, animeTitle) {
+    if (!confirm(`Remove "${animeTitle}" from your watchlist?`)) return
+
+    try {
+      const response = await fetch("/api/watchlist/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anime_id: animeId }),
+      })
+
+      if (response.ok) {
+        this.watchlistData = this.watchlistData.filter((item) => item.anime_id !== animeId)
+        this.loadedAnimeIds.delete(animeId)
+
+        this.closeStatusModal()
+
+        const element = document.querySelector(`[data-anime-id="${animeId}"]`)
+        if (element) {
+          element.remove()
+        }
+
+        this.totalItems = Math.max(0, this.totalItems - 1)
+        this.updatePaginationInfo()
+
+        if (this.watchlistData.length === 0) {
+          this.showEmptyState()
+        }
+
+        await this.loadWatchlistStats()
+      } else {
+        throw new Error("Remove failed")
+      }
+    } catch (error) {
+      console.error("Error removing from watchlist:", error)
+      alert("Failed to remove from watchlist")
+    }
+  }
+
+  closeStatusModal() {
+    const modal = document.getElementById("status-modal")
     if (modal) {
       modal.remove()
     }
