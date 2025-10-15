@@ -1,6 +1,7 @@
 """
 Catalog browsing routes (genre, profile, settings)
 """
+import asyncio
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app
 from markupsafe import escape
 
@@ -10,12 +11,12 @@ catalog_routes_bp = Blueprint('catalog_routes', __name__)
 
 
 @catalog_routes_bp.route('/genre/<genre_name>', methods=['GET'])
-async def genre(genre_name):
+def genre(genre_name):
     """Display anime list for a specific genre"""
     genre_name = escape(genre_name)
     
     try:
-        data = await current_app.ha_scraper.genre(genre_name)
+        data = asyncio.run(current_app.ha_scraper.genre(genre_name))
         animes = data.get("animes", [])
         if not animes:
             return render_template('404.html', error_message=f"No animes found for genre: {genre_name}"), 404

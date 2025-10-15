@@ -11,7 +11,6 @@ body {
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   position: relative;
-  /* Added focus styles for keyboard navigation */
   outline: none;
 }
 
@@ -19,7 +18,6 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(187, 134, 252, 0.5);
 }
 
-/* Added fullscreen mobile styles */
 .video-container.fullscreen-active {
   border-radius: 0;
 }
@@ -30,7 +28,7 @@ body {
   background: #000;
 }
 
-/* Video.js specific styling to integrate with existing design */
+/* Video.js specific styling */
 .video-js {
   width: 100% !important;
   height: 100% !important;
@@ -43,7 +41,6 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Fullscreen Video.js styling */
 .video-container.fullscreen-active .video-js {
   border-radius: 0;
 }
@@ -56,12 +53,10 @@ body {
   border-radius: 0;
 }
 
-/* Video.js subtitle styling - now handled dynamically by JavaScript */
 .video-js .vjs-text-track-display {
   pointer-events: none;
 }
 
-/* Default fallback styling - will be overridden by JavaScript */
 .video-js .vjs-text-track-cue {
   color: white !important;
   font-family: "Inter", sans-serif !important;
@@ -155,7 +150,7 @@ body {
   font-weight: 500;
 }
 
-/* Added control indicator styles */
+/* Simplified control indicators - removed complex animations */
 .control-indicator {
   position: absolute;
   top: 50%;
@@ -165,14 +160,13 @@ body {
   color: white;
   padding: 12px 20px;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   z-index: 100;
   pointer-events: none;
-  animation: controlFade 1.5s ease-out forwards;
+  animation: controlFade 1s ease-out forwards;
 }
 
-/* Enhanced YouTube-style control indicators */
 .control-indicator.youtube-style {
   position: absolute;
   top: 50%;
@@ -186,7 +180,7 @@ body {
   font-weight: 500;
   z-index: 100;
   pointer-events: none;
-  animation: youtubeControlShow 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: youtubeControlShow 1s ease-out forwards;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -223,18 +217,18 @@ body {
   pointer-events: none;
 }
 
-/* YouTube-style seek indicators with enhanced animations */
 .control-indicator.seek-forward,
 .control-indicator.seek-backward {
   background: rgba(255, 255, 255, 0.95);
   color: #000;
   padding: 12px 16px;
   border-radius: 8px;
-  animation: youtubeSeekShow 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: youtubeSeekShow 0.8s ease-out forwards;
 }
 
+/* Simplified seek animations */
 .seek-icon {
-  animation: seekIconPulse 0.6s ease-out;
+  animation: seekIconPulse 0.4s ease-out;
 }
 
 .seek-ripple {
@@ -244,20 +238,19 @@ body {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
   transform: translate(-50%, -50%) scale(0);
-  animation: rippleExpand 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: rippleExpand 0.5s ease-out forwards;
   pointer-events: none;
   z-index: 99;
 }
 
 .seek-ripple.right {
-  animation: rippleExpandRight 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: rippleExpandRight 0.5s ease-out forwards;
 }
 
 .seek-ripple.left {
-  animation: rippleExpandLeft 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: rippleExpandLeft 0.5s ease-out forwards;
 }
 
-/* Enhanced seek indicator with YouTube-style design */
 .seek-indicator.youtube-seek {
   position: absolute;
   top: 50%;
@@ -273,12 +266,12 @@ body {
   pointer-events: none;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: all 0.2s ease-out;
 }
 
 .seek-indicator.show {
   transform: translate(-50%, -50%) scale(1);
-  animation: seekIndicatorBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: seekIndicatorBounce 0.3s ease-out;
 }
 
 .seek-indicator.hide {
@@ -293,11 +286,11 @@ body {
 }
 
 .seek-content.forward {
-  animation: seekContentSlideRight 0.3s ease-out;
+  animation: seekContentSlideRight 0.2s ease-out;
 }
 
 .seek-content.backward {
-  animation: seekContentSlideLeft 0.3s ease-out;
+  animation: seekContentSlideLeft 0.2s ease-out;
 }
 
 .seek-arrow {
@@ -329,7 +322,7 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   opacity: 0;
   transform: translateY(10px);
@@ -354,7 +347,7 @@ body {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(187, 134, 252, 0.3);
 }
 
@@ -371,7 +364,6 @@ body {
   box-shadow: none;
 }
 
-/* Resume notification styles */
 .resume-notification {
   position: absolute;
   top: 20px;
@@ -389,7 +381,6 @@ body {
   animation: slideDown 0.3s ease-out;
 }
 
-/* Added missing showError method styles */
 .error-message {
   position: absolute;
   top: 50%;
@@ -409,6 +400,7 @@ body {
   animation: errorFadeIn 0.3s ease-out;
 }
 
+/* Simplified animations */
 @keyframes errorFadeIn {
   0% {
     opacity: 0;
@@ -423,7 +415,7 @@ body {
 @keyframes controlFade {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.8);
+    transform: translate(-50%, -50%) scale(0.9);
   }
   20% {
     opacity: 1;
@@ -438,13 +430,10 @@ body {
 @keyframes youtubeControlShow {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.8);
+    transform: translate(-50%, -50%) scale(0.9);
   }
   15% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-  25% {
     transform: translate(-50%, -50%) scale(1);
   }
   85% {
@@ -460,22 +449,19 @@ body {
 @keyframes youtubeSeekShow {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.7) rotate(-5deg);
+    transform: translate(-50%, -50%) scale(0.8);
   }
   20% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.05) rotate(0deg);
-  }
-  30% {
-    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    transform: translate(-50%, -50%) scale(1);
   }
   80% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    transform: translate(-50%, -50%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.8) rotate(2deg);
+    transform: translate(-50%, -50%) scale(0.9);
   }
 }
 
@@ -485,7 +471,7 @@ body {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.2);
+    transform: scale(1.1);
   }
 }
 
@@ -493,9 +479,6 @@ body {
   0% {
     transform: translate(-50%, -50%) scale(0);
     opacity: 0.6;
-  }
-  50% {
-    opacity: 0.3;
   }
   100% {
     transform: translate(-50%, -50%) scale(1);
@@ -508,9 +491,6 @@ body {
     transform: translate(-50%, -50%) scale(0) translateX(-10px);
     opacity: 0.6;
   }
-  50% {
-    opacity: 0.3;
-  }
   100% {
     transform: translate(-50%, -50%) scale(1) translateX(10px);
     opacity: 0;
@@ -522,9 +502,6 @@ body {
     transform: translate(-50%, -50%) scale(0) translateX(10px);
     opacity: 0.6;
   }
-  50% {
-    opacity: 0.3;
-  }
   100% {
     transform: translate(-50%, -50%) scale(1) translateX(-10px);
     opacity: 0;
@@ -533,10 +510,10 @@ body {
 
 @keyframes seekIndicatorBounce {
   0% {
-    transform: translate(-50%, -50%) scale(0.8);
+    transform: translate(-50%, -50%) scale(0.9);
   }
   60% {
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(1.05);
   }
   100% {
     transform: translate(-50%, -50%) scale(1);
@@ -621,18 +598,15 @@ body {
   overflow: visible;
   scrollbar-width: thin;
   scrollbar-color: #bb86fc rgba(255, 255, 255, 0.1);
-
-  /* prevent grid from stretching/forcing card heights when the parent is constrained */
   align-content: start;
   grid-auto-rows: minmax(0, auto);
 }
 
-/* desktop-only: limit the container height and make it scroll */
 @media (min-width: 1024px) {
   .episodes-container {
     max-height: calc(100vh - 160px);
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
   }
 
   .episodes-grid {
@@ -648,7 +622,7 @@ body {
   padding: 12px 16px;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   text-decoration: none;
   color: #e0e0e0;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -753,15 +727,15 @@ body {
 @media (max-width: 768px) {
   .episodes-container {
     padding: 16px;
-    max-height: calc(100vh - 120px); /* allow scrolling within viewport */
+    max-height: calc(100vh - 120px);
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* smooth scroll */
+    -webkit-overflow-scrolling: touch;
   }
 
   .episodes-grid {
-    grid-template-columns: 1fr; /* single column */
+    grid-template-columns: 1fr;
     gap: 12px;
-    max-height: none; /* remove fixed max-height */
+    max-height: none;
     align-content: start;
     grid-auto-rows: minmax(0, auto);
   }
@@ -790,7 +764,6 @@ body {
     padding: 12px 16px;
     margin-bottom: 16px;
   }
-}
 
   .resume-notification {
     left: 10px;
@@ -811,7 +784,6 @@ body {
     font-size: 0.8rem;
   }
 
-  /* Added mobile fullscreen styles */
   .video-container.fullscreen-active {
     position: fixed;
     top: 0;
@@ -831,7 +803,6 @@ body {
     padding: 6px 12px;
   }
 
-  /* Enhanced mobile responsiveness for YouTube-style controls */
   .control-indicator.youtube-style {
     padding: 12px 16px;
     font-size: 0.9rem;
@@ -865,32 +836,6 @@ body {
     height: 100px;
   }
 
-  /* Mobile subtitle selector adjustments */
-  .subtitle-selector {
-    top: 15px;
-    right: 15px;
-  }
-
-  .subtitle-toggle-btn {
-    padding: 8px;
-  }
-
-  .subtitle-icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  .subtitle-menu {
-    min-width: 140px;
-    right: -10px;
-  }
-
-  .subtitle-option {
-    padding: 10px 14px;
-    font-size: 0.85rem;
-  }
-
-  /* Loading screen mobile adjustments */
   .loading-spinner {
     width: 50px;
     height: 50px;
@@ -945,32 +890,6 @@ body {
     font-size: 0.75rem;
   }
 
-  /* Mobile subtitle selector adjustments */
-  .subtitle-selector {
-    top: 10px;
-    right: 10px;
-  }
-
-  .subtitle-toggle-btn {
-    padding: 6px;
-  }
-
-  .subtitle-icon {
-    width: 16px;
-    height: 16px;
-  }
-
-  .subtitle-menu {
-    min-width: 120px;
-    right: -15px;
-  }
-
-  .subtitle-option {
-    padding: 8px 12px;
-    font-size: 0.8rem;
-  }
-
-  /* Small phone loading adjustments */
   .loading-spinner {
     width: 45px;
     height: 45px;
@@ -998,7 +917,6 @@ body {
   }
 }
 
-/* Added landscape orientation styles for mobile fullscreen */
 @media screen and (orientation: landscape) and (max-width: 1024px) {
   .video-container.fullscreen-active {
     position: fixed;
@@ -1013,30 +931,13 @@ body {
   .video-container.fullscreen-active .video-player {
     object-fit: contain;
   }
-
-  /* Hide subtitle selector in landscape fullscreen for better viewing */
-  .video-container.fullscreen-active .subtitle-selector {
-    top: 20px;
-    right: 10px;
-  }
-
-  .video-container.fullscreen-active .subtitle-toggle-btn {
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.8);
-  }
-
-  .video-container.fullscreen-active .subtitle-icon {
-    width: 18px;
-    height: 18px;
-  }
 }
 
-/* Server and Language Selector Styles */
 .server-btn,
 .language-btn {
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-weight: 500;
   cursor: pointer;
 }
@@ -1060,7 +961,7 @@ body {
 @media (max-width: 640px) {
   .server-btn,
   .language-btn {
-    min-w-[60px];
+    min-width: 60px;
     padding: 8px 12px;
     font-size: 0.875rem;
   }

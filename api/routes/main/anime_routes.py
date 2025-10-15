@@ -1,20 +1,21 @@
 """
 Anime information and episodes routes
 """
+import asyncio
 from flask import Blueprint, request, render_template, current_app
 
 anime_routes_bp = Blueprint('anime_routes', __name__)
 
 
 @anime_routes_bp.route('/anime/<anime_id>', methods=['GET'])
-async def anime_info(anime_id: str):
+def anime_info(anime_id: str):
     """Fetch and display anime information"""
     current_path = request.path
     get_info_method = getattr(current_app.ha_scraper, "get_anime_info", None)
     if not get_info_method:
         return "Anime info function not found", 500
     
-    anime_info = await get_info_method(anime_id)
+    anime_info = asyncio.run(get_info_method(anime_id))
     if not anime_info:
         return f"No info found for anime ID: {anime_id}", 404
     
@@ -42,14 +43,14 @@ async def anime_info(anime_id: str):
 
 
 @anime_routes_bp.route('/episodes/<anime_id>', methods=['GET'])
-async def episodes(anime_id: str):
+def episodes(anime_id: str):
     """Fetch and display episodes for the selected anime"""
     info = "Episodes"
     suggestions = {"data": {"spotlightAnimes": []}}
 
     try:
         # Fetch anime info
-        anime_info = await current_app.ha_scraper.get_anime_info(anime_id)
+        anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(anime_id))
         current_app.logger.debug("episodes() - got anime_info for %s: %s", anime_id, bool(anime_info))
         if not anime_info:
             return render_template(
@@ -60,7 +61,7 @@ async def episodes(anime_id: str):
             )
 
         # Fetch episodes
-        ep_data = await current_app.ha_scraper.get_episodes(anime_id)
+        ep_data = asyncio.run(current_app.ha_scraper.get_episodes(anime_id))
         current_app.logger.debug("episodes() - ep_data type=%s, repr=%s", type(ep_data), repr(ep_data)[:800])
 
         if not isinstance(ep_data, dict):

@@ -23,7 +23,7 @@
       <div class="p-6 md:p-10">
         <div class="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8">
           <div class="relative flex-shrink-0">
-            <div class="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-600 shadow-2xl ring-4 ring-purple-500/30 transition-transform hover:scale-105">
+            <div class="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-600 shadow-2xl ring-4 ring-purple-500/30">
               {% if user.avatar %}
               <img src="{{ user.avatar }}" alt="{{ username }}'s Avatar" class="w-full h-full object-cover">
               {% else %}
@@ -63,14 +63,14 @@
             </div>
 
             <div class="flex flex-wrap gap-3 justify-center md:justify-start">
-              <a href="/settings" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg transition-all duration-200 flex items-center gap-2">
+              <a href="/settings" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg transition-colors duration-200 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
                 Settings
               </a>
-              <a href="/watchlist" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-2">
+              <a href="/watchlist" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                 </svg>
@@ -89,15 +89,15 @@
             AniList Statistics
           </h2>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="bg-gradient-to-br from-purple-600/20 to-purple-800/20 p-6 rounded-xl border border-purple-500/30 text-center hover:scale-105 transition-transform">
+            <div class="bg-gradient-to-br from-purple-600/20 to-purple-800/20 p-6 rounded-xl border border-purple-500/30 text-center">
               <div class="text-4xl font-bold text-purple-300 mb-2">{{ user.anilist_stats.anime_count }}</div>
               <div class="text-sm text-gray-300 uppercase tracking-wide">Anime Watched</div>
             </div>
-            <div class="bg-gradient-to-br from-indigo-600/20 to-indigo-800/20 p-6 rounded-xl border border-indigo-500/30 text-center hover:scale-105 transition-transform">
+            <div class="bg-gradient-to-br from-indigo-600/20 to-indigo-800/20 p-6 rounded-xl border border-indigo-500/30 text-center">
               <div class="text-4xl font-bold text-indigo-300 mb-2">{{ "%.1f"|format(user.anilist_stats.mean_score) }}</div>
               <div class="text-sm text-gray-300 uppercase tracking-wide">Mean Score</div>
             </div>
-            <div class="bg-gradient-to-br from-pink-600/20 to-pink-800/20 p-6 rounded-xl border border-pink-500/30 text-center hover:scale-105 transition-transform">
+            <div class="bg-gradient-to-br from-pink-600/20 to-pink-800/20 p-6 rounded-xl border border-pink-500/30 text-center">
               <div class="text-4xl font-bold text-pink-300 mb-2">{{ (user.anilist_stats.minutes_watched / 60) | int }}</div>
               <div class="text-sm text-gray-300 uppercase tracking-wide">Hours Watched</div>
             </div>
@@ -113,7 +113,7 @@
           </h2>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30 hover:border-purple-500/50 transition-colors">
+            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center">
                   <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +127,7 @@
               </div>
             </div>
 
-            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30 hover:border-indigo-500/50 transition-colors">
+            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-indigo-600/20 rounded-lg flex items-center justify-center">
                   <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +141,7 @@
               </div>
             </div>
 
-            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30 hover:border-green-500/50 transition-colors">
+            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-green-600/20 rounded-lg flex items-center justify-center">
                   <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,14 +151,14 @@
                 <div class="flex-1">
                   <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-1">Status</p>
                   <p class="text-sm text-white font-medium flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <span class="w-2 h-2 bg-green-400 rounded-full"></span>
                     Active
                   </p>
                 </div>
               </div>
             </div>
 
-            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30 hover:border-{{ 'purple' if user.anilist_authenticated else 'gray' }}-500/50 transition-colors">
+            <div class="bg-gray-700/30 p-5 rounded-xl border border-gray-600/30">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-{{ 'purple' if user.anilist_authenticated else 'gray' }}-600/20 rounded-lg flex items-center justify-center">
                   <svg class="w-5 h-5 text-{{ 'purple' if user.anilist_authenticated else 'gray' }}-400" fill="currentColor" viewBox="0 0 24 24">
