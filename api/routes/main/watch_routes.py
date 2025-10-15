@@ -1,6 +1,7 @@
 """
 Watch episode routes
 """
+import asyncio
 from flask import Blueprint, request, session, redirect, url_for, render_template, current_app
 from urllib.parse import parse_qs
 
@@ -8,7 +9,7 @@ watch_routes_bp = Blueprint('watch_routes', __name__)
 
 
 @watch_routes_bp.route('/watch/<eps_title>', methods=['GET', 'POST'])
-async def watch(eps_title):
+def watch(eps_title):
     """Watch episode page with video player"""
     ep_param = request.args.get("ep")
 
@@ -37,13 +38,13 @@ async def watch(eps_title):
     # If no language specified in URL, check if dub is available
     if ep_param and "-" not in ep_param:
         try:
-            dub_available = await current_app.ha_scraper.is_dub_available(eps_title, ep_number)
+            dub_available = asyncio.run(current_app.ha_scraper.is_dub_available(eps_title, ep_number))
         except Exception:
             pass
 
     # Check if dub is available
     try:
-        dub_available = await current_app.ha_scraper.is_dub_available(eps_title, ep_number)
+        dub_available = asyncio.run(current_app.ha_scraper.is_dub_available(eps_title, ep_number))
     except Exception:
         dub_available = False
 
@@ -54,7 +55,7 @@ async def watch(eps_title):
     # --- Fetch available servers first ---
     available_servers = []
     try:
-        servers_data = await current_app.ha_scraper.episode_servers(full_slug)
+        servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
         if servers_data:
             available_servers = servers_data.get(lang, [])
     except Exception as e:
@@ -77,7 +78,7 @@ async def watch(eps_title):
     print(f"Selected server: {selected_server}, Available: {[s.get('serverName') for s in available_servers]}")
 
     # --- Fetch video data from the API ---
-    raw = await current_app.ha_scraper.video(full_slug, lang, selected_server)
+    raw = asyncio.run(current_app.ha_scraper.video(full_slug, lang, selected_server))
 
     video_link = None
     subtitle_tracks = []
@@ -116,7 +117,7 @@ async def watch(eps_title):
     # Fetch episodes list
     eps_title_clean = eps_title.split('?', 1)[0]
     try:
-        all_episodes = await current_app.ha_scraper.episodes(eps_title_clean)
+        all_episodes = asyncio.run(current_app.ha_scraper.episodes(eps_title_clean))
     except Exception:
         all_episodes = None
 

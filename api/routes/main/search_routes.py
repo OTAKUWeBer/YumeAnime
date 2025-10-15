@@ -1,20 +1,21 @@
 """
 Search routes
 """
+import asyncio
 from flask import Blueprint, request, redirect, url_for, render_template, jsonify, current_app
 
 search_routes_bp = Blueprint('search_routes', __name__)
 
 
 @search_routes_bp.route('/search', methods=['GET'])
-async def search():
+def search():
     """Handle search request and display results"""
     search_query = request.args.get('q', '').strip()
     if not search_query:
         return redirect(url_for('main.home_routes.home'))
     
     try:
-        results = await current_app.ha_scraper.search(search_query)
+        results = asyncio.run(current_app.ha_scraper.search(search_query))
 
         # Extract anime list
         animes = results.get("animes") or results.get("data") or []
@@ -46,11 +47,11 @@ async def search():
 
 
 @search_routes_bp.route('/search/suggestions', methods=['GET'])
-async def search_suggestions_route():
+def search_suggestions_route():
     """Return JSON suggestions for the query"""
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify({"suggestions": []})
 
-    suggestions = await current_app.ha_scraper.search_suggestions(query)
+    suggestions = asyncio.run(current_app.ha_scraper.search_suggestions(query))
     return jsonify(suggestions)
