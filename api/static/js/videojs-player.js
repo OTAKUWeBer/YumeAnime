@@ -155,188 +155,192 @@ class VideoJSPlayer {
     })
   }
 
-formatSubtitlesForVideoJS(subtitles) {
-  if (!subtitles || subtitles.length === 0) {
-    console.log('[Subtitles] No subtitles provided')
-    return []
-  }
-
-  console.log('[Subtitles] Raw subtitle data:', JSON.stringify(subtitles, null, 2))
-
-  // Language name to code mapping
-  const langToCode = {
-    english: 'en',
-    'chinese - traditional': 'zh-Hant',
-    'chinese - simplified': 'zh-Hans',
-    indonesian: 'id',
-    korean: 'ko',
-    malay: 'ms',
-    thai: 'th',
-    spanish: 'es',
-    french: 'fr',
-    german: 'de',
-    japanese: 'ja',
-    arabic: 'ar',
-    portuguese: 'pt',
-    russian: 'ru',
-    italian: 'it',
-    vietnamese: 'vi',
-  }
-
-  const normalizeLabel = (s) => {
-    if (!s || s === 'null' || s === 'undefined') return ''
-    s = String(s).trim()
-    
-    // Title case each word while preserving separators
-    return s
-      .split(/(\s+|-)/)
-      .map(part => {
-        if (!part || /^\s*$/.test(part) || part === '-') return part
-        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-      })
-      .join('')
-  }
-
-  // Try to extract language from filename
-  const extractLanguageFromFilename = (filename) => {
-    if (!filename) return null
-    
-    // Remove query params and extension
-    const cleanName = filename.split('?')[0].replace(/\.(vtt|srt|ass|ssa)$/i, '')
-    
-    // Common patterns: en.vtt, english.vtt, en-US.vtt, subtitle-en.vtt
-    const patterns = [
-      /[._-](en|english)[._-]?/i,
-      /[._-](zh[-_]?hant|chinese[-_]?traditional)[._-]?/i,
-      /[._-](zh[-_]?hans|chinese[-_]?simplified)[._-]?/i,
-      /[._-](id|indonesian)[._-]?/i,
-      /[._-](ko|korean)[._-]?/i,
-      /[._-](ms|malay)[._-]?/i,
-      /[._-](th|thai)[._-]?/i,
-      /[._-](es|spanish)[._-]?/i,
-      /[._-](fr|french)[._-]?/i,
-      /[._-](de|german)[._-]?/i,
-      /[._-](ja|japanese)[._-]?/i,
-      /[._-](ar|arabic)[._-]?/i,
-      /[._-](pt|portuguese)[._-]?/i,
-      /[._-](ru|russian)[._-]?/i,
-      /[._-](it|italian)[._-]?/i,
-      /[._-](vi|vietnamese)[._-]?/i,
-    ]
-    
-    for (const pattern of patterns) {
-      const match = cleanName.match(pattern)
-      if (match) {
-        return match[1].toLowerCase()
-      }
-    }
-    
-    return null
-  }
-
-  // ENHANCED: Filter valid subtitle tracks with stricter validation
-  const candidates = subtitles.filter((subtitle) => {
-    const subFile = subtitle.file || subtitle.url
-    if (!subFile || subFile === 'null' || subFile === '') return false
-
-    const labelOrLang = (subtitle.lang || subtitle.label || '').toString().toLowerCase()
-    const kind = (subtitle.kind || '').toString().toLowerCase()
-    
-    // CRITICAL: Skip any track that's explicitly NOT subtitles/captions
-    if (kind && kind !== 'subtitles' && kind !== 'captions' && kind !== '') {
-      console.warn('[Subtitles] Skipping non-subtitle track (wrong kind):', subtitle)
-      return false
-    }
-    
-    // Skip thumbnails, posters, images, sprites
-    if (labelOrLang.includes('thumb') || 
-        labelOrLang.includes('thumbnail') || 
-        labelOrLang.includes('poster') || 
-        labelOrLang.includes('image') ||
-        labelOrLang.includes('sprite') ||
-        labelOrLang.includes('preview')) {
-      console.warn('[Subtitles] Skipping non-subtitle track:', subtitle)
-      return false
+  formatSubtitlesForVideoJS(subtitles) {
+    if (!subtitles || subtitles.length === 0) {
+      console.log("[Subtitles] No subtitles provided")
+      return []
     }
 
-    // Skip image files and common sprite formats
-    if (/\.(jpe?g|png|gif|webp|bmp|svg|vtt\.jpg|vtt\.png)(\?.*)?$/i.test(subFile)) {
-      console.warn('[Subtitles] Skipping image file:', subFile)
-      return false
+    console.log("[Subtitles] Raw subtitle data:", JSON.stringify(subtitles, null, 2))
+
+    // Language name to code mapping
+    const langToCode = {
+      english: "en",
+      "chinese - traditional": "zh-Hant",
+      "chinese - simplified": "zh-Hans",
+      indonesian: "id",
+      korean: "ko",
+      malay: "ms",
+      thai: "th",
+      spanish: "es",
+      french: "fr",
+      german: "de",
+      japanese: "ja",
+      arabic: "ar",
+      portuguese: "pt",
+      russian: "ru",
+      italian: "it",
+      vietnamese: "vi",
     }
-    return true
-  })
 
-  console.log(`[Subtitles] Filtered ${candidates.length} valid subtitle tracks from ${subtitles.length} total`)
+    const normalizeLabel = (s) => {
+      if (!s || s === "null" || s === "undefined") return ""
+      s = String(s).trim()
 
-  // Map to Video.js format
-  const tracks = candidates.map((subtitle, index) => {
-    const subFile = subtitle.file || subtitle.url
-
-    // Get the raw label/lang value
-    let rawLabel = subtitle.label || subtitle.lang || ''
-    
-    // If no label/lang, try to extract from filename
-    if (!rawLabel || rawLabel === 'null' || rawLabel === 'undefined') {
-      const extractedLang = extractLanguageFromFilename(subFile)
-      if (extractedLang) {
-        rawLabel = extractedLang
-        console.log(`[Subtitles] Extracted language from filename: ${extractedLang}`)
-      }
+      // Title case each word while preserving separators
+      return s
+        .split(/(\s+|-)/)
+        .map((part) => {
+          if (!part || /^\s*$/.test(part) || part === "-") return part
+          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+        })
+        .join("")
     }
-    
-    // Create readable label
-    const label = rawLabel && rawLabel !== 'null' && rawLabel !== 'undefined'
-      ? normalizeLabel(rawLabel)
-      : `Subtitle ${index + 1}`
 
-    // Get language code
-    const langKey = (rawLabel || '').toString().toLowerCase()
-    let srclang = subtitle.srclang || langToCode[langKey]
-    
-    if (!srclang) {
-      // Try normalized version
-      const normalizedKey = normalizeLabel(langKey).toLowerCase()
-      srclang = langToCode[normalizedKey]
-    }
-    
-    if (!srclang) {
-      // Try partial match (e.g., "english" in "english-us")
-      for (const [key, code] of Object.entries(langToCode)) {
-        if (langKey.includes(key)) {
-          srclang = code
-          break
+    // Try to extract language from filename
+    const extractLanguageFromFilename = (filename) => {
+      if (!filename) return null
+
+      // Remove query params and extension
+      const cleanName = filename.split("?")[0].replace(/\.(vtt|srt|ass|ssa)$/i, "")
+
+      // Common patterns: en.vtt, english.vtt, en-US.vtt, subtitle-en.vtt
+      const patterns = [
+        /[._-](en|english)[._-]?/i,
+        /[._-](zh[-_]?hant|chinese[-_]?traditional)[._-]?/i,
+        /[._-](zh[-_]?hans|chinese[-_]?simplified)[._-]?/i,
+        /[._-](id|indonesian)[._-]?/i,
+        /[._-](ko|korean)[._-]?/i,
+        /[._-](ms|malay)[._-]?/i,
+        /[._-](th|thai)[._-]?/i,
+        /[._-](es|spanish)[._-]?/i,
+        /[._-](fr|french)[._-]?/i,
+        /[._-](de|german)[._-]?/i,
+        /[._-](ja|japanese)[._-]?/i,
+        /[._-](ar|arabic)[._-]?/i,
+        /[._-](pt|portuguese)[._-]?/i,
+        /[._-](ru|russian)[._-]?/i,
+        /[._-](it|italian)[._-]?/i,
+        /[._-](vi|vietnamese)[._-]?/i,
+      ]
+
+      for (const pattern of patterns) {
+        const match = cleanName.match(pattern)
+        if (match) {
+          return match[1].toLowerCase()
         }
       }
-    }
-    
-    if (!srclang) {
-      // Fallback: extract first two letters
-      const inferred = langKey.replace(/[^a-z]/gi, '').slice(0, 2) || 'en'
-      srclang = inferred
+
+      return null
     }
 
-    // Check if this should be the default track
-    const isEnglish = label.toLowerCase().includes('english') || srclang.startsWith('en')
-    const shouldBeDefault = isEnglish && 
-                           this.settings.subtitleLanguage === 'English' && 
-                           this.currentLanguage === 'sub'
+    // ENHANCED: Filter valid subtitle tracks with stricter validation
+    const candidates = subtitles.filter((subtitle) => {
+      const subFile = subtitle.file || subtitle.url
+      if (!subFile || subFile === "null" || subFile === "") return false
 
-    console.log(`[Subtitles] Track ${index}: label="${label}", srclang="${srclang}", file="${subFile}", default=${shouldBeDefault}`)
+      const labelOrLang = (subtitle.lang || subtitle.label || "").toString().toLowerCase()
+      const kind = (subtitle.kind || "").toString().toLowerCase()
 
-    return {
-      kind: 'subtitles',
-      src: subFile,
-      srclang,
-      label,
-      default: shouldBeDefault,
-      mode: shouldBeDefault ? 'showing' : 'disabled',
-    }
-  })
+      // CRITICAL: Skip any track that's explicitly NOT subtitles/captions
+      if (kind && kind !== "subtitles" && kind !== "captions" && kind !== "") {
+        console.warn("[Subtitles] Skipping non-subtitle track (wrong kind):", subtitle)
+        return false
+      }
 
-  console.log(`[Subtitles] Formatted ${tracks.length} subtitle tracks`)
-  return tracks
-}
+      // Skip thumbnails, posters, images, sprites, metadata
+      if (
+        labelOrLang.includes("thumb") ||
+        labelOrLang.includes("thumbnail") ||
+        labelOrLang.includes("poster") ||
+        labelOrLang.includes("image") ||
+        labelOrLang.includes("sprite") ||
+        labelOrLang.includes("preview") ||
+        labelOrLang.includes("metadata") ||
+        labelOrLang.includes("chapter")
+      ) {
+        console.warn("[Subtitles] Skipping non-subtitle track:", subtitle)
+        return false
+      }
+
+      // Skip image files and common sprite formats
+      if (/\.(jpe?g|png|gif|webp|bmp|svg|vtt\.jpg|vtt\.png)(\?.*)?$/i.test(subFile)) {
+        console.warn("[Subtitles] Skipping image file:", subFile)
+        return false
+      }
+      return true
+    })
+
+    console.log(`[Subtitles] Filtered ${candidates.length} valid subtitle tracks from ${subtitles.length} total`)
+
+    // Map to Video.js format
+    const tracks = candidates.map((subtitle, index) => {
+      const subFile = subtitle.file || subtitle.url
+
+      // Get the raw label/lang value
+      let rawLabel = subtitle.label || subtitle.lang || ""
+
+      // If no label/lang, try to extract from filename
+      if (!rawLabel || rawLabel === "null" || rawLabel === "undefined") {
+        const extractedLang = extractLanguageFromFilename(subFile)
+        if (extractedLang) {
+          rawLabel = extractedLang
+          console.log(`[Subtitles] Extracted language from filename: ${extractedLang}`)
+        }
+      }
+
+      // Create readable label
+      const label =
+        rawLabel && rawLabel !== "null" && rawLabel !== "undefined" ? normalizeLabel(rawLabel) : `Subtitle ${index + 1}`
+
+      // Get language code
+      const langKey = (rawLabel || "").toString().toLowerCase()
+      let srclang = subtitle.srclang || langToCode[langKey]
+
+      if (!srclang) {
+        // Try normalized version
+        const normalizedKey = normalizeLabel(langKey).toLowerCase()
+        srclang = langToCode[normalizedKey]
+      }
+
+      if (!srclang) {
+        // Try partial match (e.g., "english" in "english-us")
+        for (const [key, code] of Object.entries(langToCode)) {
+          if (langKey.includes(key)) {
+            srclang = code
+            break
+          }
+        }
+      }
+
+      if (!srclang) {
+        // Fallback: extract first two letters
+        const inferred = langKey.replace(/[^a-z]/gi, "").slice(0, 2) || "en"
+        srclang = inferred
+      }
+
+      // Check if this should be the default track
+      const isEnglish = label.toLowerCase().includes("english") || srclang.startsWith("en")
+      const shouldBeDefault =
+        isEnglish && this.settings.subtitleLanguage === "English" && this.currentLanguage === "sub"
+
+      console.log(
+        `[Subtitles] Track ${index}: label="${label}", srclang="${srclang}", file="${subFile}", default=${shouldBeDefault}`,
+      )
+
+      return {
+        kind: "subtitles",
+        src: subFile,
+        srclang,
+        label,
+        default: shouldBeDefault,
+        mode: shouldBeDefault ? "showing" : "disabled",
+      }
+    })
+
+    console.log(`[Subtitles] Formatted ${tracks.length} subtitle tracks`)
+    return tracks
+  }
 
   applySubtitleStyling() {
     const existingStyle = document.getElementById("videojs-subtitle-custom-style")
@@ -404,6 +408,26 @@ formatSubtitlesForVideoJS(subtitles) {
       this.setDefaultSubtitleTrack()
     })
 
+    this.player.on("waiting", () => {
+      console.log("[Player] Video waiting for data")
+      if (window.progressManager) {
+        window.progressManager.showBufferIndicator()
+      }
+    })
+
+    this.player.on("canplay", () => {
+      console.log("[Player] Video can play")
+      if (window.progressManager) {
+        window.progressManager.hideBufferIndicator()
+      }
+    })
+
+    this.player.on("playing", () => {
+      if (window.progressManager) {
+        window.progressManager.hideBufferIndicator()
+      }
+    })
+
     this.player.on("error", (error) => {
       console.error("Video.js error:", error)
 
@@ -442,7 +466,7 @@ formatSubtitlesForVideoJS(subtitles) {
 
   setDefaultSubtitleTrack() {
     if (!this.player || !this.player.textTracks) {
-      console.warn('[Subtitles] Player not ready for subtitle setup')
+      console.warn("[Subtitles] Player not ready for subtitle setup")
       return
     }
 
@@ -473,10 +497,10 @@ formatSubtitlesForVideoJS(subtitles) {
         defaultTrack.mode = "showing"
         console.log(`[Subtitles] Enabled subtitle track: ${defaultTrack.label}`)
       } else {
-        console.warn('[Subtitles] No subtitle tracks found to enable')
+        console.warn("[Subtitles] No subtitle tracks found to enable")
       }
     } else {
-      console.log('[Subtitles] Dub mode - subtitles disabled')
+      console.log("[Subtitles] Dub mode - subtitles disabled")
       for (let i = 0; i < textTracks.length; i++) {
         textTracks[i].mode = "disabled"
       }
@@ -516,9 +540,9 @@ formatSubtitlesForVideoJS(subtitles) {
 
   detectCurrentLanguage() {
     const urlParams = new URLSearchParams(window.location.search)
-    const epParam = urlParams.get('ep')
+    const epParam = urlParams.get("ep")
 
-    if (epParam && epParam.includes('-dub')) {
+    if (epParam && epParam.includes("-dub")) {
       this.currentLanguage = "dub"
       console.log(`[Language] Detected from URL: dub`)
       return

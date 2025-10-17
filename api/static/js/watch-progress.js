@@ -12,6 +12,8 @@ class WatchProgressManager {
     this.resumeTime = 0
     this.autoSaveInterval = null
     this.settings = this.loadSettings()
+    this.bufferIndicator = null
+    this.bufferTimeout = null
 
     this.initializeProgress()
   }
@@ -237,19 +239,31 @@ class WatchProgressManager {
     if (this.video) {
       const resumeTime = this.resumeTime
 
-      // Try to resume immediately
-      this.video.currentTime = resumeTime
+      // Wait for video to be fully ready before seeking
+      const attemptResume = () => {
+        if (this.video.readyState >= 2) {
+          // readyState 2 = HAVE_CURRENT_DATA
+          this.video.currentTime = resumeTime
+          console.log(`[v0] Resumed from ${this.formatTime(resumeTime)}`)
+        } else {
+          // If not ready yet, try again in 100ms
+          setTimeout(attemptResume, 100)
+        }
+      }
 
-      // If video is paused (likely on mobile), add play event listener to resume
+      // Start attempting to resume
+      attemptResume()
+
+      // If video is paused, ensure resume happens when user plays
       if (this.video.paused) {
         const handlePlay = () => {
-          // Set time again when user actually plays the video
+          // Double-check and correct position if needed
           setTimeout(() => {
-            if (Math.abs(this.video.currentTime - resumeTime) > 5) {
+            if (Math.abs(this.video.currentTime - resumeTime) > 2) {
               this.video.currentTime = resumeTime
-              console.log(`[v0] Resumed from ${this.formatTime(resumeTime)} after user interaction`)
+              console.log(`[v0] Corrected resume position to ${this.formatTime(resumeTime)}`)
             }
-          }, 100)
+          }, 200)
           this.video.removeEventListener("play", handlePlay)
         }
         this.video.addEventListener("play", handlePlay)
@@ -274,13 +288,17 @@ class WatchProgressManager {
         // On mobile, show resume notification instead of auto-resuming
         this.showResumeNotification(currentProgress.watchTime)
       } else {
-        // On desktop, auto-resume as before
-        setTimeout(() => {
+        // On desktop, auto-resume with proper state verification
+        const attemptAutoResume = () => {
           if (this.video && this.video.readyState >= 2) {
             this.video.currentTime = currentProgress.watchTime
             console.log(`[v0] Auto-resumed from ${this.formatTime(currentProgress.watchTime)}`)
+          } else if (this.video) {
+            // Keep trying until video is ready (max 5 seconds)
+            setTimeout(attemptAutoResume, 100)
           }
-        }, 1000) // Wait 1 second for video to be ready
+        }
+        attemptAutoResume()
       }
     }
 
@@ -308,6 +326,20 @@ class WatchProgressManager {
         }
       }
     }, 500) // Save every 0.5 seconds
+
+    this.video.addEventListener("waiting", () => {
+      console.log("[v0] Video buffering...")
+      this.showBufferIndicator()
+    })
+
+    this.video.addEventListener("canplay", () => {
+      console.log("[v0] Video can play")
+      this.hideBufferIndicator()
+    })
+
+    this.video.addEventListener("playing", () => {
+      this.hideBufferIndicator()
+    })
 
     // Add event listeners
     this.video.addEventListener("timeupdate", () => {
@@ -347,6 +379,42 @@ class WatchProgressManager {
     })
   }
 
+  showBufferIndicator() {
+    if (this.bufferTimeout) {
+      clearTimeout(this.bufferTimeout)
+    }
+
+    if (!this.bufferIndicator) {
+      this.bufferIndicator = document.createElement("div")
+      this.bufferIndicator.className = "buffer-indicator"
+      this.bufferIndicator.innerHTML = `
+        <div class="buffer-spinner"></div>
+      `
+      const videoContainer = document.getElementById("videoContainer")
+      if (videoContainer) {
+        videoContainer.appendChild(this.bufferIndicator)
+      }
+    }
+
+    // Show with a small delay to avoid flickering for brief pauses
+    this.bufferTimeout = setTimeout(() => {
+      if (this.bufferIndicator) {
+        this.bufferIndicator.classList.add("show")
+      }
+    }, 300)
+  }
+
+  hideBufferIndicator() {
+    if (this.bufferTimeout) {
+      clearTimeout(this.bufferTimeout)
+      this.bufferTimeout = null
+    }
+
+    if (this.bufferIndicator) {
+      this.bufferIndicator.classList.remove("show")
+    }
+  }
+
   handleVideoEnd() {
     // Auto-next logic is now handled by HLSVideoPlayer
     console.log("Video ended - progress saved")
@@ -357,6 +425,10 @@ class WatchProgressManager {
     if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval)
       this.autoSaveInterval = null
+    }
+    this.hideBufferIndicator()
+    if (this.bufferTimeout) {
+      clearTimeout(this.bufferTimeout)
     }
   }
 }
