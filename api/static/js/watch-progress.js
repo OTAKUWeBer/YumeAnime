@@ -316,16 +316,17 @@ class WatchProgressManager {
   startProgressTracking() {
     if (!this.video) return
 
+    // Use lower interval for smoother tracking but don't overload
     this.autoSaveInterval = setInterval(() => {
       if (this.video && !this.video.paused && this.video.currentTime > 0) {
         const currentTime = this.video.currentTime
         const duration = this.video.duration
 
-        if (duration > 0) {
+        if (duration > 0 && !isNaN(currentTime) && !isNaN(duration)) {
           this.saveProgress(currentTime, duration, currentTime / duration >= 0.9)
         }
       }
-    }, 500) // Save every 0.5 seconds
+    }, 1000) // Changed from 500ms to 1000ms for stability
 
     this.video.addEventListener("waiting", () => {
       console.log("[v0] Video buffering...")
@@ -335,18 +336,43 @@ class WatchProgressManager {
     this.video.addEventListener("canplay", () => {
       console.log("[v0] Video can play")
       this.hideBufferIndicator()
+      if (!this.video.paused && this.video.play) {
+        this.video.play().catch((err) => {
+          console.log("[v0] Auto-resume after buffer failed:", err)
+        })
+      }
+    })
+
+    this.video.addEventListener("canplaythrough", () => {
+      console.log("[v0] Video can play through")
+      this.hideBufferIndicator()
+      if (!this.video.paused && this.video.play) {
+        this.video.play().catch((err) => {
+          console.log("[v0] Auto-resume after full buffer failed:", err)
+        })
+      }
     })
 
     this.video.addEventListener("playing", () => {
       this.hideBufferIndicator()
     })
 
-    // Add event listeners
+    this.video.addEventListener("seeking", () => {
+      console.log("[v0] Video seeking...")
+    })
+
+    this.video.addEventListener("seeked", () => {
+      console.log("[v0] Seek completed")
+      if (!this.video.paused) {
+        this.video.play().catch((err) => console.log("[v0] Play after seek failed:", err))
+      }
+    })
+
     this.video.addEventListener("timeupdate", () => {
       const currentTime = this.video.currentTime
       const duration = this.video.duration
 
-      if (currentTime > 0 && duration > 0) {
+      if (currentTime > 0 && duration > 0 && !isNaN(currentTime) && !isNaN(duration)) {
         // Only update UI, actual saving is handled by interval
         this.updateUI()
       }
@@ -364,6 +390,17 @@ class WatchProgressManager {
           this.video.duration,
           this.video.currentTime / this.video.duration >= 0.9,
         )
+        if (this.video.currentTime / this.video.duration >= 0.9) {
+          this.syncWatchedEpisodesToWatchlist()
+        }
+      }
+    })
+
+    this.video.addEventListener("error", (event) => {
+      const error = event.target.error
+      if (error) {
+        console.error(`[v0] Video error: ${error.code} - ${error.message}`)
+        // Don't auto-recover, let player handle it
       }
     })
 
@@ -416,8 +453,57 @@ class WatchProgressManager {
   }
 
   handleVideoEnd() {
-    // Auto-next logic is now handled by HLSVideoPlayer
-    console.log("Video ended - progress saved")
+    this.syncWatchedEpisodesToWatchlist()
+    console.log("Video ended - progress saved and watchlist updated")
+  }
+
+  syncWatchedEpisodesToWatchlist() {
+    if (!this.currentAnimeId || !this.currentEpisodeNumber) {
+      console.log("[v0] Cannot sync - missing anime or episode info")
+      return
+    }
+
+    try {
+      // Get current watched episodes from localStorage to count total
+      const watchData = JSON.parse(localStorage.getItem("animeWatchData") || "{}")
+      let completedCount = 0
+
+      // Look at all episodes for this anime and count completed ones
+      Object.keys(watchData).forEach((key) => {
+        // Key format: anime_id_episode_id_langtype
+        if (key.startsWith(this.currentAnimeId + "_")) {
+          const progress = watchData[key]
+          // Only count if explicitly marked as completed
+          if (progress.completed === true) {
+            completedCount++
+          }
+        }
+      })
+
+      console.log(`[v0] Total completed episodes for ${this.currentAnimeId}: ${completedCount}`)
+
+      // Send to backend to update watchlist with TOTAL count (not increment)
+      fetch("/api/watchlist/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          anime_id: this.currentAnimeId,
+          action: "episodes",
+          watched_episodes: completedCount, // Send total, not increment
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("[v0] Watchlist updated - total watched episodes:", completedCount)
+        })
+        .catch((error) => {
+          console.error("[v0] Error syncing to watchlist:", error)
+        })
+    } catch (error) {
+      console.error("[v0] Error in syncWatchedEpisodesToWatchlist:", error)
+    }
   }
 
   stopTracking() {

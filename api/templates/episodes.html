@@ -1,32 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Episodes - {{ title }}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>{{ title }} Episodes</title>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            /* Updated to a more modern dark gradient */
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f35 100%);
             min-height: 100vh;
         }
-        
+
         /* Enhanced episode card animations and styling */
         .episode-grid {
             transition: all 0.3s ease-in-out;
         }
         
         .episode-card {
-            /* Improved card styling with better colors */
             background: linear-gradient(145deg, #1e293b, #334155);
             border: 1px solid rgba(59, 130, 246, 0.2);
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
         }
         
         .episode-card::before {
@@ -36,7 +32,6 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            /* Updated shimmer effect color */
             background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
             transition: left 0.5s;
         }
@@ -47,11 +42,33 @@
         
         .episode-card:hover {
             transform: translateY(-4px) scale(1.02);
-            /* Enhanced hover shadow */
             box-shadow: 0 20px 40px rgba(59, 130, 246, 0.4);
             border-color: rgba(59, 130, 246, 0.6);
         }
-        
+
+        /* Simplified watched episode styling - just deep green color, no checkmark */
+        .episode-card.watched {
+            background: linear-gradient(145deg, #0d5a3a, #1a7a52);
+            border: 1px solid #1a7a52;
+            box-shadow: 0 0 12px rgba(26, 122, 82, 0.4);
+        }
+
+        .episode-card.watched .episode-number {
+            color: #d1fae5;
+            font-weight: 600;
+        }
+
+        /* Simplified partially watched styling */
+        .episode-card.partially-watched {
+            background: linear-gradient(145deg, #6b2e1a, #9a4a2f);
+            border: 1px solid #9a4a2f;
+            box-shadow: 0 0 12px rgba(154, 74, 47, 0.3);
+        }
+
+        .episode-card.partially-watched .episode-number {
+            color: #fde2d4;
+        }
+
         .list-view .episode-card {
             display: flex;
             align-items: center;
@@ -70,7 +87,6 @@
             flex: 1;
         }
 
-        /* Added genre tag styling */
         .genre-tag {
             transition: all 0.3s ease;
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
@@ -83,7 +99,6 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
-        /* Added glass morphism effect for header */
         .header-glass {
             background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(20px);
@@ -99,7 +114,7 @@
 
     <div class="container mx-auto px-4 pt-20 pb-8">
         <!-- Made header section more compact with reduced padding and spacing -->
-        <div class="mb-6 header-glass rounded-xl p-4 mb-6">
+        <div class="mb-6 header-glass rounded-xl p-4">
             <!-- Reduced gap and made layout more compact -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <!-- Reduced title size significantly -->
@@ -122,11 +137,11 @@
                     </svg>
                     {{ total_episodes }} Episodes
                 </span>
-                <span class="bg-green-600/80 px-3 py-1.5 rounded-full font-medium">
+                <span class="bg-green-600/80 px-3 py-1.5 rounded-full font-medium" id="watchedCount">
                     <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    {{ status }}
+                    <span id="watchedNumber">0</span> Watched
                 </span>
                 
                 <!-- Made genre tags smaller and more compact -->
@@ -189,6 +204,7 @@
         </div>
 
         <!-- Improved mobile grid layout and touch targets -->
+        <!-- Added data-watch-status attribute to track and style watched episodes -->
         <div class="episode-grid grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 sm:gap-4" id="episodeList">
             {% for episode_id, episode_number, episode_title in episodes %}
             <!-- Reduced padding from p-6 to p-4 and made cards more compact -->
@@ -203,8 +219,13 @@
 
             {% set user_lang = 'sub' %}
             <!-- Enhanced episode cards with better styling -->
+            <!-- Added classes and data attributes for watched status tracking -->
             <div class="episode-card rounded-xl p-4 sm:p-5 cursor-pointer group text-center relative z-10 min-h-[70px] sm:min-h-[90px] flex flex-col justify-center shadow-lg"
-                onclick="navigateToEpisode('{{ path }}', '{{ ep_value }}')">
+                onclick="navigateToEpisode('{{ path }}', '{{ ep_value }}')"
+                data-episode="{{ episode_number }}"
+                data-anime-id="{{ path }}"
+                data-ep-id="{{ ep_value }}"
+                data-watch-status="unwatched">
 
                 <div class="episode-number text-lg sm:text-xl font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{{ episode_number }}</div>
                 <div class="episode-title text-xs text-gray-300 leading-tight hidden font-medium group-hover:text-gray-200 transition-colors">
@@ -227,15 +248,72 @@
     </div>
 
     <script>
-        // Check user's preferred language and navigate accordingly
+        function updateEpisodeStatuses() {
+            try {
+                const episodeCards = document.querySelectorAll('[data-watch-status]');
+                let watchedCount = 0;
+                
+                episodeCards.forEach(card => {
+                    const episodeNumber = card.getAttribute('data-episode');
+                    const animeId = card.getAttribute('data-anime-id');
+                    const epId = card.getAttribute('data-ep-id');
+
+                    if (animeId && epId) {
+                        // Key format: anime_id_episode_id_langtype (langtype defaults to 'default')
+                        const watchData = JSON.parse(localStorage.getItem('animeWatchData') || '{}');
+                        
+                        // Try all possible key formats (sub, dub, default)
+                        let progress = null;
+                        const possibleKeys = [
+                            `${animeId}_${epId}_sub`,
+                            `${animeId}_${epId}_dub`,
+                            `${animeId}_${epId}_default`,
+                            `${animeId}_${epId}`  // Fallback without language suffix
+                        ];
+                        
+                        for (const key of possibleKeys) {
+                            if (watchData[key]) {
+                                progress = watchData[key];
+                                break;
+                            }
+                        }
+
+                        card.classList.remove('watched', 'partially-watched');
+
+                        if (progress) {
+                            // Only mark as watched if explicitly completed or 90%+ watched
+                            if (progress.completed === true) {
+                                card.classList.add('watched');
+                                card.setAttribute('data-watch-status', 'watched');
+                                watchedCount++;
+                            } else if (progress.watchTime > 0 && progress.totalTime > 0) {
+                                const percentage = (progress.watchTime / progress.totalTime) * 100;
+                                if (percentage >= 90) {
+                                    card.classList.add('watched');
+                                    card.setAttribute('data-watch-status', 'watched');
+                                    watchedCount++;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Update the watched count display
+                const watchedNumberElement = document.getElementById('watchedNumber');
+                if (watchedNumberElement) {
+                    watchedNumberElement.textContent = watchedCount;
+                }
+            } catch (error) {
+                console.error('[v0] Error updating episode statuses:', error);
+            }
+        }
+
         async function navigateToEpisode(path, epValue) {
             try {
                 const settings = JSON.parse(localStorage.getItem('yumeAnimeSettings') || '{}');
                 const preferredLang = settings.preferredLanguage || 'sub';
                 
-                // If user prefers dub, check if it's available
                 if (preferredLang === 'dub') {
-                    // For now, we'll try dub and let the server redirect to sub if not available
                     window.location.href = `/watch/${path}?ep=${epValue}-dub`;
                 } else {
                     window.location.href = `/watch/${path}?ep=${epValue}-sub`;
@@ -288,6 +366,19 @@
                 episodeList.classList.add('grid', 'grid-cols-3', 'sm:grid-cols-4', 'md:grid-cols-6', 'lg:grid-cols-8', 'xl:grid-cols-10', 'gap-3', 'sm:gap-4');
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateEpisodeStatuses();
+            // Update episode statuses every 1 second for real-time feedback
+            setInterval(updateEpisodeStatuses, 1000);
+        });
+        
+        // Also update when user returns to the tab
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                updateEpisodeStatuses();
+            }
+        });
     </script>
 </body>
 </html>

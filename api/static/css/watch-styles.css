@@ -150,7 +150,6 @@ body {
   font-weight: 500;
 }
 
-/* Simplified control indicators - removed complex animations */
 .control-indicator {
   position: absolute;
   top: 50%;
@@ -226,7 +225,6 @@ body {
   animation: youtubeSeekShow 0.8s ease-out forwards;
 }
 
-/* Simplified seek animations */
 .seek-icon {
   animation: seekIconPulse 0.4s ease-out;
 }
@@ -400,7 +398,6 @@ body {
   animation: errorFadeIn 0.3s ease-out;
 }
 
-/* Simplified animations */
 @keyframes errorFadeIn {
   0% {
     opacity: 0;
@@ -571,6 +568,15 @@ body {
   }
 }
 
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .progress-indicator {
   position: absolute;
   bottom: 0;
@@ -667,15 +673,69 @@ body {
   position: relative;
 }
 
+/* Add visual distinction for watched episodes with gradient background */
+.episode-card.watched {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.episode-card.watched:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.episode-card.watched .episode-number {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.episode-card.watched .episode-progress {
+  background: #10b981;
+}
+
+/* Enhance watched indicator appearance with shadow and pulse animation */
 .episode-watched-indicator {
   position: absolute;
   top: -2px;
   right: -2px;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: #10b981;
   border-radius: 50%;
   border: 2px solid #0f0f23;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: watchedPulse 2s ease-in-out infinite;
+}
+
+@keyframes watchedPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+    transform: scale(1.05);
+  }
+}
+
+/* Style for partial watch progress (25-90% watched) */
+.episode-card.partially-watched {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(234, 88, 12, 0.05));
+  border-color: rgba(251, 146, 60, 0.3);
+}
+
+.episode-card.partially-watched:hover {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(234, 88, 12, 0.1));
+  border-color: rgba(251, 146, 60, 0.4);
+}
+
+.episode-card.partially-watched .episode-progress {
+  background: #fb923c;
 }
 
 .episode-card.current .episode-number {
@@ -723,7 +783,6 @@ body {
   margin-bottom: 24px;
 }
 
-/* Enhanced mobile responsiveness */
 @media (max-width: 768px) {
   .episodes-container {
     padding: 16px;
@@ -735,19 +794,11 @@ body {
   .episodes-grid {
     grid-template-columns: 1fr;
     gap: 12px;
-    max-height: none;
-    align-content: start;
-    grid-auto-rows: minmax(0, auto);
   }
 
-  .nav-button {
-    padding: 10px 16px;
-    font-size: 0.9rem;
-    text-align: center;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .episode-card {
+    padding: 10px 12px;
+    gap: 10px;
   }
 
   .episode-number {
@@ -758,6 +809,10 @@ body {
 
   .episode-title {
     font-size: 0.9rem;
+  }
+
+  .episode-meta {
+    font-size: 0.75rem;
   }
 
   .current-episode-banner {
@@ -783,86 +838,6 @@ body {
     padding: 6px 12px;
     font-size: 0.8rem;
   }
-
-  .video-container.fullscreen-active {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 9999;
-  }
-
-  .control-indicator {
-    font-size: 1rem;
-    padding: 10px 16px;
-  }
-
-  .seek-indicator {
-    font-size: 0.9rem;
-    padding: 6px 12px;
-  }
-
-  .control-indicator.youtube-style {
-    padding: 12px 16px;
-    font-size: 0.9rem;
-  }
-
-  .control-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .control-text {
-    font-size: 0.85rem;
-  }
-
-  .seek-indicator.youtube-seek {
-    padding: 10px 14px;
-    font-size: 0.8rem;
-  }
-
-  .seek-arrow {
-    width: 18px;
-    height: 18px;
-  }
-
-  .seek-time {
-    font-size: 0.8rem;
-  }
-
-  .seek-ripple {
-    width: 100px;
-    height: 100px;
-  }
-
-  .loading-spinner {
-    width: 50px;
-    height: 50px;
-    border-width: 3px;
-  }
-
-  .loading-text {
-    font-size: 1rem;
-  }
-
-  .loading-subtext {
-    font-size: 0.85rem;
-  }
-
-  .buffer-indicator {
-    padding: 12px 20px;
-  }
-
-  .buffer-spinner {
-    width: 20px;
-    height: 20px;
-    border-width: 2px;
-  }
-
-  .buffer-text {
-    font-size: 0.9rem;
-  }
 }
 
 @media (max-width: 480px) {
@@ -885,36 +860,6 @@ body {
   .episode-title {
     font-size: 0.85rem;
   }
-
-  .episode-meta {
-    font-size: 0.75rem;
-  }
-
-  .loading-spinner {
-    width: 45px;
-    height: 45px;
-  }
-
-  .loading-text {
-    font-size: 0.95rem;
-  }
-
-  .loading-subtext {
-    font-size: 0.8rem;
-  }
-
-  .buffer-indicator {
-    padding: 10px 16px;
-  }
-
-  .buffer-spinner {
-    width: 18px;
-    height: 18px;
-  }
-
-  .buffer-text {
-    font-size: 0.85rem;
-  }
 }
 
 @media screen and (orientation: landscape) and (max-width: 1024px) {
@@ -926,10 +871,6 @@ body {
     height: 100vh;
     z-index: 9999;
     border-radius: 0;
-  }
-
-  .video-container.fullscreen-active .video-player {
-    object-fit: contain;
   }
 }
 
@@ -956,22 +897,4 @@ body {
 .server-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-@media (max-width: 640px) {
-  .server-btn,
-  .language-btn {
-    min-width: 60px;
-    padding: 8px 12px;
-    font-size: 0.875rem;
-  }
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
 }
