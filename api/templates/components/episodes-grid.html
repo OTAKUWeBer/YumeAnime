@@ -25,6 +25,18 @@
         </div>
     </div>
 
+    <!-- Add legend showing episode status indicators -->
+    <div class="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-gray-700/50">
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+            <div class="w-3 h-3 bg-gray-600 rounded"></div>
+            <span>Unwatched</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+            <div class="w-3 h-3 bg-emerald-500 rounded-full"></div>
+            <span>Watched</span>
+        </div>
+    </div>
+
     <div class="episodes-grid" id="episodesGrid">
         {% if episodes and episodes.episodes %}
             {% for episode in episodes.episodes %}
@@ -33,11 +45,13 @@
                 {% set ep_query = ep_parts[1] if ep_parts|length > 1 else '' %}
                 {% set ep_param = ep_query.split('ep=')[1].split('&')[0] if 'ep=' in ep_query else '' %}
                 
+                <!-- Add data attributes for watch status tracking -->
                 <a href="/watch/{{ ep_slug }}?ep={{ ep_param }}-{{ lang if lang else 'sub' }}{% if selected_server %}&server={{ selected_server }}{% endif %}"
                    class="episode-card {% if episode_number and episode.number == episode_number|int %}current{% endif %}"
                    data-episode="{{ episode.number }}"
                    data-anime-id="{{ ep_slug }}"
-                   data-ep-id="{{ ep_param }}">
+                   data-ep-id="{{ ep_param }}"
+                   data-watch-status="unwatched">
                     <div class="episode-progress" id="progress-{{ episode.number }}" style="width: 0%"></div>
                     <div class="episode-number" id="number-{{ episode.number }}">
                         {{ episode.number }}
@@ -58,3 +72,46 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Script to update episode status classes based on watch progress -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const updateEpisodeStatuses = () => {
+    try {
+      const episodeCards = document.querySelectorAll('.episode-card')
+      episodeCards.forEach(card => {
+        const episodeNumber = card.getAttribute('data-episode')
+        const animeId = card.getAttribute('data-anime-id')
+        const epId = card.getAttribute('data-ep-id')
+
+        if (animeId && epId) {
+          const watchData = JSON.parse(localStorage.getItem('animeWatchData') || '{}')
+          const urlParams = new URLSearchParams(window.location.search)
+          const ep = urlParams.get('ep')
+          const langType = ep && ep.includes('-') ? ep.split('-').pop() : 'default'
+          const key = `${animeId}_${epId}_${langType}`
+          const progress = watchData[key]
+
+          // Remove existing status classes
+          card.classList.remove('watched', 'partially-watched')
+
+          if (progress) {
+            const percentage = (progress.watchTime / progress.totalTime) * 100
+
+            if (progress.completed || percentage >= 90) {
+              card.classList.add('watched')
+              card.setAttribute('data-watch-status', 'watched')
+            }
+          }
+        }
+      })
+    } catch (error) {
+      console.error('[v0] Error updating episode statuses:', error)
+    }
+  }
+
+  // Update on load and periodically
+  updateEpisodeStatuses()
+  setInterval(updateEpisodeStatuses, 2000)
+})
+</script>
