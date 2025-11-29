@@ -15,6 +15,7 @@ class VideoJSPlayer {
     this.controlIndicatorTimeouts = new Map()
     this.settings = this.loadSettings()
     this.currentLanguage = "sub" // Track current language for subtitle visibility
+    this.stalledCheckInterval = null // For stalled playback monitoring
   }
 
   loadSettings() {
@@ -118,6 +119,31 @@ class VideoJSPlayer {
           enableLowInitialPlaylist: true,
           smoothQualityChange: true,
           useBandwidthFromLocalStorage: true,
+          segmentDuration: 10,
+          maxPlaylistRetries: 3,
+          // Retry failed segments with exponential backoff
+          segmentRetryOptions: {
+            maxRetries: 3,
+            retryDelay: 200, // Initial retry delay in ms
+            backoffFactor: 2, // Exponential backoff multiplier
+          },
+          // Timeout settings for segment requests
+          segmentRequestTimeout: 30000, // 30 seconds for segment requests
+          // Handle stalled/stuck playback
+          stalledMonitoringInterval: 1000,
+          // Lower the threshold for detecting stalled playback
+          highWaterMark: 20 * 1000 * 1000, // 20MB buffer
+          bandwidth: 4194304, // 4Mbps initial bandwidth estimate
+          // Adaptive bitrate settings
+          minPlaylistRetryDelay: 100,
+          maxPlaylistRetryDelay: 30000,
+          playlistRetryDelayBase: 2,
+          playlistRetryDelayMax: 30,
+          discontinuitySequence: true,
+          // Better segment loading strategy
+          bufferBasedABR: true,
+          baseTolerance: 100,
+          baseTargetDuration: 10,
         },
         nativeVideoTracks: false,
         nativeAudioTracks: false,
@@ -151,6 +177,26 @@ class VideoJSPlayer {
     // Handle errors
     this.player.on("error", (error) => {
       console.error("Video.js error:", error)
+
+      const playerError = this.player.error()
+      if (playerError) {
+        console.error(`[v0] Error code: ${playerError.code}, message: ${playerError.message}`)
+
+        // Don't show error for subtitle issues (code 4)
+        if (playerError.code === 4) {
+          console.warn("Subtitle loading error detected, continuing without subtitles")
+          return
+        }
+
+        if (playerError.code === 2 || playerError.code === 3) {
+          console.warn("[v0] Network error detected, attempting recovery...")
+          setTimeout(() => {
+            this.attemptPlaybackRecovery()
+          }, 1000)
+          return
+        }
+      }
+
       this.showError("Video playback failed. Please try refreshing the page.")
     })
   }
@@ -413,12 +459,18 @@ class VideoJSPlayer {
       if (window.progressManager) {
         window.progressManager.showBufferIndicator()
       }
+      this.monitorStalledPlayback()
     })
 
     this.player.on("canplay", () => {
       console.log("[Player] Video can play")
       if (window.progressManager) {
         window.progressManager.hideBufferIndicator()
+      }
+      // Clear any stalled playback monitoring
+      if (this.stalledCheckInterval) {
+        clearInterval(this.stalledCheckInterval)
+        this.stalledCheckInterval = null
       }
     })
 
@@ -428,6 +480,7 @@ class VideoJSPlayer {
       }
     })
 
+    // Handle errors
     this.player.on("error", (error) => {
       console.error("Video.js error:", error)
 
@@ -462,6 +515,71 @@ class VideoJSPlayer {
     this.player.on("pause", () => {
       this.updateSubtitleVisibility()
     })
+  }
+
+  monitorStalledPlayback() {
+    if (this.stalledCheckInterval) {
+      clearInterval(this.stalledCheckInterval)
+    }
+
+    let stalledCount = 0
+    const maxStalledAttempts = 3
+
+    this.stalledCheckInterval = setInterval(() => {
+      if (!this.player || this.player.paused()) {
+        clearInterval(this.stalledCheckInterval)
+        this.stalledCheckInterval = null
+        return
+      }
+
+      const time = this.player.currentTime()
+      const buffered = this.player.buffered()
+
+      // Check if playhead is stuck and buffered data is available
+      if (time >= 0 && buffered.length > 0 && buffered.end(buffered.length - 1) > time + 2) {
+        // Playhead is stuck but buffer has data ahead
+        stalledCount++
+        console.log(`[v0] Stalled playback detected (attempt ${stalledCount}/${maxStalledAttempts})`)
+
+        if (stalledCount >= maxStalledAttempts) {
+          clearInterval(this.stalledCheckInterval)
+          this.stalledCheckInterval = null
+          this.attemptPlaybackRecovery()
+        }
+      } else {
+        stalledCount = 0
+      }
+    }, 1000)
+  }
+
+  attemptPlaybackRecovery() {
+    if (!this.player) return
+
+    console.log("[v0] Attempting playback recovery...")
+
+    const currentTime = this.player.currentTime()
+    const wasPlaying = !this.player.paused()
+
+    try {
+      // Stop and seek to current position to flush buffers
+      this.player.pause()
+
+      // Clear the buffer by seeking to a slightly different position
+      const seekTime = Math.max(0, currentTime - 1)
+      this.player.currentTime(seekTime)
+
+      // Brief delay then attempt to resume
+      setTimeout(() => {
+        if (wasPlaying) {
+          console.log("[v0] Resuming playback after recovery...")
+          this.player.play().catch((err) => {
+            console.error("[v0] Failed to resume playback:", err)
+          })
+        }
+      }, 500)
+    } catch (error) {
+      console.error("[v0] Recovery attempt failed:", error)
+    }
   }
 
   setDefaultSubtitleTrack() {
@@ -981,7 +1099,7 @@ class VideoJSPlayer {
         break
       case "pause":
         icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          <path d="M6 19h4V5H6v14zm8-14v12l8.5-6L13 6z"/>
         </svg>`
         content = ""
         break
@@ -1285,6 +1403,11 @@ class VideoJSPlayer {
     // Clear all timeouts
     this.controlIndicatorTimeouts.forEach((timeoutId) => clearTimeout(timeoutId))
     this.controlIndicatorTimeouts.clear()
+    // Clear stalled playback interval
+    if (this.stalledCheckInterval) {
+      clearInterval(this.stalledCheckInterval)
+      this.stalledCheckInterval = null
+    }
   }
 
   saveSettings() {
