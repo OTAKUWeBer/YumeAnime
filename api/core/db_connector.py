@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+db_name = os.getenv("db")
+users_collection_name = os.getenv("users_collection")
+watchlist_collection_name = os.getenv("watchlist_collection")
+
 # Centralized MongoDB connection with optimizations
 mongodb_uri = os.getenv("MONGODB_URI")
 client = MongoClient(
@@ -15,6 +19,6 @@ client = MongoClient(
 )
 
 # Provide access to the database and collections
-db = client["test"]
-users_collection = db["test"]
-watchlist_collection = db["watchlist"]
+db = client[db_name]
+users_collection = db[users_collection_name]
+watchlist_collection = db[watchlist_collection_name]
