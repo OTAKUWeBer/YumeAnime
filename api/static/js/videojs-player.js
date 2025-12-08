@@ -29,7 +29,7 @@ class VideoJSPlayer {
               rememberPosition: true,
               defaultVolume: 80,
               preferredLanguage: "sub",
-              videoQuality: "720p",
+              videoQuality: "auto",
               subtitleLanguage: "English", // Added default subtitle language
               subtitleBackground: "transparent", // Added default transparent background
               forceSubtitlesOff: false, // Added default force subtitles off setting
