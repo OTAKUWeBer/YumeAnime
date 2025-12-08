@@ -19,36 +19,38 @@ class VideoJSPlayer {
   }
 
   loadSettings() {
-    try {
-      const saved = localStorage.getItem("yumeAnimeSettings")
-      return saved
-        ? JSON.parse(saved)
-        : {
-            autoplayNext: true,
-            skipIntro: true,
-            rememberPosition: true,
-            defaultVolume: 80,
-            preferredLanguage: "sub",
-            videoQuality: "auto",
-            subtitleLanguage: "English", // Added default subtitle language
-            subtitleBackground: "transparent", // Added default transparent background
-            forceSubtitlesOff: false, // Added default force subtitles off setting
-          }
-    } catch (error) {
-      console.error("Error loading settings:", error)
-      return {
-        autoplayNext: true,
-        skipIntro: true,
-        rememberPosition: true,
-        defaultVolume: 80,
-        preferredLanguage: "sub",
-        videoQuality: "auto",
-        subtitleLanguage: "English", // Added default subtitle language
-        subtitleBackground: "transparent", // Added default transparent background
-        forceSubtitlesOff: false, // Added default force subtitles off setting
+      try {
+        const saved = localStorage.getItem("yumeAnimeSettings")
+        return saved
+          ? JSON.parse(saved)
+          : {
+              autoplayNext: true,
+              skipIntro: true,
+              rememberPosition: true,
+              defaultVolume: 80,
+              preferredLanguage: "sub",
+              videoQuality: "720p",
+              subtitleLanguage: "English", // Added default subtitle language
+              subtitleBackground: "transparent", // Added default transparent background
+              forceSubtitlesOff: false, // Added default force subtitles off setting
+              subtitleFontSize: 28, // Added default subtitle font size
+            }
+      } catch (error) {
+        console.error("Error loading settings:", error)
+        return {
+          autoplayNext: true,
+          skipIntro: true,
+          rememberPosition: true,
+          defaultVolume: 80,
+          preferredLanguage: "sub",
+          videoQuality: "auto",
+          subtitleLanguage: "English", // Added default subtitle language
+          subtitleBackground: "transparent", // Added default transparent background
+          forceSubtitlesOff: false, // Added default force subtitles off setting
+          subtitleFontSize: 28, // Added default subtitle font size
+        }
       }
     }
-  }
 
   initialize() {
     console.log("=== Video.js Player Initialization ===")
