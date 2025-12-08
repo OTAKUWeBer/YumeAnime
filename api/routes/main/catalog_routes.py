@@ -6,6 +6,7 @@ from flask import Blueprint, request, session, redirect, url_for, render_templat
 from markupsafe import escape
 
 from ...models.user import get_user_by_id
+from ...core.caching import cache_result, USER_DATA_CACHE_DURATION
 
 catalog_routes_bp = Blueprint('catalog_routes', __name__)
 
