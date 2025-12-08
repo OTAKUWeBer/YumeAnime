@@ -10,6 +10,7 @@ from ...utils.helpers import verify_turnstile
 from ...models.user import (
     create_user, get_user, user_exists, email_exists, get_user_by_id, change_password
 )
+from ...core.caching import clear_user_cache
 from ...core.config import Config
 
 auth_api_bp = Blueprint('auth_api', __name__)
@@ -119,6 +120,10 @@ def login():
 def logout():
     """User logout endpoint"""
     try:
+        user_id = session.get('_id')
+        if user_id:
+            clear_user_cache(user_id)
+        
         username = session.get('username', 'Unknown')
         session.clear()
         current_app.logger.info(f"User {username} logged out successfully")

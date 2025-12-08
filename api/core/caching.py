@@ -1,10 +1,13 @@
-# core/caching.py
 import time
 from functools import wraps
 from typing import Dict, Any, Callable
 
 _cache: Dict[str, Any] = {}
-CACHE_DURATION = 900  # 15 minutes
+
+CACHE_DURATION = 900  # 15 minutes - default
+LOGIN_CACHE_DURATION = 3600  # 1 hour - user login sessions and auth data
+USER_DATA_CACHE_DURATION = 1800  # 30 minutes - user profile data
+WATCHLIST_STATS_CACHE_DURATION = 600  # 10 minutes - watchlist statistics
 
 
 def cache_result(duration: int = CACHE_DURATION) -> Callable:
@@ -34,6 +37,21 @@ def cache_result(duration: int = CACHE_DURATION) -> Callable:
             return result
         return wrapper
     return decorator
+
+
+def cache_user_data(duration: int = USER_DATA_CACHE_DURATION) -> Callable:
+    """Cache user profile data with longer TTL."""
+    return cache_result(duration)
+
+
+def cache_login_data(duration: int = LOGIN_CACHE_DURATION) -> Callable:
+    """Cache login session data with even longer TTL."""
+    return cache_result(duration)
+
+
+def cache_watchlist_stats(duration: int = WATCHLIST_STATS_CACHE_DURATION) -> Callable:
+    """Cache watchlist statistics with moderate TTL."""
+    return cache_result(duration)
 
 
 def clear_user_cache(user_id: int) -> None:

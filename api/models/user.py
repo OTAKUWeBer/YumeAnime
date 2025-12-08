@@ -2,7 +2,12 @@ import random
 from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw
 import logging
-from ..core.db_connector import users_collection 
+from ..core.db_connector import users_collection
+from ..core.caching import (
+    cache_result, cache_user_data, cache_login_data, 
+    clear_user_cache as clear_user_cache_func, 
+    USER_DATA_CACHE_DURATION, LOGIN_CACHE_DURATION
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +98,7 @@ def update_anilist_user(user_id, anilist_user_info, access_token):
     }
     
     users_collection.update_one({"_id": user_id}, update_doc)
+    clear_user_cache_func(user_id)
     return True
 
 def get_user_by_anilist_id(anilist_id):
@@ -106,8 +112,9 @@ def get_user(username, password):
         return user
     return None
 
+@cache_user_data(duration=LOGIN_CACHE_DURATION)
 def get_user_by_id(_id):
-    """Get user by ID."""
+    """Get user by ID (cached for 1 hour)."""
     return users_collection.find_one({"_id": _id})
 
 def get_user_by_email(email):
@@ -135,6 +142,7 @@ def update_user_avatar(_id, avatar_url):
             }
         }
     )
+    clear_user_cache_func(_id)
 
 def update_user_email(_id, email):
     """Update user's email if it doesn't already exist."""
@@ -150,6 +158,7 @@ def update_user_email(_id, email):
             }
         }
     )
+    clear_user_cache_func(_id)
     return True
 
 def change_password(_id, old_password, new_password):
@@ -175,6 +184,7 @@ def change_password(_id, old_password, new_password):
             }
         }
     )
+    clear_user_cache_func(_id)
     return True
 
 def delete_user(_id):
@@ -361,9 +371,14 @@ def connect_anilist_to_user(user_id: int, anilist_user_info: dict, access_token:
         return False
 
 def get_anilist_connection_info(user_id: int) -> dict:
-    """Get detailed AniList connection information for a user."""
+    """Get detailed AniList connection information for a user (cached)."""
+    return _get_anilist_connection_info_uncached(user_id)
+
+@cache_user_data(duration=LOGIN_CACHE_DURATION)
+def _get_anilist_connection_info_uncached(user_id: int) -> dict:
+    """Internal uncached version of get_anilist_connection_info."""
     try:
-        user = get_user_by_id(user_id)
+        user = users_collection.find_one({"_id": user_id})
         if not user:
             return {'connected': False, 'error': 'User not found'}
         
