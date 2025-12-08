@@ -433,43 +433,65 @@ class SettingsManager {
   }
 
   showNotification(message, type = "info") {
-    // Remove existing notification
-    const existingNotification = document.getElementById("settings-notification")
-    if (existingNotification) {
-      existingNotification.remove()
-    }
+      // Remove existing notification
+      const existingNotification = document.getElementById("settings-notification")
+      if (existingNotification) {
+        existingNotification.remove()
+      }
 
-    const notification = document.createElement("div")
-    notification.id = "settings-notification"
-    notification.className = `fixed top-6 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl font-semibold transition-all duration-300 transform translate-x-full border backdrop-blur-sm ${
-      type === "success"
-        ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30"
-        : type === "error"
-          ? "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30"
-          : type === "warning"
-            ? "bg-gradient-to-r from-yellow-600 to-yellow-700 text-white border-yellow-500/30"
-            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30"
-    }`
-    notification.textContent = message
+      const notification = document.createElement("div")
+      notification.id = "settings-notification"
+      notification.className = `fixed top-6 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl font-semibold transition-all duration-300 transform translate-x-full border backdrop-blur-sm flex items-center gap-3 ${
+        type === "success"
+          ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30"
+          : type === "error"
+            ? "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30"
+            : type === "warning"
+              ? "bg-gradient-to-r from-yellow-600 to-yellow-700 text-white border-yellow-500/30"
+              : "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30"
+      }`
+      
+      // Create message span
+      const messageSpan = document.createElement("span")
+      messageSpan.textContent = message
+      notification.appendChild(messageSpan)
+      
+      // Create close button
+      const closeButton = document.createElement("button")
+      closeButton.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      `
+      closeButton.className = "ml-2 hover:opacity-70 transition-opacity focus:outline-none"
+      closeButton.onclick = () => {
+        notification.style.transform = "translateX(100%) scale(0.95)"
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove()
+          }
+        }, 300)
+      }
+      notification.appendChild(closeButton)
 
-    document.body.appendChild(notification)
+      document.body.appendChild(notification)
 
-    // Animate in
-    setTimeout(() => {
-      notification.classList.remove("translate-x-full")
-      notification.style.transform = "translateX(0) scale(1)"
-    }, 100)
-
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-      notification.style.transform = "translateX(100%) scale(0.95)"
+      // Animate in
       setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove()
-        }
-      }, 300)
-    }, 4000)
-  }
+        notification.classList.remove("translate-x-full")
+        notification.style.transform = "translateX(0) scale(1)"
+      }, 100)
+
+      // Auto remove after 4 seconds
+      setTimeout(() => {
+        notification.style.transform = "translateX(100%) scale(0.95)"
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove()
+          }
+        }, 300)
+      }, 4000)
+    }
 }
 
 // Global functions for template compatibility
