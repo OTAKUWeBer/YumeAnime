@@ -390,7 +390,7 @@ class VideoJSPlayer {
     return tracks
   }
 
-    applySubtitleStyling() {
+applySubtitleStyling() {
         const existingStyle = document.getElementById("videojs-subtitle-custom-style")
         if (existingStyle) {
           existingStyle.remove()
@@ -401,7 +401,7 @@ class VideoJSPlayer {
 
         // Get font size from settings or use defaults
         const fontSize = this.settings.subtitleFontSize || 28
-        const mobileFontSize = Math.max(20, fontSize - 8)
+        const mobileFontSize = Math.max(16, fontSize - 12)  // Smaller default for mobile
         const fullscreenMobileFontSize = Math.max(32, fontSize + 4)
 
         style.textContent = `
