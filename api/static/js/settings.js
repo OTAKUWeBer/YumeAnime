@@ -3,11 +3,14 @@
  * Handles basic settings functionality for playback preferences
  */
 
+/**
+ * Settings Page JavaScript
+ * Handles basic settings functionality for playback preferences
+ */
 class SettingsManager {
   constructor() {
     this.currentUser = null
     this.settings = this.loadSettings()
-
     this.init()
   }
 
@@ -15,7 +18,6 @@ class SettingsManager {
     this.loadUserSession()
     this.loadSettingsFromStorage()
     this.setupEventListeners()
-    this.applySettings()
   }
 
   async loadUserSession() {
@@ -24,7 +26,6 @@ class SettingsManager {
         method: "GET",
         credentials: "same-origin",
       })
-
       if (response.ok) {
         const userData = await response.json()
         if (userData && userData.username) {
@@ -79,16 +80,15 @@ class SettingsManager {
     settingInputs.forEach((input) => {
       input.addEventListener("change", () => {
         this.updateSettingsFromForm()
-        this.applySettings()
+        this.saveSettings() // Now only saves when user actually changes something
       })
     })
 
-    // Specific handler for autoplay next setting
+    // Specific handler for autoplay next setting (this is redundant with the above, but keeping for consistency)
     const autoplayToggle = document.getElementById("autoplay-next")
     if (autoplayToggle) {
       autoplayToggle.addEventListener("change", (e) => {
         this.settings.autoplayNext = e.target.checked
-        this.saveSettings()
         console.log("Auto-play next episode setting updated:", e.target.checked)
       })
     }
@@ -99,11 +99,6 @@ class SettingsManager {
     this.settings.autoplayNext = document.getElementById("autoplay-next").checked
     this.settings.skipIntro = document.getElementById("skip-intro").checked
     this.settings.preferredLanguage = document.getElementById("preferred-language").value
-  }
-
-  applySettings() {
-    // Save to localStorage
-    this.saveSettings()
   }
 
   updateAniListStatus() {
@@ -132,22 +127,21 @@ class SettingsManager {
                                     <path d="M6.361 2.943 0 21.056h4.06l1.077-3.133h6.875l1.077 3.133H17.15L10.789 2.943zm1.77 5.392 2.18 6.336H5.951zm10.365 9.794V8.113c3.02.501 4.473 2.273 4.473 4.728 0 2.456-1.453 4.227-4.473 4.728z"/>
                                 </svg>
                             </div>
-                            ${
-                              this.currentUser.anilist_id
-                                ? `
+${
+  this.currentUser.anilist_id
+    ? `
                                 <p class="text-xs opacity-80">ID: ${this.currentUser.anilist_id}</p>
                                 <p class="text-xs opacity-70">${statsText}</p>
-                            `
-                                : ""
-                            }
+`
+    : ""
+}
                         </div>
                     </div>
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-            `
-
+`
       connectBtn.classList.add("hidden")
       syncBtn.classList.remove("hidden")
       disconnectBtn.classList.remove("hidden")
@@ -172,8 +166,7 @@ class SettingsManager {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </div>
-            `
-
+`
       connectBtn.classList.remove("hidden")
       syncBtn.classList.add("hidden")
       disconnectBtn.classList.add("hidden")
@@ -221,7 +214,7 @@ class SettingsManager {
 
       if (data.success) {
         this.showNotification(
-          `Sync completed successfully! Added ${data.synced_count} new entries, skipped ${data.skipped_count} duplicates.${data.failed_count > 0 ? ` ${data.failed_count} entries could not be matched.` : ""}`,
+          `Sync completed successfully! Added ${data.synced_count} new entries, skipped ${data.skipped_count} duplicates.${data.failed_count > 0 ? ` ${data.failed_count} entries could not be matched` : ""}`,
           "success",
         )
       } else {
