@@ -16,6 +16,7 @@ class VideoJSPlayer {
     this.settings = this.loadSettings()
     this.currentLanguage = "sub" // Track current language for subtitle visibility
     this.stalledCheckInterval = null // For stalled playback monitoring
+    this.subtitleObserver = null // MutationObserver for subtitle styling
   }
 
   loadSettings() {
@@ -30,10 +31,10 @@ class VideoJSPlayer {
               defaultVolume: 80,
               preferredLanguage: "sub",
               videoQuality: "auto",
-              subtitleLanguage: "English", // Added default subtitle language
-              subtitleBackground: "transparent", // Added default transparent background
-              forceSubtitlesOff: false, // Added default force subtitles off setting
-              subtitleFontSize: 28, // Added default subtitle font size
+              subtitleLanguage: "English",
+              subtitleBackground: "transparent",
+              forceSubtitlesOff: false,
+              subtitleFontSize: 28,
             }
       } catch (error) {
         console.error("Error loading settings:", error)
@@ -44,10 +45,10 @@ class VideoJSPlayer {
           defaultVolume: 80,
           preferredLanguage: "sub",
           videoQuality: "auto",
-          subtitleLanguage: "English", // Added default subtitle language
-          subtitleBackground: "transparent", // Added default transparent background
-          forceSubtitlesOff: false, // Added default force subtitles off setting
-          subtitleFontSize: 28, // Added default subtitle font size
+          subtitleLanguage: "English",
+          subtitleBackground: "transparent",
+          forceSubtitlesOff: false,
+          subtitleFontSize: 28,
         }
       }
     }
@@ -106,15 +107,19 @@ class VideoJSPlayer {
   }
 
   setupVideoJS(videoElement, videoUrl, subtitles) {
-    console.log("=== Setting up Video.js ===")
+    console.log("[v0] Setting up Video.js with URL:", videoUrl)
 
-    // Video.js configuration
+    // Video.js configuration with enhanced HLS support
     const playerOptions = {
       fluid: true,
       responsive: true,
       aspectRatio: "16:9",
-      playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
-      volume: this.settings.defaultVolume / 100,
+      controls: true,
+      autoplay: false,
+      preload: "metadata",
+      playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+      volume: Math.min(this.settings.defaultVolume / 100, 1),
+      muted: false,
       html5: {
         vhs: {
           overrideNative: true,
@@ -122,30 +127,26 @@ class VideoJSPlayer {
           smoothQualityChange: true,
           useBandwidthFromLocalStorage: true,
           segmentDuration: 10,
-          maxPlaylistRetries: 3,
-          // Retry failed segments with exponential backoff
+          maxPlaylistRetries: 5,
           segmentRetryOptions: {
-            maxRetries: 3,
-            retryDelay: 200, // Initial retry delay in ms
-            backoffFactor: 2, // Exponential backoff multiplier
+            maxRetries: 5,
+            retryDelay: 300,
+            backoffFactor: 2.5,
           },
-          // Timeout settings for segment requests
-          segmentRequestTimeout: 30000, // 30 seconds for segment requests
-          // Handle stalled/stuck playback
-          stalledMonitoringInterval: 1000,
-          // Lower the threshold for detecting stalled playback
-          highWaterMark: 20 * 1000 * 1000, // 20MB buffer
-          bandwidth: 4194304, // 4Mbps initial bandwidth estimate
-          // Adaptive bitrate settings
+          segmentRequestTimeout: 45000,
+          stalledMonitoringInterval: 500,
+          highWaterMark: 30 * 1000 * 1000,
+          bandwidth: 5242880,
           minPlaylistRetryDelay: 100,
-          maxPlaylistRetryDelay: 30000,
+          maxPlaylistRetryDelay: 60000,
           playlistRetryDelayBase: 2,
-          playlistRetryDelayMax: 30,
+          playlistRetryDelayMax: 60,
           discontinuitySequence: true,
-          // Better segment loading strategy
           bufferBasedABR: true,
-          baseTolerance: 100,
+          baseTolerance: 150,
           baseTargetDuration: 10,
+          lowInitialPlaylistRetryDelay: 500,
+          llhls: false,
         },
         nativeVideoTracks: false,
         nativeAudioTracks: false,
@@ -160,20 +161,39 @@ class VideoJSPlayer {
       tracks: this.formatSubtitlesForVideoJS(subtitles),
     }
 
-    // Initialize Video.js player
-    const videojs = window.videojs // Declare the videojs variable
-    this.player = videojs(videoElement, playerOptions)
+    // Initialize Video.js player with proper error handling
+    try {
+      const videojs = window.videojs
+      if (!videojs) {
+        console.error("[v0] Video.js library not loaded!")
+        return
+      }
+
+      console.log("[v0] Creating Video.js instance...")
+      this.player = videojs(videoElement, playerOptions)
+      console.log("[v0] Video.js player created successfully")
+    } catch (error) {
+      console.error("[v0] Error creating Video.js player:", error)
+      return
+    }
 
     // Setup event listeners and features
     this.player.ready(() => {
-      console.log("Video.js player is ready")
-      this.setupPlayerEvents()
-      this.setupKeyboardShortcuts()
-      this.setupMobileFeatures()
-      this.setupSkipButtons()
-      this.setupSubtitleHandling(subtitles)
-      this.hideVideoJSLoadingSpinner()
-      this.applySubtitleStyling()
+      console.log("[v0] Video.js player is ready and operational")
+      try {
+        this.setupPlayerEvents()
+        console.log("[v0] Player events setup complete")
+        this.setupKeyboardShortcuts()
+        this.setupMobileFeatures()
+        this.setupSkipButtons()
+        this.setupSubtitleHandling(subtitles)
+        this.hideVideoJSLoadingSpinner()
+        this.applySubtitleStyling()
+        this.forceTransparentSubtitles()
+        console.log("[v0] All player features initialized")
+      } catch (error) {
+        console.error("[v0] Error during player setup:", error)
+      }
     })
 
     // Handle errors
@@ -390,76 +410,194 @@ class VideoJSPlayer {
     return tracks
   }
 
-applySubtitleStyling() {
-        const existingStyle = document.getElementById("videojs-subtitle-custom-style")
-        if (existingStyle) {
-          existingStyle.remove()
+  applySubtitleStyling() {
+    // Use CSS custom properties to update styles without recreating the style tag
+    // This prevents flickering when changing settings
+    let existingStyle = document.getElementById("videojs-subtitle-custom-style")
+    
+    // Only create the style tag once on first call
+    if (!existingStyle) {
+      existingStyle = document.createElement("style")
+      existingStyle.id = "videojs-subtitle-custom-style"
+      
+      // Create the style template with CSS custom properties
+      existingStyle.textContent = `
+        :root {
+          --vjs-subtitle-font-size: 28px;
+          --vjs-subtitle-font-size-tablet: 24px;
+          --vjs-subtitle-font-size-mobile: 16px;
+          --vjs-subtitle-font-size-mobile-fullscreen: 32px;
         }
-
-        const style = document.createElement("style")
-        style.id = "videojs-subtitle-custom-style"
-
-        // Get font size from settings or use defaults
-        const fontSize = this.settings.subtitleFontSize || 28
-        const mobileFontSize = Math.max(16, fontSize - 12)  // Smaller default for mobile
-        const fullscreenMobileFontSize = Math.max(32, fontSize + 4)
-
-        style.textContent = `
+        
+        /* CRITICAL: Force transparent backgrounds on ALL subtitle elements */
+        .video-js .vjs-text-track-cue,
+        .video-js .vjs-text-track-cue > div,
+        .video-js .vjs-text-track-display,
+        .vjs-text-track-cue,
+        video::cue,
+        ::cue {
+          background: transparent !important;
+          background-color: transparent !important;
+          color: white !important;
+          font-size: var(--vjs-subtitle-font-size) !important;
+          line-height: 1.5 !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+          font-weight: 600 !important;
+          text-shadow: 
+            2px 2px 4px rgba(0, 0, 0, 0.95),
+            -1px -1px 2px rgba(0, 0, 0, 0.8),
+            1px -1px 2px rgba(0, 0, 0, 0.8),
+            -1px 1px 2px rgba(0, 0, 0, 0.8),
+            1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+          border: none !important;
+          letter-spacing: 0.02em !important;
+          transition: none !important;
+          animation: none !important;
+        }
+        
+        /* Tablet adjustments */
+        @media (max-width: 1024px) {
           .video-js .vjs-text-track-cue {
-            background: transparent !important;
-            color: white !important;
-            font-size: ${fontSize}px !important;
-            line-height: 1.5 !important;
+            font-size: var(--vjs-subtitle-font-size-tablet) !important;
+          }
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+          .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile) !important;
             padding: 0 !important;
-            border-radius: 0 !important;
-            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-            font-weight: 600 !important;
-            text-shadow: 
-              2px 2px 4px rgba(0, 0, 0, 0.95),
-              -1px -1px 2px rgba(0, 0, 0, 0.8),
-              1px -1px 2px rgba(0, 0, 0, 0.8),
-              -1px 1px 2px rgba(0, 0, 0, 0.8),
-              1px 1px 2px rgba(0, 0, 0, 0.8) !important;
-            border: none !important;
-            letter-spacing: 0.02em !important;
           }
           
-          /* Tablet adjustments */
-          @media (max-width: 1024px) {
-            .video-js .vjs-text-track-cue {
-              font-size: ${Math.max(24, fontSize - 4)}px !important;
-            }
+          .video-container.fullscreen-active .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile-fullscreen) !important;
+            padding: 0 !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .video-js .vjs-text-track-cue {
+            font-size: calc(var(--vjs-subtitle-font-size-mobile) + 6px) !important;
+            padding: 0 !important;
           }
           
-          /* Mobile adjustments */
-          @media (max-width: 768px) {
-            .video-js .vjs-text-track-cue {
-              font-size: ${mobileFontSize}px !important;
-              padding: 0 !important;
-            }
-            
-            .video-container.fullscreen-active .video-js .vjs-text-track-cue {
-              font-size: ${fullscreenMobileFontSize}px !important;
-              padding: 0 !important;
-            }
+          .video-container.fullscreen-active .video-js .vjs-text-track-cue {
+            font-size: calc(var(--vjs-subtitle-font-size-mobile-fullscreen) + 4px) !important;
+            padding: 0 !important;
           }
-          
-          @media (max-width: 480px) {
-            .video-js .vjs-text-track-cue {
-              font-size: ${Math.max(22, mobileFontSize + 2)}px !important;
-              padding: 0 !important;
-            }
-            
-            .video-container.fullscreen-active .video-js .vjs-text-track-cue {
-              font-size: ${Math.max(36, fullscreenMobileFontSize + 4)}px !important;
-              padding: 0 !important;
-            }
-          }
-        `
+        }
+      `
+      
+      document.head.appendChild(existingStyle)
+    }
+    
+    // Update CSS custom properties without recreating the style
+    const fontSize = this.settings.subtitleFontSize || 28
+    const root = document.documentElement
+    root.style.setProperty('--vjs-subtitle-font-size', `${fontSize}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-tablet', `${Math.max(24, fontSize - 4)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-mobile', `${Math.max(16, fontSize - 12)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-mobile-fullscreen', `${Math.max(32, fontSize + 4)}px`)
+    
+    console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px`)
+  }
 
-        document.head.appendChild(style)
-        console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px`)
+  /**
+   * CRITICAL FIX: Force transparent backgrounds on subtitle elements
+   * This function uses direct DOM manipulation and MutationObserver to ensure
+   * that Video.js doesn't add black backgrounds to subtitle cues
+   */
+  forceTransparentSubtitles() {
+    if (!this.player) return
+
+    console.log("[Subtitles] Setting up forced transparent subtitle backgrounds")
+
+    // Function to remove backgrounds from all subtitle elements
+    const removeSubtitleBackgrounds = () => {
+      const playerEl = this.player.el()
+      if (!playerEl) return
+
+      // Find all text track cue elements
+      const cues = playerEl.querySelectorAll('.vjs-text-track-cue, .vjs-text-track-cue > div')
+      
+      cues.forEach(cue => {
+        // Force transparent background using inline styles (highest specificity)
+        cue.style.setProperty('background', 'transparent', 'important')
+        cue.style.setProperty('background-color', 'transparent', 'important')
+        cue.style.setProperty('padding', '0', 'important')
+        cue.style.setProperty('border', 'none', 'important')
+      })
+
+      // Also target the text track display container
+      const display = playerEl.querySelector('.vjs-text-track-display')
+      if (display) {
+        display.style.setProperty('background', 'transparent', 'important')
+        display.style.setProperty('background-color', 'transparent', 'important')
       }
+    }
+
+    // Apply immediately
+    removeSubtitleBackgrounds()
+
+    // Set up MutationObserver to catch dynamically added subtitle elements
+    const playerEl = this.player.el()
+    if (playerEl) {
+      // Disconnect existing observer if any
+      if (this.subtitleObserver) {
+        this.subtitleObserver.disconnect()
+      }
+
+      this.subtitleObserver = new MutationObserver((mutations) => {
+        let shouldUpdate = false
+        
+        mutations.forEach(mutation => {
+          // Check if subtitle-related nodes were added
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) { // Element node
+                if (node.classList && (
+                  node.classList.contains('vjs-text-track-cue') ||
+                  node.classList.contains('vjs-text-track-display') ||
+                  node.querySelector('.vjs-text-track-cue')
+                )) {
+                  shouldUpdate = true
+                }
+              }
+            })
+          }
+        })
+
+        if (shouldUpdate) {
+          console.log("[Subtitles] Subtitle elements detected, forcing transparent backgrounds")
+          removeSubtitleBackgrounds()
+        }
+      })
+
+      // Observe the player element for changes
+      this.subtitleObserver.observe(playerEl, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      })
+
+      console.log("[Subtitles] MutationObserver initialized for subtitle background monitoring")
+    }
+
+    // Also apply on text track change events
+    this.player.textTracks().on('change', () => {
+      setTimeout(() => {
+        removeSubtitleBackgrounds()
+      }, 100)
+    })
+
+    // Apply periodically as a safety measure (every 500ms)
+    setInterval(() => {
+      removeSubtitleBackgrounds()
+    }, 500)
+  }
 
   setupPlayerEvents() {
     // Track progress for resume functionality
@@ -472,6 +610,7 @@ applySubtitleStyling() {
       this.detectCurrentLanguage()
       this.updateSubtitleVisibility()
       this.setDefaultSubtitleTrack()
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
     })
 
     this.player.on("waiting", () => {
@@ -492,12 +631,14 @@ applySubtitleStyling() {
         clearInterval(this.stalledCheckInterval)
         this.stalledCheckInterval = null
       }
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
     })
 
     this.player.on("playing", () => {
       if (window.progressManager) {
         window.progressManager.hideBufferIndicator()
       }
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
     })
 
     // Handle errors
@@ -530,6 +671,7 @@ applySubtitleStyling() {
     // Handle play/pause for subtitle visibility
     this.player.on("play", () => {
       this.updateSubtitleVisibility()
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
     })
 
     this.player.on("pause", () => {
@@ -634,6 +776,9 @@ applySubtitleStyling() {
         }
         defaultTrack.mode = "showing"
         console.log(`[Subtitles] Enabled subtitle track: ${defaultTrack.label}`)
+        
+        // Force transparent backgrounds after enabling
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
       } else {
         console.warn("[Subtitles] No subtitle tracks found to enable")
       }
@@ -654,16 +799,22 @@ applySubtitleStyling() {
       setTimeout(() => {
         this.updateSubtitleVisibility()
         this.setDefaultSubtitleTrack()
+        this.forceTransparentSubtitles()
       }, 200)
 
       this.player.textTracks().on("change", () => {
         console.log("[Subtitles] Text tracks changed")
         this.handleTextTrackChange()
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
       })
 
       this.player.on("texttrackchange", () => {
         console.log("[Subtitles] Text track change event fired")
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
       })
+
+      // Setup captions button to toggle subtitles on/off
+      this.setupCaptionsToggle()
     })
 
     const languageToggle = document.querySelector(".language-toggle")
@@ -671,8 +822,57 @@ applySubtitleStyling() {
       const observer = new MutationObserver(() => {
         this.detectCurrentLanguage()
         this.updateSubtitleVisibility()
+        this.setDefaultSubtitleTrack()
       })
       observer.observe(languageToggle, { childList: true, subtree: true })
+    }
+
+    // Listen for subtitle language changes from settings
+    document.addEventListener("subtitleLanguageChanged", (e) => {
+      console.log("[v0] Subtitle language changed to:", e.detail.language)
+      this.settings.subtitleLanguage = e.detail.language
+      this.setDefaultSubtitleTrack()
+      this.handleTextTrackChange()
+    })
+
+    // Listen for subtitle toggle changes
+    document.addEventListener("subtitleToggled", (e) => {
+      console.log("[v0] Subtitle toggled:", e.detail.enabled)
+      this.settings.forceSubtitlesOff = !e.detail.enabled
+      this.updateSubtitleVisibility()
+    })
+  }
+
+  setupCaptionsToggle() {
+    // Find the captions button and add click handler
+    const captionsBtn = this.player.controlBar.captionsButton
+    if (captionsBtn) {
+      captionsBtn.on("click", () => {
+        console.log("[v0] Captions button clicked")
+        const textTracks = this.player.textTracks()
+        let allDisabled = true
+
+        for (let i = 0; i < textTracks.length; i++) {
+          if ((textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") && textTracks[i].mode === "showing") {
+            allDisabled = false
+            break
+          }
+        }
+
+        // Toggle all subtitle tracks
+        for (let i = 0; i < textTracks.length; i++) {
+          if (textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") {
+            textTracks[i].mode = allDisabled ? "showing" : "disabled"
+          }
+        }
+
+        this.settings.forceSubtitlesOff = !allDisabled
+        this.saveSettings()
+        console.log("[v0] Subtitles", allDisabled ? "enabled" : "disabled")
+        
+        // Force transparent backgrounds after toggle
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
+      })
     }
   }
 
@@ -703,11 +903,22 @@ applySubtitleStyling() {
   handleTextTrackChange() {
     const textTracks = this.player.textTracks()
 
+    // If subtitles are forced off, disable all subtitle tracks
+    if (this.settings.forceSubtitlesOff) {
+      console.log("[v0] Subtitles forced off by user")
+      for (let i = 0; i < textTracks.length; i++) {
+        if (textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") {
+          textTracks[i].mode = "disabled"
+        }
+      }
+      return
+    }
+
     for (let i = 0; i < textTracks.length; i++) {
       const track = textTracks[i]
 
       // Log track status for debugging
-      console.log(`[v0] Track ${i}: mode=${track.mode}, kind=${track.kind}, language=${track.language}`)
+      console.log(`[v0] Track ${i}: mode=${track.mode}, kind=${track.kind}, label=${track.label}, language=${track.language}`)
 
       // Ensure metadata tracks don't show as subtitles
       if (track.kind === "metadata" || track.kind === "chapters") {
@@ -720,21 +931,41 @@ applySubtitleStyling() {
         if (this.currentLanguage === "dub") {
           track.mode = "disabled"
         } else if (this.currentLanguage === "sub") {
+          const preferredLang = this.settings.subtitleLanguage.toLowerCase()
+          const trackLabel = (track.label || "").toLowerCase()
+          
+          // Match by label or language code
           const isPreferredLanguage =
-            track.label && track.label.toLowerCase().includes(this.settings.subtitleLanguage.toLowerCase())
-          const isFirstTrack = i === 0
+            trackLabel.includes(preferredLang) ||
+            (track.language && track.language.includes(preferredLang.substring(0, 2)))
+          
+          const isFirstSubtitleTrack = i === this.getFirstSubtitleTrackIndex()
 
           if (
             isPreferredLanguage ||
-            (isFirstTrack && !this.hasPreferredLanguageTrack(this.settings.subtitleLanguage))
+            (isFirstSubtitleTrack && !this.hasPreferredLanguageTrack(preferredLang))
           ) {
             track.mode = "showing"
+            console.log(`[v0] Showing subtitle: ${track.label}`)
           } else {
             track.mode = "disabled"
           }
         }
       }
     }
+    
+    // Force transparent backgrounds after track change
+    setTimeout(() => this.forceTransparentSubtitles(), 100)
+  }
+
+  getFirstSubtitleTrackIndex() {
+    const textTracks = this.player.textTracks()
+    for (let i = 0; i < textTracks.length; i++) {
+      if (textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") {
+        return i
+      }
+    }
+    return -1
   }
 
   hasPreferredLanguageTrack(preferredLang) {
@@ -793,6 +1024,9 @@ applySubtitleStyling() {
         }
       }
     }
+    
+    // Force transparent backgrounds after visibility update
+    setTimeout(() => this.forceTransparentSubtitles(), 100)
   }
 
   hideVideoJSLoadingSpinner() {
@@ -1428,6 +1662,11 @@ applySubtitleStyling() {
       clearInterval(this.stalledCheckInterval)
       this.stalledCheckInterval = null
     }
+    // Disconnect subtitle observer
+    if (this.subtitleObserver) {
+      this.subtitleObserver.disconnect()
+      this.subtitleObserver = null
+    }
   }
 
   saveSettings() {
@@ -1445,8 +1684,9 @@ applySubtitleStyling() {
     console.log(`[v0] Updated setting ${key} to ${value}`)
 
     // Apply subtitle styling changes immediately
-    if (key === "subtitleBackground") {
+    if (key === "subtitleBackground" || key === "subtitleFontSize") {
       this.applySubtitleStyling()
+      this.forceTransparentSubtitles()
     }
 
     // Update subtitle language if changed
@@ -1462,6 +1702,7 @@ applySubtitleStyling() {
 
     // Reapply subtitle styling with new settings
     this.applySubtitleStyling()
+    this.forceTransparentSubtitles()
 
     // Update subtitle visibility if language preference changed
     if (
