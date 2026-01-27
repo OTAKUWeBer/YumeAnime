@@ -1,27 +1,35 @@
 <div class="video-container mb-6 md:mb-8 relative" id="videoContainer">
     {% if video_link %}
-        <!-- Video.js player -->
-        <video-js id="videoPlayer"
-                class="vjs-default-skin video-player vjs-big-play-centered"
-                controls
-                preload="auto"
-                width="100%"
-                height="100%"
-                playsinline
-                crossorigin="anonymous"
-                data-video-url="{{ video_link }}"
-                data-subtitles='{{ subtitles | tojson | safe }}'
-                data-intro='{{ intro | tojson | safe }}'
-                data-outro='{{ outro | tojson | safe }}'
-                data-setup='{}'>
+        <!-- Enhanced Video.js player with modern UI -->
+        <video 
+            id="videoPlayer"
+            class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9 video-player"
+            controls
+            preload="auto"
+            width="100%"
+            height="100%"
+            playsinline
+            crossorigin="anonymous"
+            data-video-url="{{ video_link }}"
+            data-subtitles='{{ subtitles | tojson | safe }}'
+            data-intro='{{ intro | tojson | safe }}'
+            data-outro='{{ outro | tojson | safe }}'>
 
-            <!-- real source for Chromium fallback -->
+            <!-- HLS video source -->
             <source src="{{ video_link }}" type="application/x-mpegURL" />
+            
+            <!-- Fallback message -->
+            <p class="vjs-no-js">
+                To view this video, please enable JavaScript and consider upgrading to a web browser that
+                <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+            </p>
 
+            <!-- Subtitle tracks -->
             {% if subtitles %}
                 {% for sub in subtitles %}
                     {% if sub.file or sub.url %}
-                    <track kind="subtitles"
+                    <track 
+                        kind="subtitles"
                         src="{{ sub.file or sub.url }}"
                         srclang="{{ sub.lang or 'en' }}"
                         label="{{ sub.label or 'Subtitle' }}"
@@ -29,28 +37,34 @@
                     {% endif %}
                 {% endfor %}
             {% endif %}
-        </video-js>
+        </video>
 
         <!-- Skip Intro/Outro buttons -->
         <div class="skip-buttons" id="skipButtons">
             <button id="skipIntroBtn" class="skip-button" style="display: none;">
-                Skip Intro
+                <span class="skip-text">Skip Intro</span>
+                <span class="skip-timer"></span>
             </button>
             <button id="skipOutroBtn" class="skip-button" style="display: none;">
-                Skip Outro
+                <span class="skip-text">Skip Outro</span>
+                <span class="skip-timer"></span>
             </button>
         </div>
     {% else %}
         <!-- Video not available fallback -->
-        <div class="flex items-center justify-center bg-gray-900 text-gray-400" style="min-height: 400px; aspect-ratio: 16/9;">
-            <div class="text-center">
-                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14
-                             M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                </svg>
-                <p class="text-lg">Video not available</p>
-                <p class="text-sm opacity-75">Please try a different server or check back later</p>
+        <div class="flex items-center justify-center bg-gradient-to-br from-gray-900 to-black text-gray-400" style="min-height: 400px; aspect-ratio: 16/9;">
+            <div class="text-center space-y-4">
+                <div class="relative w-16 h-16 mx-auto">
+                    <svg class="w-16 h-16 opacity-30 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14
+                                 M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-lg font-semibold text-gray-300">Video not available</p>
+                    <p class="text-sm text-gray-500">Please try a different server or check back later</p>
+                </div>
             </div>
         </div>
     {% endif %}

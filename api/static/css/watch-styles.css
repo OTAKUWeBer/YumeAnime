@@ -53,14 +53,68 @@ body {
   border-radius: 0;
 }
 
+/* Text Track Display Container - CRITICAL: Keep transparent, NO ANIMATIONS */
 .video-js .vjs-text-track-display {
-  pointer-events: none;
+  pointer-events: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  transition: none !important;
+  animation: none !important;
 }
 
+/* Video.js Text Track Cue styling - CRITICAL: No background, NO ANIMATIONS */
 .video-js .vjs-text-track-cue {
+  background: transparent !important;
+  background-color: transparent !important;
   color: white !important;
   font-family: "Inter", sans-serif !important;
   font-weight: 500 !important;
+  transition: none !important;
+  animation: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Native WebVTT Cue styling - Standard way to style subtitles, NO ANIMATIONS */
+::cue {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: white !important;
+  font-family: "Inter", sans-serif !important;
+  font-weight: 500 !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Ensure no background on cue region */
+::cue-region {
+  background: transparent !important;
+  background-color: transparent !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Video element text track - NO ANIMATIONS */
+video::cue {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: white !important;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.95),
+    -1px -1px 2px rgba(0, 0, 0, 0.8),
+    1px -1px 2px rgba(0, 0, 0, 0.8),
+    -1px 1px 2px rgba(0, 0, 0, 0.8),
+    1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Override Video.js default dark background */
+.vjs-text-track-cue {
+  background: transparent !important;
+  background-color: transparent !important;
+  transition: none !important;
+  animation: none !important;
 }
 
 /* Loading Screen Styles */
