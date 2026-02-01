@@ -5,6 +5,7 @@ import requests
 import logging
 
 from ..utils.helpers import verify_turnstile, get_anilist_user_info
+from ..core.caching import clear_user_cache
 from ..models.user import (
     get_user, user_exists, email_exists, create_user, get_user_by_id,
     get_user_by_anilist_id, create_anilist_user, update_anilist_user,
@@ -188,6 +189,8 @@ def unlink_anilist_account():
     
     try:
         user_id = session.get('_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': 'User not found.'}), 404
         
         # Get user data before unlinking to log the action
         user = get_user_by_id(user_id)
@@ -198,7 +201,7 @@ def unlink_anilist_account():
         username = user.get('username', 'Unknown')
         
         # Delete all AniList-related data from the user
-        result = delete_anilist_data(user_id)
+        result = delete_anilist_data(int(user_id))
         
         if result:
             # Update session to reflect the change
