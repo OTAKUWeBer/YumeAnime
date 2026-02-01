@@ -20,29 +20,15 @@ class VideoJSPlayer {
   }
 
   loadSettings() {
-      try {
-        const saved = localStorage.getItem("yumeAnimeSettings")
-        return saved
-          ? JSON.parse(saved)
-          : {
-              autoplayNext: true,
-              skipIntro: true,
-              rememberPosition: true,
-              defaultVolume: 80,
-              preferredLanguage: "sub",
-              videoQuality: "auto",
-              subtitleLanguage: "English",
-              subtitleBackground: "transparent",
-              forceSubtitlesOff: false,
-              subtitleFontSize: 28,
-            }
-      } catch (error) {
-        console.error("Error loading settings:", error)
-        return {
+    try {
+      const saved = localStorage.getItem("yumeAnimeSettings")
+      return saved
+        ? JSON.parse(saved)
+        : {
           autoplayNext: true,
           skipIntro: true,
           rememberPosition: true,
-          defaultVolume: 80,
+          defaultVolume: 100,
           preferredLanguage: "sub",
           videoQuality: "auto",
           subtitleLanguage: "English",
@@ -50,8 +36,22 @@ class VideoJSPlayer {
           forceSubtitlesOff: false,
           subtitleFontSize: 28,
         }
+    } catch (error) {
+      console.error("Error loading settings:", error)
+      return {
+        autoplayNext: true,
+        skipIntro: true,
+        rememberPosition: true,
+        defaultVolume: 80,
+        preferredLanguage: "sub",
+        videoQuality: "auto",
+        subtitleLanguage: "English",
+        subtitleBackground: "transparent",
+        forceSubtitlesOff: false,
+        subtitleFontSize: 28,
       }
     }
+  }
 
   initialize() {
     console.log("=== Video.js Player Initialization ===")
@@ -122,7 +122,7 @@ class VideoJSPlayer {
       muted: false,
       html5: {
         vhs: {
-          overrideNative: true,
+          overrideNative: false, // Allow native HLS (better for mobile seeking)
           enableLowInitialPlaylist: true,
           smoothQualityChange: true,
           useBandwidthFromLocalStorage: true,
@@ -130,22 +130,22 @@ class VideoJSPlayer {
           maxPlaylistRetries: 5,
           segmentRetryOptions: {
             maxRetries: 5,
-            retryDelay: 300,
-            backoffFactor: 2.5,
+            retryDelay: 500,
+            backoffFactor: 2,
           },
-          segmentRequestTimeout: 45000,
-          stalledMonitoringInterval: 500,
-          highWaterMark: 30 * 1000 * 1000,
+          segmentRequestTimeout: 60000,
+          stalledMonitoringInterval: 1000,
+          highWaterMark: 62914560, // 60MB buffer cap
           bandwidth: 5242880,
-          minPlaylistRetryDelay: 100,
-          maxPlaylistRetryDelay: 60000,
+          minPlaylistRetryDelay: 500,
+          maxPlaylistRetryDelay: 30000,
           playlistRetryDelayBase: 2,
           playlistRetryDelayMax: 60,
           discontinuitySequence: true,
           bufferBasedABR: true,
-          baseTolerance: 150,
+          baseTolerance: 60,
           baseTargetDuration: 10,
-          lowInitialPlaylistRetryDelay: 500,
+          lowInitialPlaylistRetryDelay: 1000,
           llhls: false,
         },
         nativeVideoTracks: false,
@@ -414,12 +414,12 @@ class VideoJSPlayer {
     // Use CSS custom properties to update styles without recreating the style tag
     // This prevents flickering when changing settings
     let existingStyle = document.getElementById("videojs-subtitle-custom-style")
-    
+
     // Only create the style tag once on first call
     if (!existingStyle) {
       existingStyle = document.createElement("style")
       existingStyle.id = "videojs-subtitle-custom-style"
-      
+
       // Create the style template with CSS custom properties
       existingStyle.textContent = `
         :root {
@@ -489,10 +489,10 @@ class VideoJSPlayer {
           }
         }
       `
-      
+
       document.head.appendChild(existingStyle)
     }
-    
+
     // Update CSS custom properties without recreating the style
     const fontSize = this.settings.subtitleFontSize || 28
     const root = document.documentElement
@@ -500,7 +500,7 @@ class VideoJSPlayer {
     root.style.setProperty('--vjs-subtitle-font-size-tablet', `${Math.max(24, fontSize - 4)}px`)
     root.style.setProperty('--vjs-subtitle-font-size-mobile', `${Math.max(16, fontSize - 12)}px`)
     root.style.setProperty('--vjs-subtitle-font-size-mobile-fullscreen', `${Math.max(32, fontSize + 4)}px`)
-    
+
     console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px`)
   }
 
@@ -521,7 +521,7 @@ class VideoJSPlayer {
 
       // Find all text track cue elements
       const cues = playerEl.querySelectorAll('.vjs-text-track-cue, .vjs-text-track-cue > div')
-      
+
       cues.forEach(cue => {
         // Force transparent background using inline styles (highest specificity)
         cue.style.setProperty('background', 'transparent', 'important')
@@ -551,7 +551,7 @@ class VideoJSPlayer {
 
       this.subtitleObserver = new MutationObserver((mutations) => {
         let shouldUpdate = false
-        
+
         mutations.forEach(mutation => {
           // Check if subtitle-related nodes were added
           if (mutation.addedNodes.length > 0) {
@@ -776,7 +776,7 @@ class VideoJSPlayer {
         }
         defaultTrack.mode = "showing"
         console.log(`[Subtitles] Enabled subtitle track: ${defaultTrack.label}`)
-        
+
         // Force transparent backgrounds after enabling
         setTimeout(() => this.forceTransparentSubtitles(), 100)
       } else {
@@ -869,7 +869,7 @@ class VideoJSPlayer {
         this.settings.forceSubtitlesOff = !allDisabled
         this.saveSettings()
         console.log("[v0] Subtitles", allDisabled ? "enabled" : "disabled")
-        
+
         // Force transparent backgrounds after toggle
         setTimeout(() => this.forceTransparentSubtitles(), 100)
       })
@@ -933,12 +933,12 @@ class VideoJSPlayer {
         } else if (this.currentLanguage === "sub") {
           const preferredLang = this.settings.subtitleLanguage.toLowerCase()
           const trackLabel = (track.label || "").toLowerCase()
-          
+
           // Match by label or language code
           const isPreferredLanguage =
             trackLabel.includes(preferredLang) ||
             (track.language && track.language.includes(preferredLang.substring(0, 2)))
-          
+
           const isFirstSubtitleTrack = i === this.getFirstSubtitleTrackIndex()
 
           if (
@@ -953,7 +953,7 @@ class VideoJSPlayer {
         }
       }
     }
-    
+
     // Force transparent backgrounds after track change
     setTimeout(() => this.forceTransparentSubtitles(), 100)
   }
@@ -1024,7 +1024,7 @@ class VideoJSPlayer {
         }
       }
     }
-    
+
     // Force transparent backgrounds after visibility update
     setTimeout(() => this.forceTransparentSubtitles(), 100)
   }
