@@ -19,6 +19,107 @@
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
+    <!-- Anti-Scraping Protection -->
+    <script>
+        (function () {
+            // Clear console and detect DevTools
+            const devtools = { open: false, orientation: null };
+            const threshold = 160;
+
+            // Detect DevTools via window size difference
+            const checkDevTools = function () {
+                const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+                const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+
+                if (widthThreshold || heightThreshold) {
+                    if (!devtools.open) {
+                        devtools.open = true;
+                        onDevToolsOpen();
+                    }
+                } else {
+                    devtools.open = false;
+                }
+            };
+
+            const onDevToolsOpen = function () {
+                // Clear console repeatedly
+                console.clear();
+                console.log('%c⚠️ Stop!', 'color: red; font-size: 40px; font-weight: bold;');
+                console.log('%cThis is a browser feature intended for developers.', 'font-size: 16px;');
+            };
+
+            // Check periodically
+            setInterval(checkDevTools, 1000);
+
+            // Override console methods when devtools detected
+            const originalLog = console.log;
+            const originalWarn = console.warn;
+            const originalError = console.error;
+
+            // Clear console on various triggers
+            document.addEventListener('keydown', function (e) {
+                // Detect F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+                if (e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
+                    (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
+                    e.preventDefault();
+                    console.clear();
+                    return false;
+                }
+            });
+
+            // Disable right-click on video and iframe elements
+            document.addEventListener('contextmenu', function (e) {
+                const target = e.target;
+                if (target.tagName === 'VIDEO' ||
+                    target.tagName === 'IFRAME' ||
+                    target.closest('.video-player') ||
+                    target.closest('.player-container') ||
+                    target.closest('[class*="player"]')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Protect video elements from inspection
+            const protectVideos = function () {
+                const videos = document.querySelectorAll('video, iframe');
+                videos.forEach(function (el) {
+                    el.setAttribute('controlslist', 'nodownload noremoteplayback');
+                    el.setAttribute('disablepictureinpicture', '');
+                    el.oncontextmenu = function () { return false; };
+                });
+            };
+
+            // Run on load and observe for new elements
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', protectVideos);
+            } else {
+                protectVideos();
+            }
+
+            // Observer for dynamically added videos
+            const observer = new MutationObserver(function (mutations) {
+                protectVideos();
+            });
+
+            observer.observe(document.body || document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+
+            // Debugger trap (triggers when devtools is open)
+            setInterval(function () {
+                const start = performance.now();
+                debugger;
+                const end = performance.now();
+                if (end - start > 100) {
+                    console.clear();
+                }
+            }, 1000);
+        })();
+    </script>
+
     {% block extra_css %}{% endblock %}
 </head>
 

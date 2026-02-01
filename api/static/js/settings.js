@@ -204,7 +204,7 @@ ${
     this.setSyncButtonLoading(true)
 
     try {
-      const response = await fetch("/api/sync-anilist", {
+      const response = await fetch("/api/anilist/sync-anilist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",

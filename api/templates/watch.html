@@ -232,7 +232,7 @@
                     Episode {{ Episode }}
                 </h2>
                 <p class="text-muted">
-                    {{ eps_title.replace('-', ' ').title() if eps_title else 'Unknown' }}
+                    {{ eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else 'Unknown' }}
                 </p>
 
                 <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap;">
