@@ -1,947 +1,266 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ anime.title }} - YumeAnime</title>
-    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
+{% extends "base.html" %}
 
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white min-h-screen">
-{% include 'nav_base.html' %}
+{% block title %}{{ anime.name or anime.title or 'Anime' }} - YumeAnime{% endblock %}
+{% block meta_description %}Watch {{ anime.name or anime.title }} online. {{ (anime.description or anime.synopsis or
+'')[:150] }}{% endblock %}
 
-    <main class="pt-24 max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="flex flex-col gap-8">
-            <div>
-                <div class="flex flex-col lg:flex-row gap-6">
-                    <div class="w-full sm:w-64 lg:w-64 flex-shrink-0 mx-auto sm:mx-0">
-                        <img src="{{ anime.poster }}" alt="{{ anime.title }}" class="w-full h-auto rounded-lg shadow-lg object-cover max-w-64 mx-auto sm:mx-0">
-                    </div>
-                    <div class="flex-1">
-                        <h1 class="text-2xl sm:text-3xl font-bold mb-4 text-center sm:text-left">{{ anime.title }}</h1>
-                        {% if anime.japanese %}
-                        <p class="text-sm text-gray-400 mb-4 text-center sm:text-left">Japanese: {{ anime.japanese }}</p>
-                        {% endif %}
-                        
-                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 mb-4 text-sm">
-                            {% if anime.rating %}
-                            <div class="flex items-center gap-1">
-                                <span class="text-yellow-400">★</span>
-                                <span class="font-semibold">{{ anime.rating }}</span>
-                            </div>
-                            {% endif %}
-                            {% if anime.status %}
-                            <span class="px-2 py-1 bg-green-600 rounded-full text-xs font-semibold">{{ anime.status }}</span>
-                            {% endif %}
-                            {% if anime.type %}
-                            <span class="px-2 py-1 bg-blue-600 rounded-full text-xs font-semibold">{{ anime.type }}</span>
-                            {% endif %}
-                        </div>
+{% block content %}
+<div class="anime-hero">
+    <!-- Banner Background -->
+    <div class="anime-banner">
+        <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}">
+    </div>
 
-                        {% if anime.genres %}
-                        <!-- Genres section - cleaner layout -->
-                        <div class="mb-6">
-                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start mb-4 relative z-30">
-                                {% for genre in anime.genres %}
-                                <a href="/genre/{{ genre|lower|replace(' ', '-') }}"
-                                   class="inline-block bg-purple-700 hover:bg-purple-800 px-3 py-1 rounded-full text-xs text-white transition-all duration-300 hover:scale-105 hover:shadow-md no-underline">
-                                    {{ genre }}
-                                </a>
-                                {% endfor %}
-                            </div>
-                            {% if anime %}
-                                {% set anime_id_from_url = request.path.split('/')[-1] %}
-                                <div class="flex justify-center sm:justify-end sm:relative sm:-top-14 gap-3 relative z-30">
-                                    <a href="{{ url_for('main.anime_routes.episodes', anime_id=anime_id_from_url) }}" onclick="handleWatchNowClick(event, '{{ anime_id_from_url }}')"
-                                    class="inline-flex items-center px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl min-h-[48px] border border-purple-500/20">
-                                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                        Watch Now
-                                    </a>
-                                    
-                                    <div class="relative">
-                                        <button id="watchlist-btn" onclick="toggleWatchlistMenu()" 
-                                            class="inline-flex items-center px-4 py-3 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl min-h-[48px] border border-gray-600/30 relative overflow-hidden group">
-                                            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-purple-700 opacity-0 transition-opacity duration-300" id="progress-bg"></div>
-                                            <div class="relative z-10 flex items-center">
-                                                <svg class="w-5 h-5 mr-2 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="watchlist-icon">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                                </svg>
-                                                <span id="watchlist-text">Watchlist</span>
-                                            </div>
-                                            <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-400 to-pink-500 transition-all duration-500 ease-out" id="progress-bar" style="width: 0%"></div>
-                                        </button>
-                                        
-                                        <div id="watchlist-menu" class="absolute right-0 mt-3 w-72 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl z-50 hidden border border-gray-700/50 backdrop-blur-sm">
-                                            <div class="p-6">
-                                                <div class="mb-4">
-                                                    <label class="block text-sm font-semibold mb-3 text-gray-200">Status:</label>
-                                                    <select id="watchlist-status" class="w-full p-3 bg-gray-700/80 border border-gray-600/50 rounded-xl text-white font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm">
-                                                        <option value="plan_to_watch">Plan to Watch</option>
-                                                        <option value="watching">Watching</option>
-                                                        <option value="completed">Completed</option>
-                                                        <option value="paused">Paused</option>
-                                                        <option value="dropped">Dropped</option>
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="mb-4">
-                                                    <label class="block text-sm font-semibold mb-3 text-gray-200">Episodes Watched:</label>
-                                                    <div class="relative">
-                                                        <input type="number" id="watched-episodes" min="0" value="0" 
-                                                            class="w-full p-3 bg-gray-700/80 border border-gray-600/50 rounded-xl text-white font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm pr-16"
-                                                            oninput="updateProgress()">
-                                                        <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium" id="total-episodes">/ {{ anime.total_sub_episodes or 0 }}</span>
-                                                    </div>
-                                                    <div class="mt-2 bg-gray-700/50 rounded-full h-2 overflow-hidden">
-                                                        <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500 ease-out" id="menu-progress-bar" style="width: 0%"></div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="flex gap-3">
-                                                    <button onclick="saveWatchlist()" 
-                                                        class="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg border border-purple-500/20">
-                                                        Save
-                                                    </button>
-                                                    <button onclick="removeFromWatchlist()" id="remove-btn"
-                                                        class="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg border border-red-500/20 hidden">
-                                                        Remove
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        {% if anime.description %}
-                        <div class="mb-6">
-                            <div id="description-container">
-                                <p id="description-text" class="text-gray-300 leading-relaxed line-clamp-3">
-                                    {{ anime.description }}
-                                </p>
-                                <button id="expand-btn" class="text-purple-400 hover:text-purple-300 text-sm font-semibold mt-2" onclick="toggleDescription()">
-                                    ...more
-                                </button>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Info Grid with External Links -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm mb-6">
-                            {% if anime.duration %}
-                            <div><span class="font-semibold text-gray-400">Duration:</span> <span class="text-white">{{ anime.duration }}</span></div>
-                            {% endif %}
-                            {% if anime.total_sub_episodes %}
-                            <div><span class="font-semibold text-gray-400">Sub Episodes:</span> <span class="text-white">{{ anime.total_sub_episodes }}</span></div>
-                            {% endif %}
-                            {% if anime.total_dub_episodes %}
-                            <div><span class="font-semibold text-gray-400">Dub Episodes:</span> <span class="text-white">{{ anime.total_dub_episodes }}</span></div>
-                            {% endif %}
-                            {% if anime.studios %}
-                            <div><span class="font-semibold text-gray-400">Studio:</span> <span class="text-white">{{ anime.studios }}</span></div>
-                            {% endif %}
-                            {% if anime.producers %}
-                            <div class="col-span-1 sm:col-span-2"><span class="font-semibold text-gray-400">Producers:</span> <span class="text-white">{{ anime.producers | join(', ') }}</span></div>
-                            {% endif %}
-                            
-                            <!-- External Links in Info Grid (Alternative placement) -->
-                            {% if (anime.anilistId and anime.anilistId != 0) or (anime.malId and anime.malId != 0) %}
-                            <div class="col-span-1 sm:col-span-3">
-                                <span class="font-semibold text-gray-400">External Links:</span>
-                                <div class="flex flex-wrap gap-3 mt-1">
-                                    {% if anime.anilistId and anime.anilistId != 0 %}
-                                        <a href="https://anilist.co/anime/{{ anime.anilistId }}" target="_blank"
-                                        class="">
-                                            <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" class="w-6 h-auto">
-                                        </a>
-                                    {% endif %}
-
-                                    {% if anime.malId and anime.malId != 0 %}
-                                        <a href="https://myanimelist.net/anime/{{ anime.malId }}" target="_blank"
-                                        class="">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" class="h-6 w-auto">
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+    <div class="container">
+        <div class="anime-info-container">
+            <div class="anime-info-grid">
+                <!-- Poster -->
+                <div class="anime-poster">
+                    <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}">
                 </div>
 
-                {% if anime.seasons %}
-                <h2 class="text-xl sm:text-2xl font-bold mt-8 mb-4">Seasons</h2>
-                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3 mb-8">
-                {% for season in anime.seasons %}
-                <div class="group relative">
-                    <a href="/anime/{{ season.id }}" class="block transform hover:scale-105 transition-all duration-300">
-                        <div class="relative overflow-hidden rounded-lg h-20 sm:h-24
-                                    {% if season.id|string == current_season_id|string %}
-                                        border border-purple-400 shadow-lg
-                                    {% else %}
-                                        bg-gray-800 border border-gray-700
-                                    {% endif %} cursor-pointer">
-                            
-                            <div class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('{{ season.poster }}');"></div>
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            
-                            <div class="relative z-10 h-full flex flex-col justify-center items-center text-center p-1 sm:p-2">
-                                <h3 class="text-xs sm:text-sm font-semibold text-white leading-tight">{{ season.title or season.name or 'Season ' + loop.index|string }}</h3>
-                            </div>
-                        </div>
-                    </a>
+                <!-- Details -->
+                <div class="anime-details">
+                    <h1 class="anime-title">{{ anime.name or anime.title }}</h1>
+                    {% if anime.jname or anime.japanese_title %}
+                    <p class="anime-alt-title">{{ anime.jname or anime.japanese_title }}</p>
+                    {% endif %}
 
-                    {% if season.id|string == current_season_id|string %}
-                    <div class="absolute -top-1 -right-1 bg-purple-500 text-white px-1.5 py-0.5 rounded-full text-xs font-bold z-20 shadow-md">
-                        ●
+                    <!-- Stats -->
+                    <div class="anime-stats">
+                        {% if anime.stats and anime.stats.rating %}
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: var(--warning);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+                                    style="vertical-align: middle;">
+                                    <polygon
+                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                                {{ anime.stats.rating }}
+                            </div>
+                            <div class="stat-label">Rating</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.episodes and anime.stats.episodes.sub %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.episodes.sub }}</div>
+                            <div class="stat-label">Episodes</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.episodes and anime.stats.episodes.dub %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.episodes.dub }}</div>
+                            <div class="stat-label">Dubbed</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.type %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.type }}</div>
+                            <div class="stat-label">Type</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.duration %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.duration }}</div>
+                            <div class="stat-label">Duration</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.status %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.status }}</div>
+                            <div class="stat-label">Status</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Genres -->
+                    {% if anime.genres %}
+                    <div class="anime-genres">
+                        {% for genre in anime.genres %}
+                        <a href="/genre/{{ genre | lower | replace(' ', '-') }}" class="genre-tag">{{ genre }}</a>
+                        {% endfor %}
                     </div>
                     {% endif %}
-                </div>
-                {% endfor %}
 
-                </div>
-                {% endif %}
-
-                {% if anime.prequels or anime.sequels %}
-                <h2 class="text-xl sm:text-2xl font-bold mt-8 mb-4">Series Order</h2>
-                <div class="flex overflow-x-auto gap-3 sm:gap-4 mb-8 pb-4 px-1">
-                    {% for item in anime.prequels|reverse %}
-                    <div class="flex-shrink-0 w-32 sm:w-40 group">
-                        <a href="/anime/{{ item.id }}" class="block transform hover:scale-105 transition-all duration-300">
-                            <div class="relative overflow-hidden rounded-lg">
-                                <img src="{{ item.poster }}" class="w-full h-44 sm:h-56 object-cover">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                <div class="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                                    Prequel
-                                </div>
-                            </div>
-                            <h3 class="text-center mt-2 text-sm sm:text-base font-semibold group-hover:text-purple-400 transition-colors">{{ item.title }}</h3>
-                        </a>
+                    <!-- Synopsis -->
+                    <div class="anime-synopsis">
+                        <h3>Synopsis</h3>
+                        <p>{{ anime.description or anime.synopsis or 'No description available.' }}</p>
                     </div>
-                    {% endfor %}
-                    
-                    <div class="flex-shrink-0 w-32 sm:w-40">
-                        <div class="relative overflow-hidden rounded-lg border-2 border-purple-500">
-                            <img src="{{ anime.poster }}" class="w-full h-44 sm:h-56 object-cover">
-                            <div class="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold z-20 shadow-lg border border-white/20">
-                                ● CURRENT
+
+                    <!-- Additional Info -->
+                    {% if anime.moreInfo %}
+                    <div class="anime-more-info" style="margin-bottom: var(--space-xl);">
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+                            {% if anime.moreInfo.studios and anime.moreInfo.studios | length > 0 %}
+                            <div>
+                                <span class="text-muted text-sm">Studios:</span>
+                                <span>{{ anime.moreInfo.studios | join(', ') }}</span>
                             </div>
+                            {% endif %}
+                            {% if anime.moreInfo.producers and anime.moreInfo.producers | length > 0 %}
+                            <div>
+                                <span class="text-muted text-sm">Producers:</span>
+                                <span>{{ anime.moreInfo.producers | join(', ') }}</span>
+                            </div>
+                            {% endif %}
+                            {% if anime.moreInfo.premiered %}
+                            <div>
+                                <span class="text-muted text-sm">Premiered:</span>
+                                <span>{{ anime.moreInfo.premiered }}</span>
+                            </div>
+                            {% endif %}
+                            {% if anime.moreInfo.aired %}
+                            <div>
+                                <span class="text-muted text-sm">Aired:</span>
+                                <span>{{ anime.moreInfo.aired }}</span>
+                            </div>
+                            {% endif %}
                         </div>
-                        <h3 class="text-center mt-2 text-sm sm:text-base font-semibold text-purple-400">{{ anime.title }}</h3>
                     </div>
-                    
-                    {% for item in anime.sequels %}
-                    <div class="flex-shrink-0 w-32 sm:w-40 group">
-                        <a href="/anime/{{ item.id }}" class="block transform hover:scale-105 transition-all duration-300">
-                            <img src="{{ item.poster }}" class="rounded-lg shadow-md w-full h-44 sm:h-56 object-cover">
-                            <h3 class="text-center mt-2 text-sm sm:text-base font-semibold group-hover:text-purple-400 transition-colors">{{ item.name }}</h3>
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
+                    {% endif %}
 
-                {% if suggestions.related %}
-                <h2 class="text-xl sm:text-2xl font-bold mt-8 mb-4">Related Anime</h2>
-                <div class="flex overflow-x-auto gap-3 sm:gap-4 mb-8 px-1 scrollbar-hide">
-                    {% for item in suggestions.related %}
-                    <div class="flex-shrink-0 w-32 sm:w-40 group">
-                        <a href="/anime/{{ item.id }}" class="block transform hover:scale-105 transition-all duration-300">
-                            <img src="{{ item.poster }}" class="rounded-lg shadow-md w-full h-44 sm:h-56 object-cover">
-                            <h3 class="text-center mt-2 text-sm sm:text-base font-semibold group-hover:text-purple-400 transition-colors">{{ item.name }}</h3>
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                {% if suggestions.recommended %}
-                <h2 class="text-xl sm:text-2xl font-bold mt-8 mb-4">Recommended Anime</h2>
-                <div class="flex overflow-x-auto gap-3 sm:gap-4 mb-8 px-1 scrollbar-hide">
-                    {% for item in suggestions.recommended %}
-                    <div class="flex-shrink-0 w-32 sm:w-40 group">
-                        <a href="/anime/{{ item.id }}" class="block transform hover:scale-105 transition-all duration-300">
-                            <img src="{{ item.poster }}" class="rounded-lg shadow-md w-full h-44 sm:h-56 object-cover">
-                            <h3 class="text-center mt-2 text-sm sm:text-base font-semibold group-hover:text-purple-400 transition-colors">{{ item.name }}</h3>
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="space-y-6">
-                {% if anime.characters %}
-                <div class="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-md rounded-2xl border border-gray-700/40 overflow-hidden shadow-xl">
-                    <div class="p-4 border-b border-gray-700/50 bg-gradient-to-r from-purple-600/10 to-pink-600/10">
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    <!-- Actions -->
+                    <div class="anime-actions">
+                        <a href="/episodes/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
-                            Characters
-                        </h3>
-                    </div>
-                    <div class="max-h-96 overflow-y-auto custom-scrollbar">
-                        {% for char_va in anime.characters[:8] %}
-                        <div class="p-3 border-b border-gray-700/20 last:border-b-0 hover:bg-gradient-to-r hover:from-purple-600/5 hover:to-pink-600/5 transition-all duration-300 group">
-                            <div class="flex items-center space-x-4">
-                                <div class="flex items-center space-x-2 flex-1">
-                                    <div class="relative">
-                                        <img src="{{ char_va.character.poster }}" 
-                                             alt="{{ char_va.character.name }}" 
-                                             class="w-10 h-10 rounded-lg object-cover border border-purple-500/30 group-hover:border-purple-400/50 transition-colors duration-300 shadow-md"
-                                             onerror="this.src='/placeholder.svg?height=40&width=40'">
-                                        <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full border border-gray-800 flex items-center justify-center">
-                                            <span class="text-xs font-bold text-white">C</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h4 class="font-medium text-white text-sm truncate group-hover:text-purple-300 transition-colors duration-300">{{ char_va.character.name }}</h4>
-                                        <p class="text-xs text-purple-400">{{ char_va.character.cast }}</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center space-x-2 flex-1">
-                                    <div class="relative">
-                                        <img src="{{ char_va.voiceActor.poster }}" 
-                                             alt="{{ char_va.voiceActor.name }}" 
-                                             class="w-10 h-10 rounded-lg object-cover border border-blue-500/30 group-hover:border-blue-400/50 transition-colors duration-300 shadow-md"
-                                             onerror="this.src='/placeholder.svg?height=40&width=40'">
-                                        <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full border border-gray-800 flex items-center justify-center">
-                                            <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h5 class="font-medium text-gray-200 text-sm truncate group-hover:text-blue-300 transition-colors duration-300">{{ char_va.voiceActor.name }}</h5>
-                                        <p class="text-xs text-blue-400">{{ char_va.voiceActor.cast }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                        {% if anime.characters|length > 8 %}
-                        <div class="p-4 text-center bg-gradient-to-r from-purple-600/5 to-pink-600/5">
-                            <button onclick="toggleAllCharacters()" class="text-purple-400 hover:text-purple-300 text-sm font-medium hover:bg-purple-500/10 px-3 py-1.5 rounded-lg transition-all duration-300">
-                                View All Characters ({{ anime.characters|length }})
-                            </button>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if anime.promotionalVideos %}
-                <div class="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-md rounded-2xl border border-gray-700/40 overflow-hidden shadow-xl">
-                    <div class="p-4 border-b border-gray-700/50 bg-gradient-to-r from-red-600/10 to-orange-600/10">
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-red-400" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                            Watch Now
+                        </a>
+                        <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
+                            data-anime-id="{{ anime.id or current_season_id }}"
+                            data-anime-title="{{ anime.name or anime.title }}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                             </svg>
-                            Videos
-                        </h3>
-                    </div>
-                    <div class="max-h-80 overflow-y-auto custom-scrollbar">
-                        {% for video in anime.promotionalVideos[:6] %}
-                        <div class="p-3 border-b border-gray-700/20 last:border-b-0 group">
-                            <a href="{{ video.source }}" target="_blank" class="block">
-                                <div class="flex items-center space-x-3 hover:bg-gradient-to-r hover:from-red-600/5 hover:to-orange-600/5 rounded-xl p-2 transition-all duration-300">
-                                    <div class="relative flex-shrink-0">
-                                        <div class="w-16 h-12 rounded-lg overflow-hidden border border-gray-600/50 group-hover:border-red-500/50 transition-colors duration-300">
-                                            <img src="{{ video.thumbnail }}" 
-                                                 alt="{{ video.title }}" 
-                                                 class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                                 onerror="this.src='/placeholder.svg?height=48&width=64'">
-                                        </div>
-                                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300 rounded-lg flex items-center justify-center">
-                                            <div class="w-6 h-6 bg-red-600/90 rounded-full flex items-center justify-center group-hover:bg-red-500 group-hover:scale-110 transition-all duration-300 shadow-lg">
-                                                <svg class="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M8 5v14l11-7z"/>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h4 class="font-medium text-white text-sm line-clamp-2 group-hover:text-red-300 transition-colors duration-300 leading-tight">
-                                            {{ video.title }}
-                                        </h4>
-                                        <div class="flex items-center mt-1 space-x-2">
-                                            <span class="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">YouTube</span>
-                                            <svg class="w-3 h-3 text-gray-500 group-hover:text-red-400 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        {% endfor %}
-                        {% if anime.promotionalVideos|length > 6 %}
-                        <div class="p-4 text-center bg-gradient-to-r from-red-600/5 to-orange-600/5">
-                            <button class="text-red-400 hover:text-red-300 text-sm font-medium hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all duration-300">
-                                View All Videos ({{ anime.promotionalVideos|length }})
-                            </button>
-                        </div>
-                        {% endif %}
+                            <span id="watchlist-btn-text">Add to List</span>
+                        </button>
                     </div>
                 </div>
-                {% endif %}
             </div>
         </div>
-    </main>
+    </div>
+</div>
 
+<!-- Related & Recommended -->
+<div class="container" style="margin-top: var(--space-3xl);">
+    {% if suggestions and suggestions.related and suggestions.related | length > 0 %}
+    <section class="section">
+        <div class="section-header">
+            <h2 class="section-title">Related Anime</h2>
+        </div>
+        <div class="anime-grid">
+            {% for related in suggestions.related[:6] %}
+            <a href="/anime/{{ related.id }}" class="anime-card">
+                <div class="anime-card-poster">
+                    <img src="{{ related.poster or related.image }}" alt="{{ related.name or related.title }}"
+                        loading="lazy">
+                    <div class="anime-card-badges">
+                        {% if related.episodes and related.episodes.sub %}
+                        <span class="badge badge-sub">{{ related.episodes.sub }}</span>
+                        {% endif %}
+                        {% if related.episodes and related.episodes.dub %}
+                        <span class="badge badge-dub">{{ related.episodes.dub }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="anime-card-info">
+                    <h3 class="anime-card-title">{{ related.name or related.title }}</h3>
+                    <div class="anime-card-meta">
+                        {% if related.type %}<span>{{ related.type }}</span>{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if suggestions and suggestions.recommended and suggestions.recommended | length > 0 %}
+    <section class="section">
+        <div class="section-header">
+            <h2 class="section-title">Recommended</h2>
+        </div>
+        <div class="anime-grid">
+            {% for rec in suggestions.recommended[:6] %}
+            <a href="/anime/{{ rec.id }}" class="anime-card">
+                <div class="anime-card-poster">
+                    <img src="{{ rec.poster or rec.image }}" alt="{{ rec.name or rec.title }}" loading="lazy">
+                    <div class="anime-card-badges">
+                        {% if rec.episodes and rec.episodes.sub %}
+                        <span class="badge badge-sub">{{ rec.episodes.sub }}</span>
+                        {% endif %}
+                        {% if rec.episodes and rec.episodes.dub %}
+                        <span class="badge badge-dub">{{ rec.episodes.dub }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="anime-card-info">
+                    <h3 class="anime-card-title">{{ rec.name or rec.title }}</h3>
+                    <div class="anime-card-meta">
+                        {% if rec.type %}<span>{{ rec.type }}</span>{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Handle language preference for watch now button
-function handleWatchNowClick(event, animeId) {
-    // Let the default navigation happen - episodes page will handle language preference
-    return true;
-}
+    // Watchlist functionality
+    const addToWatchlistBtn = document.getElementById('add-to-watchlist');
+    const watchlistBtnText = document.getElementById('watchlist-btn-text');
 
-function toggleDescription() {
-    const descText = document.getElementById('description-text');
-    const expandBtn = document.getElementById('expand-btn');
+    if (addToWatchlistBtn) {
+        // Check current status
+        const animeId = addToWatchlistBtn.dataset.animeId;
 
-    if (!descText || !expandBtn) return;
-
-    if (descText.classList.contains('line-clamp-3')) {
-        // expand
-        descText.classList.remove('line-clamp-3');
-        expandBtn.textContent = '...less';
-    } else {
-        // collapse
-        descText.classList.add('line-clamp-3');
-        expandBtn.textContent = '...more';
-    }
-}
-
-let currentWatchlistData = null;
-let currentAnimeData = {
-    id: '{{ anime.id }}',
-    title: '{{ anime.title }}',
-    totalEpisodes: {{ anime.total_sub_episodes or 0 }}
-};
-
-// Check watchlist status on page load
-document.addEventListener('DOMContentLoaded', function() {
-    checkWatchlistStatus();
-    
-    // Close watchlist menu when clicking outside
-    document.addEventListener('click', function(e) {
-        const menu = document.getElementById('watchlist-menu');
-        const btn = document.getElementById('watchlist-btn');
-        if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
-            menu.classList.add('hidden');
-        }
-    });
-    
-    const menu = document.getElementById('watchlist-menu');
-    if (menu) {
-        menu.style.transform = 'translateY(-10px) scale(0.95)';
-        menu.style.opacity = '0';
-        menu.style.transition = 'all 0.2s ease-out';
-    }
-});
-
-async function checkWatchlistStatus() {
-    try {
-        const response = await fetch(`/api/watchlist/status?anime_id=${currentAnimeData.id}`);
-        const data = await response.json();
-        
-        if (data.in_watchlist) {
-            currentWatchlistData = data;
-            updateWatchlistUI(data);
-        }
-    } catch (error) {
-        console.error('Error checking watchlist status:', error);
-    }
-}
-
-function updateWatchlistUI(data) {
-    const btn = document.getElementById('watchlist-btn');
-    const statusSelect = document.getElementById('watchlist-status');
-    const watchedInput = document.getElementById('watched-episodes');
-    const removeBtn = document.getElementById('remove-btn');
-    const progressBar = document.getElementById('progress-bar');
-    const progressBg = document.getElementById('progress-bg');
-    const watchlistIcon = document.getElementById('watchlist-icon');
-    const watchlistText = document.getElementById('watchlist-text');
-    
-    if (data.in_watchlist) {
-        const progress = currentAnimeData.totalEpisodes > 0 ? 
-            (data.watched_episodes / currentAnimeData.totalEpisodes) * 100 : 0;
-        
-        // Update button appearance based on status
-        if (data.status === 'completed') {
-            watchlistIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>`;
-            watchlistText.textContent = 'Completed';
-            btn.classList.remove('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700', 'from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800');
-            btn.classList.add('from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800');
-            progressBg.style.opacity = '1';
-        } else if (data.status === 'plan_to_watch') {
-            watchlistIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>`;
-            watchlistText.textContent = 'Plan to Watch';
-            btn.classList.remove('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700', 'from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800');
-            btn.classList.add('from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800');
-            progressBg.style.opacity = '0';
-        } else if (data.status === 'paused') {
-            watchlistIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>`;
-            watchlistText.textContent = 'Paused';
-            btn.classList.remove('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700', 'from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800', 'from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800');
-            btn.classList.add('from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800');
-            progressBg.style.opacity = '0';
-        } else if (data.status === 'dropped') {
-            watchlistIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>`;
-            watchlistText.textContent = 'Dropped';
-            btn.classList.remove('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700', 'from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800', 'from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800');
-            btn.classList.add('from-red-600', 'to-red-700', 'hover:from-red-700', 'hover:to-red-800');
-            progressBg.style.opacity = '0';
-        } else {
-            // Default watching status
-            watchlistIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`;
-            watchlistText.textContent = `${data.watched_episodes}/${currentAnimeData.totalEpisodes}`;
-            btn.classList.remove('from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800', 'from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800', 'from-red-600', 'to-red-700', 'hover:from-red-700', 'hover:to-red-800');
-            btn.classList.add('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700');
-            progressBg.style.opacity = '0';
-        }
-        
-        progressBar.style.width = `${progress}%`;
-        
-        statusSelect.value = data.status;
-        watchedInput.value = data.watched_episodes || 0;
-        watchedInput.setAttribute('max', currentAnimeData.totalEpisodes);
-        removeBtn.classList.remove('hidden');
-        
-        updateProgress(); // Update menu progress bar
-    } else {
-        watchlistIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>`;
-        watchlistText.textContent = 'Watchlist';
-        btn.classList.remove('from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800', 'from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800', 'from-red-600', 'to-red-700', 'hover:from-red-700', 'hover:to-red-800');
-        btn.classList.add('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700');
-        
-        btn.classList.remove('from-blue-600', 'to-blue-700', 'hover:from-blue-700', 'hover:to-blue-800', 'from-purple-600', 'to-purple-700', 'hover:from-purple-700', 'hover:to-purple-800', 'from-yellow-600', 'to-yellow-700', 'hover:from-yellow-700', 'hover:to-yellow-800', 'from-red-600', 'to-red-700', 'hover:from-red-700', 'hover:to-red-800');
-        btn.classList.add('from-gray-700', 'to-gray-800', 'hover:from-gray-600', 'hover:to-gray-700');
-        progressBar.style.width = '0%';
-        progressBg.style.opacity = '0';
-        watchedInput.setAttribute('max', currentAnimeData.totalEpisodes);
-        removeBtn.classList.add('hidden');
-    }
-}
-
-function toggleWatchlistMenu() {
-    const menu = document.getElementById('watchlist-menu');
-    const isHidden = menu.classList.contains('hidden');
-    
-    if (isHidden) {
-        menu.classList.remove('hidden');
-        // Trigger animation
-        setTimeout(() => {
-            menu.style.transform = 'translateY(0) scale(1)';
-            menu.style.opacity = '1';
-        }, 10);
-    } else {
-        menu.style.transform = 'translateY(-10px) scale(0.95)';
-        menu.style.opacity = '0';
-        setTimeout(() => {
-            menu.classList.add('hidden');
-        }, 200);
-    }
-}
-
-function updateProgress() {
-    const watchedInput = document.getElementById('watched-episodes');
-    const menuProgressBar = document.getElementById('menu-progress-bar');
-    
-    const watched = parseInt(watchedInput.value) || 0;
-    const total = currentAnimeData.totalEpisodes;
-    const progress = total > 0 ? (watched / total) * 100 : 0;
-    
-    menuProgressBar.style.width = `${Math.min(progress, 100)}%`;
-    
-    // Ensure episodes don't exceed total
-    if (watched > total && total > 0) {
-        watchedInput.value = total;
-        updateProgress();
-    }
-}
-
-async function saveWatchlist() {
-    const status = document.getElementById('watchlist-status').value;
-    const watchedEpisodes = parseInt(document.getElementById('watched-episodes').value) || 0;
-    
-    try {
-        let response;
-        
-        if (currentWatchlistData && currentWatchlistData.in_watchlist) {
-            // Update existing entry
-            response = await fetch('/api/watchlist/update', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    anime_id: currentAnimeData.id,
-                    action: 'status',
-                    status: status
-                })
-            });
-            
-            if (response.ok) {
-                // Update episodes
-                await fetch('/api/watchlist/update', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        anime_id: currentAnimeData.id,
-                        action: 'episodes',
-                        watched_episodes: watchedEpisodes,
-                        total_episodes: currentAnimeData.totalEpisodes
-                    })
-                });
-            }
-        } else {
-            // Add new entry
-            response = await fetch('/api/watchlist/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    anime_id: currentAnimeData.id,
-                    anime_title: currentAnimeData.title,
-                    status: status,
-                    total_episodes: currentAnimeData.totalEpisodes
-                })
-            });
-            
-            if (response.ok) {
-                // Update episodes
-                await fetch('/api/watchlist/update', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        anime_id: currentAnimeData.id,
-                        action: 'episodes',
-                        watched_episodes: watchedEpisodes,
-                        total_episodes: currentAnimeData.totalEpisodes
-                    })
-                });
-            }
-        }
-        
-        if (response.ok) {
-            const result = await response.json();
-            currentWatchlistData = {
-                in_watchlist: true,
-                status: status,
-                watched_episodes: watchedEpisodes,
-                total_episodes: currentAnimeData.totalEpisodes
-            };
-            updateWatchlistUI(currentWatchlistData);
-            toggleWatchlistMenu();
-            
-            const message = status === 'completed' ? 
-                'Congratulations on completing this anime!' : 
-                result.message || 'Watchlist updated!';
-            showNotification(message, 'success');
-        } else {
-            const error = await response.json();
-            showNotification(error.message || 'Please log in first.', 'error');
-        }
-    } catch (error) {
-        console.error('Error saving watchlist:', error);
-        showNotification('Network error. Please try again.', 'error');
-    }
-}
-
-async function removeFromWatchlist() {
-    if (!confirm('Remove this anime from your watchlist?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/watchlist/remove', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                anime_id: currentAnimeData.id
+        fetch(`/api/watchlist/status?anime_id=${encodeURIComponent(animeId)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.in_watchlist) {
+                    watchlistBtnText.textContent = data.status || 'In List';
+                    addToWatchlistBtn.classList.add('active');
+                }
             })
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            currentWatchlistData = { in_watchlist: false };
-            updateWatchlistUI(currentWatchlistData);
-            toggleWatchlistMenu();
-            showNotification(result.message || 'Removed from watchlist!', 'success');
-        } else {
-            const error = await response.json();
-            showNotification(error.message || 'Failed to remove from watchlist', 'error');
-        }
-    } catch (error) {
-        console.error('Error removing from watchlist:', error);
-        showNotification('Network error. Please try again.', 'error');
-    }
-}
+            .catch(() => { });
 
-function showNotification(message, type = 'info') {
-    // Remove existing notification
-    const existingNotification = document.getElementById('notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
-    
-    const notification = document.createElement('div');
-    notification.id = 'notification';
-    notification.className = `fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl font-semibold transition-all duration-300 transform translate-x-full border backdrop-blur-sm ${
-        type === 'success' ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30' : 
-        type === 'error' ? 'bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30' : 
-        'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30'
-    }`;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => {
-        notification.classList.remove('translate-x-full');
-        notification.style.transform = 'translateX(0) scale(1)';
-    }, 100);
-    
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-        notification.style.transform = 'translateX(100%) scale(0.95)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
+        addToWatchlistBtn.addEventListener('click', async function () {
+            const animeId = this.dataset.animeId;
+            const animeTitle = this.dataset.animeTitle;
+
+            try {
+                const response = await fetch('/api/watchlist/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        anime_id: animeId,
+                        anime_title: animeTitle,
+                        status: 'watching'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    watchlistBtnText.textContent = 'Added!';
+                    this.classList.add('active');
+                } else if (response.status === 401) {
+                    openLoginModal();
+                } else {
+                    alert(data.message || 'Failed to add to watchlist');
+                }
+            } catch (e) {
+                console.error('Watchlist error:', e);
             }
-        }, 300);
-    }, 4000);
-}
-(function(){
-  // DEFAULT: restrict to genre links area so we don't override other overlays.
-  // Change to null to enable across the whole page.
-  const SCOPE_SELECTOR = '.mb-6'; // e.g. '.mb-6' for genres, or null for global
-
-  let raf = null;
-  const coords = { x: 0, y: 0 };
-  let lastWasClickable = false;
-
-  function isClickable(el) {
-    if (!el || el.nodeType !== 1) return false;
-    const tag = el.tagName;
-    if (tag === 'A' && el.getAttribute('href')) return true;
-    if (tag === 'BUTTON') return true;
-    if (el.hasAttribute && el.hasAttribute('onclick')) return true;
-    const role = el.getAttribute && el.getAttribute('role');
-    if (role === 'button') return true;
-    // treat elements with an href-like data-attr or tabindex + onclick sparingly; avoid inputs
-    return false;
-  }
-
-  function findClickableUnder(x, y) {
-    if (typeof document.elementsFromPoint !== 'function') return null;
-    const stack = document.elementsFromPoint(x, y) || [];
-    for (const node of stack) {
-      // check the node or its closest interactive ancestor
-      let candidate = null;
-      if (node.nodeType === 1 && isClickable(node)) candidate = node;
-      if (!candidate && node.closest) candidate = node.closest('a[href], button, [role="button"], [onclick]');
-      if (!candidate) continue;
-      if (SCOPE_SELECTOR) {
-        if (!candidate.closest || !candidate.closest(SCOPE_SELECTOR)) continue;
-      }
-      return candidate;
+        });
     }
-    return null;
-  }
-
-  function processHover() {
-    raf = null;
-    const el = findClickableUnder(coords.x, coords.y);
-    const clickable = !!el;
-    if (clickable !== lastWasClickable) {
-      lastWasClickable = clickable;
-      document.documentElement.style.cursor = clickable ? 'pointer' : '';
-    }
-  }
-
-  function onMove(e) {
-    coords.x = e.clientX;
-    coords.y = e.clientY;
-    if (!raf) raf = requestAnimationFrame(processHover);
-  }
-
-  // Click forwarding: capture phase so we run before overlays intercept
-  document.addEventListener('click', function (e) {
-    try {
-      // If click is already on a clickable element (or inside one), let it proceed
-      if (e.target.closest && e.target.closest('a[href], button, [role="button"], [onclick]')) {
-        return;
-      }
-
-      const x = (e.clientX !== undefined) ? e.clientX : (coords.x || 0);
-      const y = (e.clientY !== undefined) ? e.clientY : (coords.y || 0);
-      const target = findClickableUnder(x, y);
-      if (!target) return; // nothing to forward to
-
-      // Prevent overlay handlers from swallowing this click
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (target.tagName === 'A') {
-        const href = target.getAttribute('href');
-        const targetAttr = target.getAttribute('target');
-        if (!href) {
-          // fallback to programmatic click
-          target.click();
-          return;
-        }
-        if (href.startsWith('javascript:')) {
-          // execute anchor's click as fallback
-          target.click();
-          return;
-        }
-        if (targetAttr === '_blank') {
-          window.open(href, '_blank');
-        } else if (href.startsWith('#')) {
-          // same-page anchor
-          // try native behavior
-          target.click();
-          // also update hash if needed
-          try { location.hash = href; } catch(_) {}
-        } else {
-          // normal navigation (preserves history)
-          window.location.assign(href);
-        }
-        return;
-      }
-
-      // If it's a button or element with onclick, call click()
-      if (typeof target.click === 'function') {
-        target.click();
-      }
-    } catch (err) {
-      // Fail silently to avoid breaking other scripts
-      console.error('click-forward error:', err);
-    }
-  }, true); // capture = true
-
-  // cleanup handlers
-  function clearCursor() {
-    if (raf) { cancelAnimationFrame(raf); raf = null; }
-    lastWasClickable = false;
-    document.documentElement.style.cursor = '';
-  }
-
-  document.addEventListener('mousemove', onMove, { passive: true });
-  document.addEventListener('mouseleave', clearCursor);
-  window.addEventListener('blur', clearCursor);
-
-})();
 </script>
-
-    <style>
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        /* Added line-clamp-2 for video titles */
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        /* Added scrollbar hiding utility class */
-        .scrollbar-hide {
-            -ms-overflow-style: none;  /* Internet Explorer 10+ */
-            scrollbar-width: none;  /* Firefox */
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;  /* Safari and Chrome */
-        }
-        
-        /* Added custom scrollbar styling for sidebar sections */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(75, 85, 99, 0.2);
-            border-radius: 3px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, rgba(147, 51, 234, 0.6), rgba(236, 72, 153, 0.6));
-            border-radius: 3px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(236, 72, 153, 0.8));
-        }
-        
-        /* Added custom animations for enhanced UI */
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        /* Enhanced gradient text animations */
-        @keyframes gradient-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .bg-clip-text {
-            background-size: 200% 200%;
-            animation: gradient-shift 3s ease infinite;
-        }
-        
-        /* Enhanced hover effects */
-        #watchlist-btn:hover #progress-bar {
-            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
-        }
-        
-        /* Smooth transitions for all interactive elements */
-        button, select, input {
-            transition: all 0.2s ease-out;
-        }
-        
-        /* Custom scrollbar for better aesthetics */
-        #watchlist-menu::-webkit-scrollbar {
-            width: 4px;
-        }
-        
-        #watchlist-menu::-webkit-scrollbar-track {
-            background: rgba(75, 85, 99, 0.3);
-            border-radius: 2px;
-        }
-        
-        #watchlist-menu::-webkit-scrollbar-thumb {
-            background: rgba(147, 51, 234, 0.6);
-            border-radius: 2px;
-        }
-        
-        /* Added enhanced card hover effects */
-        .group:hover .absolute.inset-0 {
-            background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(236, 72, 153, 0.1));
-        }
-    </style>
-</body>
-</html>
+{% endblock %}

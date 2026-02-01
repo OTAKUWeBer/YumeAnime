@@ -1,74 +1,453 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Watch {% if eps_title %}{{ eps_title }}{% else %}Anime{% endif %}{% if Episode %} - Episode {{ Episode }}{% endif %}</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type=\"image/png\" href="{{ url_for('static', filename='images/logo.png') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Replaced HLS.js with Video.js CDN -->
-    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
-    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
-    
-    <!-- Added modular CSS file for watch page styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/watch-styles.css') }}">
-</head>
-<body class="min-h-screen text-white">
-    <!-- Navigation -->
-    {% include 'nav_base.html' %}
+{% extends "base.html" %}
 
-    <!-- Info Button -->
-    <a href="/anime/{{ eps_title if eps_title else 'unknown' }}"
-    class="fixed top-20 right-4 md:right-8 z-40 inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-black/20 backdrop-blur-sm border border-purple-500/30 rounded-lg text-purple-400 hover:bg-purple-500/10 transition-all duration-300 text-sm md:text-base">
-        <span class="font-semibold truncate max-w-[150px] sm:max-w-xs">
-            {{ 'Anime' }}
-        </span>
-        <svg class="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+{% block title %}Episode {{ Episode }} - {{ eps_title }} - YumeAnime{% endblock %}
+{% block meta_description %}Watch {{ eps_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
+
+{% block extra_css %}
+<style>
+    .watch-layout {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: var(--space-xl);
+    }
+
+    @media (max-width: 1024px) {
+        .watch-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .episode-sidebar {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        max-height: 600px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .episode-sidebar-header {
+        padding: var(--space-md);
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+
+    .episode-sidebar-header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .episode-search-input {
+        width: 100%;
+        padding: 8px 12px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        outline: none;
+        transition: border-color var(--transition-fast);
+    }
+
+    .episode-search-input:focus {
+        border-color: var(--text-primary);
+    }
+
+    .episode-search-input::placeholder {
+        color: var(--text-muted);
+    }
+
+    .episode-sidebar-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-sm);
+    }
+
+    .episode-sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+        margin-bottom: 2px;
+    }
+
+    .episode-sidebar-item:hover {
+        background: var(--bg-surface-hover);
+    }
+
+    .episode-sidebar-item.current {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+    }
+
+    .episode-sidebar-num {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-elevated);
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .episode-sidebar-item.current .episode-sidebar-num {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+
+    .video-wrapper {
+        position: relative;
+        width: 100%;
+        background: #000;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+
+    .video-wrapper iframe,
+    .video-wrapper video {
+        width: 100%;
+        aspect-ratio: 16/9;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back Link -->
+    <a href="/episodes/{{ back_to_ep }}" class="btn btn-ghost" style="margin-bottom: var(--space-md);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
         </svg>
+        Back to Episodes
     </a>
 
-    <div class="container mx-auto px-4 md:px-6 py-24 md:py-24 max-w-6xl">
-        <!-- Title Section -->
-        <div class="text-center mb-6 md:mb-8 pt-4 md:pt-0">
-            <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-purple-400 mb-2 px-2 leading-tight">
-                {% if eps_title %}
-                    {{ eps_title.rsplit('-', 1)[0].replace('-', ' ').title() }}
+    <div class="watch-layout">
+        <div class="watch-main">
+            <!-- Video Player -->
+            <div class="video-wrapper" id="video-wrapper">
+                {% if video_link %}
+                <video id="video-player" controls autoplay playsinline>
+                    <source src="{{ video_link }}" type="application/x-mpegURL">
+                    {% if subtitles %}
+                    {% for track in subtitles %}
+                    {% if track.kind == 'captions' or track.label %}
+                    <track kind="captions" src="{{ track.file }}"
+                        srclang="{{ track.label[:2] | lower if track.label else 'en' }}"
+                        label="{{ track.label or 'English' }}" {% if track.default %}default{% endif %}>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                    Your browser does not support the video tag.
+                </video>
                 {% else %}
-                    Loading...
+                <div
+                    style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: var(--bg-surface);">
+                    <div class="text-center">
+                        <div class="no-results-icon">🎬</div>
+                        <p class="text-muted">Video not available</p>
+                    </div>
+                </div>
                 {% endif %}
-            </h1>
-            <p class="text-lg md:text-xl text-gray-300">
-                {% if Episode %}
+            </div>
+
+            <!-- Player Controls -->
+            <div class="player-controls-bar">
+                <div class="player-nav">
+                    {% if prev_episode_url %}
+                    <a href="{{ prev_episode_url }}" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                        Ep {{ prev_episode_number or 'Prev' }}
+                    </a>
+                    {% endif %}
+
+                    {% if next_episode_url %}
+                    <a href="{{ next_episode_url }}" class="btn btn-primary">
+                        Ep {{ next_episode_number or 'Next' }}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="player-options">
+                    <!-- Server Select -->
+                    {% if available_servers and available_servers | length > 0 %}
+                    <select class="server-select" id="server-select">
+                        {% for server in available_servers %}
+                        <option value="{{ server.serverName }}" {% if server.serverName==selected_server %}selected{%
+                            endif %}>
+                            {{ server.serverName | upper }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+
+                    <!-- Language Toggle -->
+                    <div
+                        style="display: flex; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color);">
+                        {% if sub_url %}
+                        <a href="{{ sub_url }}"
+                            class="btn btn-sm {% if lang == 'sub' %}btn-primary{% else %}btn-ghost{% endif %}"
+                            style="border-radius: 0;">SUB</a>
+                        {% endif %}
+                        {% if dub_url and dub_available %}
+                        <a href="{{ dub_url }}"
+                            class="btn btn-sm {% if lang == 'dub' %}btn-primary{% else %}btn-ghost{% endif %}"
+                            style="border-radius: 0;">DUB</a>
+                        {% elif not dub_available %}
+                        <span class="btn btn-sm btn-ghost"
+                            style="border-radius: 0; opacity: 0.5; cursor: not-allowed;">DUB</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Episode Info -->
+            <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--space-lg); margin-top: var(--space-lg);">
+                <h2 style="margin-bottom: var(--space-sm);">
                     Episode {{ Episode }}
-                {% else %}
-                    Episode not found
-                {% endif %}
-            </p>
+                </h2>
+                <p class="text-muted">
+                    {{ eps_title.replace('-', ' ').title() if eps_title else 'Unknown' }}
+                </p>
+
+                <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap;">
+                    <span class="badge badge-sub" style="font-size: 0.8rem;">{{ lang | upper }}</span>
+                    {% if selected_server %}
+                    <span class="badge" style="background: var(--bg-elevated); font-size: 0.8rem;">{{ selected_server |
+                        upper }}</span>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
-        <!-- Current Episode Banner -->
-        {% include 'components/current-episode-banner.html' %}
-
-        <!-- Video Player -->
-        {% include 'components/video-player.html' %}
-
-        <!-- Episode Navigation -->
-        {% include 'components/episode-navigation.html' %}
-
-        <!-- Server and Language Selector -->
-        {% include 'components/server-selector.html' %}
-
-        <!-- Episodes Grid -->
-        {% include 'components/episodes-grid.html' %}
+        <!-- Episode Sidebar -->
+        <div class="episode-sidebar">
+            <div class="episode-sidebar-header">
+                <div class="episode-sidebar-header-top">
+                    <span>Episodes</span>
+                    <span class="text-muted text-sm" id="episode-count">{% if episodes and episodes.episodes %}{{
+                        episodes.episodes | length }}{% endif %}</span>
+                </div>
+                <input type="text" class="episode-search-input" id="episode-sidebar-search"
+                    placeholder="Search episode...">
+            </div>
+            <div class="episode-sidebar-list" id="episode-sidebar-list">
+                {% if episodes and episodes.episodes %}
+                {% for ep in episodes.episodes %}
+                {% set ep_id = ep.episodeId.split('?ep=')[1] if '?ep=' in ep.episodeId else ep.episodeId %}
+                {% set ep_slug = ep.episodeId.split('?')[0] if '?' in ep.episodeId else back_to_ep %}
+                <a href="/watch/{{ ep_slug }}?ep={{ ep_id }}-{{ lang }}"
+                    class="episode-sidebar-item {% if ep.number == episode_number %}current{% endif %}"
+                    data-episode="{{ ep.number }}" data-title="{{ ep.title or '' }}">
+                    <div class="episode-sidebar-num">{{ ep.number }}</div>
+                    <div style="min-width: 0;">
+                        <div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ ep.title or 'Episode ' + ep.number|string }}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+                {% else %}
+                <div class="text-center p-lg text-muted">
+                    No episodes found
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- Replaced HLS player scripts with Video.js player script -->
-    <script src="{{ url_for('static', filename='js/server-manager.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
-</body>
-</html>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+    // Subtitles data from server
+    const subtitlesData = {{ subtitles | tojson | safe if subtitles else '[]' }};
+
+    // HLS.js video player
+    const video = document.getElementById('video-player');
+    const videoSrc = '{{ video_link | safe }}';
+
+    // Function to load VTT subtitles
+    function loadSubtitles() {
+        if (!video || !subtitlesData || subtitlesData.length === 0) return;
+
+        // Remove any existing tracks
+        const existingTracks = video.querySelectorAll('track');
+        existingTracks.forEach(t => t.remove());
+
+        // Sort to prioritize English
+        const sortedSubs = [...subtitlesData].sort((a, b) => {
+            const aIsEnglish = (a.label || '').toLowerCase().includes('english');
+            const bIsEnglish = (b.label || '').toLowerCase().includes('english');
+            if (aIsEnglish && !bIsEnglish) return -1;
+            if (!aIsEnglish && bIsEnglish) return 1;
+            return 0;
+        });
+
+        sortedSubs.forEach((track, index) => {
+            if (!track.file) return;
+
+            const trackEl = document.createElement('track');
+            trackEl.kind = 'captions';
+            trackEl.src = track.file;
+            trackEl.label = track.label || 'Unknown';
+            trackEl.srclang = (track.label || 'en').substring(0, 2).toLowerCase();
+
+            // Set English as default
+            const isEnglish = (track.label || '').toLowerCase().includes('english');
+            if (isEnglish || index === 0) {
+                trackEl.default = true;
+            }
+
+            video.appendChild(trackEl);
+        });
+
+        // Enable the first text track (should be English)
+        setTimeout(() => {
+            if (video.textTracks && video.textTracks.length > 0) {
+                // Find English track or use first
+                let englishTrack = null;
+                for (let i = 0; i < video.textTracks.length; i++) {
+                    if (video.textTracks[i].label.toLowerCase().includes('english')) {
+                        englishTrack = video.textTracks[i];
+                        break;
+                    }
+                }
+
+                const trackToEnable = englishTrack || video.textTracks[0];
+                trackToEnable.mode = 'showing';
+                console.log('Enabled subtitle track:', trackToEnable.label);
+            }
+        }, 500);
+    }
+
+    if (video && videoSrc) {
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+            });
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                video.play().catch(() => { });
+                // Load subtitles after video is ready
+                loadSubtitles();
+            });
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    console.error('HLS error:', data);
+                    // Try native playback as fallback
+                    video.src = videoSrc;
+                    loadSubtitles();
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function () {
+                video.play().catch(() => { });
+                loadSubtitles();
+            });
+        }
+    }
+
+    // Server change
+    const serverSelect = document.getElementById('server-select');
+    if (serverSelect) {
+        serverSelect.addEventListener('change', function () {
+            const server = this.value;
+            // Store preference
+            document.cookie = `preferred_server=${server};path=/;max-age=31536000`;
+            // Reload page with new server
+            location.reload();
+        });
+    }
+
+    // Episode sidebar search
+    const episodeSearch = document.getElementById('episode-sidebar-search');
+    const episodeList = document.getElementById('episode-sidebar-list');
+    const episodeCount = document.getElementById('episode-count');
+
+    if (episodeSearch && episodeList) {
+        const episodes = episodeList.querySelectorAll('.episode-sidebar-item');
+
+        episodeSearch.addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            episodes.forEach(ep => {
+                const epNum = ep.dataset.episode || '';
+                const epTitle = (ep.dataset.title || '').toLowerCase();
+
+                const matches = !query ||
+                    epNum.includes(query) ||
+                    epTitle.includes(query);
+
+                ep.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            });
+
+            if (episodeCount) {
+                episodeCount.textContent = visibleCount;
+            }
+        });
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function (e) {
+        // Don't trigger shortcuts when typing in search
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (!video) return;
+
+        switch (e.key) {
+            case ' ':
+            case 'k':
+                e.preventDefault();
+                video.paused ? video.play() : video.pause();
+                break;
+            case 'ArrowLeft':
+                video.currentTime -= 10;
+                break;
+            case 'ArrowRight':
+                video.currentTime += 10;
+                break;
+            case 'f':
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    video.requestFullscreen();
+                }
+                break;
+            case 'm':
+                video.muted = !video.muted;
+                break;
+            case 'c':
+                // Toggle captions
+                if (video.textTracks && video.textTracks.length > 0) {
+                    const track = video.textTracks[0];
+                    track.mode = track.mode === 'showing' ? 'hidden' : 'showing';
+                }
+                break;
+        }
+    });
+</script>
+{% endblock %}
