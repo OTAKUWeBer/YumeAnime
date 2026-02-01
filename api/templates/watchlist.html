@@ -142,7 +142,7 @@
             watchlistContent.innerHTML = items.map(item => `
                 <div class="watchlist-item" data-id="${item.anime_id}">
                     <a href="/anime/${item.anime_id}" class="watchlist-item-poster">
-                        <img src="${item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
+                        <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
                     </a>
                     <div class="watchlist-item-info">
                         <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
