@@ -68,6 +68,8 @@
 
     /* Layout */
     --max-width: 1400px;
+    --max-width-xl: 1600px;
+    --max-width-2xl: 1800px;
     --navbar-height: 64px;
     --sidebar-width: 280px;
 }
@@ -2232,5 +2234,265 @@ h6 {
 
     .anime-poster {
         max-width: 120px;
+    }
+}
+
+/* ============================================
+   LARGE SCREEN OPTIMIZATIONS
+   For 1440p, 4K monitors and TVs
+   ============================================ */
+
+/* 1440p and larger (2560px+) */
+@media (min-width: 1600px) {
+    .container {
+        max-width: var(--max-width-xl);
+    }
+
+    .navbar-container {
+        max-width: var(--max-width-xl);
+    }
+
+    /* Larger anime cards */
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: var(--space-xl);
+    }
+
+    .anime-card-title {
+        font-size: 1rem;
+    }
+
+    /* Bigger spotlight */
+    .spotlight-slide {
+        height: 550px;
+    }
+
+    .spotlight-title {
+        font-size: 3rem;
+    }
+
+    .spotlight-description {
+        font-size: 1.1rem;
+        -webkit-line-clamp: 4;
+    }
+
+    /* Larger typography */
+    h1 {
+        font-size: 3rem;
+    }
+
+    h2 {
+        font-size: 2.5rem;
+    }
+
+    h3 {
+        font-size: 1.75rem;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+    }
+
+    /* Bigger buttons */
+    .btn {
+        padding: var(--space-md) var(--space-xl);
+        font-size: 1rem;
+    }
+
+    .btn-lg {
+        padding: var(--space-lg) var(--space-2xl);
+        font-size: 1.1rem;
+    }
+
+    /* Watch page layout */
+    .watch-layout {
+        grid-template-columns: 1fr 380px;
+        gap: var(--space-2xl);
+    }
+
+    .episode-sidebar {
+        max-height: 700px;
+    }
+
+    .player-controls-bar {
+        padding: var(--space-lg);
+        gap: var(--space-lg);
+    }
+
+    /* Info page */
+    .anime-info-grid {
+        grid-template-columns: 250px 1fr;
+        gap: var(--space-2xl);
+    }
+
+    .anime-banner {
+        height: 500px;
+    }
+
+    .anime-title {
+        font-size: 2.5rem;
+    }
+
+    .anime-synopsis p {
+        font-size: 1.1rem;
+        line-height: 1.9;
+    }
+
+    /* Settings */
+    .settings-container {
+        max-width: 900px;
+    }
+
+    .settings-section {
+        padding: var(--space-2xl);
+    }
+
+    /* Watchlist */
+    .watchlist-item-poster {
+        width: 100px;
+        height: 140px;
+    }
+
+    /* Episode grid */
+    .episode-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+
+/* 4K and larger (3840px+) */
+@media (min-width: 2000px) {
+    .container {
+        max-width: var(--max-width-2xl);
+    }
+
+    .navbar-container {
+        max-width: var(--max-width-2xl);
+    }
+
+    /* Even larger anime cards */
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: var(--space-2xl);
+    }
+
+    .anime-card-title {
+        font-size: 1.1rem;
+    }
+
+    .anime-card-meta {
+        font-size: 0.9rem;
+    }
+
+    /* Huge spotlight */
+    .spotlight-slide {
+        height: 650px;
+    }
+
+    .spotlight-title {
+        font-size: 3.5rem;
+    }
+
+    .spotlight-content {
+        padding: var(--space-3xl);
+    }
+
+    .spotlight-info {
+        max-width: 700px;
+    }
+
+    /* Larger typography */
+    h1 {
+        font-size: 3.5rem;
+    }
+
+    h2 {
+        font-size: 3rem;
+    }
+
+    h3 {
+        font-size: 2rem;
+    }
+
+    .section-title {
+        font-size: 2rem;
+    }
+
+    /* Watch page */
+    .watch-layout {
+        grid-template-columns: 1fr 450px;
+    }
+
+    .episode-sidebar {
+        max-height: 800px;
+    }
+
+    .episode-sidebar-item {
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    .episode-sidebar-num {
+        width: 48px;
+        height: 48px;
+        font-size: 1.1rem;
+    }
+
+    /* Info page */
+    .anime-info-grid {
+        grid-template-columns: 300px 1fr;
+    }
+
+    .anime-banner {
+        height: 600px;
+    }
+
+    .anime-info-container {
+        padding-top: 350px;
+    }
+
+    .anime-stats {
+        gap: var(--space-2xl);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    /* Settings */
+    .settings-container {
+        max-width: 1000px;
+    }
+
+    /* Episode grid */
+    .episode-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: var(--space-md);
+    }
+
+    .episode-item {
+        padding: var(--space-lg);
+        font-size: 1.1rem;
+    }
+}
+
+/* Ultra-wide monitors (21:9 aspect ratio, 3440px+) */
+@media (min-width: 2500px) {
+    .container {
+        max-width: 2200px;
+    }
+
+    .navbar-container {
+        max-width: 2200px;
+    }
+
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+
+    .spotlight-slide {
+        height: 700px;
+    }
+
+    .watch-layout {
+        grid-template-columns: 1fr 500px;
     }
 }
