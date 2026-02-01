@@ -76,35 +76,58 @@
 
 {% block extra_js %}
 <script>
-    // Episode search/filter
-    const searchInput = document.getElementById('episode-search');
-    const filterSelect = document.getElementById('episode-filter');
-    const episodeGrid = document.getElementById('episode-grid');
-    const episodes = episodeGrid.querySelectorAll('.episode-item');
+    // Episode search/filter - wrapped in DOMContentLoaded for safety
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('episode-search');
+        const filterSelect = document.getElementById('episode-filter');
+        const episodeGrid = document.getElementById('episode-grid');
 
-    function filterEpisodes() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filterRange = filterSelect.value;
+        if (!episodeGrid) {
+            console.error('[Episode Search] Episode grid not found');
+            return;
+        }
 
-        episodes.forEach(ep => {
-            const epNum = parseInt(ep.dataset.episode) || 0;
-            const epTitle = (ep.dataset.title || '').toLowerCase();
+        const episodes = episodeGrid.querySelectorAll('.episode-item');
+        console.log('[Episode Search] Found', episodes.length, 'episodes');
 
-            let showBySearch = !searchTerm ||
-                epNum.toString().includes(searchTerm) ||
-                epTitle.includes(searchTerm);
+        function filterEpisodes() {
+            const searchTerm = (searchInput?.value || '').toLowerCase().trim();
+            const filterRange = filterSelect?.value || 'all';
 
-            let showByFilter = true;
-            if (filterRange === '1-12') showByFilter = epNum >= 1 && epNum <= 12;
-            else if (filterRange === '13-24') showByFilter = epNum >= 13 && epNum <= 24;
-            else if (filterRange === '25-50') showByFilter = epNum >= 25 && epNum <= 50;
-            else if (filterRange === '51+') showByFilter = epNum >= 51;
+            console.log('[Episode Search] Filtering:', searchTerm, filterRange);
 
-            ep.style.display = (showBySearch && showByFilter) ? '' : 'none';
-        });
-    }
+            let visibleCount = 0;
+            episodes.forEach(ep => {
+                const epNum = parseInt(ep.dataset.episode) || 0;
+                const epTitle = (ep.dataset.title || '').toLowerCase();
 
-    if (searchInput) searchInput.addEventListener('input', filterEpisodes);
-    if (filterSelect) filterSelect.addEventListener('change', filterEpisodes);
+                let showBySearch = !searchTerm ||
+                    epNum.toString().includes(searchTerm) ||
+                    epTitle.includes(searchTerm);
+
+                let showByFilter = true;
+                if (filterRange === '1-12') showByFilter = epNum >= 1 && epNum <= 12;
+                else if (filterRange === '13-24') showByFilter = epNum >= 13 && epNum <= 24;
+                else if (filterRange === '25-50') showByFilter = epNum >= 25 && epNum <= 50;
+                else if (filterRange === '51+') showByFilter = epNum >= 51;
+
+                const shouldShow = showBySearch && showByFilter;
+                ep.style.display = shouldShow ? '' : 'none';
+                if (shouldShow) visibleCount++;
+            });
+
+            console.log('[Episode Search] Visible episodes:', visibleCount);
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterEpisodes);
+            searchInput.addEventListener('keyup', filterEpisodes); // Backup event
+            console.log('[Episode Search] Search input listener attached');
+        }
+        if (filterSelect) {
+            filterSelect.addEventListener('change', filterEpisodes);
+            console.log('[Episode Search] Filter select listener attached');
+        }
+    });
 </script>
 {% endblock %}

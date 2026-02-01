@@ -4,6 +4,8 @@
 {% block meta_description %}Watch {{ eps_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
 
 {% block extra_css %}
+<!-- Video.js CSS -->
+<link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
 <style>
     .watch-layout {
         display: grid;
@@ -118,6 +120,19 @@
         aspect-ratio: 16/9;
         display: block;
     }
+
+    /* Subtitle Styling Override for VideoJS */
+    .video-js .vjs-text-track-display {
+        background-color: transparent !important;
+    }
+
+    .video-js .vjs-text-track-cue>div {
+        background-color: transparent !important;
+        color: white !important;
+        text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8) !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 1.25em !important;
+    }
 </style>
 {% endblock %}
 
@@ -136,17 +151,10 @@
             <!-- Video Player -->
             <div class="video-wrapper" id="video-wrapper">
                 {% if video_link %}
-                <video id="video-player" controls autoplay playsinline>
+                <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls playsinline
+                    data-video-url="{{ video_link }}"
+                    data-subtitles='{{ subtitles | tojson | safe if subtitles else "[]" }}'>
                     <source src="{{ video_link }}" type="application/x-mpegURL">
-                    {% if subtitles %}
-                    {% for track in subtitles %}
-                    {% if track.kind == 'captions' or track.label %}
-                    <track kind="captions" src="{{ track.file }}"
-                        srclang="{{ track.label[:2] | lower if track.label else 'en' }}"
-                        label="{{ track.label or 'English' }}" {% if track.default %}default{% endif %}>
-                    {% endif %}
-                    {% endfor %}
-                    {% endif %}
                     Your browser does not support the video tag.
                 </video>
                 {% else %}
@@ -245,6 +253,7 @@
                     <span class="text-muted text-sm" id="episode-count">{% if episodes and episodes.episodes %}{{
                         episodes.episodes | length }}{% endif %}</span>
                 </div>
+                <!-- ID changed to match original JS logic -->
                 <input type="text" class="episode-search-input" id="episode-sidebar-search"
                     placeholder="Search episode...">
             </div>
@@ -276,99 +285,27 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<!-- Video.js Core -->
+<script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+<!-- Custom Video.js Player with Subtitle Support -->
+<script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
 <script>
-    // Subtitles data from server
-    const subtitlesData = {{ subtitles | tojson | safe if subtitles else '[]' }};
-
-    // HLS.js video player
-    const video = document.getElementById('video-player');
-    const videoSrc = '{{ video_link | safe }}';
-
-    // Function to load VTT subtitles
-    function loadSubtitles() {
-        if (!video || !subtitlesData || subtitlesData.length === 0) return;
-
-        // Remove any existing tracks
-        const existingTracks = video.querySelectorAll('track');
-        existingTracks.forEach(t => t.remove());
-
-        // Sort to prioritize English
-        const sortedSubs = [...subtitlesData].sort((a, b) => {
-            const aIsEnglish = (a.label || '').toLowerCase().includes('english');
-            const bIsEnglish = (b.label || '').toLowerCase().includes('english');
-            if (aIsEnglish && !bIsEnglish) return -1;
-            if (!aIsEnglish && bIsEnglish) return 1;
-            return 0;
-        });
-
-        sortedSubs.forEach((track, index) => {
-            if (!track.file) return;
-
-            const trackEl = document.createElement('track');
-            trackEl.kind = 'captions';
-            trackEl.src = track.file;
-            trackEl.label = track.label || 'Unknown';
-            trackEl.srclang = (track.label || 'en').substring(0, 2).toLowerCase();
-
-            // Set English as default
-            const isEnglish = (track.label || '').toLowerCase().includes('english');
-            if (isEnglish || index === 0) {
-                trackEl.default = true;
+    // Initialize Video.js player
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            // Check if player already exists to prevent double init
+            if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
+                console.log('[VideoPlayer] Player already initialized');
+                return;
             }
 
-            video.appendChild(trackEl);
-        });
-
-        // Enable the first text track (should be English)
-        setTimeout(() => {
-            if (video.textTracks && video.textTracks.length > 0) {
-                // Find English track or use first
-                let englishTrack = null;
-                for (let i = 0; i < video.textTracks.length; i++) {
-                    if (video.textTracks[i].label.toLowerCase().includes('english')) {
-                        englishTrack = video.textTracks[i];
-                        break;
-                    }
-                }
-
-                const trackToEnable = englishTrack || video.textTracks[0];
-                trackToEnable.mode = 'showing';
-                console.log('Enabled subtitle track:', trackToEnable.label);
-            }
-        }, 500);
-    }
-
-    if (video && videoSrc) {
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-            });
-            hls.loadSource(videoSrc);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                video.play().catch(() => { });
-                // Load subtitles after video is ready
-                loadSubtitles();
-            });
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal) {
-                    console.error('HLS error:', data);
-                    // Try native playback as fallback
-                    video.src = videoSrc;
-                    loadSubtitles();
-                }
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Native HLS support (Safari)
-            video.src = videoSrc;
-            video.addEventListener('loadedmetadata', function () {
-                video.play().catch(() => { });
-                loadSubtitles();
-            });
+            const vjsPlayer = new VideoJSPlayer();
+            vjsPlayer.initialize();
+            console.log('[VideoPlayer] Player initialized successfully');
+        } catch (error) {
+            console.error('[VideoPlayer] Error initializing player:', error);
         }
-    }
+    });
 
     // Server change
     const serverSelect = document.getElementById('server-select');
@@ -411,43 +348,5 @@
             }
         });
     }
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function (e) {
-        // Don't trigger shortcuts when typing in search
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        if (!video) return;
-
-        switch (e.key) {
-            case ' ':
-            case 'k':
-                e.preventDefault();
-                video.paused ? video.play() : video.pause();
-                break;
-            case 'ArrowLeft':
-                video.currentTime -= 10;
-                break;
-            case 'ArrowRight':
-                video.currentTime += 10;
-                break;
-            case 'f':
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                } else {
-                    video.requestFullscreen();
-                }
-                break;
-            case 'm':
-                video.muted = !video.muted;
-                break;
-            case 'c':
-                // Toggle captions
-                if (video.textTracks && video.textTracks.length > 0) {
-                    const track = video.textTracks[0];
-                    track.mode = track.mode === 'showing' ? 'hidden' : 'showing';
-                }
-                break;
-        }
-    });
 </script>
 {% endblock %}

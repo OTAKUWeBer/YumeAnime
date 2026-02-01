@@ -16,6 +16,9 @@
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -236,6 +239,9 @@
                     </div>
                     <div id="login-error" class="text-error text-sm"
                         style="display: none; margin-bottom: var(--space-md);"></div>
+                    <!-- Cloudflare Turnstile Widget -->
+                    <div class="cf-turnstile" data-sitekey="0x4AAAAAABu3fPLT_Y5VwGsZ" data-theme="dark"
+                        style="margin-bottom: var(--space-md);"></div>
                     <button type="submit" class="btn btn-primary w-full" id="login-btn">
                         <span id="login-btn-text">Sign In</span>
                     </button>
@@ -276,6 +282,9 @@
                     </div>
                     <div id="signup-error" class="text-error text-sm"
                         style="display: none; margin-bottom: var(--space-md);"></div>
+                    <!-- Cloudflare Turnstile Widget -->
+                    <div class="cf-turnstile" data-sitekey="{{ config.CLOUDFLARE_SITE_KEY }}" data-theme="dark"
+                        style="margin-bottom: var(--space-md);"></div>
                     <button type="submit" class="btn btn-primary w-full" id="signup-btn">
                         <span id="signup-btn-text">Create Account</span>
                     </button>
@@ -406,6 +415,14 @@
             const btnText = document.getElementById('login-btn-text');
             const errorDiv = document.getElementById('login-error');
 
+            // Get Turnstile token
+            const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
+            if (!turnstileToken) {
+                errorDiv.textContent = 'Please complete the security check.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
             btn.disabled = true;
             btnText.textContent = 'Signing in...';
             errorDiv.style.display = 'none';
@@ -417,7 +434,7 @@
                     body: JSON.stringify({
                         username: form.username.value,
                         password: form.password.value,
-                        cf_turnstile_response: 'bypass' // For development
+                        cf_turnstile_response: turnstileToken
                     })
                 });
 
@@ -428,6 +445,11 @@
                 } else {
                     errorDiv.textContent = data.message || 'Login failed';
                     errorDiv.style.display = 'block';
+                    // Reset Turnstile widget
+                    if (window.turnstile) {
+                        const widget = form.querySelector('.cf-turnstile');
+                        if (widget) turnstile.reset(widget);
+                    }
                 }
             } catch (err) {
                 errorDiv.textContent = 'An error occurred. Please try again.';
@@ -445,6 +467,14 @@
             const btnText = document.getElementById('signup-btn-text');
             const errorDiv = document.getElementById('signup-error');
 
+            // Get Turnstile token
+            const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
+            if (!turnstileToken) {
+                errorDiv.textContent = 'Please complete the security check.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
             btn.disabled = true;
             btnText.textContent = 'Creating account...';
             errorDiv.style.display = 'none';
@@ -457,7 +487,7 @@
                         username: form.username.value,
                         email: form.email.value,
                         password: form.password.value,
-                        cf_turnstile_response: 'bypass' // For development
+                        cf_turnstile_response: turnstileToken
                     })
                 });
 
@@ -468,6 +498,11 @@
                 } else {
                     errorDiv.textContent = data.message || 'Signup failed';
                     errorDiv.style.display = 'block';
+                    // Reset Turnstile widget
+                    if (window.turnstile) {
+                        const widget = form.querySelector('.cf-turnstile');
+                        if (widget) turnstile.reset(widget);
+                    }
                 }
             } catch (err) {
                 errorDiv.textContent = 'An error occurred. Please try again.';
