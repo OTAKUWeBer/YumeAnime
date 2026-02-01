@@ -73,6 +73,25 @@
                         {% endif %}
                     </div>
 
+                    <!-- Actions - Placed first for quick access -->
+                    <div class="anime-actions" style="margin-bottom: var(--space-xl);">
+                        <a href="/episodes/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                            Watch Now
+                        </a>
+                        <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
+                            data-anime-id="{{ anime.id or current_season_id }}"
+                            data-anime-title="{{ anime.name or anime.title }}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span id="watchlist-btn-text">Add to List</span>
+                        </button>
+                    </div>
+
                     <!-- Genres -->
                     {% if anime.genres %}
                     <div class="anime-genres">
@@ -120,25 +139,6 @@
                         </div>
                     </div>
                     {% endif %}
-
-                    <!-- Actions -->
-                    <div class="anime-actions">
-                        <a href="/episodes/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="5 3 19 12 5 21 5 3" />
-                            </svg>
-                            Watch Now
-                        </a>
-                        <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
-                            data-anime-id="{{ anime.id or current_season_id }}"
-                            data-anime-title="{{ anime.name or anime.title }}">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                            </svg>
-                            <span id="watchlist-btn-text">Add to List</span>
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
