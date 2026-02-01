@@ -86,9 +86,7 @@
                             Settings
                         </a>
                         <div class="dropdown-divider"></div>
-                        <a href="{{ url_for('auth.logout') if 'auth.logout' in (request.endpoint or '') else '/auth/logout' }}"
-                            class="dropdown-item"
-                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <a href="#" class="dropdown-item" onclick="handleLogout(event)">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -99,7 +97,6 @@
                         </a>
                     </div>
                 </div>
-                <form id="logout-form" action="/api/auth/logout" method="POST" style="display: none;"></form>
                 {% else %}
                 <button class="btn btn-primary" onclick="openLoginModal()">Sign In</button>
                 {% endif %}
@@ -517,6 +514,27 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeLoginModal();
         });
+
+        // Handle logout via API
+        async function handleLogout(e) {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    alert('Logout failed. Please try again.');
+                }
+            } catch (err) {
+                console.error('Logout error:', err);
+                // Even if there's an error, redirect to home
+                window.location.href = '/';
+            }
+        }
     </script>
 
     <!-- Login Widget Script -->
