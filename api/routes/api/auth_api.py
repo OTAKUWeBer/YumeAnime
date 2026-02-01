@@ -122,14 +122,15 @@ def logout():
     try:
         user_id = session.get('_id')
         if user_id:
-            clear_user_cache(user_id)
+            clear_user_cache(int(user_id))
         
         username = session.get('username', 'Unknown')
         session.clear()
-        current_app.logger.info(f"User {username} logged out successfully")
+        current_app.logger.info(f"User {username} logged out successfully via API")
         return jsonify({'success': True, 'message': 'Logged out successfully.'}), 200
     except Exception as e:
         current_app.logger.error(f"Error during logout: {e}")
+        # Always return success on logout to prevent client issues
         return jsonify({'success': True, 'message': 'Logged out successfully.'}), 200
 
 
