@@ -2,7 +2,7 @@
 Authentication API endpoints
 Handles signup, login, logout, and session management
 """
-from flask import Blueprint, request, session, jsonify, current_app
+from flask import Blueprint, request, session, jsonify, current_app, make_response
 import re
 import logging
 
@@ -126,12 +126,20 @@ def logout():
         
         username = session.get('username', 'Unknown')
         session.clear()
+        
+        # Create response and explicitly delete the session cookie
+        response = make_response(jsonify({'success': True, 'message': 'Logged out successfully.'}))
+        response.delete_cookie('session')
+        
         current_app.logger.info(f"User {username} logged out successfully via API")
-        return jsonify({'success': True, 'message': 'Logged out successfully.'}), 200
+        return response, 200
     except Exception as e:
         current_app.logger.error(f"Error during logout: {e}")
         # Always return success on logout to prevent client issues
-        return jsonify({'success': True, 'message': 'Logged out successfully.'}), 200
+        session.clear()
+        response = make_response(jsonify({'success': True, 'message': 'Logged out successfully.'}))
+        response.delete_cookie('session')
+        return response, 200
 
 
 @auth_api_bp.route('/me', methods=['GET'])
