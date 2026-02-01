@@ -1,4 +1,63 @@
-# Key changes for reliability:
+import re
+import inspect
+import aiohttp
+import asyncio
+from typing import List, Dict, Any, Optional, Callable
+from datetime import datetime
+import logging
+from dataclasses import dataclass
+import time
+
+logger = logging.getLogger(__name__)
+
+from ..models.user import get_user_by_id
+from ..models.watchlist import (
+    get_watchlist_entry, update_watchlist_status,
+    update_watched_episodes, remove_from_watchlist, get_user_watchlist,
+    get_user_watchlist_paginated, get_watchlist_stats, warm_cache, add_to_watchlist
+)
+from ..scrapers.hianime import HianimeScraper
+
+HA = HianimeScraper()
+ANILIST_GRAPHQL = "https://graphql.anilist.co"
+CONCURRENT_REQUESTS = 500
+
+_semaphore = None
+def get_semaphore():
+    global _semaphore
+    loop = asyncio.get_running_loop()
+    if _semaphore is None or _semaphore._loop is not loop:
+        _semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
+    return _semaphore
+
+MAX_CACHE_SIZE = 10000
+search_cache: Dict[str, Any] = {}
+info_cache: Dict[str, Any] = {}
+id_mapping_cache: Dict[int, str] = {}
+
+NORMALIZE_PATTERN = re.compile(r"[^\w\s]")
+WHITESPACE_PATTERN = re.compile(r"\s+")
+
+@dataclass
+class BatchConfig:
+    batch_size: int = 2000
+    delay_between_batches: float = 0.0
+    max_retries: int = 2
+    enable_caching: bool = True
+    skip_failed_matches: bool = True
+    max_search_candidates: int = 10
+    max_anime_check: int = 10
+
+class SyncProgress:
+    def __init__(self, total: int, callback: Optional[Callable] = None):
+        self.total = total
+        self.processed = 0
+        self.synced = 0
+        self.failed = 0
+        self.cached_hits = 0
+        self.skipped = 0
+        self.callback = callback
+        self.start_time = time.time()# Key changes for reliability:
 # 1. Better timeout handling for AniList API
 # 2. Improved error detection for empty watchlists
 # 3. More robust session management
@@ -71,6 +130,25 @@ class SyncProgress:
             if skipped:
                 self.skipped += 1
             
+            if self.callback and (self.processed % 50 == 0 or self.processed == self.total):
+                try:
+                    self.callback(self)
+                except Exception as e:
+                    logger.warning(f"Progress callback error: {e}")
+
+    async def update(self, synced: bool = False, failed: bool = False, cached: bool = False, skipped: bool = False):
+        lock = asyncio.Lock()
+        async with lock:
+            self.processed += 1
+            if synced:
+                self.synced += 1
+            if failed:
+                self.failed += 1
+            if cached:
+                self.cached_hits += 1
+            if skipped:
+                self.skipped += 1
+
             if self.callback and (self.processed % 50 == 0 or self.processed == self.total):
                 try:
                     self.callback(self)

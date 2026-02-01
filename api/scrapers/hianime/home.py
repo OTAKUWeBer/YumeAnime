@@ -16,16 +16,20 @@ class HianimeHomeService:
         self._home_cache = None
         self._home_cache_ts = 0.0
         self._home_cache_ttl = 5.0
-        self._home_lock = asyncio.Lock()
-    
+
     async def _fetch_home_cached(self) -> Dict[str, Any]:
         """Fetch home data with caching"""
         now = time.time()
         if self._home_cache and (now - self._home_cache_ts) < self._home_cache_ttl:
             return self._home_cache
 
-        async with self._home_lock:
-            for _ in range(3):  # retry 3 times
+        lock = asyncio.Lock()
+        async with lock:
+            now = time.time()
+            if self._home_cache and (now - self._home_cache_ts) < self._home_cache_ttl:
+                return self._home_cache
+
+            for _ in range(3):
                 resp = await self.client._get("home")
                 if resp and isinstance(resp, dict):
                     data = resp.get("data") or {}
