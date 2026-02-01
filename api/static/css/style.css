@@ -776,28 +776,40 @@ h6 {
     position: absolute;
     bottom: var(--space-lg);
     right: var(--space-lg);
+
+/* ============================================
+   Episode Grid & Sidebar Fixes
+   ============================================ */
+.episode-grid-title {
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.episode-item {
     display: flex;
-    gap: var(--space-sm);
+    flex-direction: column; 
+    align-items: center; 
+    text-align: center;
+    overflow: hidden; /* Prevent spillover */
 }
 
-.spotlight-nav-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition-fast);
+/* Ensure flex children don't overflow */
+.episode-item > div {
+    min-width: 0;
+    max-width: 100%;
 }
 
-.spotlight-nav-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+@media (max-width: 768px) {
+    .episode-grid-title {
+        font-size: 0.7rem;
+    }
 }
 
-.spotlight-dots {
-    position: absolute;
     bottom: var(--space-lg);
     left: 50%;
     transform: translateX(-50%);

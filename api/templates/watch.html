@@ -266,7 +266,7 @@
                     class="episode-sidebar-item {% if ep.number == episode_number %}current{% endif %}"
                     data-episode="{{ ep.number }}" data-title="{{ ep.title or '' }}">
                     <div class="episode-sidebar-num">{{ ep.number }}</div>
-                    <div style="min-width: 0;">
+                    <div style="min-width: 0; flex: 1;">
                         <div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             {{ ep.title or 'Episode ' + ep.number|string }}
                         </div>

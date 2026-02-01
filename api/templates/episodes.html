@@ -58,8 +58,7 @@
             <div>
                 <div style="font-size: 1.25rem; font-weight: 600;">{{ episode_number }}</div>
                 {% if episode_title and episode_title != 'Episode ' + episode_number|string %}
-                <div class="text-xs text-muted"
-                    style="margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;">
+                <div class="episode-grid-title">
                     {{ episode_title }}</div>
                 {% endif %}
             </div>
