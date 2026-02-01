@@ -1,38 +1,277 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Watchlist - YumeAnime</title>
-    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/anti-flicker.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/watchlist-hover.css') }}">
-</head>
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white min-h-screen">
-    {% include 'nav_base.html' %}
+{% extends "base.html" %}
 
-    <main class="pt-24 max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold mb-4">My Watchlist</h1>
-            
-            {% include 'partials/watchlist-filters.html' %}
-            {% include 'partials/watchlist-stats.html' %}
+{% block title %}My Watchlist - YumeAnime{% endblock %}
+{% block meta_description %}Manage your anime watchlist{% endblock %}
+
+{% block extra_css %}
+<style>
+    .watchlist-loading {
+        text-align: center;
+        padding: var(--space-3xl);
+    }
+
+    .watchlist-empty {
+        text-align: center;
+        padding: var(--space-3xl);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="margin-bottom: var(--space-lg);">My Watchlist</h1>
+
+    <!-- Stats -->
+    <div class="watchlist-stats" id="watchlist-stats">
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-watching">-</div>
+            <div class="stat-card-label">Watching</div>
         </div>
-
-        {% include 'partials/watchlist-states.html' %}
-
-        <div id="watchlist-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6 hidden">
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-completed">-</div>
+            <div class="stat-card-label">Completed</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-plan">-</div>
+            <div class="stat-card-label">Plan to Watch</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-total">-</div>
+            <div class="stat-card-label">Total</div>
+        </div>
+    </div>
 
-        {% include 'partials/watchlist-pagination.html' %}
-    </main>
+    <!-- Tabs -->
+    <div class="watchlist-tabs" id="watchlist-tabs">
+        <button class="watchlist-tab active" data-status="">All</button>
+        <button class="watchlist-tab" data-status="watching">Watching</button>
+        <button class="watchlist-tab" data-status="completed">Completed</button>
+        <button class="watchlist-tab" data-status="on_hold">On Hold</button>
+        <button class="watchlist-tab" data-status="dropped">Dropped</button>
+        <button class="watchlist-tab" data-status="plan_to_watch">Plan to Watch</button>
+    </div>
 
-    <script src="{{ url_for('static', filename='js/modules/watchlist-filters.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/modules/watchlist-stats.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/modules/watchlist-ui.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/watchlist.js') }}"></script>
-</body>
-</html>
+    <!-- Watchlist Content -->
+    <div id="watchlist-content">
+        <div class="watchlist-loading">
+            <div class="loading-spinner" style="margin: 0 auto;"></div>
+            <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="watchlist-pagination"
+        style="display: flex; justify-content: center; gap: var(--space-md); margin-top: var(--space-xl);"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const watchlistContent = document.getElementById('watchlist-content');
+    const watchlistTabs = document.getElementById('watchlist-tabs');
+    const paginationContainer = document.getElementById('watchlist-pagination');
+
+    let currentStatus = '';
+    let currentPage = 1;
+
+    // Status labels
+    const statusLabels = {
+        'watching': 'Watching',
+        'completed': 'Completed',
+        'on_hold': 'On Hold',
+        'dropped': 'Dropped',
+        'plan_to_watch': 'Plan to Watch'
+    };
+
+    // Fetch stats
+    async function fetchStats() {
+        try {
+            const response = await fetch('/api/watchlist/stats');
+            const stats = await response.json();
+
+            document.getElementById('stat-watching').textContent = stats.watching || 0;
+            document.getElementById('stat-completed').textContent = stats.completed || 0;
+            document.getElementById('stat-plan').textContent = stats.plan_to_watch || 0;
+            document.getElementById('stat-total').textContent = stats.total || 0;
+        } catch (e) {
+            console.error('Stats error:', e);
+        }
+    }
+
+    // Fetch watchlist
+    async function fetchWatchlist(status = '', page = 1) {
+        watchlistContent.innerHTML = `
+            <div class="watchlist-loading">
+                <div class="loading-spinner" style="margin: 0 auto;"></div>
+                <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
+            </div>
+        `;
+
+        try {
+            const params = new URLSearchParams({ page, limit: 20 });
+            if (status) params.append('status', status);
+
+            const response = await fetch(`/api/watchlist/paginated?${params}`);
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            const items = data.data || [];
+            const pagination = data.pagination || {};
+
+            if (items.length === 0) {
+                watchlistContent.innerHTML = `
+                    <div class="watchlist-empty">
+                        <div style="font-size: 4rem; margin-bottom: var(--space-md);">📚</div>
+                        <h3>Your watchlist is empty</h3>
+                        <p class="text-muted" style="margin-bottom: var(--space-lg);">
+                            Start adding anime to your watchlist to track your progress!
+                        </p>
+                        <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
+                    </div>
+                `;
+                paginationContainer.innerHTML = '';
+                return;
+            }
+
+            watchlistContent.innerHTML = items.map(item => `
+                <div class="watchlist-item" data-id="${item.anime_id}">
+                    <a href="/anime/${item.anime_id}" class="watchlist-item-poster">
+                        <img src="${item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
+                    </a>
+                    <div class="watchlist-item-info">
+                        <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
+                        <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
+                            <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
+                                ${Object.entries(statusLabels).map(([val, label]) =>
+                `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
+            ).join('')}
+                            </select>
+                        </div>
+                        <div class="watchlist-item-progress">
+                            <span class="text-sm">${item.watched_episodes || 0}/${item.total_episodes || '?'}</span>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: ${item.total_episodes ? (item.watched_episodes / item.total_episodes * 100) : 0}%"></div>
+                            </div>
+                            <div style="display: flex; gap: 4px;">
+                                <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) - 1})">-</button>
+                                <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) + 1})">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-icon btn-ghost" onclick="removeFromWatchlist('${item.anime_id}')" title="Remove">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+
+            // Render pagination
+            if (pagination.total_pages > 1) {
+                let paginationHTML = '';
+                for (let i = 1; i <= pagination.total_pages; i++) {
+                    paginationHTML += `
+                        <button class="btn btn-sm ${i === page ? 'btn-primary' : 'btn-secondary'}" 
+                                onclick="fetchWatchlist('${currentStatus}', ${i})">${i}</button>
+                    `;
+                }
+                paginationContainer.innerHTML = paginationHTML;
+            } else {
+                paginationContainer.innerHTML = '';
+            }
+
+        } catch (e) {
+            console.error('Watchlist error:', e);
+            watchlistContent.innerHTML = `
+                <div class="watchlist-empty">
+                    <div style="font-size: 4rem; margin-bottom: var(--space-md);">⚠️</div>
+                    <h3>Error loading watchlist</h3>
+                    <p class="text-muted">${e.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // Update status
+    async function updateStatus(animeId, status) {
+        try {
+            const response = await fetch('/api/watchlist/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ anime_id: animeId, action: 'status', status })
+            });
+            const data = await response.json();
+            if (!data.success) {
+                alert(data.message || 'Failed to update status');
+            }
+            fetchStats();
+        } catch (e) {
+            console.error('Update error:', e);
+        }
+    }
+
+    // Update episodes
+    async function updateEpisodes(animeId, count) {
+        if (count < 0) count = 0;
+        try {
+            const response = await fetch('/api/watchlist/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: count })
+            });
+            const data = await response.json();
+            if (data.success) {
+                fetchWatchlist(currentStatus, currentPage);
+            } else {
+                alert(data.message || 'Failed to update');
+            }
+        } catch (e) {
+            console.error('Update error:', e);
+        }
+    }
+
+    // Remove from watchlist
+    async function removeFromWatchlist(animeId) {
+        if (!confirm('Remove this anime from your watchlist?')) return;
+
+        try {
+            const response = await fetch('/api/watchlist/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ anime_id: animeId })
+            });
+            const data = await response.json();
+            if (data.success) {
+                fetchWatchlist(currentStatus, currentPage);
+                fetchStats();
+            } else {
+                alert(data.message || 'Failed to remove');
+            }
+        } catch (e) {
+            console.error('Remove error:', e);
+        }
+    }
+
+    // Tab click handlers
+    watchlistTabs.querySelectorAll('.watchlist-tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            watchlistTabs.querySelector('.active').classList.remove('active');
+            this.classList.add('active');
+            currentStatus = this.dataset.status;
+            currentPage = 1;
+            fetchWatchlist(currentStatus, currentPage);
+        });
+    });
+
+    // Initial load
+    fetchStats();
+    fetchWatchlist();
+</script>
+{% endblock %}
