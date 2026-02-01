@@ -80,6 +80,24 @@ def create_app():
             SESSION_COOKIE_SAMESITE="Lax",
         )
 
+    # Custom Jinja2 filters
+    import re
+    
+    def regex_replace(s, pattern, replacement):
+        """Replace regex pattern in string"""
+        if s is None:
+            return ''
+        return re.sub(pattern, replacement, str(s))
+    
+    def strip_anime_id(s):
+        """Strip trailing numeric ID from anime slug (e.g., 'anime-name-12345' -> 'anime-name')"""
+        if s is None:
+            return ''
+        return re.sub(r'-\d+$', '', str(s))
+    
+    app.jinja_env.filters['regex_replace'] = regex_replace
+    app.jinja_env.filters['strip_anime_id'] = strip_anime_id
+
     # Initialize scraper
     app.ha_scraper = HianimeScraper()
 

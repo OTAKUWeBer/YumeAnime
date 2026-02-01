@@ -61,13 +61,31 @@
                     </span>
                     <span class="settings-label-desc">AniList ID: {{ user.anilist_id }}</span>
                 </div>
-                <button class="btn btn-secondary" id="disconnect-anilist" style="color: var(--error);">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-                        <line x1="12" y1="2" x2="12" y2="12" />
-                    </svg>
-                    Disconnect
-                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary" id="sync-anilist-btn" onclick="syncAniList()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" id="sync-icon">
+                            <path d="M21 2v6h-6" />
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                            <path d="M3 22v-6h6" />
+                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                        </svg>
+                        <span id="sync-btn-text">Sync Watchlist</span>
+                        <svg id="sync-spinner" class="hidden" width="16" height="16" viewBox="0 0 24 24"
+                            style="animation: spin 1s linear infinite;">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"
+                                stroke-dasharray="31.4 31.4" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-secondary" id="disconnect-anilist" style="color: var(--error);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                            <line x1="12" y1="2" x2="12" y2="12" />
+                        </svg>
+                        Disconnect
+                    </button>
+                </div>
             </div>
             {% else %}
             <div class="settings-row">
