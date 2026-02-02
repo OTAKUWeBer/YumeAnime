@@ -424,9 +424,9 @@ class VideoJSPlayer {
       existingStyle.textContent = `
         :root {
           --vjs-subtitle-font-size: 28px;
-          --vjs-subtitle-font-size-tablet: 24px;
-          --vjs-subtitle-font-size-mobile: 16px;
-          --vjs-subtitle-font-size-mobile-fullscreen: 32px;
+          --vjs-subtitle-font-size-tablet: 20px;
+          --vjs-subtitle-font-size-mobile: 14px;
+          --vjs-subtitle-font-size-mobile-fullscreen: 18px;
         }
         
         /* CRITICAL: Force transparent backgrounds on ALL subtitle elements */
@@ -479,12 +479,12 @@ class VideoJSPlayer {
         
         @media (max-width: 480px) {
           .video-js .vjs-text-track-cue {
-            font-size: calc(var(--vjs-subtitle-font-size-mobile) + 6px) !important;
+            font-size: var(--vjs-subtitle-font-size-mobile) !important;
             padding: 0 !important;
           }
           
           .video-container.fullscreen-active .video-js .vjs-text-track-cue {
-            font-size: calc(var(--vjs-subtitle-font-size-mobile-fullscreen) + 4px) !important;
+            font-size: var(--vjs-subtitle-font-size-mobile-fullscreen) !important;
             padding: 0 !important;
           }
         }
@@ -497,9 +497,9 @@ class VideoJSPlayer {
     const fontSize = this.settings.subtitleFontSize || 28
     const root = document.documentElement
     root.style.setProperty('--vjs-subtitle-font-size', `${fontSize}px`)
-    root.style.setProperty('--vjs-subtitle-font-size-tablet', `${Math.max(24, fontSize - 4)}px`)
-    root.style.setProperty('--vjs-subtitle-font-size-mobile', `${Math.max(16, fontSize - 12)}px`)
-    root.style.setProperty('--vjs-subtitle-font-size-mobile-fullscreen', `${Math.max(32, fontSize + 4)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-tablet', `${Math.max(20, fontSize - 8)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-mobile', `${Math.max(14, fontSize - 14)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-mobile-fullscreen', `${Math.max(18, fontSize - 10)}px`)
 
     console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px`)
   }
