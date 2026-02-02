@@ -207,6 +207,10 @@ async def watch(eps_title):
         sub_url = url_for('anime.watch', eps_title=eps_title_clean, ep=f"{ep_number}-sub") if ep_number else None
         dub_url = url_for('anime.watch', eps_title=eps_title_clean, ep=f"{ep_number}-dub") if ep_number and dub_available else None
 
+        # Prepare intro/outro data
+        intro = raw.get("intro") if isinstance(raw, dict) else None
+        outro = raw.get("outro") if isinstance(raw, dict) else None
+
         # Render watch page
         return render_template('watch.html',
                                back_to_ep=eps_title_clean,
@@ -222,7 +226,9 @@ async def watch(eps_title):
                                episodes=all_episodes,
                                dub_available=dub_available,
                                sub_url=sub_url,
-                               dub_url=dub_url)
+                               dub_url=dub_url,
+                               intro=intro,
+                               outro=outro)
 
     except Exception as e:
         logger.error(f"Watch error for {eps_title}: {e}")

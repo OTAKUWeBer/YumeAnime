@@ -153,7 +153,9 @@
                 {% if video_link %}
                 <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls playsinline
                     data-video-url="{{ video_link }}"
-                    data-subtitles='{{ subtitles | tojson | safe if subtitles else "[]" }}'>
+                    data-subtitles='{{ subtitles | tojson | safe if subtitles else "[]" }}'
+                    data-intro='{{ intro | tojson | safe if intro else "{}" }}'
+                    data-outro='{{ outro | tojson | safe if outro else "{}" }}'>
                     <source src="{{ video_link }}" type="application/x-mpegURL">
                     Your browser does not support the video tag.
                 </video>

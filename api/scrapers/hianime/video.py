@@ -93,6 +93,8 @@ class HianimeVideoService:
             # keep raw payload for debugging if needed
             "_raw": sources_data,
         }
+        
+        print(f"------------------------------------\n{result}\n------------------------------------")
 
         # Try to set canonical episode_id (extract from payload or source URLs)
         ep_extracted = extract_episode_id(result) or extract_episode_id(sources_data) or extract_episode_id(servers_resp)
