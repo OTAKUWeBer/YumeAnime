@@ -124,6 +124,13 @@ def create_app():
         app.logger.error(f"500 error: {str(e)}")
         return render_template('404.html', error_message="Internal server error"), 500
 
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        """Handle 429 errors (Rate Limit Exceeded)."""
+        app.logger.warning(f"Rate limit exceeded: {request.url} - {request.remote_addr}")
+        from flask import jsonify
+        return jsonify(success=False, message="Too many attempts. Please try again later."), 429
+
     return app
 
 
