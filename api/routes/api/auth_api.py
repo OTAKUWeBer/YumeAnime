@@ -12,12 +12,14 @@ from ...models.user import (
 )
 from ...core.caching import clear_user_cache
 from ...core.config import Config
+from ...core.extensions import limiter
 
 auth_api_bp = Blueprint('auth_api', __name__)
 logger = logging.getLogger(__name__)
 
 
 @auth_api_bp.route('/signup', methods=['POST'])
+@limiter.limit("3 per minute")
 def signup():
     """User registration endpoint"""
     data = request.get_json()
@@ -74,14 +76,19 @@ def signup():
 
 
 @auth_api_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """User login endpoint"""
     data = request.get_json()
     username = data.get('username', '').strip()
     password = data.get('password', '')
     turnstile_token = data.get('cf_turnstile_response')
+    client_ip = request.remote_addr
 
-    if not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, request.remote_addr):
+    current_app.logger.info(f"Login attempt for user '{username}' from IP: {client_ip}")
+
+    if not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, client_ip):
+        current_app.logger.warning(f"Failed captcha for user '{username}' from IP: {client_ip}")
         return jsonify({'success': False, 'message': 'Please verify you are not a robot.'}), 403
 
     if not username or not password:
@@ -98,7 +105,7 @@ def login():
             session['_id'] = user['_id']
             session.permanent = True
             
-            current_app.logger.info(f"User {username} logged in successfully")
+            current_app.logger.info(f"User {username} logged in successfully from IP: {client_ip}")
             
             return jsonify({
                 'success': True,
@@ -109,6 +116,7 @@ def login():
                 }
             }), 200
         else:
+            current_app.logger.warning(f"Failed login for user '{username}' from IP: {client_ip} (Invalid credentials)")
             return jsonify({'success': False, 'message': 'Invalid username or password.'}), 401
             
     except Exception as e:
