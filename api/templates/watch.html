@@ -133,6 +133,58 @@
         font-family: 'Inter', sans-serif !important;
         font-size: 1.25em !important;
     }
+
+    /* Skip Buttons */
+    .skip-buttons {
+        position: absolute;
+        bottom: 80px;
+        right: 20px;
+        z-index: 90;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+        /* Let clicks pass through container */
+    }
+
+    .skip-btn {
+        display: none;
+        /* Hidden by default */
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        pointer-events: auto;
+        /* Enable clicks on buttons */
+        backdrop-filter: blur(4px);
+    }
+
+    .skip-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+    }
+
+    .skip-btn.show {
+        display: block;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -159,6 +211,26 @@
                     <source src="{{ video_link }}" type="application/x-mpegURL">
                     Your browser does not support the video tag.
                 </video>
+
+                <!-- Skip Buttons Container -->
+                <div id="skipButtons" class="skip-buttons">
+                    <button id="skipIntroBtn" class="skip-btn">
+                        Skip Intro
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" style="margin-left: 6px; display: inline-block; vertical-align: middle;">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                    </button>
+                    <button id="skipOutroBtn" class="skip-btn">
+                        Skip Outro
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" style="margin-left: 6px; display: inline-block; vertical-align: middle;">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                    </button>
+                </div>
                 {% else %}
                 <div
                     style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: var(--bg-surface);">
