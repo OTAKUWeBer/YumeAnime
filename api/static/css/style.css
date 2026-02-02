@@ -748,7 +748,7 @@ h6 {
     font-weight: 700;
     margin-bottom: var(--space-md);
     line-height: 1.2;
-    
+
     /* Truncation to prevent layout breaking */
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -791,6 +791,7 @@ h6 {
     position: absolute;
     bottom: var(--space-lg);
     right: var(--space-lg);
+}
 
 /* ============================================
    Episode Grid & Sidebar Fixes
@@ -805,12 +806,24 @@ h6 {
     color: var(--text-muted);
 }
 
+/* ============================================
+   Spoilers preventions
+   ============================================ */
+.episode-title-spoiler {
+    display: none;
+}
+
+.episode-title-spoiler.visible {
+    display: block;
+}
+
 .episode-item {
     display: flex;
-    flex-direction: column; 
-    align-items: center; 
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    overflow: hidden; /* Prevent spillover */
+    overflow: hidden;
+    /* Prevent spillover */
 }
 
 /* Ensure flex children don't overflow */

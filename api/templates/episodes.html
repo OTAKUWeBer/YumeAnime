@@ -58,7 +58,7 @@
             <div>
                 <div style="font-size: 1.25rem; font-weight: 600;">{{ episode_number }}</div>
                 {% if episode_title and episode_title != 'Episode ' + episode_number|string %}
-                <div class="episode-grid-title">
+                <div class="episode-grid-title episode-title-spoiler">
                     {{ episode_title }}</div>
                 {% endif %}
             </div>
@@ -77,6 +77,14 @@
 <script>
     // Episode search/filter - wrapped in DOMContentLoaded for safety
     document.addEventListener('DOMContentLoaded', function () {
+        // Handle spoiler titles
+        const showTitles = localStorage.getItem('yume_show_episode_titles') === 'true';
+        if (showTitles) {
+            document.querySelectorAll('.episode-title-spoiler').forEach(el => {
+                el.classList.add('visible');
+            });
+        }
+
         const searchInput = document.getElementById('episode-search');
         const filterSelect = document.getElementById('episode-filter');
         const episodeGrid = document.getElementById('episode-grid');
