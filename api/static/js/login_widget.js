@@ -2,7 +2,7 @@
 (function ensureModalsOnBody() {
   const loginModalWidget = document.getElementById('loginModalWidget');
   const syncModalWidget = document.getElementById('syncModalWidget');
-  
+
   if (loginModalWidget && loginModalWidget.parentElement !== document.body) {
     document.body.appendChild(loginModalWidget);
   }
@@ -153,7 +153,7 @@ class LoginWidget {
   resetTurnstile(formId) {
     const form = document.getElementById(formId);
     if (!form) return;
-    
+
     const turnstileWidget = form.querySelector('.cf-turnstile');
     if (turnstileWidget && window.turnstile) {
       // Reset the Turnstile widget
@@ -166,24 +166,41 @@ class LoginWidget {
   }
 
   handleAniListAuth() {
+    // Determine which form is currently active to find the correct Turnstile widget
+    let activeFormId = 'loginFormWidget';
+    let errorWidget = this.loginMsgWidget;
+
+    if (this.signupFormWidget && !this.signupFormWidget.classList.contains('hidden')) {
+      activeFormId = 'signupFormWidget';
+      errorWidget = this.signupMsgWidget;
+    }
+
+    // Check Turnstile token
+    const turnstileToken = document.querySelector(`#${activeFormId} [name="cf-turnstile-response"]`)?.value;
+
+    if (!turnstileToken) {
+      this.showMessage(errorWidget, 'Please complete the security check before continuing.', 'error');
+      return;
+    }
+
     // Generate state parameter for security
     const state = this.generateStateParameter();
     sessionStorage.setItem('anilist_oauth_state', state);
-    
+
     // Hide modal first
     this.hideLoginModal();
-    
+
     // Build OAuth URL - Use callback route instead of link route for regular login/signup
     const clientId = this.getAniListClientId();
     const redirectUri = this.getAniListRedirectUri();
-    
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       state: state
     });
-    
+
     const authUrl = `https://anilist.co/api/v2/oauth/authorize?${params.toString()}`;
     window.location.href = authUrl;
   }
@@ -304,7 +321,7 @@ class LoginWidget {
     try {
       const response = await fetch('/api/signup', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({ username, email, password, cf_turnstile_response: turnstileToken })
       });
@@ -357,7 +374,7 @@ class LoginWidget {
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({ username, password, cf_turnstile_response: turnstileToken })
       });
@@ -391,17 +408,17 @@ class LoginWidget {
     this.setButtonLoading('startSyncWidget', true);
     this.syncProgressWidget?.classList.remove('hidden');
     this.syncInProgress = true;
-    
+
     // Start progress polling
     this.startSyncProgressPolling();
-    
+
     // Show initial progress
     this.updateSyncProgress(0, 'Starting sync...');
 
     try {
       const response = await fetch('/api/sync-anilist', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin'
       });
 
@@ -413,7 +430,7 @@ class LoginWidget {
           `Sync completed successfully! Added ${data.synced_count} new entries, skipped ${data.skipped_count} duplicates. ${data.failed_count > 0 ? `${data.failed_count} entries could not be matched.` : ''}`,
           'success'
         );
-        
+
         // Auto-close modal after 4 seconds
         setTimeout(() => {
           this.hideSyncModal();
@@ -439,21 +456,21 @@ class LoginWidget {
     const skipped = progress.skipped || 0;
     const failed = progress.failed || 0;
     const eta = progress.estimated_remaining || 0;
-    
+
     if (total === 0) {
       return 'Starting sync...';
     }
-    
+
     let message = `Processing ${processed}/${total} entries`;
     if (synced > 0 || skipped > 0 || failed > 0) {
       message += ` (✓${synced} ⭯${skipped} ✗${failed})`;
     }
-    
+
     if (eta > 0 && eta < 300) { // Only show ETA if less than 5 minutes
-      const etaText = eta > 60 ? `${Math.round(eta/60)}m` : `${Math.round(eta)}s`;
+      const etaText = eta > 60 ? `${Math.round(eta / 60)}m` : `${Math.round(eta)}s`;
       message += ` • ETA: ${etaText}`;
     }
-    
+
     return message;
   }
 
@@ -468,31 +485,31 @@ class LoginWidget {
 
   showSyncResult(message, type) {
     if (!this.syncResultWidget) return;
-    
+
     const typeClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning';
-    
+
     this.syncResultWidget.innerHTML = `
       <div class="sync-status ${typeClass}">
         <p class="text-sm">${message}</p>
       </div>
     `;
-    
+
     this.syncResultWidget.classList.remove('hidden');
   }
 
   async handleLogout() {
     try {
-      await fetch('/api/logout', { 
+      await fetch('/api/logout', {
         method: 'POST',
         credentials: 'same-origin'
       });
     } catch (e) {
       console.warn('Logout API failed, clearing state anyway.');
     }
-    
+
     this.isLoggedIn = false;
     this.currentUser = null;
-    
+
     // Refresh page after logout
     window.location.reload();
   }
@@ -501,7 +518,7 @@ class LoginWidget {
     const button = document.getElementById(buttonId);
     const text = document.getElementById(buttonId.replace('submit', '').replace('start', 'sync').replace('Widget', 'BtnTextWidget'));
     const spinner = document.getElementById(buttonId.replace('submit', '').replace('start', 'sync').replace('Widget', 'SpinnerWidget'));
-    
+
     if (button && text && spinner) {
       button.disabled = loading;
       if (loading) {
@@ -569,23 +586,23 @@ class LoginWidget {
     if (staticDd) staticDd.classList.add('hidden');
 
     const isAniListUser = this.currentUser && this.currentUser.anilist_authenticated;
-    
+
     const dd = document.createElement('div');
     dd.id = 'profileDropdownApp';
     dd.className = 'hidden absolute mt-2 w-56 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-50';
     dd.setAttribute('role', 'menu');
-    
+
     let userInfoSection = '';
     if (this.currentUser) {
       userInfoSection = `
         <div class="px-4 py-3 border-b border-white/10">
           <div class="flex items-center space-x-3">
-            ${this.currentUser.avatar ? 
-              `<img src="${this.currentUser.avatar}" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-white/20">` :
-              `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+            ${this.currentUser.avatar ?
+          `<img src="${this.currentUser.avatar}" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-white/20">` :
+          `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
                  <span class="text-white font-semibold text-sm">${this.currentUser.username.charAt(0).toUpperCase()}</span>
                </div>`
-            }
+        }
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-white truncate">${this.currentUser.username}</p>
               ${isAniListUser ? `
@@ -696,7 +713,7 @@ class LoginWidget {
         method: 'GET',
         credentials: 'same-origin',
       });
-      
+
       if (response.ok) {
         const userData = await response.json();
         if (userData && userData.username) {
