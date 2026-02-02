@@ -222,7 +222,7 @@ def sync_anilist_watchlist_blocking(user_id: str, access_token: str, progress_ca
 
 # === Watchlist Enrichment ===
 
-from ..scrapers.hianime import HianimeScraper
+from ..providers.hianime import HianimeScraper
 
 HA = HianimeScraper()
 

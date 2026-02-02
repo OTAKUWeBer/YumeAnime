@@ -8,7 +8,7 @@ from flask import Flask, render_template, request
 
 from dotenv import load_dotenv
 from api.core.config import Config
-from api.scrapers import HianimeScraper
+from api.providers import HianimeScraper
 
 
 from api.routes.main import main_bp
