@@ -327,13 +327,15 @@ class LoginWidget {
       });
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         this.isLoggedIn = true;
         this.currentUser = data.user || data;
         this.showMessage(this.signupMsgWidget, 'Account created successfully!', 'success');
         setTimeout(() => window.location.reload(), 300);
       } else {
-        this.showMessage(this.signupMsgWidget, data.message || 'Registration failed.', 'error');
+        // Handle explicit error messages from server (including 429)
+        const errorMessage = data.message || 'Registration failed.';
+        this.showMessage(this.signupMsgWidget, errorMessage, 'error');
         // Reset Turnstile after failed signup
         this.resetTurnstile('signupFormWidget');
       }
@@ -380,13 +382,15 @@ class LoginWidget {
       });
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         this.isLoggedIn = true;
         this.currentUser = data.user || data;
         this.showMessage(this.loginMsgWidget, 'Login successful!', 'success');
         setTimeout(() => window.location.reload(), 300);
       } else {
-        this.showMessage(this.loginMsgWidget, data.message || 'Login failed.', 'error');
+        // Handle explicit error messages from server (including 429)
+        const errorMessage = data.message || 'Login failed.';
+        this.showMessage(this.loginMsgWidget, errorMessage, 'error');
         // Reset Turnstile after failed login
         this.resetTurnstile('loginFormWidget');
       }
