@@ -16,7 +16,7 @@ from ..models.watchlist import (
     update_watched_episodes, remove_from_watchlist, get_user_watchlist,
     get_user_watchlist_paginated, get_watchlist_stats, warm_cache, add_to_watchlist
 )
-from ..scrapers.hianime import HianimeScraper
+from ..providers.hianime import HianimeScraper
 
 HA = HianimeScraper()
 ANILIST_GRAPHQL = "https://graphql.anilist.co"
@@ -81,7 +81,7 @@ from ..models.watchlist import (
     update_watched_episodes, remove_from_watchlist, get_user_watchlist,
     get_user_watchlist_paginated, get_watchlist_stats, warm_cache, add_to_watchlist
 )
-from ..scrapers.hianime import HianimeScraper
+from ..providers.hianime import HianimeScraper
 
 HA = HianimeScraper()
 ANILIST_GRAPHQL = "https://graphql.anilist.co"

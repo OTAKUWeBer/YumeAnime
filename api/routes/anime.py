@@ -12,7 +12,7 @@ from urllib.parse import parse_qs
 import asyncio
 import logging
 
-from ..scrapers import HianimeScraper
+from ..providers import HianimeScraper
 
 anime_bp = Blueprint('anime_bp', __name__)
 HA = HianimeScraper()

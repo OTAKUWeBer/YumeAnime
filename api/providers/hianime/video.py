@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional, Union, List
-from ...scrapers.hianime.episodes import HianimeEpisodesService
+from ...providers.hianime.episodes import HianimeEpisodesService
 from .video_utils import extract_episode_id, proxy_video_sources
 
 class HianimeVideoService:
