@@ -9,3 +9,4 @@ requests
 httpx
 python-snappy
 curl-cffi
+Flask-Limiter

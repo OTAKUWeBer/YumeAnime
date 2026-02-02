@@ -101,6 +101,10 @@ def create_app():
     # Initialize scraper
     app.ha_scraper = HianimeScraper()
 
+    # Initialize extensions
+    from api.core.extensions import limiter
+    limiter.init_app(app)
+
     # Register blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
