@@ -24,6 +24,20 @@ class HianimeCatalogService:
     
     async def category(self, name: str, page: int = 1) -> Dict[str, Any]:
         """Get anime by category"""
+        if name == "trending":
+            resp = await self.client._get("home")
+            if not resp or not resp.get("data"):
+                return {}
+            
+            trending = resp["data"].get("trendingAnimes", [])
+            return {
+                "animes": trending,
+                "category": "Trending",
+                "totalPages": 1,
+                "hasNextPage": False,
+                "currentPage": 1
+            }
+
         resp = await self.client._get(f"category/{name}", params={"page": page})
         return resp.get("data") if resp else {}
     
