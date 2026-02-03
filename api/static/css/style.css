@@ -827,7 +827,7 @@ h6 {
 }
 
 /* Ensure flex children don't overflow */
-.episode-item > div {
+.episode-item>div {
     min-width: 0;
     max-width: 100%;
 }
@@ -838,11 +838,11 @@ h6 {
     }
 }
 
-    bottom: var(--space-lg);
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: var(--space-sm);
+bottom: var(--space-lg);
+left: 50%;
+transform: translateX(-50%);
+display: flex;
+gap: var(--space-sm);
 }
 
 .spotlight-dot {
@@ -2535,4 +2535,114 @@ h6 {
     .watch-layout {
         grid-template-columns: 1fr 500px;
     }
+}
+
+/* ============================================
+   Sync Progress Bar - Premium UI
+   ============================================ */
+.sync-progress-container {
+    flex: 1;
+    margin-left: 1rem;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(4px);
+    transition: all var(--transition-normal);
+}
+
+.sync-progress-container.hidden {
+    display: none;
+    opacity: 0;
+    transform: translateY(-5px);
+}
+
+.sync-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.sync-status-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sync-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+}
+
+.sync-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+}
+
+.sync-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
+    border-radius: var(--radius-full);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.sync-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%);
+    transform: translateX(-100%);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.sync-percent {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
 }

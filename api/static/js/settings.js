@@ -70,9 +70,13 @@ class SettingsManager {
 
   loadSettingsFromStorage() {
     // Playback settings
-    document.getElementById("autoplay-next").checked = this.settings.autoplayNext
-    document.getElementById("skip-intro").checked = this.settings.skipIntro
-    document.getElementById("preferred-language").value = this.settings.preferredLanguage
+    const autoplayNext = document.getElementById("autoplay-next")
+    const skipIntro = document.getElementById("skip-intro")
+    const preferredLanguage = document.getElementById("preferred-language")
+
+    if (autoplayNext) autoplayNext.checked = this.settings.autoplayNext
+    if (skipIntro) skipIntro.checked = this.settings.skipIntro
+    if (preferredLanguage) preferredLanguage.value = this.settings.preferredLanguage
   }
 
   setupEventListeners() {
@@ -97,9 +101,13 @@ class SettingsManager {
 
   updateSettingsFromForm() {
     // Playback settings
-    this.settings.autoplayNext = document.getElementById("autoplay-next").checked
-    this.settings.skipIntro = document.getElementById("skip-intro").checked
-    this.settings.preferredLanguage = document.getElementById("preferred-language").value
+    const autoplayNext = document.getElementById("autoplay-next")
+    const skipIntro = document.getElementById("skip-intro")
+    const preferredLanguage = document.getElementById("preferred-language")
+
+    if (autoplayNext) this.settings.autoplayNext = autoplayNext.checked
+    if (skipIntro) this.settings.skipIntro = skipIntro.checked
+    if (preferredLanguage) this.settings.preferredLanguage = preferredLanguage.value
   }
 
   updateAniListStatus() {
@@ -579,11 +587,20 @@ ${this.currentUser.anilist_id
 // Global functions for template compatibility
 function syncAniList() {
   console.log("Global syncAniList called");
+  if (!window.settingsManager) {
+    console.warn("SettingsManager not initialized, attempting JIT initialization...");
+    try {
+      window.settingsManager = new SettingsManager();
+    } catch (e) {
+      console.error("JIT initialization failed:", e);
+    }
+  }
+
   if (window.settingsManager) {
     window.settingsManager.syncAniList()
   } else {
-    console.error("SettingsManager not initialized");
-    alert("Settings not initialized. Please refresh the page.");
+    console.error("SettingsManager still not initialized after JIT attempt");
+    alert("System error: Settings manager could not be loaded. Please refresh the page.");
   }
 }
 
@@ -632,15 +649,21 @@ function submitPasswordChange() {
 
 // Initialize settings manager when DOM is loaded
 const initSettings = () => {
-  if (!window.settingsManager) {
-    window.settingsManager = new SettingsManager()
-    console.log("SettingsManager initialized");
+  try {
+    if (!window.settingsManager) {
+      window.settingsManager = new SettingsManager()
+      console.log("SettingsManager initialized");
+    }
+  } catch (error) {
+    console.error("Failed to initialize SettingsManager:", error);
+    alert("Error initializing settings: " + error.message);
   }
 };
 
 if (document.readyState === 'loading') {
   document.addEventListener("DOMContentLoaded", initSettings);
 } else {
+  // If already loaded, try initializing immediately
   initSettings();
 }
 
