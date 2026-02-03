@@ -18,6 +18,7 @@ class SettingsManager {
     this.loadUserSession()
     this.loadSettingsFromStorage()
     this.setupEventListeners()
+    this.pollSyncProgress() // Start polling for any active syncs
   }
 
   async loadUserSession() {
@@ -127,14 +128,13 @@ class SettingsManager {
                                     <path d="M6.361 2.943 0 21.056h4.06l1.077-3.133h6.875l1.077 3.133H17.15L10.789 2.943zm1.77 5.392 2.18 6.336H5.951zm10.365 9.794V8.113c3.02.501 4.473 2.273 4.473 4.728 0 2.456-1.453 4.227-4.473 4.728z"/>
                                 </svg>
                             </div>
-${
-  this.currentUser.anilist_id
-    ? `
+${this.currentUser.anilist_id
+          ? `
                                 <p class="text-xs opacity-80">ID: ${this.currentUser.anilist_id}</p>
                                 <p class="text-xs opacity-70">${statsText}</p>
 `
-    : ""
-}
+          : ""
+        }
                         </div>
                     </div>
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,18 +213,93 @@ ${
       const data = await response.json()
 
       if (data.success) {
-        this.showNotification(
-          `Sync completed successfully! Added ${data.synced_count} new entries, skipped ${data.skipped_count} duplicates.${data.failed_count > 0 ? ` ${data.failed_count} entries could not be matched` : ""}`,
-          "success",
-        )
+        this.showNotification("Sync started in background...", "info")
+        this.pollSyncProgress()
       } else {
         this.showNotification(data.message || "Sync failed. Please try again.", "error")
+        this.setSyncButtonLoading(false)
       }
     } catch (error) {
       console.error("Sync error:", error)
       this.showNotification("Network error occurred. Please try again.", "error")
-    } finally {
       this.setSyncButtonLoading(false)
+    }
+  }
+
+  async pollSyncProgress() {
+    const pollInterval = 1000 // 1 second
+    let isPolling = true
+
+    const poll = async () => {
+      if (!isPolling) return
+
+      try {
+        const response = await fetch("/api/anilist/sync-progress")
+        if (!response.ok) return
+
+        const progress = await response.json()
+
+        // Update UI
+        this.updateSyncUI(progress)
+
+        if (progress.status === "completed" || progress.status === "error" || progress.status === "idle") {
+          isPolling = false
+          this.setSyncButtonLoading(false)
+
+          if (progress.status === "completed") {
+            this.showNotification(progress.message || "Sync completed!", "success")
+            // Clear progress after a short delay
+            setTimeout(() => this.clearSyncProgress(), 5000)
+          } else if (progress.status === "error") {
+            this.showNotification(progress.message || "Sync failed", "error")
+          }
+        } else {
+          // Continue polling
+          setTimeout(poll, pollInterval)
+        }
+      } catch (error) {
+        console.error("Poll error:", error)
+        isPolling = false
+        this.setSyncButtonLoading(false)
+      }
+    }
+
+    poll()
+  }
+
+  updateSyncUI(progress) {
+    const container = document.getElementById("sync-progress-container")
+    const statusText = document.getElementById("sync-status-text")
+    const percentText = document.getElementById("sync-percent-text")
+    const progressBar = document.getElementById("sync-progress-bar")
+    const syncBtn = document.getElementById("sync-anilist-btn")
+
+    if (!container || !progress || progress.status === "idle") {
+      if (container) container.classList.add("hidden")
+      if (syncBtn) syncBtn.disabled = false
+      return
+    }
+
+    // Show container
+    container.classList.remove("hidden")
+    if (syncBtn) syncBtn.disabled = true
+
+    // Update values
+    if (statusText) statusText.textContent = progress.status === 'starting' ? 'Starting...' :
+      progress.status === 'syncing' ? `Syncing... ${progress.processed}/${progress.total}` :
+        progress.status === 'completed' ? 'Completed' : 'Error'
+
+    if (percentText) percentText.textContent = `${Math.round(progress.percentage || 0)}%`
+    if (progressBar) progressBar.style.width = `${progress.percentage || 0}%`
+  }
+
+  async clearSyncProgress() {
+    try {
+      await fetch("/api/anilist/sync-progress/clear", { method: "POST" })
+      const container = document.getElementById("sync-progress-container")
+      if (container) container.classList.add("hidden")
+    } catch (e) {
+      console.error("Failed to clear progress", e)
     }
   }
 
@@ -426,65 +501,64 @@ ${
   }
 
   showNotification(message, type = "info") {
-      // Remove existing notification
-      const existingNotification = document.getElementById("settings-notification")
-      if (existingNotification) {
-        existingNotification.remove()
-      }
+    // Remove existing notification
+    const existingNotification = document.getElementById("settings-notification")
+    if (existingNotification) {
+      existingNotification.remove()
+    }
 
-      const notification = document.createElement("div")
-      notification.id = "settings-notification"
-      notification.className = `fixed top-6 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl font-semibold transition-all duration-300 transform translate-x-full border backdrop-blur-sm flex items-center gap-3 ${
-        type === "success"
-          ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30"
-          : type === "error"
-            ? "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30"
-            : type === "warning"
-              ? "bg-gradient-to-r from-yellow-600 to-yellow-700 text-white border-yellow-500/30"
-              : "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30"
+    const notification = document.createElement("div")
+    notification.id = "settings-notification"
+    notification.className = `fixed top-6 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl font-semibold transition-all duration-300 transform translate-x-full border backdrop-blur-sm flex items-center gap-3 ${type === "success"
+        ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30"
+        : type === "error"
+          ? "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30"
+          : type === "warning"
+            ? "bg-gradient-to-r from-yellow-600 to-yellow-700 text-white border-yellow-500/30"
+            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30"
       }`
-      
-      // Create message span
-      const messageSpan = document.createElement("span")
-      messageSpan.textContent = message
-      notification.appendChild(messageSpan)
-      
-      // Create close button
-      const closeButton = document.createElement("button")
-      closeButton.innerHTML = `
+
+    // Create message span
+    const messageSpan = document.createElement("span")
+    messageSpan.textContent = message
+    notification.appendChild(messageSpan)
+
+    // Create close button
+    const closeButton = document.createElement("button")
+    closeButton.innerHTML = `
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
       `
-      closeButton.className = "ml-2 hover:opacity-70 transition-opacity focus:outline-none"
-      closeButton.onclick = () => {
-        notification.style.transform = "translateX(100%) scale(0.95)"
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove()
-          }
-        }, 300)
-      }
-      notification.appendChild(closeButton)
-
-      document.body.appendChild(notification)
-
-      // Animate in
+    closeButton.className = "ml-2 hover:opacity-70 transition-opacity focus:outline-none"
+    closeButton.onclick = () => {
+      notification.style.transform = "translateX(100%) scale(0.95)"
       setTimeout(() => {
-        notification.classList.remove("translate-x-full")
-        notification.style.transform = "translateX(0) scale(1)"
-      }, 100)
-
-      // Auto remove after 4 seconds
-      setTimeout(() => {
-        notification.style.transform = "translateX(100%) scale(0.95)"
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove()
-          }
-        }, 300)
-      }, 4000)
+        if (notification.parentNode) {
+          notification.remove()
+        }
+      }, 300)
     }
+    notification.appendChild(closeButton)
+
+    document.body.appendChild(notification)
+
+    // Animate in
+    setTimeout(() => {
+      notification.classList.remove("translate-x-full")
+      notification.style.transform = "translateX(0) scale(1)"
+    }, 100)
+
+    // Auto remove after 4 seconds
+    setTimeout(() => {
+      notification.style.transform = "translateX(100%) scale(0.95)"
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove()
+        }
+      }, 300)
+    }, 4000)
+  }
 }
 
 // Global functions for template compatibility
