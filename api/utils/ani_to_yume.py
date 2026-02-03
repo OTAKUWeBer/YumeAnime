@@ -31,9 +31,9 @@ WHITESPACE_PATTERN = re.compile(r"\s+")
 
 @dataclass
 class BatchConfig:
-    batch_size: int = 50
-    concurrent_requests: int = 5
-    delay_between_batches: float = 0.5
+    batch_size: int = 200
+    concurrent_requests: int = 50
+    delay_between_batches: float = 0.05
     max_retries: int = 3
     enable_caching: bool = True
     skip_failed_matches: bool = True
