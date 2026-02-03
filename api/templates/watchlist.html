@@ -62,216 +62,328 @@
         </div>
     </div>
 
-    <!-- Pagination -->
-    <div id="watchlist-pagination"
-        style="display: flex; justify-content: center; gap: var(--space-md); margin-top: var(--space-xl);"></div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const watchlistContent = document.getElementById('watchlist-content');
-    const watchlistTabs = document.getElementById('watchlist-tabs');
-    const paginationContainer = document.getElementById('watchlist-pagination');
+    document.addEventListener('DOMContentLoaded', () => {
+        const watchlistContent = document.getElementById('watchlist-content');
+        const watchlistTabs = document.getElementById('watchlist-tabs');
+        // Sentinel for infinite scroll
+        let sentinel = null;
 
-    let currentStatus = '';
-    let currentPage = 1;
+        let currentStatus = '';
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMore = true;
 
-    // Status labels
-    const statusLabels = {
-        'watching': 'Watching',
-        'completed': 'Completed',
-        'on_hold': 'On Hold',
-        'dropped': 'Dropped',
-        'plan_to_watch': 'Plan to Watch'
-    };
+        // Status labels
+        const statusLabels = {
+            'watching': 'Watching',
+            'completed': 'Completed',
+            'on_hold': 'On Hold',
+            'dropped': 'Dropped',
+            'plan_to_watch': 'Plan to Watch'
+        };
 
-    // Fetch stats
-    async function fetchStats() {
-        try {
-            const response = await fetch('/api/watchlist/stats');
-            const stats = await response.json();
+        // Fetch stats
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/watchlist/stats');
+                const stats = await response.json();
 
-            document.getElementById('stat-watching').textContent = stats.watching || 0;
-            document.getElementById('stat-completed').textContent = stats.completed || 0;
-            document.getElementById('stat-plan').textContent = stats.plan_to_watch || 0;
-            document.getElementById('stat-total').textContent = stats.total || 0;
-        } catch (e) {
-            console.error('Stats error:', e);
+                if (document.getElementById('stat-watching')) document.getElementById('stat-watching').textContent = stats.watching || 0;
+                if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = stats.completed || 0;
+                if (document.getElementById('stat-plan')) document.getElementById('stat-plan').textContent = stats.plan_to_watch || 0;
+                if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total || 0;
+            } catch (e) {
+                console.error('Stats error:', e);
+            }
         }
-    }
 
-    // Fetch watchlist
-    async function fetchWatchlist(status = '', page = 1) {
-        watchlistContent.innerHTML = `
-            <div class="watchlist-loading">
+        // Create and append loading sentinel
+        function createSentinel() {
+            // Remove existing sentinel if any
+            if (sentinel) sentinel.remove();
+
+            const sentinelDiv = document.createElement('div');
+            sentinelDiv.id = 'watchlist-sentinel';
+            sentinelDiv.className = 'watchlist-loading';
+            // IMPORTANT: Sentinel must be in the DOM for IntersectionObserver to work.
+            // We use opacity to hide/show the spinner, but the element remains present.
+            sentinelDiv.style.opacity = '0';
+            sentinelDiv.style.minHeight = '1px'; // Ensure it takes up space
+            sentinelDiv.style.transition = 'opacity 0.2s';
+            sentinelDiv.innerText = 'Loading more...'; // Simple text or innerHTML
+            sentinelDiv.innerHTML = `
                 <div class="loading-spinner" style="margin: 0 auto;"></div>
-                <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
-            </div>
-        `;
-
-        try {
-            const params = new URLSearchParams({ page, limit: 20 });
-            if (status) params.append('status', status);
-
-            const response = await fetch(`/api/watchlist/paginated?${params}`);
-            const data = await response.json();
-
-            if (data.error) {
-                throw new Error(data.error);
+                <p class="text-muted" style="margin-top: var(--space-md);">Loading more...</p>
+            `;
+            if (watchlistContent && watchlistContent.parentNode) {
+                watchlistContent.parentNode.appendChild(sentinelDiv);
             }
+            return sentinelDiv;
+        }
 
-            const items = data.data || [];
-            const pagination = data.pagination || {};
+        // Fetch watchlist
+        async function fetchWatchlist(status = '', page = 1, append = false) {
+            if (isLoading) return;
+            isLoading = true;
 
-            if (items.length === 0) {
-                watchlistContent.innerHTML = `
-                    <div class="watchlist-empty">
-                        <div style="font-size: 4rem; margin-bottom: var(--space-md);">📚</div>
-                        <h3>Your watchlist is empty</h3>
-                        <p class="text-muted" style="margin-bottom: var(--space-lg);">
-                            Start adding anime to your watchlist to track your progress!
-                        </p>
-                        <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
-                    </div>
-                `;
-                paginationContainer.innerHTML = '';
-                return;
-            }
-
-            watchlistContent.innerHTML = items.map(item => `
-                <div class="watchlist-item" data-id="${item.anime_id}">
-                    <a href="/anime/${item.anime_id}" class="watchlist-item-poster">
-                        <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
-                    </a>
-                    <div class="watchlist-item-info">
-                        <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
-                        <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
-                            <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
-                                ${Object.entries(statusLabels).map(([val, label]) =>
-                `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
-            ).join('')}
-                            </select>
+            // If not appending (new filter or fresh load), show initial loading state
+            if (!append) {
+                if (watchlistContent) {
+                    watchlistContent.innerHTML = `
+                        <div class="watchlist-loading">
+                            <div class="loading-spinner" style="margin: 0 auto;"></div>
+                            <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
                         </div>
-                        <div class="watchlist-item-progress">
-                            <span class="text-sm">${item.watched_episodes || 0}/${item.total_episodes || '?'}</span>
-                            <div class="progress-bar">
-                                <div class="progress-bar-fill" style="width: ${item.total_episodes ? (item.watched_episodes / item.total_episodes * 100) : 0}%"></div>
-                            </div>
-                            <div style="display: flex; gap: 4px;">
-                                <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) - 1})">-</button>
-                                <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) + 1})">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn btn-icon btn-ghost" onclick="removeFromWatchlist('${item.anime_id}')" title="Remove">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                        </svg>
-                    </button>
-                </div>
-            `).join('');
-
-            // Render pagination
-            if (pagination.total_pages > 1) {
-                let paginationHTML = '';
-                for (let i = 1; i <= pagination.total_pages; i++) {
-                    paginationHTML += `
-                        <button class="btn btn-sm ${i === page ? 'btn-primary' : 'btn-secondary'}" 
-                                onclick="fetchWatchlist('${currentStatus}', ${i})">${i}</button>
                     `;
                 }
-                paginationContainer.innerHTML = paginationHTML;
+                // Reset state
+                currentPage = 1;
+                hasMore = true;
+                // Re-create sentinel
+                if (!sentinel) sentinel = createSentinel();
+                sentinel.style.display = 'block';
+                sentinel.style.opacity = '0';
             } else {
-                paginationContainer.innerHTML = '';
+                // Show sentinel spinner
+                if (sentinel) sentinel.style.opacity = '1';
             }
 
-        } catch (e) {
-            console.error('Watchlist error:', e);
-            watchlistContent.innerHTML = `
-                <div class="watchlist-empty">
-                    <div style="font-size: 4rem; margin-bottom: var(--space-md);">⚠️</div>
-                    <h3>Error loading watchlist</h3>
-                    <p class="text-muted">${e.message}</p>
-                </div>
-            `;
-        }
-    }
+            try {
+                const params = new URLSearchParams({ page, limit: 20 });
+                if (status) params.append('status', status);
 
-    // Update status
-    async function updateStatus(animeId, status) {
-        try {
-            const response = await fetch('/api/watchlist/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ anime_id: animeId, action: 'status', status })
+                const response = await fetch(`/api/watchlist/paginated?${params}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const items = data.data || [];
+                const pagination = data.pagination || {};
+
+                // Check if we have more pages
+                hasMore = pagination.has_next && page < pagination.total_pages;
+
+                if (items.length === 0 && !append) {
+                    if (watchlistContent) {
+                        watchlistContent.innerHTML = `
+                            <div class="watchlist-empty">
+                                <div style="font-size: 4rem; margin-bottom: var(--space-md);">📚</div>
+                                <h3>Your watchlist is empty</h3>
+                                <p class="text-muted" style="margin-bottom: var(--space-lg);">
+                                    Start adding anime to your watchlist to track your progress!
+                                </p>
+                                <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
+                            </div>
+                        `;
+                    }
+                    if (sentinel) sentinel.style.display = 'none'; // No items, hide sentinel
+                    return;
+                }
+
+                const itemsHTML = items.map(item => `
+                    <div class="watchlist-item" data-id="${item.anime_id}">
+                        <a href="/anime/${item.anime_id}" class="watchlist-item-poster">
+                            <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
+                        </a>
+                        <div class="watchlist-item-info">
+                            <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
+                            <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
+                                <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
+                                    ${Object.entries(statusLabels).map(([val, label]) =>
+                    `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
+                ).join('')}
+                                </select>
+                            </div>
+                            <div class="watchlist-item-progress">
+                                <span class="text-sm">${item.watched_episodes || 0}/${item.total_episodes || '?'}</span>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: ${item.total_episodes ? (item.watched_episodes / item.total_episodes * 100) : 0}%"></div>
+                                </div>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) - 1})">-</button>
+                                    <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) + 1})">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-icon btn-ghost" onclick="removeFromWatchlist('${item.anime_id}')" title="Remove">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </div>
+                `).join('');
+
+                if (watchlistContent) {
+                    if (!append) {
+                        watchlistContent.innerHTML = itemsHTML;
+                    } else {
+                        watchlistContent.insertAdjacentHTML('beforeend', itemsHTML);
+                    }
+                }
+
+            } catch (e) {
+                console.error('Watchlist error:', e);
+                if (!append && watchlistContent) {
+                    watchlistContent.innerHTML = `
+                        <div class="watchlist-empty">
+                            <div style="font-size: 4rem; margin-bottom: var(--space-md);">⚠️</div>
+                            <h3>Error loading watchlist</h3>
+                            <p class="text-muted">${e.message}</p>
+                        </div>
+                    `;
+                }
+            } finally {
+                isLoading = false;
+                if (!hasMore && sentinel) {
+                    sentinel.style.display = 'none'; // Absolutely no more items
+                } else if (sentinel) {
+                    sentinel.style.opacity = '0'; // Keep element for intersection, but hide spinner
+                }
+            }
+        }
+
+        // Initialize Intersection Observer
+        function initInfiniteScroll() {
+            if (!sentinel) sentinel = createSentinel();
+
+            const observer = new IntersectionObserver((entries) => {
+                // Must be intersecting, have more pages, and not currently loading
+                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                    // Show spinner immediately for feedback
+                    sentinel.style.opacity = '1';
+                    currentPage++;
+                    fetchWatchlist(currentStatus, currentPage, true);
+                }
+            }, {
+                root: null,
+                rootMargin: '100px', // Pre-fetch before reaching exact bottom
+                threshold: 0.1
             });
-            const data = await response.json();
-            if (!data.success) {
-                alert(data.message || 'Failed to update status');
-            }
-            fetchStats();
-        } catch (e) {
-            console.error('Update error:', e);
-        }
-    }
 
-    // Update episodes
-    async function updateEpisodes(animeId, count) {
-        if (count < 0) count = 0;
-        try {
-            const response = await fetch('/api/watchlist/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: count })
+            if (sentinel) observer.observe(sentinel);
+        }
+
+        // Global function wrappers for inline event handlers
+        window.updateStatus = async function (animeId, status) {
+            try {
+                const response = await fetch('/api/watchlist/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anime_id: animeId, action: 'status', status })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    alert(data.message || 'Failed to update status');
+                } else {
+                    if (currentStatus && currentStatus !== status) {
+                        const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                        if (item) {
+                            item.style.transition = 'opacity 0.3s, height 0.3s';
+                            item.style.opacity = '0';
+                            setTimeout(() => item.remove(), 300);
+                        }
+                    }
+                    fetchStats();
+                }
+            } catch (e) {
+                console.error('Update error:', e);
+            }
+        };
+
+        window.updateEpisodes = async function (animeId, count) {
+            if (count < 0) count = 0;
+            try {
+                const response = await fetch('/api/watchlist/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: count })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Update local DOM
+                    const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                    if (item) {
+                        const progressText = item.querySelector('.watchlist-item-progress span');
+                        const progressBar = item.querySelector('.progress-bar-fill');
+
+                        if (progressText) {
+                            const parts = progressText.textContent.split('/');
+                            const totalStr = parts[1];
+                            const total = totalStr === '?' ? 0 : parseInt(totalStr);
+
+                            progressText.textContent = `${count}/${totalStr}`;
+                            if (total > 0) {
+                                progressBar.style.width = `${Math.min(100, (count / total * 100))}%`;
+                            }
+                        }
+                    }
+                    fetchStats();
+                } else {
+                    alert(data.message || 'Failed to update');
+                }
+            } catch (e) {
+                console.error('Update error:', e);
+            }
+        };
+
+        window.removeFromWatchlist = async function (animeId) {
+            if (!confirm('Remove this anime from your watchlist?')) return;
+
+            try {
+                const response = await fetch('/api/watchlist/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anime_id: animeId })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Remove element locally
+                    const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                    if (item) {
+                        item.style.transition = 'opacity 0.3s, height 0.3s';
+                        item.style.opacity = '0';
+                        setTimeout(() => item.remove(), 300);
+                    }
+
+                    fetchStats();
+                } else {
+                    alert(data.message || 'Failed to remove');
+                }
+            } catch (e) {
+                console.error('Remove error:', e);
+            }
+        };
+
+        // Tab click handlers
+        if (watchlistTabs) {
+            watchlistTabs.querySelectorAll('.watchlist-tab').forEach(tab => {
+                tab.addEventListener('click', function () {
+                    watchlistTabs.querySelector('.active').classList.remove('active');
+                    this.classList.add('active');
+                    currentStatus = this.dataset.status;
+
+                    // Reset for new filter
+                    currentPage = 1;
+                    hasMore = true;
+                    isLoading = false;
+                    fetchWatchlist(currentStatus, 1, false);
+                });
             });
-            const data = await response.json();
-            if (data.success) {
-                fetchWatchlist(currentStatus, currentPage);
-            } else {
-                alert(data.message || 'Failed to update');
-            }
-        } catch (e) {
-            console.error('Update error:', e);
         }
-    }
 
-    // Remove from watchlist
-    async function removeFromWatchlist(animeId) {
-        if (!confirm('Remove this anime from your watchlist?')) return;
-
-        try {
-            const response = await fetch('/api/watchlist/remove', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ anime_id: animeId })
-            });
-            const data = await response.json();
-            if (data.success) {
-                fetchWatchlist(currentStatus, currentPage);
-                fetchStats();
-            } else {
-                alert(data.message || 'Failed to remove');
-            }
-        } catch (e) {
-            console.error('Remove error:', e);
-        }
-    }
-
-    // Tab click handlers
-    watchlistTabs.querySelectorAll('.watchlist-tab').forEach(tab => {
-        tab.addEventListener('click', function () {
-            watchlistTabs.querySelector('.active').classList.remove('active');
-            this.classList.add('active');
-            currentStatus = this.dataset.status;
-            currentPage = 1;
-            fetchWatchlist(currentStatus, currentPage);
-        });
+        // Initial load
+        fetchStats();
+        fetchWatchlist();
+        initInfiniteScroll();
     });
-
-    // Initial load
-    fetchStats();
-    fetchWatchlist();
 </script>
 {% endblock %}
