@@ -391,10 +391,20 @@ h6 {
     padding: var(--space-md);
     transition: background var(--transition-fast);
     cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
 }
 
 .suggestion-item:hover {
     background: var(--bg-surface-hover);
+}
+
+.suggestion-item:hover .suggestion-poster {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
 }
 
 .suggestion-poster {
@@ -402,6 +412,7 @@ h6 {
     height: 56px;
     object-fit: cover;
     border-radius: var(--radius-sm);
+    transition: all var(--transition-normal);
 }
 
 .suggestion-info {
@@ -474,6 +485,96 @@ h6 {
     }
 }
 
+/* Mobile Search */
+.mobile-search-toggle {
+    display: none;
+    padding: var(--space-sm);
+    color: var(--text-primary);
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-search-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    z-index: 2000;
+    padding: var(--space-md);
+    overflow-y: auto;
+}
+
+.mobile-search-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.mobile-search-header {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    position: sticky;
+    top: 0;
+    background: var(--bg-primary);
+    z-index: 10;
+    padding-bottom: var(--space-sm);
+}
+
+.mobile-search-form {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mobile-search-input {
+    width: 100%;
+    padding: var(--space-md);
+    padding-left: 3rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+}
+
+.mobile-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg-surface-hover);
+}
+
+.mobile-search-icon {
+    position: absolute;
+    left: var(--space-md);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.mobile-search-close {
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: var(--space-sm) var(--space-md);
+    background: transparent;
+    border-radius: var(--radius-md);
+}
+
+.mobile-search-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+}
+
+.mobile-suggestions {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .mobile-search-toggle {
+        display: flex;
+    }
+}
+
 /* ============================================
    Buttons
    ============================================ */
@@ -541,8 +642,8 @@ h6 {
    ============================================ */
 .anime-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--space-lg);
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: var(--space-md);
 }
 
 @media (min-width: 640px) {
@@ -838,12 +939,7 @@ h6 {
     }
 }
 
-bottom: var(--space-lg);
-left: 50%;
-transform: translateX(-50%);
-display: flex;
-gap: var(--space-sm);
-}
+
 
 .spotlight-dot {
     width: 8px;
@@ -1474,6 +1570,8 @@ gap: var(--space-sm);
     border-radius: var(--radius-full);
     cursor: pointer;
     transition: background var(--transition-fast);
+    flex-shrink: 0;
+    /* Prevent resizing in flex containers */
 }
 
 .toggle.active {
@@ -1494,6 +1592,8 @@ gap: var(--space-sm);
 
 .toggle.active::after {
     transform: translateX(20px);
+    background: var(--bg-primary);
+    /* Fix contrast: Black knob on White background */
 }
 
 /* ============================================
@@ -1598,6 +1698,10 @@ gap: var(--space-sm);
 .footer-links a {
     color: var(--text-muted);
     transition: color var(--transition-fast);
+    padding: var(--space-xs) 0;
+    /* Enhance touch target */
+    display: block;
+    /* Ensure full width clickable area in column */
 }
 
 .footer-links a:hover {
@@ -1921,13 +2025,14 @@ gap: var(--space-sm);
         align-items: flex-start;
     }
 
-    .settings-row>div:last-child {
+    .settings-row>div:not(.toggle):last-child {
         width: 100%;
     }
 
     .settings-row .btn {
         flex: 1;
         justify-content: center;
+        width: 100%;
     }
 
     .settings-row>div[style*="display: flex"] {
@@ -1946,16 +2051,29 @@ gap: var(--space-sm);
 }
 
 /* Watch Page Mobile */
+@media (max-width: 1024px) {
+    .watch-layout {
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+    }
+
+    .episode-sidebar {
+        max-height: 500px;
+    }
+}
+
 @media (max-width: 768px) {
     .player-controls-bar {
         padding: var(--space-sm);
         gap: var(--space-sm);
         flex-direction: column;
+        align-items: stretch;
     }
 
     .player-nav {
         width: 100%;
         justify-content: space-between;
+        gap: var(--space-sm);
     }
 
     .player-nav .btn {
@@ -1967,16 +2085,24 @@ gap: var(--space-sm);
 
     .player-options {
         width: 100%;
-        justify-content: space-between;
+        gap: var(--space-sm);
+        flex-direction: column;
     }
 
     .player-options .server-select {
         flex: 1;
         min-width: 0;
+        width: 100%;
     }
 
-    .episode-sidebar {
-        max-height: 400px;
+    .player-options>div {
+        width: 100%;
+        display: flex;
+    }
+
+    .player-options>div .btn {
+        flex: 1;
+        justify-content: center;
     }
 
     .episode-sidebar-item {
@@ -2001,44 +2127,61 @@ gap: var(--space-sm);
         height: 280px;
     }
 
+    .anime-info-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+        text-align: center;
+    }
+
     .anime-poster {
-        max-width: 150px;
+        max-width: 160px;
         margin: 0 auto;
     }
 
     .anime-title {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
+        line-height: 1.2;
     }
 
     .anime-stats {
         justify-content: center;
         gap: var(--space-md);
+        padding: var(--space-sm) 0;
     }
 
     .stat-item {
-        min-width: 60px;
+        min-width: auto;
+        padding: 0 var(--space-sm);
     }
 
     .stat-value {
         font-size: 1rem;
     }
 
+    .stat-label {
+        font-size: 0.7rem;
+    }
+
     .anime-actions {
         flex-direction: column;
+        gap: var(--space-sm);
     }
 
     .anime-actions .btn {
         width: 100%;
         justify-content: center;
+        padding: var(--space-md);
     }
 
     .anime-genres {
         justify-content: center;
+        gap: var(--space-xs);
     }
 
     .anime-synopsis p {
-        font-size: 0.9rem;
-        line-height: 1.7;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        text-align: left;
     }
 }
 
@@ -2047,18 +2190,49 @@ gap: var(--space-sm);
     .profile-header {
         flex-direction: column;
         text-align: center;
-        gap: var(--space-lg);
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
     }
 
     .profile-avatar {
         width: 100px;
         height: 100px;
+        margin: 0 auto;
+        flex-shrink: 0;
+        display: block;
+        /* Ensure it behaves as a block */
     }
 
     .profile-info {
         display: flex;
         flex-direction: column;
         align-items: center;
+        width: 100%;
+    }
+
+    .watchlist-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+    }
+
+    /* Fix AniList card on mobile */
+    .settings-section>div[style*="display: flex"] {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-md) !important;
+        gap: var(--space-md) !important;
+    }
+
+    .settings-section>div[style*="display: flex"]>div:first-child {
+        margin: 0 auto;
+    }
+
+    .settings-section>div[style*="display: flex"] .badge {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+        display: flex;
+        padding: var(--space-sm);
     }
 }
 
@@ -2074,17 +2248,36 @@ gap: var(--space-sm);
         height: 84px;
     }
 
+    .watchlist-item-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
     .watchlist-item-title {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+        line-height: 1.3;
+    }
+
+    .watchlist-item-progress {
+        margin-top: auto;
     }
 
     .watchlist-tabs {
         gap: var(--space-xs);
+        padding-bottom: var(--space-sm);
+        margin-bottom: var(--space-md);
+        /* Ensure horizontal scroll works */
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
     }
 
     .watchlist-tab {
         padding: var(--space-xs) var(--space-md);
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        flex-shrink: 0;
     }
 
     .stat-card {
@@ -2100,17 +2293,20 @@ gap: var(--space-sm);
 @media (max-width: 768px) {
     .btn {
         padding: var(--space-sm) var(--space-md);
-        font-size: 0.85rem;
+        font-size: 0.9rem;
+        min-height: 40px;
+        /* Improve touch target */
     }
 
     .btn-lg {
-        padding: var(--space-sm) var(--space-lg);
-        font-size: 0.95rem;
+        padding: var(--space-md) var(--space-lg);
+        font-size: 1rem;
     }
 
     .btn-sm {
-        padding: 4px var(--space-sm);
-        font-size: 0.75rem;
+        padding: 6px var(--space-sm);
+        font-size: 0.8rem;
+        min-height: 32px;
     }
 }
 
@@ -2126,62 +2322,106 @@ gap: var(--space-sm);
     }
 
     .anime-card-title {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        line-height: 1.3;
+        height: 2.6em;
+        /* Limit to 2 lines visual height */
     }
 
     .anime-card-meta {
         font-size: 0.7rem;
+    }
+
+    .badge {
+        font-size: 0.65rem;
+        padding: 2px 4px;
     }
 }
 
 /* Episode Grid Mobile */
 @media (max-width: 480px) {
     .episode-grid {
-        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
         gap: var(--space-xs);
     }
 
     .episode-item {
         padding: var(--space-sm);
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
 }
 
 /* Modal Mobile */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .modal {
+        padding: var(--space-sm);
+        /* Reduce outer padding */
+    }
+
     .modal-content {
         padding: var(--space-lg);
-        margin: var(--space-md);
-        max-width: calc(100% - var(--space-xl));
+        margin: 0;
+        max-width: 100%;
+        max-height: 95vh;
+        width: 100%;
+        border-radius: var(--radius-lg);
     }
 
     .form-input {
-        padding: var(--space-sm) var(--space-md);
-        font-size: 16px;
+        padding: var(--space-md);
+        font-size: 16px !important;
         /* Prevents iOS zoom */
+        height: 48px;
+        /* Better touch target */
+    }
+
+    .modal-close {
+        top: var(--space-md);
+        right: var(--space-md);
+        width: 36px;
+        height: 36px;
+        background: var(--bg-surface-hover);
+        /* Make slightly visible by default */
+    }
+
+    .form-group {
+        margin-bottom: var(--space-md);
+    }
+
+    .cf-turnstile {
+        transform-origin: left center;
+        transform: scale(0.85);
+        /* Scale down if needed */
+        margin-bottom: var(--space-sm) !important;
     }
 }
 
 /* Flash Messages Mobile */
 @media (max-width: 768px) {
     .flash-container {
-        left: var(--space-md);
-        right: var(--space-md);
+        left: var(--space-sm);
+        right: var(--space-sm);
+        top: calc(var(--navbar-height) + var(--space-sm));
+        width: auto;
     }
 
     .flash-message {
         max-width: 100%;
+        padding: var(--space-md);
+        font-size: 0.9rem;
     }
 }
 
 /* Search Results Mobile */
 @media (max-width: 768px) {
     .search-results-header h1 {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
+        word-break: break-word;
+        /* Prevent long query overflow */
     }
 
     .no-results {
-        padding: var(--space-xl);
+        padding: var(--space-xl) var(--space-md);
     }
 
     .no-results-icon {
@@ -2192,11 +2432,11 @@ gap: var(--space-sm);
 /* Error Page Mobile */
 @media (max-width: 768px) {
     .error-code {
-        font-size: 5rem;
+        font-size: 6rem;
     }
 
     .error-message {
-        font-size: 1.1rem;
+        font-size: 1.25rem;
     }
 }
 
