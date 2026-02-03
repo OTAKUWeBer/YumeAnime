@@ -77,6 +77,21 @@
                                 stroke-dasharray="31.4 31.4" stroke-linecap="round" />
                         </svg>
                     </button>
+                    <!-- Sync Progress Bar Container -->
+                    <div id="sync-progress-container" class="hidden"
+                        style="flex: 1; margin-left: 10px; max-width: 300px; display: flex; flex-direction: column; justify-content: center;">
+                        <div
+                            style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px; color: var(--text-muted);">
+                            <span id="sync-status-text">Syncing...</span>
+                            <span id="sync-percent-text">0%</span>
+                        </div>
+                        <div
+                            style="width: 100%; height: 6px; background: var(--surface-hover); border-radius: 3px; overflow: hidden;">
+                            <div id="sync-progress-bar"
+                                style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s ease;">
+                            </div>
+                        </div>
+                    </div>
                     <button class="btn btn-secondary" id="disconnect-anilist" style="color: var(--error);">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">

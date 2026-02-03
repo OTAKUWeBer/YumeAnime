@@ -5,6 +5,7 @@ Handles AniList connection status, sync, and disconnection
 from flask import Blueprint, request, session, jsonify, current_app
 import logging
 import time
+import threading
 
 from ...models.user import get_user_by_id, get_anilist_connection_info
 from ...utils.helpers import (
@@ -47,7 +48,7 @@ def disconnect_anilist():
 
 @anilist_api_bp.route('/sync-anilist', methods=['POST'])
 def sync_anilist():
-    """Sync AniList watchlist to local database"""
+    """Sync AniList watchlist to local database (Background Task)"""
     if 'username' not in session or '_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in.'}), 401
     
@@ -72,88 +73,113 @@ def sync_anilist():
             'message': 'Starting sync...'
         })
         
-        def progress_callback(progress):
-            """Progress callback to update UI"""
-            try:
-                store_sync_progress(user_id, {
-                    'status': 'syncing',
-                    'processed': progress.processed,
-                    'total': progress.total,
-                    'synced': progress.synced,
-                    'skipped': progress.skipped,
-                    'failed': progress.failed,
-                    'percentage': progress.percentage,
-                    'estimated_remaining': getattr(progress, 'estimated_remaining', 0),
-                    'message': f'Syncing... {progress.processed}/{progress.total} processed'
-                })
-            except Exception as e:
-                logger.warning(f"Progress callback error: {e}")
+        # Define background task with app context
+        app = current_app._get_current_object()
         
-        # Run the sync function
-        result = sync_anilist_watchlist_blocking(user_id, access_token, progress_callback)
-        
-        # Handle errors
-        if 'error' in result:
-            store_sync_progress(user_id, {
-                'status': 'error',
-                'message': f'Sync failed: {result["error"]}',
-                'error': result['error']
-            })
-            return jsonify({'success': False, 'message': f'Sync failed: {result["error"]}'}), 500
-        
-        # Calculate success metrics
-        synced_count = result.get('synced_count', 0)
-        skipped_count = result.get('skipped_count', 0)
-        failed_count = result.get('failed_count', 0)
-        total_count = result.get('total_count', 0)
-        
-        success_count = synced_count + skipped_count
-        success_rate = (success_count / total_count * 100) if total_count > 0 else 0
-        
-        # Store final progress
-        store_sync_progress(user_id, {
-            'status': 'completed',
-            'processed': total_count,
-            'total': total_count,
-            'synced': synced_count,
-            'skipped': skipped_count,
-            'failed': failed_count,
-            'percentage': 100,
-            'success_rate': success_rate,
-            'message': f'Sync completed! {success_count}/{total_count} entries processed successfully.'
-        })
-        
-        is_success = success_rate >= 70.0
-        
-        if is_success:
-            message = f'Sync completed successfully! Added {synced_count} new entries, skipped {skipped_count} duplicates.'
-            if failed_count > 0:
-                message += f' {failed_count} entries could not be matched.'
-        else:
-            message = f'Sync partially completed. Only {success_count}/{total_count} entries were processed successfully.'
+        def background_sync(app, user_id, access_token):
+            with app.app_context():
+                try:
+                    def progress_callback(progress):
+                        try:
+                            store_sync_progress(user_id, {
+                                'status': 'syncing',
+                                'processed': progress.processed,
+                                'total': progress.total,
+                                'synced': progress.synced,
+                                'skipped': progress.skipped,
+                                'failed': progress.failed,
+                                'percentage': progress.percentage,
+                                'estimated_remaining': getattr(progress, 'estimated_remaining', 0),
+                                'message': f'Syncing... {progress.processed}/{progress.total} processed'
+                            })
+                        except Exception as e:
+                            logger.warning(f"Progress callback error: {e}")
+                    
+                    # Run the sync function
+                    result = sync_anilist_watchlist_blocking(user_id, access_token, progress_callback)
+                    
+                    # Handle errors
+                    if 'error' in result:
+                        store_sync_progress(user_id, {
+                            'status': 'error',
+                            'message': f'Sync failed: {result["error"]}',
+                            'error': result['error']
+                        })
+                        return
+                    
+                    # Calculate success metrics
+                    synced_count = result.get('synced_count', 0)
+                    skipped_count = result.get('skipped_count', 0)
+                    failed_count = result.get('failed_count', 0)
+                    total_count = result.get('total_count', 0)
+                    
+                    success_count = synced_count + skipped_count
+                    success_rate = (success_count / total_count * 100) if total_count > 0 else 0
+                    
+                    is_success = success_rate >= 70.0
+                    
+                    if is_success:
+                        message = f'Sync completed! Added {synced_count}, skipped {skipped_count}.'
+                    else:
+                        message = f'Sync partially completed. {success_count}/{total_count} successful.'
+                    
+                    # Store final progress
+                    store_sync_progress(user_id, {
+                        'status': 'completed',
+                        'processed': total_count,
+                        'total': total_count,
+                        'synced': synced_count,
+                        'skipped': skipped_count,
+                        'failed': failed_count,
+                        'percentage': 100,
+                        'success_rate': success_rate,
+                        'message': message,
+                        'result': {
+                            'success': is_success,
+                            'synced_count': synced_count,
+                            'skipped_count': skipped_count,
+                            'failed_count': failed_count
+                        }
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Background sync error for user {user_id}: {e}")
+                    store_sync_progress(user_id, {
+                        'status': 'error',
+                        'message': f'Unexpected error: {str(e)}',
+                        'error': str(e)
+                    })
+
+        # Start background thread
+        thread = threading.Thread(target=background_sync, args=(app, user_id, access_token))
+        thread.daemon = True
+        thread.start()
         
         return jsonify({
-            'success': is_success,
-            'message': message,
-            'synced_count': synced_count,
-            'skipped_count': skipped_count,
-            'failed_count': failed_count,
-            'total_count': total_count,
-            'success_rate': f'{success_rate:.1f}%',
-            'elapsed_time': result.get('elapsed_time', 'N/A')
-        })
+            'success': True, 
+            'message': 'Sync started in background',
+            'status': 'started'
+        }), 202
         
     except Exception as e:
-        user_id = session.get('_id', 'unknown')
-        logger.error(f"Error syncing AniList watchlist for user {user_id}: {e}")
+        logger.error(f"Error starting AniList sync: {e}")
+        return jsonify({'success': False, 'message': 'Failed to start sync.'}), 500
+
+
+@anilist_api_bp.route('/sync-progress', methods=['GET'])
+def get_sync_progress_route():
+    """Get current sync progress"""
+    if 'username' not in session or '_id' not in session:
+        return jsonify({'error': 'Not logged in.'}), 401
         
-        store_sync_progress(user_id, {
-            'status': 'error',
-            'message': f'Unexpected error: {str(e)}',
-            'error': str(e)
-        })
+    user_id = session.get('_id')
+    progress = get_sync_progress(user_id)
+    
+    # If no progress found, return empty/idle status
+    if not progress:
+        return jsonify({'status': 'idle'}), 200
         
-        return jsonify({'success': False, 'message': 'Sync failed due to unexpected error. Please try again.'}), 500
+    return jsonify(progress), 200
 
 
 @anilist_api_bp.route('/sync-progress/clear', methods=['POST'])
