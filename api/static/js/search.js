@@ -8,26 +8,26 @@ class SearchManager {
     constructor() {
         // Initialize elements
         this.initializeElements();
-        
+
         // Initialize variables
         this.debounceTimeouts = {
             desktop: null,
             mobile: null,
             dropdown: null
         };
-        
+
         this.abortControllers = {
             desktop: null,
             mobile: null,
             dropdown: null
         };
-        
+
         // Cache for suggestions to improve performance
         this.suggestionCache = new Map();
-        
+
         // Click outside handler state
         this.isClickOutsideEnabled = true;
-        
+
         // Initialize all event listeners
         this.initializeEventListeners();
     }
@@ -48,6 +48,7 @@ class SearchManager {
             },
             mobile: {
                 overlay: document.getElementById('mobile-search-overlay'),
+                toggle: document.getElementById('mobile-search-toggle'),
                 closeBtn: document.getElementById('mobile-search-close'),
                 form: document.getElementById('mobile-search-form'),
                 input: document.getElementById('mobile-search-input'),
@@ -166,7 +167,7 @@ class SearchManager {
         // Clear previous timeout
         clearTimeout(this.debounceTimeouts[searchType]);
         this.hideLoading(searchType);
-        
+
         if (!query) {
             this.elements[searchType].suggestionBox?.classList.add('hidden');
             if (this.elements[searchType].suggestionsContent) {
@@ -210,20 +211,20 @@ class SearchManager {
         const target = e.target.closest('[data-id]');
         if (target) {
             const animeId = target.getAttribute('data-id');
-            
+
             // Hide suggestions
             this.elements[searchType].suggestionBox?.classList.add('hidden');
-            
+
             // Hide mobile overlay if mobile search
             if (searchType === 'mobile') {
                 this.elements.mobile.overlay?.classList.add('hidden');
             }
-            
+
             // Hide dropdown container if dropdown search
             if (searchType === 'dropdown') {
                 this.elements.dropdown.container?.classList.add('hidden');
             }
-            
+
             // Navigate to anime page
             window.location.href = `/anime/${animeId}`;
         }
@@ -233,6 +234,12 @@ class SearchManager {
      * Initialize mobile-specific handlers
      */
     initializeMobileHandlers() {
+        // Open mobile search overlay
+        this.elements.mobile.toggle?.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default button behavior
+            this.openMobileSearch();
+        });
+
         // Close mobile search overlay
         this.elements.mobile.closeBtn?.addEventListener('click', () => {
             this.elements.mobile.overlay?.classList.add('hidden');
@@ -262,7 +269,7 @@ class SearchManager {
 
         // Close dropdown on outside click
         document.addEventListener('click', (e) => {
-            if (!this.elements.dropdown.toggle?.contains(e.target) && 
+            if (!this.elements.dropdown.toggle?.contains(e.target) &&
                 !this.elements.dropdown.container?.contains(e.target)) {
                 this.elements.dropdown.container?.classList.add('hidden');
             }
@@ -333,7 +340,7 @@ class SearchManager {
         // Click outside to close desktop suggestions
         document.addEventListener('click', (e) => {
             if (!this.isClickOutsideEnabled) return;
-            
+
             const searchContainer = this.elements.desktop.form?.parentElement;
             if (searchContainer && !searchContainer.contains(e.target)) {
                 this.elements.desktop.suggestionBox?.classList.add('hidden');
@@ -358,17 +365,17 @@ class SearchManager {
     showSearchError(msg, searchType = 'desktop') {
         const errorEl = this.elements[searchType].error;
         const inputEl = this.elements[searchType].input;
-        
+
         if (!errorEl || !inputEl) return;
-        
+
         const errorSpan = errorEl.querySelector('span');
         if (errorSpan) {
             errorSpan.textContent = msg;
         }
-        
+
         errorEl.classList.remove('hidden');
         inputEl.classList.add('ring-2', 'ring-red-400/50', 'border-red-400/50', 'focus:ring-red-400/30');
-        
+
         // Subtle shake animation
         inputEl.animate([
             { transform: 'translateX(0)' },
@@ -376,7 +383,7 @@ class SearchManager {
             { transform: 'translateX(2px)' },
             { transform: 'translateX(0)' }
         ], { duration: 200, iterations: 2 });
-        
+
         setTimeout(() => inputEl.focus(), 100);
     }
 
@@ -387,9 +394,9 @@ class SearchManager {
     clearSearchError(searchType = 'desktop') {
         const errorEl = this.elements[searchType].error;
         const inputEl = this.elements[searchType].input;
-        
+
         if (!errorEl || !inputEl) return;
-        
+
         errorEl.classList.add('hidden');
         inputEl.classList.remove('ring-2', 'ring-red-400/50', 'border-red-400/50', 'focus:ring-red-400/30');
     }
@@ -429,7 +436,7 @@ class SearchManager {
         }
 
         this.showLoading(searchType);
-        
+
         try {
             // Create new abort controller
             const controller = new AbortController();
@@ -438,20 +445,20 @@ class SearchManager {
             const response = await fetch(`/search/suggestions?q=${encodeURIComponent(query)}`, {
                 signal: controller.signal
             });
-            
+
             this.hideLoading(searchType);
-            
+
             if (!response.ok) {
                 console.error('Search suggestions API error:', response.status);
                 return;
             }
-            
+
             const json = await response.json();
             const suggestions = json.suggestions || json.animes || json.data || [];
 
             // Cache the results
             this.suggestionCache.set(query, suggestions);
-            
+
             // Limit cache size
             if (this.suggestionCache.size > 50) {
                 const firstKey = this.suggestionCache.keys().next().value;
@@ -475,9 +482,9 @@ class SearchManager {
     displaySuggestions(suggestions, searchType = 'desktop') {
         const suggestionBoxEl = this.elements[searchType].suggestionBox;
         const suggestionsContentEl = this.elements[searchType].suggestionsContent;
-        
+
         if (!suggestionBoxEl || !suggestionsContentEl) return;
-        
+
         if (!suggestions.length) {
             suggestionBoxEl.classList.add('hidden');
             suggestionsContentEl.innerHTML = '';
@@ -488,28 +495,20 @@ class SearchManager {
         const suggestionHTML = suggestions
             .slice(0, 8)
             .map(s => `
-                <div class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-all duration-200 border-b border-white/5 last:border-b-0 group ${isMobile ? 'active:bg-white/10' : ''}" data-id="${s.id}" data-name="${s.name}">
-                    <div class="relative flex-shrink-0">
-                        <img src="${s.poster || '/static/images/placeholder.jpg'}" 
-                             alt="${s.name}" 
-                             class="w-10 h-14 object-cover rounded shadow-lg group-hover:shadow-xl transition-shadow duration-200 ${isMobile ? 'w-12 h-16' : ''}" 
-                             onerror="this.src='/static/images/placeholder.jpg'" 
-                             loading="lazy" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded"></div>
-                    </div>
-                    <div class="flex-1 min-w-0 space-y-1">
-                        <h4 class="font-semibold text-sm text-white truncate group-hover:text-blue-300 transition-colors duration-200">${s.name}</h4>
+                <div class="suggestion-item group" data-id="${s.id}" data-name="${s.name}">
+                    <img src="${s.poster || '/static/images/placeholder.jpg'}" 
+                         alt="${s.name}" 
+                         class="suggestion-poster" 
+                         onerror="this.src='/static/images/placeholder.jpg'" 
+                         loading="lazy" />
+                    <div class="suggestion-info">
+                        <h4 class="suggestion-title group-hover:text-blue-300 transition-colors duration-200">${s.name}</h4>
                         ${s.jname ? `<p class="text-xs text-gray-400 truncate font-medium">${s.jname}</p>` : ''}
                         ${s.moreInfo && s.moreInfo.length ? `
-                            <div class="flex items-center gap-1 text-xs text-gray-500">
-                                ${s.moreInfo.slice(0, 2).map(info => `<span class="px-1.5 py-0.5 bg-white/5 rounded text-xs">${info}</span>`).join('')}
+                            <div class="suggestion-meta">
+                                ${s.moreInfo.slice(0, 2).map((info, idx) => `<span>${info}${idx < 1 ? ' • ' : ''}</span>`).join('')}
                             </div>
                         ` : ''}
-                    </div>
-                    <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="shape-rendering: crispEdges;">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
                     </div>
                 </div>
             `)
@@ -524,9 +523,12 @@ class SearchManager {
      */
     openMobileSearch() {
         this.elements.mobile.overlay?.classList.remove('hidden');
-        setTimeout(() => {
-            this.elements.mobile.input?.focus();
-        }, 100);
+        // Use requestAnimationFrame for better reliability on mobile devices
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                this.elements.mobile.input?.focus();
+            }, 100);
+        });
     }
 
     /**
@@ -541,7 +543,7 @@ class SearchManager {
 }
 
 // Initialize search manager when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Create global search manager instance
     window.searchManager = SearchManager.getInstance();
 });
