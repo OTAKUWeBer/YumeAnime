@@ -55,6 +55,51 @@ def genre(genre_name):
         return render_template('404.html', error_message=f"Error fetching genre: {e}"), 500
 
 
+
+@catalog_routes_bp.route('/category/<category_name>', methods=['GET'])
+def category(category_name):
+    """Display anime list for a specific category"""
+    category_name_escaped = escape(category_name)
+    
+    try:
+        data = asyncio.run(current_app.ha_scraper.category(category_name_escaped))
+        animes = data.get("animes", [])
+        if not animes:
+            return render_template('404.html', error_message=f"No animes found for category: {category_name}"), 404
+        
+        category_data = {
+            'genreName': f"{category_name.replace('-', ' ').title()} Anime",
+            'animes': []
+        }
+        
+        for anime in animes:
+            anime_id = anime.get("id")
+            if not anime_id:
+                continue
+                
+            # Map all required fields for the template
+            mapped_anime = {
+                "id": anime_id,
+                "name": anime.get("name") or anime.get("title") or anime_id,
+                "jname": anime.get("jname") or anime.get("japanese_name") or "",
+                "poster": anime.get("poster") or anime.get("image") or "",
+                "duration": anime.get("duration") or "N/A",
+                "type": anime.get("type") or "Unknown",
+                "rating": anime.get("rating"),
+                "episodes": {
+                    "sub": anime.get("episodes", {}).get("sub") if anime.get("episodes") else None,
+                    "dub": anime.get("episodes", {}).get("dub") if anime.get("episodes") else None
+                }
+            }
+            category_data['animes'].append(mapped_anime)
+        
+        return render_template('genre.html', **category_data)
+    
+    except Exception as e:
+        current_app.logger.exception(f"Error fetching category {category_name}")
+        return render_template('404.html', error_message=f"Error fetching category: {e}"), 500
+
+
 @catalog_routes_bp.route('/profile', methods=['GET'])
 def profile():
     """Display user profile page"""
