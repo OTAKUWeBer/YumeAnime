@@ -106,9 +106,24 @@ class SettingsManager {
     const statusContainer = document.getElementById("anilist-status")
     const connectBtn = document.getElementById("connect-anilist-btn")
     const syncBtn = document.getElementById("sync-anilist-btn")
-    const disconnectBtn = document.getElementById("disconnect-anilist-btn")
+    const disconnectBtn = document.getElementById("disconnect-anilist")
 
     const isConnected = this.currentUser && this.currentUser.anilist_authenticated
+
+    // Safety check: if running on a page without the dynamic status container (Jinja managed),
+    // we handle button visibility manually and return early to avoid errors.
+    if (!statusContainer) {
+      if (isConnected) {
+        if (connectBtn) connectBtn.classList.add("hidden")
+        if (syncBtn) syncBtn.classList.remove("hidden")
+        if (disconnectBtn) disconnectBtn.classList.remove("hidden")
+      } else {
+        if (connectBtn) connectBtn.classList.remove("hidden")
+        if (syncBtn) syncBtn.classList.add("hidden")
+        if (disconnectBtn) disconnectBtn.classList.add("hidden")
+      }
+      return
+    }
 
     if (isConnected) {
       // Connected state
@@ -510,12 +525,12 @@ ${this.currentUser.anilist_id
     const notification = document.createElement("div")
     notification.id = "settings-notification"
     notification.className = `fixed top-6 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl font-semibold transition-all duration-300 transform translate-x-full border backdrop-blur-sm flex items-center gap-3 ${type === "success"
-        ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30"
-        : type === "error"
-          ? "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30"
-          : type === "warning"
-            ? "bg-gradient-to-r from-yellow-600 to-yellow-700 text-white border-yellow-500/30"
-            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30"
+      ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500/30"
+      : type === "error"
+        ? "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500/30"
+        : type === "warning"
+          ? "bg-gradient-to-r from-yellow-600 to-yellow-700 text-white border-yellow-500/30"
+          : "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-500/30"
       }`
 
     // Create message span
