@@ -577,15 +577,13 @@ ${this.currentUser.anilist_id
 }
 
 // Global functions for template compatibility
-function connectAniList() {
-  if (window.settingsManager) {
-    window.settingsManager.connectAniList()
-  }
-}
-
 function syncAniList() {
+  console.log("Global syncAniList called");
   if (window.settingsManager) {
     window.settingsManager.syncAniList()
+  } else {
+    console.error("SettingsManager not initialized");
+    alert("Settings not initialized. Please refresh the page.");
   }
 }
 
@@ -633,9 +631,21 @@ function submitPasswordChange() {
 }
 
 // Initialize settings manager when DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-  window.settingsManager = new SettingsManager()
+const initSettings = () => {
+  if (!window.settingsManager) {
+    window.settingsManager = new SettingsManager()
+    console.log("SettingsManager initialized");
+  }
+};
 
+if (document.readyState === 'loading') {
+  document.addEventListener("DOMContentLoaded", initSettings);
+} else {
+  initSettings();
+}
+
+// Global listeners for modals
+document.addEventListener("DOMContentLoaded", () => {
   // Close modal when clicking outside of it
   const modal = document.getElementById("password-modal")
   if (modal) {
