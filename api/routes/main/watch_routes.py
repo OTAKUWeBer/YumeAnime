@@ -5,6 +5,8 @@ import asyncio
 from flask import Blueprint, request, session, redirect, url_for, render_template, current_app
 from urllib.parse import parse_qs
 
+from ...providers.hianime.megaplay_video import get_megaplay_url
+
 watch_routes_bp = Blueprint('watch_routes', __name__)
 
 
@@ -161,6 +163,10 @@ def watch(eps_title):
     # Language switch URLs
     sub_url = url_for('main.watch_routes.watch', eps_title=eps_title_clean, ep=f"{ep_number}-sub") if ep_number else None
     dub_url = url_for('main.watch_routes.watch', eps_title=eps_title_clean, ep=f"{ep_number}-dub") if ep_number and dub_available else None
+    
+    # External player link (Megaplay embed)
+    external_link = get_megaplay_url(ep_number, lang) if ep_number else ""
+    
     # Render watch page
     try:
         return render_template(
@@ -184,6 +190,7 @@ def watch(eps_title):
             dub_url=dub_url,
             selected_server=selected_server,
             available_servers=available_servers,
+            external_link=external_link,
         )
     except Exception as e:
         print("watch error:", e)

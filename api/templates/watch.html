@@ -202,6 +202,12 @@
         <div class="watch-main">
             <!-- Video Player -->
             <div class="video-wrapper" id="video-wrapper">
+                <!-- External Player (Megaplay Embed) - Always present but hidden by default -->
+                <iframe id="externalPlayer" src="about:blank" data-external-src="{{ external_link }}"
+                    style="display: none; width: 100%; aspect-ratio: 16/9; border: none; z-index: 10;" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="origin"></iframe>
+
                 {% if video_link %}
                 <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls playsinline
                     data-video-url="{{ video_link }}"
@@ -232,7 +238,8 @@
                     </button>
                 </div>
                 {% else %}
-                <div
+                <!-- No Video Fallback - only shown when external player is also not active -->
+                <div id="noVideoFallback"
                     style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: var(--bg-surface);">
                     <div class="text-center">
                         <div class="no-results-icon">🎬</div>
@@ -267,17 +274,11 @@
                 </div>
 
                 <div class="player-options">
-                    <!-- Server Select -->
-                    {% if available_servers and available_servers | length > 0 %}
-                    <select class="server-select" id="server-select">
-                        {% for server in available_servers %}
-                        <option value="{{ server.serverName }}" {% if server.serverName==selected_server %}selected{%
-                            endif %}>
-                            {{ server.serverName | upper }}
-                        </option>
-                        {% endfor %}
+                    <!-- Player Source Select -->
+                    <select class="server-select" id="player-select" style="margin-right: var(--space-sm);">
+                        <option value="internal">Internal</option>
+                        <option value="external">External (Megaplay)</option>
                     </select>
-                    {% endif %}
 
                     <!-- Language Toggle -->
                     <div
@@ -369,28 +370,70 @@
         try {
             // Check if player already exists to prevent double init
             if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
-                console.log('[VideoPlayer] Player already initialized');
                 return;
             }
 
             const vjsPlayer = new VideoJSPlayer();
             vjsPlayer.initialize();
-            console.log('[VideoPlayer] Player initialized successfully');
         } catch (error) {
-            console.error('[VideoPlayer] Error initializing player:', error);
+            // Video player initialization error - silently fail
         }
     });
 
-    // Server change
-    const serverSelect = document.getElementById('server-select');
-    if (serverSelect) {
-        serverSelect.addEventListener('change', function () {
-            const server = this.value;
-            // Store preference
-            document.cookie = `preferred_server=${server};path=/;max-age=31536000`;
-            // Reload page with new server
-            location.reload();
+    // Player Source Switching
+    const playerSelect = document.getElementById('player-select');
+    const internalPlayer = document.getElementById('videoPlayer'); // The video element or wrapper
+    const externalPlayer = document.getElementById('externalPlayer');
+    const skipButtons = document.getElementById('skipButtons');
+
+    // Restore preference from settings
+    const savedPlayer = localStorage.getItem('preferred_player') || 'internal';
+    if (playerSelect) {
+        playerSelect.value = savedPlayer;
+        togglePlayer(savedPlayer);
+    }
+
+    if (playerSelect) {
+        playerSelect.addEventListener('change', function () {
+            const mode = this.value;
+            localStorage.setItem('preferred_player', mode);
+            togglePlayer(mode);
         });
+    }
+
+    function togglePlayer(mode) {
+        const vjsWrapper = document.querySelector('.video-js');
+        const noVideoFallback = document.getElementById('noVideoFallback');
+
+        if (mode === 'external') {
+            if (vjsWrapper) vjsWrapper.style.display = 'none';
+            if (internalPlayer) internalPlayer.style.display = 'none';
+            if (noVideoFallback) noVideoFallback.style.display = 'none';
+
+            if (externalPlayer) {
+                const externalSrc = externalPlayer.dataset.externalSrc;
+                if (externalSrc && externalPlayer.src !== externalSrc) {
+                    externalPlayer.src = externalSrc;
+                }
+                externalPlayer.style.display = 'block';
+            }
+            if (skipButtons) skipButtons.style.display = 'none';
+
+            // Pause internal player if playing
+            try {
+                if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
+                    window.videojs.getPlayer('videoPlayer').pause();
+                }
+            } catch (e) {
+                // Silently ignore errors
+            }
+        } else {
+            if (vjsWrapper) vjsWrapper.style.display = '';
+            if (internalPlayer) internalPlayer.style.display = '';
+            if (externalPlayer) externalPlayer.style.display = 'none';
+            if (skipButtons) skipButtons.style.display = '';
+            if (noVideoFallback) noVideoFallback.style.display = vjsWrapper ? 'none' : '';
+        }
     }
 
     // Episode sidebar search

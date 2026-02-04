@@ -159,14 +159,12 @@
 
             <div class="settings-row">
                 <div class="settings-label">
-                    <span class="settings-label-text">Preferred Server</span>
-                    <span class="settings-label-desc">Default streaming server</span>
+                    <span class="settings-label-text">Player Source</span>
+                    <span class="settings-label-desc">Choose your preferred video player</span>
                 </div>
-                <select class="server-select" id="preferred-server">
-                    <option value="hd-1">HD-1</option>
-                    <option value="hd-2">HD-2</option>
-                    <option value="megacloud">MegaCloud</option>
-                    <option value="streamsb">StreamSB</option>
+                <select class="server-select" id="preferred-player">
+                    <option value="internal">Internal</option>
+                    <option value="external">External (Megaplay)</option>
                 </select>
             </div>
         </div>
@@ -256,13 +254,12 @@
         });
     }
 
-    // Server preference
-    const serverSelect = document.getElementById('preferred-server');
-    if (serverSelect) {
-        serverSelect.value = localStorage.getItem('yume_preferred_server') || 'hd-2';
-        serverSelect.addEventListener('change', function () {
-            localStorage.setItem('yume_preferred_server', this.value);
-            document.cookie = `preferred_server=${this.value};path=/;max-age=31536000`;
+    // Player preference (Internal/External)
+    const playerSelect = document.getElementById('preferred-player');
+    if (playerSelect) {
+        playerSelect.value = localStorage.getItem('preferred_player') || 'internal';
+        playerSelect.addEventListener('change', function () {
+            localStorage.setItem('preferred_player', this.value);
         });
     }
 

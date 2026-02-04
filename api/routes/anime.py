@@ -13,6 +13,7 @@ import asyncio
 import logging
 
 from ..providers import HianimeScraper
+from ..providers.hianime.megaplay_video import get_megaplay_url
 
 anime_bp = Blueprint('anime_bp', __name__)
 HA = HianimeScraper()
@@ -133,7 +134,7 @@ async def watch(eps_title):
     Watch episode page with video player
     GET /anime/watch/<eps_title>?ep=<episode_param>
     """
-    ep_param = request.args.get("")  # e.g. "141637" or "141637-sub"
+    ep_param = request.args.get("ep")  # e.g. "141637" or "141637-sub"
 
     # Parse episode number and language
     ep_number, lang = None, "sub"
@@ -211,6 +212,9 @@ async def watch(eps_title):
         intro = raw.get("intro") if isinstance(raw, dict) else None
         outro = raw.get("outro") if isinstance(raw, dict) else None
 
+        # External player link
+        external_link = get_megaplay_url(ep_number, lang)
+
         # Render watch page
         return render_template('watch.html',
                                back_to_ep=eps_title_clean,
@@ -228,7 +232,8 @@ async def watch(eps_title):
                                sub_url=sub_url,
                                dub_url=dub_url,
                                intro=intro,
-                               outro=outro)
+                               outro=outro,
+                               external_link=external_link)
 
     except Exception as e:
         logger.error(f"Watch error for {eps_title}: {e}")
