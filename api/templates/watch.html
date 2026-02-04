@@ -380,30 +380,38 @@
         }
     });
 
-    // Player Source Switching
+    // Player Source Switching with Auto-Fallback
     const playerSelect = document.getElementById('player-select');
-    const internalPlayer = document.getElementById('videoPlayer'); // The video element or wrapper
+    const internalPlayer = document.getElementById('videoPlayer');
     const externalPlayer = document.getElementById('externalPlayer');
     const skipButtons = document.getElementById('skipButtons');
+
+    // Track fallback state to prevent infinite loops
+    let hasTriedFallback = false;
+    let currentPlayerMode = 'internal';
 
     // Restore preference from settings
     const savedPlayer = localStorage.getItem('preferred_player') || 'internal';
     if (playerSelect) {
         playerSelect.value = savedPlayer;
-        togglePlayer(savedPlayer);
+        currentPlayerMode = savedPlayer;
+        togglePlayer(savedPlayer, false);
     }
 
     if (playerSelect) {
         playerSelect.addEventListener('change', function () {
             const mode = this.value;
+            hasTriedFallback = false; // Reset fallback state on manual change
             localStorage.setItem('preferred_player', mode);
-            togglePlayer(mode);
+            currentPlayerMode = mode;
+            togglePlayer(mode, false);
         });
     }
 
-    function togglePlayer(mode) {
+    function togglePlayer(mode, isAutoFallback = false) {
         const vjsWrapper = document.querySelector('.video-js');
         const noVideoFallback = document.getElementById('noVideoFallback');
+        currentPlayerMode = mode;
 
         if (mode === 'external') {
             if (vjsWrapper) vjsWrapper.style.display = 'none';
@@ -416,6 +424,11 @@
                     externalPlayer.src = externalSrc;
                 }
                 externalPlayer.style.display = 'block';
+
+                // Set up external player error detection (iframe load timeout)
+                if (!isAutoFallback) {
+                    setupExternalPlayerErrorDetection();
+                }
             }
             if (skipButtons) skipButtons.style.display = 'none';
 
@@ -424,16 +437,129 @@
                 if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
                     window.videojs.getPlayer('videoPlayer').pause();
                 }
-            } catch (e) {
-                // Silently ignore errors
-            }
+            } catch (e) { }
         } else {
             if (vjsWrapper) vjsWrapper.style.display = '';
             if (internalPlayer) internalPlayer.style.display = '';
             if (externalPlayer) externalPlayer.style.display = 'none';
             if (skipButtons) skipButtons.style.display = '';
             if (noVideoFallback) noVideoFallback.style.display = vjsWrapper ? 'none' : '';
+
+            // Set up internal player error detection
+            if (!isAutoFallback) {
+                setupInternalPlayerErrorDetection();
+            }
         }
+
+        // Update dropdown to reflect current state
+        if (playerSelect && playerSelect.value !== mode) {
+            playerSelect.value = mode;
+        }
+    }
+
+    // Internal player (Video.js) error detection
+    function setupInternalPlayerErrorDetection() {
+        setTimeout(() => {
+            try {
+                const player = window.videojs && window.videojs.getPlayer('videoPlayer');
+                if (!player) {
+                    fallbackToAlternatePlayer('internal');
+                    return;
+                }
+
+                // Listen for video errors
+                player.on('error', function () {
+                    fallbackToAlternatePlayer('internal');
+                });
+
+                // Detect stalled playback (no progress for 10 seconds after play attempt)
+                let playbackStarted = false;
+                let stallCheckTimeout = null;
+
+                player.on('play', function () {
+                    if (!playbackStarted) {
+                        playbackStarted = true;
+                        stallCheckTimeout = setTimeout(() => {
+                            if (player.currentTime() === 0 && !player.paused()) {
+                                fallbackToAlternatePlayer('internal');
+                            }
+                        }, 10000);
+                    }
+                });
+
+                player.on('timeupdate', function () {
+                    if (stallCheckTimeout) {
+                        clearTimeout(stallCheckTimeout);
+                        stallCheckTimeout = null;
+                    }
+                });
+
+            } catch (e) {
+                fallbackToAlternatePlayer('internal');
+            }
+        }, 2000); // Wait for player to initialize
+    }
+
+    // External player (iframe) error detection
+    function setupExternalPlayerErrorDetection() {
+        if (!externalPlayer) return;
+
+        // Iframe load timeout - if nothing loads in 15 seconds, fallback
+        const loadTimeout = setTimeout(() => {
+            // Check if iframe is still empty/about:blank
+            try {
+                if (externalPlayer.style.display === 'block') {
+                    // Can't reliably detect iframe content due to CORS, but we can fallback on timeout
+                    // Only fallback if user hasn't interacted with it
+                }
+            } catch (e) {
+                fallbackToAlternatePlayer('external');
+            }
+        }, 15000);
+
+        // Clear timeout if user manually switches
+        externalPlayer.addEventListener('load', () => {
+            clearTimeout(loadTimeout);
+        }, { once: true });
+    }
+
+    // Fallback to alternate player
+    function fallbackToAlternatePlayer(failedPlayer) {
+        if (hasTriedFallback) return; // Prevent infinite loops
+        hasTriedFallback = true;
+
+        const alternatePlayer = failedPlayer === 'internal' ? 'external' : 'internal';
+
+        // Show brief notification
+        showFallbackNotification(failedPlayer, alternatePlayer);
+
+        // Switch to alternate player
+        togglePlayer(alternatePlayer, true);
+    }
+
+    // Show fallback notification
+    function showFallbackNotification(failed, switched) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeIn 0.3s ease;
+        `;
+        notification.textContent = `${failed === 'internal' ? 'Internal' : 'External'} player failed. Switching to ${switched === 'internal' ? 'Internal' : 'External'}...`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 
     // Episode sidebar search
