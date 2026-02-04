@@ -6,6 +6,17 @@ from typing import Dict, Any
 from .megaplay_scraper import MegaplayScraper
 
 
+def get_megaplay_url(ep_id: str, language: str = "sub") -> str:
+    """
+    Get the megaplay embed URL
+    """
+    language = language.lower()
+    if language not in ("sub", "dub"):
+        language = "sub"
+        
+    return f"https://megaplay.buzz/stream/s-2/{ep_id}/{language}"
+
+
 def get_and_play_m3u8_and_vtt(ep_id: str, language: str = "sub") -> Dict[str, Any]:
     """
     Build megaplay URL and return proxied m3u8 + vtt info (synchronous)
