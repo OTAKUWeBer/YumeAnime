@@ -441,7 +441,11 @@
         } else {
             if (vjsWrapper) vjsWrapper.style.display = '';
             if (internalPlayer) internalPlayer.style.display = '';
-            if (externalPlayer) externalPlayer.style.display = 'none';
+            if (externalPlayer) {
+                externalPlayer.style.display = 'none';
+                // Unload external player to stop background audio/video
+                externalPlayer.src = 'about:blank';
+            }
             if (skipButtons) skipButtons.style.display = '';
             if (noVideoFallback) noVideoFallback.style.display = vjsWrapper ? 'none' : '';
 
