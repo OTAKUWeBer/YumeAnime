@@ -25,7 +25,13 @@
 
             <!-- Metadata & Badges -->
             <div class="meta-row">
-                <div class="genre-tag">{{ genre }}</div>
+                <div class="genre-tags">
+                    {% for g in genre.split(',') %}
+                        <a href="{{ url_for('main.catalog_routes.genre', genre_name=g.strip().lower().replace(' ', '-')) }}" class="genre-tag">
+                            {{ g.strip() }}
+                        </a>
+                    {% endfor %}
+                </div>
                 <div class="badges-group">
                     <span class="stat-badge sub" title="Subbed episodes">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -181,10 +187,25 @@
         flex-wrap: wrap;
     }
 
+    .genre-tags {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
     .genre-tag {
         color: var(--accent);
         font-weight: 500;
         font-size: 0.95rem;
+        display: inline-block;
+        text-decoration: none;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .genre-tag:hover {
+        opacity: 0.8;
+        transform: translateY(-1px);
     }
 
     .badges-group {
