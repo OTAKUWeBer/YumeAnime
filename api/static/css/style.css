@@ -1194,6 +1194,43 @@ h6 {
     line-height: 1.8;
 }
 
+/* Enhanced Sub/Dub Badges */
+.ep-status-pills {
+    display: flex;
+    gap: 8px;
+    margin-bottom: var(--space-md);
+}
+
+.ep-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ep-pill.sub {
+    color: #4ade80; /* Emerald Green */
+    border-color: rgba(74, 222, 128, 0.3);
+    background: rgba(74, 222, 128, 0.1);
+}
+
+.ep-pill.dub {
+    color: #38bdf8; /* Sky Blue */
+    border-color: rgba(56, 189, 248, 0.3);
+    background: rgba(56, 189, 248, 0.1);
+}
+
+.ep-pill svg {
+    width: 14px;
+    height: 14px;
+}
+
 .anime-genres {
     display: flex;
     flex-wrap: wrap;
