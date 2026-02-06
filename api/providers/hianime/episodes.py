@@ -4,6 +4,7 @@ Handles episode lists and episode server information
 """
 from typing import Dict, Any, Optional
 from .base import HianimeBaseClient
+from .anime_info import HianimeAnimeInfoService
 
 
 class HianimeEpisodesService:
@@ -16,6 +17,9 @@ class HianimeEpisodesService:
         """Fetch episodes and basic info for a given anime ID"""
         resp = await self.client._get(f"/anime/{anime_id}/episodes")
 
+        info_service = HianimeAnimeInfoService(self.client)
+        anime_info = await info_service.get_anime_info(anime_id)
+
         if resp.get("status") == 200 and resp.get("data"):
             data = resp["data"]
             episodes_list = data.get("episodes", [])
@@ -23,7 +27,7 @@ class HianimeEpisodesService:
                 "anime_id": anime_id,
                 "title": data.get("title", ""),
                 "total_sub_episodes": data.get("totalEpisodes", 0),
-                "total_dub_episodes": data.get("totalDubEpisodes", 0),
+                "total_dub_episodes": anime_info.get("total_dub_episodes", 0),
                 "episodes": episodes_list,
                 "total_episodes": len(episodes_list)
             }
