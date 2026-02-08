@@ -220,14 +220,18 @@
         display: block;
         flex: 1;
         min-width: 0;
+        overflow: hidden;
     }
 
     .episode-sidebar-list[data-view="list"] .episode-title {
         font-size: 0.9rem;
         font-weight: 500;
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+        word-break: break-word;
     }
 
     /* Grid View */
@@ -280,6 +284,54 @@
         display: block;
     }
 
+    /* Mobile grid improvements */
+    @media (max-width: 768px) {
+        .episode-sidebar-list[data-view="grid"] {
+            /* Fixed 5 columns on mobile for perfect fit */
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
+            height: 50px;
+        }
+
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-num {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .episode-sidebar-list[data-view="grid"] {
+            /* Smaller phones: 4 columns */
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            padding: 6px;
+        }
+
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
+            height: 40px;
+        }
+
+        .episode-sidebar-list[data-view="list"] .episode-sidebar-item {
+            padding: var(--space-xs) var(--space-sm);
+        }
+
+        .episode-sidebar-list[data-view="list"] .episode-sidebar-num {
+            width: 32px;
+            height: 32px;
+            font-size: 0.85rem;
+        }
+
+        .episode-sidebar-list[data-view="list"] .episode-title {
+            font-size: 0.85rem;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+        }
+    }
+
     .video-wrapper {
         position: relative;
         width: 100%;
@@ -295,17 +347,122 @@
         display: block;
     }
 
+    /* Watch Main container */
+    .watch-main {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* Mobile-Specific Watch Page Improvements */
+    @media (max-width: 768px) {
+        .watch-layout {
+            gap: var(--space-md);
+            padding: 0;
+        }
+
+        .watch-main {
+            width: 100%;
+        }
+
+        .video-wrapper {
+            border-radius: var(--radius-md);
+            /* Ensure video takes full width on mobile */
+            margin: 0 calc(-1 * var(--space-md));
+            width: calc(100% + 2 * var(--space-md));
+            border-radius: 0;
+        }
+
+        /* Episode info section on mobile */
+        .watch-main>div:last-child {
+            padding: var(--space-md) !important;
+            margin-top: var(--space-md) !important;
+        }
+
+        .watch-main h2 {
+            font-size: 1.1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .watch-layout {
+            gap: var(--space-sm);
+        }
+
+        /* Very small screens - even tighter spacing */
+        .video-wrapper {
+            margin: 0 calc(-1 * var(--space-sm));
+            width: calc(100% + 2 * var(--space-sm));
+        }
+    }
+
     /* Subtitle Styling Override for VideoJS */
     .video-js .vjs-text-track-display {
         background-color: transparent !important;
+        pointer-events: none;
+        /* Push subtitles above the control bar */
+        padding-bottom: 50px !important;
+        box-sizing: border-box;
     }
 
+    .video-js .vjs-text-track-cue,
     .video-js .vjs-text-track-cue>div {
         background-color: transparent !important;
         color: white !important;
-        text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8) !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 1.25em !important;
+        text-shadow:
+            2px 2px 4px rgba(0, 0, 0, 0.95),
+            -1px -1px 2px rgba(0, 0, 0, 0.8),
+            1px -1px 2px rgba(0, 0, 0, 0.8),
+            -1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        font-size: clamp(14px, 2.5vw, 24px) !important;
+        font-weight: 600 !important;
+        line-height: 1.4 !important;
+        padding: 4px 12px !important;
+        /* Prevent text from going off-screen */
+        max-width: 90% !important;
+        margin: 0 auto !important;
+        word-wrap: break-word !important;
+        text-align: center !important;
+    }
+
+    /* Mobile subtitle adjustments */
+    @media (max-width: 768px) {
+        .video-js .vjs-text-track-display {
+            padding-bottom: 45px !important;
+        }
+
+        .video-js .vjs-text-track-cue,
+        .video-js .vjs-text-track-cue>div {
+            font-size: clamp(12px, 3vw, 16px) !important;
+            max-width: 95% !important;
+            padding: 3px 6px !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+
+        .video-js .vjs-text-track-cue,
+        .video-js .vjs-text-track-cue>div {
+            font-size: 12px !important;
+            max-width: 98% !important;
+            line-height: 1.3 !important;
+        }
+    }
+
+    /* Fullscreen subtitle adjustments */
+    .video-js.vjs-fullscreen .vjs-text-track-cue,
+    .video-js.vjs-fullscreen .vjs-text-track-cue>div {
+        font-size: clamp(18px, 2.5vw, 32px) !important;
+        max-width: 80% !important;
+    }
+
+    @media (max-width: 768px) {
+
+        .video-js.vjs-fullscreen .vjs-text-track-cue,
+        .video-js.vjs-fullscreen .vjs-text-track-cue>div {
+            font-size: clamp(14px, 4vw, 20px) !important;
+            max-width: 90% !important;
+        }
     }
 
     /* Skip Buttons */
@@ -568,6 +725,8 @@
 <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
 <!-- Custom Video.js Player with Subtitle Support -->
 <script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
+<!-- Watch Progress Manager -->
+<script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
 <script>
     // View Toggle Logic
     document.addEventListener('DOMContentLoaded', () => {
@@ -634,6 +793,9 @@
 
     // Initialize Video.js player
     document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Progress Manager
+        window.progressManager = new WatchProgressManager();
+
         try {
             // Check if player already exists to prevent double init
             if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
@@ -642,8 +804,23 @@
 
             const vjsPlayer = new VideoJSPlayer();
             vjsPlayer.initialize();
+
+            // Connect Progress Manager to Video.js after initialization
+            // The player instance is stored in vjsPlayer.player
+            setTimeout(function () {
+                const player = window.videojs && window.videojs.getPlayer('videoPlayer');
+                if (player && window.progressManager) {
+                    player.ready(function () {
+                        const videoElement = player.tech().el();
+                        if (videoElement) {
+                            window.progressManager.startTracking(videoElement);
+                        }
+                    });
+                }
+            }, 500);
+
         } catch (error) {
-            // Video player initialization error - silently fail
+            console.error("[Watch] Video player initialization error:", error);
         }
     });
 
@@ -696,6 +873,12 @@
                 // Set up external player error detection (iframe load timeout)
                 if (!isAutoFallback) {
                     setupExternalPlayerErrorDetection();
+                }
+
+                // Force save progress as "started" for external player
+                if (window.progressManager) {
+                    // Save 1 second of progress to mark as started in Continue Watching
+                    window.progressManager.saveProgress(1, 0, false);
                 }
             }
             if (skipButtons) skipButtons.style.display = 'none';
