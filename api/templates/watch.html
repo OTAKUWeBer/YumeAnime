@@ -731,45 +731,60 @@
 
     // Internal player (Video.js) error detection
     function setupInternalPlayerErrorDetection() {
-        setTimeout(() => {
-            try {
-                const player = window.videojs && window.videojs.getPlayer('videoPlayer');
-                if (!player) {
+        // Check immediately if player exists
+        const player = window.videojs && window.videojs.getPlayer('videoPlayer');
+        if (!player) {
+            // Wait a brief moment in case init is just finishing, but shorter than before
+            setTimeout(() => {
+                const retryPlayer = window.videojs && window.videojs.getPlayer('videoPlayer');
+                if (!retryPlayer) {
                     fallbackToAlternatePlayer('internal');
-                    return;
+                } else {
+                    attachErrorListeners(retryPlayer);
                 }
+            }, 500);
+            return;
+        }
 
-                // Listen for video errors
-                player.on('error', function () {
-                    fallbackToAlternatePlayer('internal');
-                });
+        attachErrorListeners(player);
+    }
 
-                // Detect stalled playback (no progress for 10 seconds after play attempt)
-                let playbackStarted = false;
-                let stallCheckTimeout = null;
+    function attachErrorListeners(player) {
+        // 1. Check if an error ALREADY happened (e.g. 403 on source load)
+        if (player.error()) {
+            console.log("[Watch] Player has existing error:", player.error());
+            fallbackToAlternatePlayer('internal');
+            return;
+        }
 
-                player.on('play', function () {
-                    if (!playbackStarted) {
-                        playbackStarted = true;
-                        stallCheckTimeout = setTimeout(() => {
-                            if (player.currentTime() === 0 && !player.paused()) {
-                                fallbackToAlternatePlayer('internal');
-                            }
-                        }, 10000);
+        // 2. Listen for future errors
+        player.on('error', function () {
+            console.log("[Watch] Player reported error:", player.error());
+            fallbackToAlternatePlayer('internal');
+        });
+
+        // 3. Detect stalled playback (no progress for 10 seconds after play attempt)
+        let playbackStarted = false;
+        let stallCheckTimeout = null;
+
+        player.on('play', function () {
+            if (!playbackStarted) {
+                playbackStarted = true;
+                stallCheckTimeout = setTimeout(() => {
+                    if (player.currentTime() === 0 && !player.paused()) {
+                        console.log("[Watch] Playback stalled at 0s");
+                        fallbackToAlternatePlayer('internal');
                     }
-                });
-
-                player.on('timeupdate', function () {
-                    if (stallCheckTimeout) {
-                        clearTimeout(stallCheckTimeout);
-                        stallCheckTimeout = null;
-                    }
-                });
-
-            } catch (e) {
-                fallbackToAlternatePlayer('internal');
+                }, 10000);
             }
-        }, 2000); // Wait for player to initialize
+        });
+
+        player.on('timeupdate', function () {
+            if (stallCheckTimeout) {
+                clearTimeout(stallCheckTimeout);
+                stallCheckTimeout = null;
+            }
+        });
     }
 
     // External player (iframe) error detection
