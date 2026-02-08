@@ -6,6 +6,7 @@ from flask import Blueprint, request, session, redirect, url_for, render_templat
 from urllib.parse import parse_qs
 
 from ...providers.hianime.megaplay_video import get_megaplay_url
+from ...models.watchlist import get_watchlist_entry
 
 watch_routes_bp = Blueprint('watch_routes', __name__)
 
@@ -37,6 +38,58 @@ def watch(eps_title):
         if len(parts) > 1:
             lang = parts[1]
     
+    # If no episode parameter is provided, determine the best episode to watch
+    if not ep_param:
+        try:
+            # Fetch episodes list first
+            eps_title_clean = eps_title.split('?', 1)[0]
+            all_episodes = asyncio.run(current_app.ha_scraper.episodes(eps_title_clean))
+            eps_list = all_episodes.get("episodes", []) if all_episodes else []
+
+            if not eps_list:
+                return render_template('404.html', error_message="No episodes found for this anime."), 404
+
+            # Default to first episode
+            target_ep = eps_list[0]
+            
+            # Check user watchlist for progress if logged in
+            if 'username' in session and '_id' in session:
+                try:
+                    user_id = session.get('_id')
+                    # Use eps_title_clean as anime_id
+                    watchlist_entry = get_watchlist_entry(user_id, eps_title_clean)
+                    
+                    if watchlist_entry:
+                        watched_count = watchlist_entry.get('watched_episodes', 0)
+                        if watched_count > 0:
+                            # If watched 1, index 1 is Ep 2. 
+                            # If watched_count is valid index, use it.
+                            if watched_count < len(eps_list):
+                                target_ep = eps_list[watched_count]
+                            else:
+                                # If completed or out of bounds, maybe show the last one?
+                                # Or keep default to 0? 
+                                # Usually if completed, user might want to rewatch or just go to last.
+                                # Let's go to the last one they watched (which is index - 1)
+                                target_ep = eps_list[-1]
+                except Exception as e:
+                    current_app.logger.error(f"Error fetching watchlist entry in watch route: {e}")
+
+            # Extract the 'ep' parameter from the target episode's ID
+            target_ep_id = target_ep.get("episodeId", "")
+            if "?ep=" in target_ep_id:
+                ep_val = target_ep_id.split("?ep=")[1]
+            else:
+                ep_val = target_ep_id # Fallback
+            
+            return redirect(url_for('main.watch_routes.watch', eps_title=eps_title, ep=ep_val))
+
+        except Exception as e:
+            current_app.logger.error(f"Error checking default episode: {e}")
+            # If anything fails, let it fall through or error out, 
+            # but ideally we should have redirected.
+            pass
+
     # If no language specified in URL, check if dub is available
     if ep_param and "-" not in ep_param:
         try:

@@ -186,11 +186,11 @@
 
                     <!-- Actions - Placed first for quick access -->
                     <div class="anime-actions" style="margin-bottom: var(--space-xl);">
-                        <a href="/episodes/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg">
+                        <a href="/watch/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg" id="watch-now-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
-                            Watch Now
+                            <span id="watch-now-text">Watch Now</span>
                         </a>
                         <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
                             data-anime-id="{{ anime.id or current_season_id }}"
@@ -202,6 +202,56 @@
                             <span id="watchlist-btn-text">Add to List</span>
                         </button>
                     </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const watchBtn = document.getElementById('watch-now-btn');
+                            const watchText = document.getElementById('watch-now-text');
+                            const animeId = "{{ anime.id or current_season_id }}";
+
+                            if (watchBtn && animeId) {
+                                try {
+                                    const watchData = JSON.parse(localStorage.getItem('animeWatchData') || '{}');
+                                    let lastWatchedEp = null;
+                                    let maxTimestamp = 0;
+
+                                    // Find the most recently watched episode for this anime
+                                    Object.keys(watchData).forEach(key => {
+                                        if (key.startsWith(animeId + '_')) {
+                                            const data = watchData[key];
+                                            if (data.lastWatched > maxTimestamp) {
+                                                maxTimestamp = data.lastWatched;
+                                                lastWatchedEp = {
+                                                    key: key,
+                                                    ...data
+                                                };
+                                            }
+                                        }
+                                    });
+
+                                    if (lastWatchedEp) {
+                                        // key format: animeId_episodeId_lang
+                                        const parts = lastWatchedEp.key.split('_');
+                                        if (parts.length >= 3) {
+                                            const episodeId = parts[1];
+                                            const lang = parts[2]; // 'default', 'sub', or 'dub'
+                                            
+                                            // Construct safe URL
+                                            let newHref = `/watch/${animeId}?ep=${episodeId}`;
+                                            if (lang && lang !== 'default') {
+                                                newHref += `-${lang}`;
+                                            }
+                                            
+                                            watchBtn.href = newHref;
+                                            watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber || ''}`;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Error updating watch button:", e);
+                                }
+                            }
+                        });
+                    </script>
 
                     <!-- Genres -->
                     {% if anime.genres %}
