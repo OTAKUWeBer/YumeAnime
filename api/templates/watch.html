@@ -9,13 +9,41 @@
 <style>
     .watch-layout {
         display: grid;
-        grid-template-columns: 1fr 320px;
+        grid-template-columns: 350px 1fr;
+        /* Sidebar on left, Video on right */
         gap: var(--space-xl);
+        align-items: start;
     }
 
     @media (max-width: 1024px) {
         .watch-layout {
             grid-template-columns: 1fr;
+            display: flex;
+            flex-direction: column-reverse;
+            /* Video on top on mobile, but sidebar under it? checks... wait. 
+            On mobile we usually want video on top.
+            If flex-direction: column; -> Sidebar (top), Video (bottom).
+            If we want Video top, Sidebar bottom -> column-reverse is needed IF sidebar is first in DOM.
+            Let's check DOM order. 
+            If I put Sidebar first in DOM -> Layout works for Desktop (Left-Right).
+            On Mobile -> Sidebar first (Top), Video second (Bottom).
+            The user likely wants video on top on mobile. 
+            So on mobile: flex-direction: column-reverse; (Video is last in DOM? No.)
+            
+            Let's plan:
+            DOM Structure:
+            <div class="watch-layout">
+                <div class="episode-sidebar">...</div>
+                <div class="watch-main">...</div>
+            </div>
+            
+            Desktop (Grid): Sidebar(1), Main(2) -> Sidebar Left, Main Right. Correct.
+            Mobile (Flex Column): Sidebar(Top), Main(Bottom).
+            WE WANT: Main (Video) on Top.
+            So Mobile: try flex-direction: column-reverse; -> Main(Top), Sidebar(Bottom). Correct.
+            */
+            display: flex;
+            flex-direction: column-reverse;
         }
     }
 
@@ -23,19 +51,33 @@
         background: var(--bg-surface);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
-        max-height: 600px;
+        height: calc(100vh - 100px);
+        /* Fixed height for sticky feel */
+        max-height: 800px;
+        position: sticky;
+        top: 80px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
     }
 
+    @media (max-width: 1024px) {
+        .episode-sidebar {
+            height: auto;
+            max-height: 500px;
+            position: relative;
+            top: 0;
+        }
+    }
+
     .episode-sidebar-header {
         padding: var(--space-md);
         border-bottom: 1px solid var(--border-color);
-        font-weight: 600;
         display: flex;
         flex-direction: column;
         gap: var(--space-sm);
+        background: var(--bg-surface);
+        z-index: 10;
     }
 
     .episode-sidebar-header-top {
@@ -44,33 +86,99 @@
         justify-content: space-between;
     }
 
+    /* Toggle Buttons */
+    .view-toggle {
+        display: flex;
+        background: var(--bg-elevated);
+        border-radius: var(--radius-md);
+        padding: 2px;
+        border: 1px solid var(--border-color);
+    }
+
+    .view-btn {
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        transition: all 0.2s;
+        display: flex;
+        /* Fix alignment of SVG */
+        align-items: center;
+        justify-content: center;
+    }
+
+    .view-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .view-btn.active {
+        background: var(--bg-surface-hover);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Search Bar */
+    .episode-search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .episode-search-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+
     .episode-search-input {
         width: 100%;
-        padding: 8px 12px;
-        background: var(--bg-elevated);
+        padding: 8px 12px 8px 36px;
+        /* Space for icon */
+        background: rgba(255, 255, 255, 0.05);
+        /* Glass-like */
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
         color: var(--text-primary);
         font-size: 0.875rem;
         outline: none;
-        transition: border-color var(--transition-fast);
+        transition: all var(--transition-fast);
     }
 
     .episode-search-input:focus {
         border-color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.1);
     }
 
     .episode-search-input::placeholder {
         color: var(--text-muted);
     }
 
+    /* Sidebar List */
     .episode-sidebar-list {
         flex: 1;
         overflow-y: auto;
         padding: var(--space-sm);
+        /* Custom scrollbar */
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-color) transparent;
     }
 
-    .episode-sidebar-item {
+    .episode-sidebar-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .episode-sidebar-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .episode-sidebar-list::-webkit-scrollbar-thumb {
+        background-color: var(--border-color);
+        border-radius: 20px;
+    }
+
+    /* List View (Default) */
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item {
         display: flex;
         align-items: center;
         gap: var(--space-md);
@@ -78,18 +186,19 @@
         border-radius: var(--radius-md);
         transition: all var(--transition-fast);
         margin-bottom: 2px;
+        text-align: left;
     }
 
-    .episode-sidebar-item:hover {
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item:hover {
         background: var(--bg-surface-hover);
     }
 
-    .episode-sidebar-item.current {
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current {
         background: var(--text-primary);
         color: var(--bg-primary);
     }
 
-    .episode-sidebar-num {
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-num {
         width: 36px;
         height: 36px;
         display: flex;
@@ -101,9 +210,74 @@
         flex-shrink: 0;
     }
 
-    .episode-sidebar-item.current .episode-sidebar-num {
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current .episode-sidebar-num {
         background: var(--bg-primary);
         color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-info {
+        display: block;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Grid View */
+    .episode-sidebar-list[data-view="grid"] {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+        gap: 8px;
+        padding: 12px;
+        align-content: start;
+        /* Fixes "blank spaces" by packing items to top */
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 0;
+        cursor: pointer;
+        transition: all 0.2s;
+        height: 50px;
+        margin-bottom: 0;
+        text-decoration: none;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item:hover {
+        transform: translateY(-2px);
+        border-color: var(--text-primary);
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.current {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        font-weight: bold;
+        border-color: transparent;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-info {
+        display: none;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-num {
+        width: auto;
+        height: auto;
+        background: transparent;
+        font-size: 0.95rem;
+        display: block;
     }
 
     .video-wrapper {
@@ -199,6 +373,70 @@
     </a>
 
     <div class="watch-layout">
+        <!-- Sidebar (Now First for Left Column) -->
+        <div class="episode-sidebar">
+            <div class="episode-sidebar-header">
+                <div class="episode-sidebar-header-top">
+                    <span>Episodes</span>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="view-grid-btn" title="Grid View">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </button>
+                        <button class="view-btn" id="view-list-btn" title="List View">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <!-- Search Input -->
+                <div class="episode-search-wrapper">
+                    <svg class="episode-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="episodeSearch" class="episode-search-input" placeholder="Search episode...">
+                </div>
+            </div>
+
+            <div class="episode-sidebar-list" id="episodeList" data-view="grid">
+                {% if episodes and episodes.episodes %}
+                {% for ep in episodes.episodes %}
+                <!-- Check if this is the current episode -->
+                {% set is_current = (ep.number|string == episode_number|string) %}
+                <!-- Extract ID -->
+                {% set ep_id = ep.episodeId %}
+                {% set ep_val = ep_id.split('?ep=')[1] if '?ep=' in ep_id else ep_id %}
+
+                <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' else '-sub')) }}"
+                    class="episode-sidebar-item {% if is_current %}current{% endif %}" data-number="{{ ep.number }}">
+                    <div class="episode-sidebar-num">{{ ep.number }}</div>
+                    <div class="episode-info">
+                        <div class="episode-title">{{ ep.title }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+                {% else %}
+                <div class="text-center p-lg text-muted">
+                    No episodes found
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="watch-main">
             <!-- Video Player -->
             <div class="video-wrapper" id="video-wrapper">
@@ -320,41 +558,7 @@
             </div>
         </div>
 
-        <!-- Episode Sidebar -->
-        <div class="episode-sidebar">
-            <div class="episode-sidebar-header">
-                <div class="episode-sidebar-header-top">
-                    <span>Episodes</span>
-                    <span class="text-muted text-sm" id="episode-count">{% if episodes and episodes.episodes %}{{
-                        episodes.episodes | length }}{% endif %}</span>
-                </div>
-                <!-- ID changed to match original JS logic -->
-                <input type="text" class="episode-search-input" id="episode-sidebar-search"
-                    placeholder="Search episode...">
-            </div>
-            <div class="episode-sidebar-list" id="episode-sidebar-list">
-                {% if episodes and episodes.episodes %}
-                {% for ep in episodes.episodes %}
-                {% set ep_id = ep.episodeId.split('?ep=')[1] if '?ep=' in ep.episodeId else ep.episodeId %}
-                {% set ep_slug = ep.episodeId.split('?')[0] if '?' in ep.episodeId else back_to_ep %}
-                <a href="/watch/{{ ep_slug }}?ep={{ ep_id }}-{{ lang }}"
-                    class="episode-sidebar-item {% if ep.number == episode_number %}current{% endif %}"
-                    data-episode="{{ ep.number }}" data-title="{{ ep.title or '' }}">
-                    <div class="episode-sidebar-num">{{ ep.number }}</div>
-                    <div style="min-width: 0; flex: 1;">
-                        <div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            {{ ep.title or 'Episode ' + ep.number|string }}
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-                {% else %}
-                <div class="text-center p-lg text-muted">
-                    No episodes found
-                </div>
-                {% endif %}
-            </div>
-        </div>
+        <!-- Old Sidebar Removed -->
     </div>
 </div>
 {% endblock %}
@@ -365,6 +569,69 @@
 <!-- Custom Video.js Player with Subtitle Support -->
 <script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
 <script>
+    // View Toggle Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const episodeList = document.getElementById('episodeList');
+        const viewListBtn = document.getElementById('view-list-btn');
+        const viewGridBtn = document.getElementById('view-grid-btn');
+        const searchInput = document.getElementById('episodeSearch');
+
+        // Load saved preference
+        const savedView = localStorage.getItem('episodeView') || 'grid';
+        setEpisodeView(savedView);
+
+        function setEpisodeView(view) {
+            if (!episodeList) return;
+
+            episodeList.setAttribute('data-view', view);
+            localStorage.setItem('episodeView', view);
+
+            if (view === 'list') {
+                viewListBtn.classList.add('active');
+                viewGridBtn.classList.remove('active');
+            } else {
+                viewGridBtn.classList.add('active');
+                viewListBtn.classList.remove('active');
+            }
+        }
+
+        if (viewListBtn) {
+            viewListBtn.addEventListener('click', () => setEpisodeView('list'));
+        }
+        if (viewGridBtn) {
+            viewGridBtn.addEventListener('click', () => setEpisodeView('grid'));
+        }
+
+        // Search Functionality
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const items = episodeList.querySelectorAll('.episode-sidebar-item');
+
+                items.forEach(item => {
+                    const num = item.dataset.number;
+                    // In list view we might search title too, but grid view only has numbers usually visible.
+                    // Let's search both number and text content (title)
+                    const text = item.textContent.toLowerCase();
+
+                    if (num.includes(term) || text.includes(term)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Auto-scroll to current episode
+        const currentEp = episodeList.querySelector('.current');
+        if (currentEp) {
+            setTimeout(() => {
+                currentEp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
+        }
+    });
+
     // Initialize Video.js player
     document.addEventListener('DOMContentLoaded', function () {
         try {
@@ -379,6 +646,7 @@
             // Video player initialization error - silently fail
         }
     });
+
 
     // Player Source Switching with Auto-Fallback
     const playerSelect = document.getElementById('player-select');
