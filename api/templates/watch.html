@@ -64,9 +64,32 @@
     @media (max-width: 1024px) {
         .episode-sidebar {
             height: auto;
-            max-height: 500px;
+            max-height: 75vh;
+            /* Make it taller */
             position: relative;
             top: 0;
+        }
+    }
+
+
+    @media (max-width: 768px) {
+        .episode-sidebar {
+            /* Full width (Edge-to-Edge) on mobile */
+            margin-left: calc(-1 * var(--space-md));
+            margin-right: calc(-1 * var(--space-md));
+            width: calc(100% + 2 * var(--space-md));
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .episode-sidebar {
+            /* Adjust for smaller container padding */
+            margin-left: calc(-1 * var(--space-sm));
+            margin-right: calc(-1 * var(--space-sm));
+            width: calc(100% + 2 * var(--space-sm));
         }
     }
 
