@@ -28,7 +28,7 @@ def search():
 
             episodes = anime.get("episodes") or {}
             mapped[name] = {
-                "link": f"/episodes/{anime.get('id')}",
+                "link": f"/anime/{anime.get('id')}",
                 "image_url": anime.get("poster") or anime.get("image") or "",
                 "episodes": {
                     "sub": episodes.get("sub") if episodes else None,

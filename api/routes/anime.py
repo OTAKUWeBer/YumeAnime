@@ -4,7 +4,6 @@ File: api/routes/anime.py
 
 Route Structure:
 - /anime/<anime_id> (GET) - Anime information page
-- /anime/episodes/<anime_id> (GET) - Episodes list page
 - /anime/watch/<eps_title> (GET) - Watch episode page
 """
 from flask import Blueprint, render_template, request, redirect, url_for
@@ -64,68 +63,6 @@ async def anime_info(anime_id: str):
     except Exception as e:
         logger.error(f"Error fetching anime info for {anime_id}: {e}")
         return render_template('404.html', error_message=f"Error loading anime: {e}"), 500
-
-
-@anime_bp.route('/episodes/<anime_id>', methods=['GET'])
-async def episodes(anime_id: str):
-    """
-    Fetch and display episodes for the selected anime
-    GET /anime/episodes/<anime_id>
-    """
-    info = "Episodes"
-    suggestions = {}
-    
-    try:
-        # Fetch anime info
-        anime_info = await HA.get_anime_info(anime_id)
-        if not anime_info:
-            return render_template(
-                'index.html',
-                error=f"Anime with ID {anime_id} not found.",
-                suggestions=suggestions,
-                info=info
-            )
-
-        # Fetch episodes
-        ep_data = await HA.get_episodes(anime_id)
-        episodes_list = ep_data.get("episodes", [])
-
-        # Prepare episodes: tuple (episode_url, episode_number, episode_title)
-        episodes = [
-            (
-                ep.get("episodeId", "#"),
-                ep.get("number", idx + 1),
-                ep.get("title", f"Episode {idx + 1}")
-            )
-            for idx, ep in enumerate(episodes_list)
-        ]
-
-        total_sub_episodes = ep_data.get("total_sub_episodes", len(episodes_list))
-        total_dub_episodes = ep_data.get("total_dub_episodes", 0)
-
-        # Prepare other display info
-        genre = anime_info.get("genres", [])
-
-        return render_template(
-            'episodes.html',
-            title=anime_info.get("title", "Unknown Title"),
-            status=anime_info.get("status", "Unknown"),
-            genre=", ".join(genre),
-            total_episodes=len(episodes),
-            total_sub_episodes=total_sub_episodes,
-            total_dub_episodes=total_dub_episodes,
-            anime_id=anime_id,
-            episodes=episodes
-        )
-
-    except Exception as e:
-        logger.error(f"Error fetching episodes for {anime_id}: {e}")
-        return render_template(
-            'index.html',
-            error=f"Error fetching episodes: {e}",
-            suggestions=suggestions,
-            info=info
-        )
 
 
 @anime_bp.route('/watch/<eps_title>', methods=['GET'])
