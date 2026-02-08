@@ -15,6 +15,12 @@ class WatchProgressManager {
     this.bufferIndicator = null
     this.bufferTimeout = null
 
+    console.log("[WatchProgress] Init:", {
+      anime: this.currentAnimeId,
+      epId: this.currentEpisodeId,
+      epNum: this.currentEpisodeNumber
+    });
+
     this.initializeProgress()
   }
 
@@ -24,12 +30,12 @@ class WatchProgressManager {
       return saved
         ? JSON.parse(saved)
         : {
-            autoplayNext: true,
-            skipIntro: true,
-            rememberPosition: true,
-            defaultVolume: 80,
-            preferredLanguage: "sub",
-          }
+          autoplayNext: true,
+          skipIntro: true,
+          rememberPosition: true,
+          defaultVolume: 80,
+          preferredLanguage: "sub",
+        }
     } catch (error) {
       return {
         autoplayNext: true,
@@ -40,6 +46,7 @@ class WatchProgressManager {
       }
     }
   }
+
   loadWatchData() {
     try {
       const data = localStorage.getItem("animeWatchData")
@@ -59,8 +66,14 @@ class WatchProgressManager {
   }
 
   extractAnimeId() {
+    // Priority: DOM attribute -> URL regex
+    const watchLayout = document.querySelector('.watch-layout, .episode-sidebar');
+    if (watchLayout && watchLayout.dataset.animeId) {
+      return watchLayout.dataset.animeId;
+    }
     const path = window.location.pathname
-    const match = path.match(/\/watch\/([^?]+)/)
+    // Matches /watch/anime-slug
+    const match = path.match(/\/watch\/([^?\/]+)/)
     return match ? match[1] : null
   }
 
@@ -68,23 +81,27 @@ class WatchProgressManager {
     const urlParams = new URLSearchParams(window.location.search)
     const ep = urlParams.get("ep")
     if (!ep) return null
-
-    // Remove -sub or -dub suffix to get the base episode ID
     return ep.replace(/-(sub|dub)$/, "")
   }
 
   extractEpisodeNumber() {
+    // Priority: URL param -> DOM attribute -> Regex fallback
     const urlParams = new URLSearchParams(window.location.search)
     const ep = urlParams.get("ep")
-    if (!ep) return null
-
-    // Try to extract episode number from the URL parameter
-    // This might need adjustment based on your URL structure
-    const episodeElement = document.querySelector("p.text-lg.md\\:text-xl.text-gray-300")
-    if (episodeElement) {
-      const match = episodeElement.textContent.match(/Episode (\d+)/)
-      return match ? Number.parseInt(match[1]) : null
+    if (ep) {
+      // "4-sub" -> 4
+      const parts = ep.split('-');
+      if (parts.length > 0 && !isNaN(parts[0])) {
+        return parseFloat(parts[0]);
+      }
     }
+
+    // Check for active sidebar item
+    const activeItem = document.querySelector('.episode-sidebar-item.current');
+    if (activeItem && activeItem.dataset.number) {
+      return parseFloat(activeItem.dataset.number);
+    }
+
     return null
   }
 
@@ -101,7 +118,10 @@ class WatchProgressManager {
   }
 
   saveProgress(watchTime, totalTime = null, completed = false) {
-    if (!this.currentAnimeId || !this.currentEpisodeId) return
+    if (!this.currentAnimeId || !this.currentEpisodeId) {
+      console.warn("[WatchProgress] Cannot save - missing IDs");
+      return;
+    }
 
     const key = this.getEpisodeKey(this.currentAnimeId, this.currentEpisodeId)
     const current = this.watchData[key] || {}
@@ -207,19 +227,21 @@ class WatchProgressManager {
 
   showResumeNotification(watchTime) {
     const container = document.getElementById("videoContainer")
+    if (!container) return
+
     const notification = document.createElement("div")
     notification.className = "resume-notification"
     notification.innerHTML = `
-            <div class="flex items-center gap-3">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>Resume from ${this.formatTime(watchTime)}?</span>
-                <button class="resume-button" onclick="progressManager.resumeVideo()">Resume</button>
-                <button class="resume-button" onclick="progressManager.startFromBeginning()">Start Over</button>
-                <button class="resume-button" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-        `
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>Resume from ${this.formatTime(watchTime)}?</span>
+        <button class="resume-button" onclick="progressManager.resumeVideo()">Resume</button>
+        <button class="resume-button" onclick="progressManager.startFromBeginning()">Start Over</button>
+        <button class="resume-button" onclick="this.parentElement.parentElement.remove()">×</button>
+      </div>
+    `
 
     container.appendChild(notification)
     this.resumeTime = watchTime
@@ -242,26 +264,20 @@ class WatchProgressManager {
       // Wait for video to be fully ready before seeking
       const attemptResume = () => {
         if (this.video.readyState >= 2) {
-          // readyState 2 = HAVE_CURRENT_DATA
           this.video.currentTime = resumeTime
-          console.log(`[v0] Resumed from ${this.formatTime(resumeTime)}`)
+          console.log(`[WatchProgress] Resumed from ${this.formatTime(resumeTime)}`)
         } else {
-          // If not ready yet, try again in 100ms
           setTimeout(attemptResume, 100)
         }
       }
 
-      // Start attempting to resume
       attemptResume()
 
-      // If video is paused, ensure resume happens when user plays
       if (this.video.paused) {
         const handlePlay = () => {
-          // Double-check and correct position if needed
           setTimeout(() => {
             if (Math.abs(this.video.currentTime - resumeTime) > 2) {
               this.video.currentTime = resumeTime
-              console.log(`[v0] Corrected resume position to ${this.formatTime(resumeTime)}`)
             }
           }, 200)
           this.video.removeEventListener("play", handlePlay)
@@ -283,26 +299,26 @@ class WatchProgressManager {
 
     // Check if we should show resume notification or auto-resume
     const currentProgress = this.getCurrentProgress()
-    if (this.settings.rememberPosition && currentProgress.watchTime > 30) {
+    console.log("[WatchProgress] Resume Check:", currentProgress);
+
+    if (this.settings.rememberPosition && currentProgress.watchTime > 10) {
+      console.log(`[WatchProgress] Attempting resume from ${currentProgress.watchTime}s`);
+
       if (this.isMobileDevice()) {
-        // On mobile, show resume notification instead of auto-resuming
         this.showResumeNotification(currentProgress.watchTime)
       } else {
-        // On desktop, auto-resume with proper state verification
         const attemptAutoResume = () => {
-          if (this.video && this.video.readyState >= 2) {
+          if (this.video && this.video.readyState >= 1) {
             this.video.currentTime = currentProgress.watchTime
-            console.log(`[v0] Auto-resumed from ${this.formatTime(currentProgress.watchTime)}`)
+            console.log(`[WatchProgress] Auto-resumed from ${this.formatTime(currentProgress.watchTime)}`)
           } else if (this.video) {
-            // Keep trying until video is ready (max 5 seconds)
-            setTimeout(attemptAutoResume, 100)
+            setTimeout(attemptAutoResume, 200)
           }
         }
         attemptAutoResume()
       }
     }
 
-    // Start progress tracking
     this.startProgressTracking()
   }
 
@@ -316,7 +332,6 @@ class WatchProgressManager {
   startProgressTracking() {
     if (!this.video) return
 
-    // Use lower interval for smoother tracking but don't overload
     this.autoSaveInterval = setInterval(() => {
       if (this.video && !this.video.paused && this.video.currentTime > 0) {
         const currentTime = this.video.currentTime
@@ -326,56 +341,22 @@ class WatchProgressManager {
           this.saveProgress(currentTime, duration, currentTime / duration >= 0.9)
         }
       }
-    }, 1000) // Changed from 500ms to 1000ms for stability
+    }, 1000)
 
     this.video.addEventListener("waiting", () => {
-      console.log("[v0] Video buffering...")
       this.showBufferIndicator()
     })
 
     this.video.addEventListener("canplay", () => {
-      console.log("[v0] Video can play")
       this.hideBufferIndicator()
-      if (!this.video.paused && this.video.play) {
-        this.video.play().catch((err) => {
-          console.log("[v0] Auto-resume after buffer failed:", err)
-        })
-      }
     })
 
     this.video.addEventListener("canplaythrough", () => {
-      console.log("[v0] Video can play through")
       this.hideBufferIndicator()
-      if (!this.video.paused && this.video.play) {
-        this.video.play().catch((err) => {
-          console.log("[v0] Auto-resume after full buffer failed:", err)
-        })
-      }
     })
 
     this.video.addEventListener("playing", () => {
       this.hideBufferIndicator()
-    })
-
-    this.video.addEventListener("seeking", () => {
-      console.log("[v0] Video seeking...")
-    })
-
-    this.video.addEventListener("seeked", () => {
-      console.log("[v0] Seek completed")
-      if (!this.video.paused) {
-        this.video.play().catch((err) => console.log("[v0] Play after seek failed:", err))
-      }
-    })
-
-    this.video.addEventListener("timeupdate", () => {
-      const currentTime = this.video.currentTime
-      const duration = this.video.duration
-
-      if (currentTime > 0 && duration > 0 && !isNaN(currentTime) && !isNaN(duration)) {
-        // Only update UI, actual saving is handled by interval
-        this.updateUI()
-      }
     })
 
     this.video.addEventListener("ended", () => {
@@ -399,12 +380,10 @@ class WatchProgressManager {
     this.video.addEventListener("error", (event) => {
       const error = event.target.error
       if (error) {
-        console.error(`[v0] Video error: ${error.code} - ${error.message}`)
-        // Don't auto-recover, let player handle it
+        console.error(`[WatchProgress] Video error: ${error.code} - ${error.message}`)
       }
     })
 
-    // Save progress when page is about to unload
     window.addEventListener("beforeunload", () => {
       if (this.video && this.video.currentTime > 0 && this.video.duration > 0) {
         this.saveProgress(
@@ -424,16 +403,13 @@ class WatchProgressManager {
     if (!this.bufferIndicator) {
       this.bufferIndicator = document.createElement("div")
       this.bufferIndicator.className = "buffer-indicator"
-      this.bufferIndicator.innerHTML = `
-        <div class="buffer-spinner"></div>
-      `
+      this.bufferIndicator.innerHTML = `<div class="buffer-spinner"></div>`
       const videoContainer = document.getElementById("videoContainer")
       if (videoContainer) {
         videoContainer.appendChild(this.bufferIndicator)
       }
     }
 
-    // Show with a small delay to avoid flickering for brief pauses
     this.bufferTimeout = setTimeout(() => {
       if (this.bufferIndicator) {
         this.bufferIndicator.classList.add("show")
@@ -459,30 +435,25 @@ class WatchProgressManager {
 
   syncWatchedEpisodesToWatchlist() {
     if (!this.currentAnimeId || !this.currentEpisodeNumber) {
-      console.log("[v0] Cannot sync - missing anime or episode info")
+      console.log("[WatchProgress] Cannot sync - missing anime or episode info")
       return
     }
 
     try {
-      // Get current watched episodes from localStorage to count total
       const watchData = JSON.parse(localStorage.getItem("animeWatchData") || "{}")
       let completedCount = 0
 
-      // Look at all episodes for this anime and count completed ones
       Object.keys(watchData).forEach((key) => {
-        // Key format: anime_id_episode_id_langtype
         if (key.startsWith(this.currentAnimeId + "_")) {
           const progress = watchData[key]
-          // Only count if explicitly marked as completed
           if (progress.completed === true) {
             completedCount++
           }
         }
       })
 
-      console.log(`[v0] Total completed episodes for ${this.currentAnimeId}: ${completedCount}`)
+      console.log(`[WatchProgress] Total completed episodes for ${this.currentAnimeId}: ${completedCount}`)
 
-      // Send to backend to update watchlist with TOTAL count (not increment)
       fetch("/api/watchlist/update", {
         method: "POST",
         headers: {
@@ -491,18 +462,18 @@ class WatchProgressManager {
         body: JSON.stringify({
           anime_id: this.currentAnimeId,
           action: "episodes",
-          watched_episodes: completedCount, // Send total, not increment
+          watched_episodes: completedCount,
         }),
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log("[v0] Watchlist updated - total watched episodes:", completedCount)
+          console.log("[WatchProgress] Watchlist updated - total watched episodes:", completedCount)
         })
         .catch((error) => {
-          console.error("[v0] Error syncing to watchlist:", error)
+          console.error("[WatchProgress] Error syncing to watchlist:", error)
         })
     } catch (error) {
-      console.error("[v0] Error in syncWatchedEpisodesToWatchlist:", error)
+      console.error("[WatchProgress] Error in syncWatchedEpisodesToWatchlist:", error)
     }
   }
 
