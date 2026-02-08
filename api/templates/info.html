@@ -90,6 +90,50 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         z-index: 5;
     }
+
+    /* External Links Styles */
+    .external-links {
+        display: flex;
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+        margin-bottom: var(--space-lg);
+    }
+
+    .external-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-full);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-fast);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .external-pill img {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+
+    .external-pill:hover {
+        background: var(--bg-surface-hover);
+        border-color: var(--accent-muted);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .external-pill.anilist:hover {
+        border-color: #3db4f2;
+        box-shadow: 0 0 10px rgba(61, 180, 242, 0.2);
+    }
+
+    .external-pill.mal:hover {
+        border-color: #2e51a2;
+        box-shadow: 0 0 10px rgba(46, 81, 162, 0.2);
+    }
 </style>
 {% endblock %}
 
@@ -166,7 +210,8 @@
                     <div class="ep-status-pills">
                         {% if anime.total_sub_episodes and anime.total_sub_episodes > 0 %}
                         <div class="ep-pill sub" title="Subtitled Episodes">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                             </svg>
                             <span>SUB {{ anime.total_sub_episodes }}</span>
@@ -175,7 +220,8 @@
 
                         {% if anime.total_dub_episodes and anime.total_dub_episodes > 0 %}
                         <div class="ep-pill dub" title="Dubbed Episodes">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                             </svg>
@@ -186,7 +232,8 @@
 
                     <!-- Actions - Placed first for quick access -->
                     <div class="anime-actions" style="margin-bottom: var(--space-xl);">
-                        <a href="/watch/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg" id="watch-now-btn">
+                        <a href="/watch/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg"
+                            id="watch-now-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
@@ -235,13 +282,13 @@
                                         if (parts.length >= 3) {
                                             const episodeId = parts[1];
                                             const lang = parts[2]; // 'default', 'sub', or 'dub'
-                                            
+
                                             // Construct safe URL
                                             let newHref = `/watch/${animeId}?ep=${episodeId}`;
                                             if (lang && lang !== 'default') {
                                                 newHref += `-${lang}`;
                                             }
-                                            
+
                                             watchBtn.href = newHref;
                                             watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber || ''}`;
                                         }
@@ -264,7 +311,26 @@
 
                     <!-- Synopsis -->
                     <div class="anime-synopsis">
-                        <h3>Synopsis</h3>
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">
+                            <h3 style="margin-bottom: 0;">Synopsis</h3>
+                            {% if anime.anilistId or anime.malId %}
+                            <div class="external-links" style="margin-top: 0; margin-bottom: 0;">
+                                {% if anime.anilistId %}
+                                <a href="https://anilist.co/anime/{{ anime.anilistId }}" target="_blank"
+                                    class="external-pill anilist" title="View on AniList">
+                                    <img src="https://anilist.co/img/icons/icon.svg" alt="AniList">
+                                </a>
+                                {% endif %}
+                                {% if anime.malId %}
+                                <a href="https://myanimelist.net/anime/{{ anime.malId }}" target="_blank"
+                                    class="external-pill mal" title="View on MyAnimeList">
+                                    <img src="https://myanimelist.net/favicon.ico" alt="MAL">
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
                         <p>{{ anime.description or anime.synopsis or 'No description available.' }}</p>
                     </div>
 
