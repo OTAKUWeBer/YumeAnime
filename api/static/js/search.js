@@ -502,11 +502,11 @@ class SearchManager {
                          onerror="this.src='/static/images/placeholder.jpg'" 
                          loading="lazy" />
                     <div class="suggestion-info">
-                        <h4 class="suggestion-title group-hover:text-blue-300 transition-colors duration-200">${s.name}</h4>
-                        ${s.jname ? `<p class="text-xs text-gray-400 truncate font-medium">${s.jname}</p>` : ''}
-                        ${s.moreInfo && s.moreInfo.length ? `
+                        <h4 class="suggestion-title group-hover:text-blue-300 transition-colors duration-200">${s.name || s.title || 'Unknown'}</h4>
+                        ${(s.jname || s.japanese_title) ? `<p class="text-xs text-gray-400 truncate font-medium">${s.jname || s.japanese_title}</p>` : ''}
+                        ${(s.moreInfo && s.moreInfo.length) ? `
                             <div class="suggestion-meta">
-                                ${s.moreInfo.slice(0, 2).map((info, idx) => `<span>${info}${idx < 1 ? ' • ' : ''}</span>`).join('')}
+                                ${s.moreInfo.slice(0, 2).map((info, idx) => `<span>${info}${idx < Math.min(s.moreInfo.length - 1, 1) ? ' • ' : ''}</span>`).join('')}
                             </div>
                         ` : ''}
                     </div>
