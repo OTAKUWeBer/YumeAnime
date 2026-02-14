@@ -17,6 +17,36 @@
         border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
     }
+
+    .status-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        margin-left: 8px;
+        vertical-align: middle;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-completed {
+        background-color: rgba(76, 175, 80, 0.15);
+        color: #81c784;
+        border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    .status-ongoing {
+        background-color: rgba(33, 150, 243, 0.15);
+        color: #64b5f6;
+        border: 1px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .status-other {
+        background-color: rgba(158, 158, 158, 0.15);
+        color: #e0e0e0;
+        border: 1px solid rgba(158, 158, 158, 0.3);
+    }
 </style>
 {% endblock %}
 
@@ -127,6 +157,25 @@
             return sentinelDiv;
         }
 
+
+        // Helper to generate status badge
+        function getStatusBadge(status) {
+            if (!status || status === 'Unknown') return '';
+            const s = status.toLowerCase();
+            let text = status;
+            let cls = 'status-other';
+
+            if (s.includes('ongoing') || s.includes('currently')) {
+                text = 'Ongoing';
+                cls = 'status-ongoing';
+            } else if (s.includes('completed') || s.includes('finished')) {
+                text = 'Completed';
+                cls = 'status-completed';
+            }
+
+            return `<span class="status-badge ${cls}">${text}</span>`;
+        }
+
         // Fetch watchlist
         async function fetchWatchlist(status = '', page = 1, append = false) {
             if (isLoading) return;
@@ -194,7 +243,10 @@
                             <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
                         </a>
                         <div class="watchlist-item-info">
-                            <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
+                            <div>
+                                <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
+                                ${getStatusBadge(item.status)}
+                            </div>
                             <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
                                 <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
                                     ${Object.entries(statusLabels).map(([val, label]) =>
