@@ -234,6 +234,60 @@ series.{% endblock %}
         </div>
     </section>
     {% endif %}
+
+    <!-- Movies Section -->
+    {% if movies %}
+    <section class="section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                    <line x1="7" y1="2" x2="7" y2="22" />
+                    <line x1="17" y1="2" x2="17" y2="22" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <line x1="2" y1="7" x2="7" y2="7" />
+                    <line x1="2" y1="17" x2="7" y2="17" />
+                    <line x1="17" y1="7" x2="22" y2="7" />
+                    <line x1="17" y1="17" x2="22" y2="17" />
+                </svg>
+                Movies
+            </h2>
+            <a href="/category/movie" class="section-link">
+                View All
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+            </a>
+        </div>
+        <div class="anime-grid">
+            {% for anime in movies[:12] %}
+            <a href="/anime/{{ anime.id }}" class="anime-card">
+                <div class="anime-card-poster">
+                    <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}" loading="lazy">
+                    <div class="anime-card-badges">
+                        {% if anime.episodes and anime.episodes.sub %}
+                        <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                        {% endif %}
+                        {% if anime.episodes and anime.episodes.dub %}
+                        <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="anime-card-overlay">
+                        <span class="btn btn-primary btn-sm">Watch Now</span>
+                    </div>
+                </div>
+                <div class="anime-card-info">
+                    <h3 class="anime-card-title">{{ anime.name or anime.title }}</h3>
+                    <div class="anime-card-meta">
+                        {% if anime.type %}<span>{{ anime.type }}</span>{% endif %}
+                        {% if anime.duration %}<span>{{ anime.duration }}</span>{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
 

@@ -142,6 +142,7 @@
                 <a href="{{ url_for('main.home_routes.home') }}"
                     class="nav-link {% if request.endpoint == 'main.home_routes.home' %}active{% endif %}">Home</a>
                 <a href="/genre/action" class="nav-link">Genres</a>
+                <a href="/category/movie" class="nav-link {% if 'movie' in request.path %}active{% endif %}">Movies</a>
                 {% if session.get('username') %}
                 <a href="{{ url_for('watchlist.watchlist') }}"
                     class="nav-link {% if request.endpoint == 'watchlist.watchlist' %}active{% endif %}">Watchlist</a>
@@ -290,6 +291,7 @@
         <div class="mobile-nav-links">
             <a href="{{ url_for('main.home_routes.home') }}" class="mobile-nav-link">Home</a>
             <a href="/genre/action" class="mobile-nav-link">Genres</a>
+            <a href="/category/movie" class="mobile-nav-link">Movies</a>
             {% if session.get('username') %}
             <a href="{{ url_for('watchlist.watchlist') }}" class="mobile-nav-link">Watchlist</a>
             <a href="{{ url_for('main.catalog_routes.profile') }}" class="mobile-nav-link">Profile</a>

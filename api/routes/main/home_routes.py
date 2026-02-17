@@ -18,9 +18,27 @@ def home():
     """Display home page with anime sections"""
     info = "Home"
     try:
-        data = asyncio.run(current_app.ha_scraper.home())
+        async def _fetch_all():
+            scraper = current_app.ha_scraper
+            home_data, movie_data = await asyncio.gather(
+                scraper.home(),
+                scraper.category("movie"),
+                return_exceptions=True,
+            )
+            if isinstance(home_data, Exception):
+                home_data = None
+            if isinstance(movie_data, Exception):
+                movie_data = None
+            return home_data, movie_data
+
+        data, movie_data = asyncio.run(_fetch_all())
+
+        if data is None:
+            raise RuntimeError("Failed to fetch home data")
+
+        movies = (movie_data or {}).get("animes", [])
         current_app.logger.debug("home counts: %s", data.get("counts"))
-        return render_template("index.html", suggestions=data, info=info)
+        return render_template("index.html", suggestions=data, movies=movies, info=info)
     except Exception as e:
         current_app.logger.exception("Unhandled error in /home")
         empty = {
@@ -34,6 +52,7 @@ def home():
         return render_template(
             "index.html",
             suggestions={"success": False, "data": empty, "counts": {}},
+            movies=[],
             error=f"Error fetching home page data: {e}",
             info=info
         )
