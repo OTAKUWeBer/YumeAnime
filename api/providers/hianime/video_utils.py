@@ -12,16 +12,24 @@ from bs4 import BeautifulSoup
 dotenv.load_dotenv()
 proxy_url = os.getenv("PROXY_URL")
 
+# Enforce HTTPS on proxy URL to prevent mixed content blocking
+if proxy_url and proxy_url.startswith("http://"):
+    proxy_url = proxy_url.replace("http://", "https://", 1)
+
 def encode_proxy(url: Optional[str]) -> Optional[str]:
     """
     Return proxied URL through Vercel http-proxy-zai (base64-encoded).
     If url is falsy, returns it unchanged.
+    Always ensures the proxy URL uses HTTPS to avoid mixed content blocking.
     """
     if not url:
         return url
     try:
         encoded = base64.b64encode(url.encode()).decode()
-        return f'{proxy_url}{encoded}'
+        result = f'{proxy_url}{encoded}'
+        if result.startswith("http://"):
+            result = result.replace("http://", "https://", 1)
+        return result
     except Exception:
         # If encoding fails, return original URL rather than crash
         return url
