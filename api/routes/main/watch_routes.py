@@ -176,6 +176,58 @@ def watch(eps_title):
     except Exception:
         all_episodes = None
 
+    try:
+        # Also try to fetch next episode schedule for the watch page
+        anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(eps_title_clean))
+        get_schedule_method = getattr(current_app.ha_scraper, "next_episode_schedule", None)
+        next_episode_schedule = asyncio.run(get_schedule_method(eps_title_clean)) if get_schedule_method else None
+    except Exception:
+        anime_info = None
+        next_episode_schedule = None
+
+    if isinstance(anime_info, dict) and "info" in anime_info and isinstance(anime_info["info"], dict):
+        anime = anime_info["info"]
+    else:
+        anime = anime_info or {}
+
+    needs_fallback = False
+    if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
+        needs_fallback = True
+    else:
+        time_until = next_episode_schedule.get("secondsUntilAiring") or next_episode_schedule.get("timeUntilAiring")
+        if time_until is not None:
+            try:
+                if int(time_until) < 0:
+                    needs_fallback = True
+            except ValueError:
+                needs_fallback = True
+
+    if needs_fallback:
+        hianime_al_id = anime.get("anilistId") or anime.get("alID")
+        hianime_mal_id = anime.get("malId") or anime.get("malID")
+        hianime_title = anime.get("title")
+        
+        if hianime_al_id or hianime_mal_id or hianime_title:
+            try:
+                from api.utils.helpers import fetch_anilist_next_episode
+                
+                async def fetch_fallback():
+                    return await fetch_anilist_next_episode(
+                        anilist_id=hianime_al_id,
+                        mal_id=hianime_mal_id,
+                        search_title=hianime_title
+                    )
+                
+                try:
+                    loop = asyncio.get_running_loop()
+                    fallback_schedule = loop.run_until_complete(fetch_fallback())
+                except RuntimeError:
+                    fallback_schedule = asyncio.run(fetch_fallback())
+                
+                if fallback_schedule and fallback_schedule.get("airingTimestamp"):
+                    next_episode_schedule = fallback_schedule
+            except Exception as e:
+                current_app.logger.error(f"Failed to fetch fallback schedule from AniList in watch: {e}")
     # Build previous/next episode URLs
     prev_episode_url = next_episode_url = None
     prev_episode_number = next_episode_number = None
@@ -244,6 +296,7 @@ def watch(eps_title):
             selected_server=selected_server,
             available_servers=available_servers,
             external_link=external_link,
+            next_episode_schedule=next_episode_schedule,
         )
     except Exception as e:
         print("watch error:", e)

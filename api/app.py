@@ -5,20 +5,18 @@ import secrets
 from datetime import timedelta
 
 from flask import Flask, render_template, request
-
 from dotenv import load_dotenv
+
+# Load .env first so Config can read it
+load_dotenv(override=False)
+
 from api.core.config import Config
 from api.providers import HianimeScraper
-
 
 from api.routes.main import main_bp
 from api.routes.auth import auth_bp
 from api.routes.watchlist import watchlist_bp
 from api.routes.api import api_bp
-
-
-# Load .env (optional; safe to call in production if python-dotenv isn't installed it'll fail — install it for dev)
-load_dotenv(override=False)
 
 
 def create_app():

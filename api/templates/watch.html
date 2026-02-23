@@ -719,6 +719,108 @@
                 </div>
             </div>
 
+            <!-- Next Episode Schedule UI -->
+            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+            {% set next_ep = next_episode_schedule.episode %}
+            <div class="next-episode-banner"
+                style="position: relative; margin-top: var(--space-lg); background: var(--bg-surface); padding: var(--space-lg); border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); overflow: hidden;">
+
+                <!-- glowing background accent -->
+                <div
+                    style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); filter: blur(40px); opacity: 0.15; pointer-events: none;">
+                </div>
+
+                <div style="position: relative; z-index: 1;">
+                    <h3
+                        style="margin-bottom: var(--space-xs); font-size: 1.25rem; color: var(--text-primary); display: flex; align-items: center; gap: var(--space-sm); font-weight: 700;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="filter: drop-shadow(0 0 8px rgba(var(--accent-rgb, 255,255,255), 0.5));">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Episode {{ next_ep if next_ep else '??' }} Airs In
+                    </h3>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); padding-left: 32px;">Don't miss
+                        the upcoming release!</p>
+                </div>
+
+                <div class="countdown-timer" id="next-ep-countdown"
+                    data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
+                    style="display: flex; gap: var(--space-sm); position: relative; z-index: 1;">
+                    <div class="time-block"
+                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
+                        <span class="days"
+                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
+                        <span class="label"
+                            style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Days</span>
+                    </div>
+                    <div class="time-block"
+                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
+                        <span class="hours"
+                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
+                        <span class="label"
+                            style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Hrs</span>
+                    </div>
+                    <div class="time-block"
+                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
+                        <span class="minutes"
+                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
+                        <span class="label"
+                            style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Mins</span>
+                    </div>
+                    <div class="time-block"
+                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--accent); box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);">
+                        <span class="seconds"
+                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--accent); text-shadow: 0 0 10px rgba(0, 0, 0, 0.3);">--</span>
+                        <span class="label"
+                            style="font-size: 0.7rem; color: var(--accent); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Secs</span>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const container = document.getElementById('next-ep-countdown');
+                    if (!container) return;
+
+                    const timestamp = parseInt(container.getAttribute('data-timestamp'), 10);
+                    if (!timestamp) return;
+
+                    const daysEl = container.querySelector('.days');
+                    const hoursEl = container.querySelector('.hours');
+                    const minutesEl = container.querySelector('.minutes');
+                    const secondsEl = container.querySelector('.seconds');
+
+                    function updateTimer() {
+                        const now = Date.now();
+                        const jsTimestamp = timestamp > 9999999999 ? timestamp : timestamp * 1000;
+                        const diff = jsTimestamp - now;
+
+                        if (diff <= 0) {
+                            daysEl.textContent = "00";
+                            hoursEl.textContent = "00";
+                            minutesEl.textContent = "00";
+                            secondsEl.textContent = "00";
+                            return;
+                        }
+
+                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                        const m = Math.floor((diff / 1000 / 60) % 60);
+                        const s = Math.floor((diff / 1000) % 60);
+
+                        daysEl.textContent = d.toString().padStart(2, '0');
+                        hoursEl.textContent = h.toString().padStart(2, '0');
+                        minutesEl.textContent = m.toString().padStart(2, '0');
+                        secondsEl.textContent = s.toString().padStart(2, '0');
+                    }
+
+                    updateTimer();
+                    setInterval(updateTimer, 1000);
+                });
+            </script>
+            {% endif %}
+
             <!-- Episode Info -->
             <div
                 style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--space-lg); margin-top: var(--space-lg);">

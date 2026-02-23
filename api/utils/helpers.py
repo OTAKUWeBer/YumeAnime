@@ -130,6 +130,74 @@ def get_anilist_user_info(access_token):
         logger.error(f"Error getting AniList user info: {e}")
         return None
 
+async def fetch_anilist_next_episode(anilist_id: int = None, mal_id: int = None, search_title: str = None) -> dict:
+    """Fetch the next episode schedule from AniList GraphQL API using anilistId, malId, or search title."""
+    if not anilist_id and not mal_id and not search_title:
+        return {}
+        
+    query_id = '''
+    query ($id: Int, $idMal: Int) {
+      Media(id: $id, idMal: $idMal, type: ANIME) {
+        nextAiringEpisode {
+          airingAt
+          timeUntilAiring
+          episode
+        }
+      }
+    }
+    '''
+    
+    query_search = '''
+    query ($search: String) {
+      Media(search: $search, type: ANIME, status: RELEASING) {
+        nextAiringEpisode {
+          airingAt
+          timeUntilAiring
+          episode
+        }
+      }
+    }
+    '''
+    
+    queries_to_try = []
+    if anilist_id and int(anilist_id) > 0:
+        queries_to_try.append((query_id, {"id": int(anilist_id)}))
+    if mal_id and int(mal_id) > 0:
+        queries_to_try.append((query_id, {"idMal": int(mal_id)}))
+    if search_title:
+        queries_to_try.append((query_search, {"search": search_title}))
+        
+    if not queries_to_try:
+        return {}
+    
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            for query, variables in queries_to_try:
+                async with session.post('https://graphql.anilist.co', json={'query': query, 'variables': variables}) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        media_data = data.get('data', {})
+                        # Handle both single Media and Page->media responses
+                        if 'Page' in media_data:
+                            media_list = media_data.get('Page', {}).get('media', [])
+                            media = media_list[0] if media_list else {}
+                        else:
+                            media = media_data.get('Media') or {}
+                            
+                        next_ep = media.get('nextAiringEpisode')
+                        if next_ep and next_ep.get('airingAt'):
+                            return {
+                                "airingTimestamp": next_ep.get('airingAt'),
+                                "timeUntilAiring": next_ep.get('timeUntilAiring'),
+                                "episode": next_ep.get('episode')
+                            }
+                # If we get here, either status != 200 or no valid airingAt was found for this query.
+                # Continue loop to try the next fallback (e.g. mal_id or search_title).
+        return {}
+    except Exception as e:
+        logger.error(f"Error fetching next episode from AniList: {e}")
+        return {}
 
 # === Sync Progress Management ===
 
