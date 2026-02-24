@@ -52,7 +52,15 @@ async def anime_info(anime_id: str):
         # Normalize: if the payload nests under "info", extract it
         if isinstance(anime_info, dict) and "info" in anime_info and isinstance(anime_info["info"], dict):
             anime = anime_info["info"]
-        # Fallback to AniList if Hianime next episode schedule isn't available
+        else:
+            anime = anime_info
+
+        # Auto-save IDs to cache (for Vercel — grows the DB as users browse)
+        try:
+            from ..utils.id_cache import auto_cache_from_info
+            auto_cache_from_info(anime_id, anime)
+        except Exception:
+            pass
         # OR if the schedule is expired/in the past (time < 0)
         needs_fallback = False
         if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
