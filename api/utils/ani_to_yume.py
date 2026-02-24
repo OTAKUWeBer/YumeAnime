@@ -497,13 +497,23 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
         all_results = []
         needs_api = []  # entries that need API search (cache miss)
         
-        # === FAST PATH: process cached entries instantly ===
+        # === FAST PATH: resolve cache hits in memory, write ONCE ===
+        from ..models.watchlist import watchlist_collection
+        from ..models.watchlist import clear_user_cache
+        
+        status_mapping = {
+            'CURRENT': 'watching', 'COMPLETED': 'completed',
+            'PAUSED': 'paused', 'DROPPED': 'dropped',
+            'PLANNING': 'plan_to_watch'
+        }
+        
+        # Step 1: resolve all entries from cache (pure memory, instant)
+        cached_updates = {}  # anime_id -> {anime_title, status, watched_episodes}
         for entry in watchlist:
             media = entry.get("media", {})
             anilist_id = media.get("id")
             mal_id = media.get("idMal")
             
-            # Check cache for hianime_id (instant lookup)
             hianime_id = None
             if config.enable_caching and anilist_id and anilist_id in id_mapping_cache:
                 hianime_id = id_mapping_cache[anilist_id]
@@ -511,35 +521,69 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                 hianime_id = lookup_hianime_id(anilist_id or 0, mal_id or 0)
             
             if hianime_id:
-                # CACHE HIT — add/update watchlist immediately, no API call
                 cached = get_ids_for_hianime(hianime_id)
                 title = (cached.get("title", "") if cached else "") or media.get("title", {}).get("userPreferred", "")
-                
-                status_mapping = {
-                    'CURRENT': 'watching', 'COMPLETED': 'completed',
-                    'PAUSED': 'paused', 'DROPPED': 'dropped',
-                    'PLANNING': 'plan_to_watch'
-                }
-                local_status = status_mapping.get(entry.get("status", "CURRENT"), 'watching')
+                local_status = status_mapping.get(entry.get("status", "CURRENT"), "watching")
                 watched_episodes = entry.get("progress", 0)
                 
-                result = await call_maybe_async(add_to_watchlist,
-                    user_id=user_id, anime_id=hianime_id,
-                    anime_title=title, status=local_status,
-                    watched_episodes=watched_episodes,
-                )
-                if result:
-                    await progress.update(synced=True, cached=True)
-                    existing_anime_ids.add(hianime_id)
-                    all_results.append({"success": True, "anime_id": hianime_id, "anime_title": title, "status": local_status})
-                else:
-                    await progress.update(failed=True)
-                    all_results.append({"failed": True, "reason": "database_error", "anilist_id": anilist_id})
+                cached_updates[hianime_id] = {
+                    "anime_id": hianime_id,
+                    "anime_title": title,
+                    "status": local_status,
+                    "watched_episodes": watched_episodes,
+                }
+                all_results.append({"success": True, "anime_id": hianime_id, "anime_title": title, "status": local_status})
             else:
-                # CACHE MISS — queue for API search
                 needs_api.append(entry)
         
-        logger.info("Fast path done: %d cached hits, %d need API search", len(watchlist) - len(needs_api), len(needs_api))
+        logger.info("Cache resolved: %d hits, %d need API search", len(cached_updates), len(needs_api))
+        
+        # Step 2: merge with existing watchlist and write ONCE
+        if cached_updates:
+            now = datetime.utcnow()
+            
+            # Build merged watchlist: start with existing entries, update/add from cache
+            existing_map = {}
+            for wl_entry in (user_watchlist or []):
+                aid = wl_entry.get("anime_id")
+                if aid:
+                    existing_map[aid] = wl_entry
+            
+            # Merge cached updates into existing
+            for anime_id, update in cached_updates.items():
+                existing_entry = existing_map.get(anime_id, {})
+                existing_map[anime_id] = {
+                    "anime_id": anime_id,
+                    "anime_title": update["anime_title"] or existing_entry.get("anime_title", ""),
+                    "status": update["status"],
+                    "watched_episodes": update["watched_episodes"],
+                    "updated_at": now,
+                }
+            
+            # Write entire watchlist back in ONE operation
+            merged_watchlist = list(existing_map.values())
+            try:
+                watchlist_collection.update_one(
+                    {"_id": user_id},
+                    {
+                        "$set": {"watchlist": merged_watchlist},
+                        "$setOnInsert": {"created_at": now},
+                    },
+                    upsert=True,
+                )
+                clear_user_cache(user_id)
+                
+                # Update progress for all cached entries at once
+                for _ in cached_updates:
+                    await progress.update(synced=True, cached=True)
+                    
+                logger.info("Bulk wrote %d entries to watchlist in 1 DB operation", len(cached_updates))
+            except Exception as e:
+                logger.error("Bulk watchlist write failed: %s", e)
+                for _ in cached_updates:
+                    await progress.update(failed=True)
+        
+        logger.info("Fast path done: %d cached, %d need API", len(cached_updates), len(needs_api))
         
         # === SLOW PATH: process cache misses via API search ===
         if needs_api:
