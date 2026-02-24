@@ -299,16 +299,17 @@ async def get_hianime_link_with_retry(media: Dict[str, Any], config: BatchConfig
     # 1) Check in-memory cache first (fastest)
     if config.enable_caching and anilist_id in id_mapping_cache:
         hianime_id = id_mapping_cache[anilist_id]
-        if hianime_id in info_cache:
-            cached_info = info_cache[hianime_id]
-            return {
-                "id": hianime_id,
-                "name": cached_info.get("title"),
-                "poster": cached_info.get("poster"),
-                "link": f"/anime/{hianime_id}"
-            }
+        # Return from cache — use info_cache for title/poster if available,
+        # otherwise fall back to AniList media title
+        cached_info = info_cache.get(hianime_id, {}) if config.enable_caching else {}
+        return {
+            "id": hianime_id,
+            "name": cached_info.get("title") or media.get("title", {}).get("userPreferred", ""),
+            "poster": cached_info.get("poster", ""),
+            "link": f"/anime/{hianime_id}"
+        }
 
-    # 2) Check persistent MongoDB ID cache
+    # 2) Check persistent MongoDB/JSON ID cache
     persistent_hid = lookup_hianime_id(anilist_id or 0, mal_id or 0)
     if persistent_hid:
         # Found in persistent cache — populate in-memory cache too
