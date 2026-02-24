@@ -318,8 +318,7 @@ async def get_hianime_link_with_retry(media: Dict[str, Any], config: BatchConfig
         for title in candidates:
             try:
                 if attempt > 0:
-                    wait_time = (2 ** (attempt - 1)) * 0.5
-                    await asyncio.sleep(wait_time)
+                    await asyncio.sleep(0.3)
                 
                 cache_key = _normalize_name(title)
                 if config.enable_caching and cache_key in search_cache:
@@ -391,7 +390,15 @@ async def process_single_entry(user_id: str, entry: Dict[str, Any],
             anilist_id = media.get("id")
             mal_id = media.get("idMal")
             
-            hianime = await get_hianime_link_with_retry(media, config)
+            # Timeout per entry so one slow search doesn't block everything
+            try:
+                hianime = await asyncio.wait_for(
+                    get_hianime_link_with_retry(media, config),
+                    timeout=15.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning("Timeout searching for anilist_id=%s", anilist_id)
+                hianime = None
             if not hianime:
                 await progress.update(failed=True)
                 return {
@@ -460,6 +467,27 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
 
         logger.info(f"Starting AniList sync for user {user_id}")
         
+        # --- Helper to send phase updates directly ---
+        def _send_phase(message, processed=0, total=0, pct=0, **extra):
+            if progress_callback:
+                class _P:
+                    pass
+                p = _P()
+                p.processed = processed
+                p.total = total
+                p.synced = extra.get("synced", 0)
+                p.skipped = extra.get("skipped", 0)
+                p.failed = extra.get("failed", 0)
+                p.percentage = pct
+                p.message = message
+                p.cached_hits = extra.get("cached_hits", 0)
+                try:
+                    progress_callback(p)
+                except Exception:
+                    pass
+        
+        _send_phase("Fetching your AniList watchlist...", pct=2)
+        
         watchlist = await fetch_anilist_watchlist(session, access_token)
         
         if not watchlist:
@@ -471,17 +499,21 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                 }
             return {"error": "Failed to connect to AniList"}
 
-        progress = SyncProgress(total=len(watchlist), callback=progress_callback)
+        total = len(watchlist)
+        progress = SyncProgress(total=total, callback=progress_callback)
+        
+        _send_phase(f"Found {total} anime on AniList. Loading cache...", total=total, pct=5)
         
         # Preload persistent ID cache into memory for fast lookups
         try:
             persistent_ids = preload_to_memory()
             id_mapping_cache.update(persistent_ids)
             logger.info("Preloaded %d ID mappings from persistent cache", len(persistent_ids))
+            _send_phase(f"Loaded {len(persistent_ids)} cached IDs. Matching anime...", total=total, pct=10)
         except Exception as e:
             logger.warning("Failed to preload ID cache: %s", e)
         
-        # Pre-fetch user's existing watchlist ONCE (instead of per-entry queries)
+        # Pre-fetch user's existing watchlist ONCE
         existing_anime_ids = set()
         try:
             user_watchlist = await call_maybe_async(get_user_watchlist, user_id)
@@ -490,14 +522,13 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                     aid = wl_entry.get("anime_id")
                     if aid:
                         existing_anime_ids.add(aid)
-            logger.info("Pre-fetched %d existing watchlist entries for skip-check", len(existing_anime_ids))
         except Exception as e:
             logger.warning("Failed to pre-fetch watchlist: %s", e)
         
         all_results = []
-        needs_api = []  # entries that need API search (cache miss)
+        needs_api = []
         
-        # === FAST PATH: resolve cache hits in memory, write ONCE ===
+        # === FAST PATH: resolve cache hits in memory ===
         from ..models.watchlist import watchlist_collection
         from ..models.watchlist import clear_user_cache
         
@@ -507,9 +538,8 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
             'PLANNING': 'plan_to_watch'
         }
         
-        # Step 1: resolve all entries from cache (pure memory, instant)
-        cached_updates = {}  # anime_id -> {anime_title, status, watched_episodes}
-        for entry in watchlist:
+        cached_updates = {}
+        for i, entry in enumerate(watchlist):
             media = entry.get("media", {})
             anilist_id = media.get("id")
             mal_id = media.get("idMal")
@@ -535,21 +565,33 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                 all_results.append({"success": True, "anime_id": hianime_id, "anime_title": title, "status": local_status})
             else:
                 needs_api.append(entry)
+            
+            # Send progress every 50 entries during resolution
+            if (i + 1) % 50 == 0 or i == total - 1:
+                pct = 10 + int((i + 1) / total * 40)  # 10% to 50%
+                _send_phase(
+                    f"Matching: {i+1}/{total} — {len(cached_updates)} found in cache, {len(needs_api)} need search",
+                    processed=i+1, total=total, pct=pct,
+                    cached_hits=len(cached_updates)
+                )
         
         logger.info("Cache resolved: %d hits, %d need API search", len(cached_updates), len(needs_api))
         
         # Step 2: merge with existing watchlist and write ONCE
         if cached_updates:
-            now = datetime.utcnow()
+            _send_phase(
+                f"Writing {len(cached_updates)} anime to your watchlist...",
+                processed=len(cached_updates), total=total, pct=55,
+                synced=len(cached_updates), cached_hits=len(cached_updates)
+            )
             
-            # Build merged watchlist: start with existing entries, update/add from cache
+            now = datetime.utcnow()
             existing_map = {}
             for wl_entry in (user_watchlist or []):
                 aid = wl_entry.get("anime_id")
                 if aid:
                     existing_map[aid] = wl_entry
             
-            # Merge cached updates into existing
             for anime_id, update in cached_updates.items():
                 existing_entry = existing_map.get(anime_id, {})
                 existing_map[anime_id] = {
@@ -560,7 +602,6 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                     "updated_at": now,
                 }
             
-            # Write entire watchlist back in ONE operation
             merged_watchlist = list(existing_map.values())
             try:
                 watchlist_collection.update_one(
@@ -573,20 +614,31 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                 )
                 clear_user_cache(user_id)
                 
-                # Update progress for all cached entries at once
-                for _ in cached_updates:
-                    await progress.update(synced=True, cached=True)
+                # Update SyncProgress counts for final report
+                progress.synced = len(cached_updates)
+                progress.cached_hits = len(cached_updates)
+                progress.processed = len(cached_updates)
                     
                 logger.info("Bulk wrote %d entries to watchlist in 1 DB operation", len(cached_updates))
+                
+                _send_phase(
+                    f"✓ {len(cached_updates)} anime synced from cache!" + 
+                    (f" Searching for {len(needs_api)} remaining..." if needs_api else ""),
+                    processed=len(cached_updates), total=total, pct=60,
+                    synced=len(cached_updates), cached_hits=len(cached_updates)
+                )
             except Exception as e:
                 logger.error("Bulk watchlist write failed: %s", e)
-                for _ in cached_updates:
-                    await progress.update(failed=True)
-        
-        logger.info("Fast path done: %d cached, %d need API", len(cached_updates), len(needs_api))
+                progress.failed = len(cached_updates)
+                _send_phase(f"Error writing to database: {e}", pct=55)
         
         # === SLOW PATH: process cache misses via API search ===
         if needs_api:
+            _send_phase(
+                f"Searching HiAnime for {len(needs_api)} anime not in cache...",
+                processed=len(cached_updates), total=total, pct=60,
+                synced=progress.synced
+            )
             chunk_size = config.batch_size
             for i in range(0, len(needs_api), chunk_size):
                 chunk = needs_api[i:i + chunk_size]
@@ -598,6 +650,16 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                         all_results.append({"failed": True, "reason": "task_exception", "error": str(res)})
                     else:
                         all_results.append(res)
+                
+                # Progress update during API search
+                api_done = min(i + chunk_size, len(needs_api))
+                api_pct = 60 + int(api_done / len(needs_api) * 35)  # 60% to 95%
+                _send_phase(
+                    f"Searching: {api_done}/{len(needs_api)} remaining anime...",
+                    processed=len(cached_updates) + api_done, total=total, pct=api_pct,
+                    synced=progress.synced, failed=progress.failed
+                )
+                
                 if i + chunk_size < len(needs_api):
                     await asyncio.sleep(config.delay_between_batches)
         
@@ -615,6 +677,7 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
             "skipped_count": len(skipped),
             "failed_count": len(failed),
             "total_count": len(watchlist),
+            "cached_hits": progress.cached_hits,
             "success_rate": f"{success_rate:.1f}%",
             "elapsed_time": f"{progress.elapsed_time:.1f}s"
         }
