@@ -237,12 +237,12 @@ def sync_anilist_watchlist_blocking(user_id: str, access_token: str, progress_ca
         # Use optimized config for better performance and fewer failures
         config = BatchConfig(
             batch_size=1000,
-            delay_between_batches=0.1,
-            max_retries=2,
+            delay_between_batches=0.05,
+            max_retries=1,
             enable_caching=True,
             skip_failed_matches=True,
-            max_search_candidates=8,
-            max_anime_check=6
+            max_search_candidates=4,
+            max_anime_check=3
         )
 
         # If the imported name is an async function, call it with progress callback

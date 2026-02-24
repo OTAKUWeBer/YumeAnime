@@ -89,8 +89,9 @@ def sync_anilist():
                                 'skipped': progress.skipped,
                                 'failed': progress.failed,
                                 'percentage': progress.percentage,
+                                'cached_hits': getattr(progress, 'cached_hits', 0),
                                 'estimated_remaining': getattr(progress, 'estimated_remaining', 0),
-                                'message': f'Syncing... {progress.processed}/{progress.total} processed'
+                                'message': getattr(progress, 'message', f'Syncing... {progress.processed}/{progress.total}')
                             })
                         except Exception as e:
                             logger.warning(f"Progress callback error: {e}")
@@ -112,6 +113,7 @@ def sync_anilist():
                     skipped_count = result.get('skipped_count', 0)
                     failed_count = result.get('failed_count', 0)
                     total_count = result.get('total_count', 0)
+                    cached_hits = result.get('cached_hits', 0)
                     
                     success_count = synced_count + skipped_count
                     success_rate = (success_count / total_count * 100) if total_count > 0 else 0
@@ -119,9 +121,14 @@ def sync_anilist():
                     is_success = success_rate >= 70.0
                     
                     if is_success:
-                        message = f'Sync completed! Added {synced_count}, skipped {skipped_count}.'
+                        parts = [f'✓ Sync completed! {synced_count} anime synced']
+                        if cached_hits:
+                            parts.append(f'{cached_hits} from cache')
+                        if failed_count:
+                            parts.append(f'{failed_count} not found')
+                        message = ' — '.join(parts)
                     else:
-                        message = f'Sync partially completed. {success_count}/{total_count} successful.'
+                        message = f'Sync partially completed. {success_count}/{total_count} successful, {failed_count} not found.'
                     
                     # Store final progress
                     store_sync_progress(user_id, {

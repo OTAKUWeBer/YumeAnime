@@ -307,10 +307,20 @@ ${this.currentUser.anilist_id
     container.classList.remove("hidden")
     if (syncBtn) syncBtn.disabled = true
 
-    // Update values
-    if (statusText) statusText.textContent = progress.status === 'starting' ? 'Starting...' :
-      progress.status === 'syncing' ? `Syncing... ${progress.processed}/${progress.total}` :
-        progress.status === 'completed' ? 'Completed' : 'Error'
+    // Use the descriptive message from backend
+    if (statusText) {
+      if (progress.message) {
+        statusText.textContent = progress.message
+      } else if (progress.status === 'starting') {
+        statusText.textContent = 'Starting sync...'
+      } else if (progress.status === 'syncing') {
+        statusText.textContent = `Syncing... ${progress.processed}/${progress.total}`
+      } else if (progress.status === 'completed') {
+        statusText.textContent = 'Sync completed!'
+      } else {
+        statusText.textContent = 'Error'
+      }
+    }
 
     if (percentText) percentText.textContent = `${Math.round(progress.percentage || 0)}%`
     if (progressBar) progressBar.style.width = `${progress.percentage || 0}%`

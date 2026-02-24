@@ -1091,6 +1091,12 @@ h6 {
     border-color: var(--accent-muted);
 }
 
+.server-select option,
+.lang-select option {
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
 /* ============================================
    Info Page
    ============================================ */
@@ -1353,27 +1359,37 @@ h6 {
     margin-bottom: var(--space-xl);
     overflow-x: auto;
     padding-bottom: var(--space-sm);
+    scrollbar-width: none;
+}
+
+.watchlist-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .watchlist-tab {
     padding: var(--space-sm) var(--space-lg);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-full);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 0.875rem;
     font-weight: 500;
     white-space: nowrap;
+    cursor: pointer;
     transition: all var(--transition-fast);
 }
 
 .watchlist-tab:hover {
-    background: var(--bg-surface-hover);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .watchlist-tab.active {
-    background: var(--text-primary);
-    color: var(--bg-primary);
-    border-color: var(--text-primary);
+    background: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb, 99, 102, 241), 0.3);
 }
 
 .watchlist-stats {
