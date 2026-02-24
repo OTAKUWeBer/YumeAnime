@@ -258,36 +258,24 @@ async def call_maybe_async(func: Callable, *args, **kwargs) -> Any:
         logger.warning(f"call_maybe_async error: {e}")
         return None
 
-async def check_existing_watchlist_entry(user_id: str, anilist_id: int, mal_id: Optional[int] = None) -> bool:
+async def check_existing_watchlist_entry(existing_anime_ids: set, anilist_id: int, mal_id: Optional[int] = None) -> bool:
+    """Check if an AniList entry already exists in the user's local watchlist.
+    Uses a pre-built set of existing anime_ids for O(1) lookup."""
     try:
-        from ..models.watchlist import watchlist_collection
-        
+        # Check by anilist_id mapping
         if anilist_id in id_mapping_cache:
             hianime_id = id_mapping_cache[anilist_id]
-            existing = await call_maybe_async(
-                watchlist_collection.find_one,
-                {"user_id": user_id, "anime_id": hianime_id}
-            )
-            if existing:
+            if hianime_id in existing_anime_ids:
                 return True
 
-        pipeline = [
-            {"$match": {"user_id": user_id}},
-            {"$project": {"anime_id": 1}}
-        ]
-        existing_entries = await call_maybe_async(list, watchlist_collection.aggregate(pipeline))
-        
-        if not existing_entries:
-            return False
-        
-        for entry in existing_entries:
-            anime_id = entry.get("anime_id")
-            if anime_id and anime_id in info_cache:
-                cached_info = info_cache[anime_id]
-                if (cached_info.get("anilistId") == anilist_id or 
-                    (mal_id and cached_info.get("malId") == mal_id)):
-                    id_mapping_cache[anilist_id] = anime_id
-                    return True
+        # Check by persistent cache (local JSON → MongoDB)
+        persistent_hid = lookup_hianime_id(anilist_id or 0, mal_id or 0)
+        if persistent_hid and persistent_hid in existing_anime_ids:
+            # Also populate in-memory cache for future lookups
+            if anilist_id:
+                id_mapping_cache[anilist_id] = persistent_hid
+            return True
+
         return False
     except Exception:
         return False
@@ -394,7 +382,8 @@ async def get_hianime_link_with_retry(media: Dict[str, Any], config: BatchConfig
 
 async def process_single_entry(user_id: str, entry: Dict[str, Any], 
                                progress: SyncProgress, config: BatchConfig, 
-                               semaphore: asyncio.Semaphore) -> Optional[Dict[str, Any]]:
+                               semaphore: asyncio.Semaphore,
+                               existing_anime_ids: set = None) -> Optional[Dict[str, Any]]:
     # Acquire semaphore for this specific entry processing task
     async with semaphore:
         try:
@@ -402,7 +391,7 @@ async def process_single_entry(user_id: str, entry: Dict[str, Any],
             anilist_id = media.get("id")
             mal_id = media.get("idMal")
             
-            if anilist_id and await check_existing_watchlist_entry(user_id, anilist_id, mal_id):
+            if existing_anime_ids and anilist_id and await check_existing_watchlist_entry(existing_anime_ids, anilist_id, mal_id):
                 await progress.update(skipped=True)
                 return {
                     "skipped": True,
@@ -501,27 +490,93 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
         except Exception as e:
             logger.warning("Failed to preload ID cache: %s", e)
         
-        all_results = []
-        chunk_size = config.batch_size
+        # Pre-fetch user's existing watchlist ONCE (instead of per-entry queries)
+        existing_anime_ids = set()
+        try:
+            user_watchlist = await call_maybe_async(get_user_watchlist, user_id)
+            if user_watchlist:
+                for wl_entry in user_watchlist:
+                    aid = wl_entry.get("anime_id")
+                    if aid:
+                        existing_anime_ids.add(aid)
+            logger.info("Pre-fetched %d existing watchlist entries for skip-check", len(existing_anime_ids))
+        except Exception as e:
+            logger.warning("Failed to pre-fetch watchlist: %s", e)
         
-        for i in range(0, len(watchlist), chunk_size):
-            chunk = watchlist[i:i + chunk_size]
+        all_results = []
+        needs_api = []  # entries that need API search (cache miss)
+        
+        # === FAST PATH: process cached entries instantly ===
+        for entry in watchlist:
+            media = entry.get("media", {})
+            anilist_id = media.get("id")
+            mal_id = media.get("idMal")
             
-            tasks = []
-            for entry in chunk:
-                tasks.append(process_single_entry(user_id, entry, progress, config, sem))
+            # Skip if already in local watchlist
+            if existing_anime_ids and anilist_id:
+                skip = await check_existing_watchlist_entry(existing_anime_ids, anilist_id, mal_id)
+                if skip:
+                    await progress.update(skipped=True)
+                    all_results.append({
+                        "skipped": True, "reason": "already_exists",
+                        "anilist_id": anilist_id,
+                        "anime_title": media.get("title", {}).get("userPreferred")
+                    })
+                    continue
             
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Check cache for hianime_id (instant lookup)
+            hianime_id = None
+            if config.enable_caching and anilist_id and anilist_id in id_mapping_cache:
+                hianime_id = id_mapping_cache[anilist_id]
+            if not hianime_id:
+                hianime_id = lookup_hianime_id(anilist_id or 0, mal_id or 0)
             
-            for res in results:
-                if isinstance(res, Exception):
-                    logger.error(f"Task exception: {res}")
-                    all_results.append({"failed": True, "reason": "task_exception", "error": str(res)})
+            if hianime_id:
+                # CACHE HIT — add to watchlist immediately, no API call
+                cached = get_ids_for_hianime(hianime_id)
+                title = (cached.get("title", "") if cached else "") or media.get("title", {}).get("userPreferred", "")
+                
+                status_mapping = {
+                    'CURRENT': 'watching', 'COMPLETED': 'completed',
+                    'PAUSED': 'paused', 'DROPPED': 'dropped',
+                    'PLANNING': 'plan_to_watch'
+                }
+                local_status = status_mapping.get(entry.get("status", "CURRENT"), 'watching')
+                watched_episodes = entry.get("progress", 0)
+                
+                result = await call_maybe_async(add_to_watchlist,
+                    user_id=user_id, anime_id=hianime_id,
+                    anime_title=title, status=local_status,
+                    watched_episodes=watched_episodes,
+                )
+                if result:
+                    await progress.update(synced=True, cached=True)
+                    existing_anime_ids.add(hianime_id)
+                    all_results.append({"success": True, "anime_id": hianime_id, "anime_title": title, "status": local_status})
                 else:
-                    all_results.append(res)
-            
-            if i + chunk_size < len(watchlist):
-                await asyncio.sleep(config.delay_between_batches)
+                    await progress.update(failed=True)
+                    all_results.append({"failed": True, "reason": "database_error", "anilist_id": anilist_id})
+            else:
+                # CACHE MISS — queue for API search
+                needs_api.append(entry)
+        
+        logger.info("Fast path done: %d cached hits, %d need API search", len(watchlist) - len(needs_api), len(needs_api))
+        
+        # === SLOW PATH: process cache misses via API search ===
+        if needs_api:
+            chunk_size = config.batch_size
+            for i in range(0, len(needs_api), chunk_size):
+                chunk = needs_api[i:i + chunk_size]
+                tasks = [process_single_entry(user_id, entry, progress, config, sem, existing_anime_ids) for entry in chunk]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for res in results:
+                    if isinstance(res, Exception):
+                        logger.error(f"Task exception: {res}")
+                        all_results.append({"failed": True, "reason": "task_exception", "error": str(res)})
+                    else:
+                        all_results.append(res)
+                if i + chunk_size < len(needs_api):
+                    await asyncio.sleep(config.delay_between_batches)
         
         synced = [r for r in all_results if r and r.get("success")]
         skipped = [r for r in all_results if r and r.get("skipped")]
