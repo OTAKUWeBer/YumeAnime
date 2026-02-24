@@ -506,10 +506,10 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
         
         # Preload persistent ID cache into memory for fast lookups
         try:
-            persistent_ids = preload_to_memory()
-            id_mapping_cache.update(persistent_ids)
-            logger.info("Preloaded %d ID mappings from persistent cache", len(persistent_ids))
-            _send_phase(f"Loaded {len(persistent_ids)} cached IDs. Matching anime...", total=total, pct=10)
+            anilist_ids, _ = preload_to_memory()
+            id_mapping_cache.update(anilist_ids)
+            logger.info("Preloaded %d AniList ID mappings", len(anilist_ids))
+            _send_phase(f"Loaded {len(anilist_ids)} cached IDs. Matching anime...", total=total, pct=10)
         except Exception as e:
             logger.warning("Failed to preload ID cache: %s", e)
         
@@ -570,7 +570,7 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
             if (i + 1) % 50 == 0 or i == total - 1:
                 pct = 10 + int((i + 1) / total * 40)  # 10% to 50%
                 _send_phase(
-                    f"Matching: {i+1}/{total} — {len(cached_updates)} found in cache, {len(needs_api)} need search",
+                    f"Matching: {i+1}/{total} — {len(cached_updates)} found in cache, {len(needs_api)} needs search",
                     processed=i+1, total=total, pct=pct,
                     cached_hits=len(cached_updates)
                 )

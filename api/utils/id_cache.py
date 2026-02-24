@@ -214,20 +214,32 @@ def get_cache_stats() -> Dict[str, Any]:
     }
 
 
-def preload_to_memory() -> Dict[int, str]:
-    """Load all anilist_id -> hianime_id mappings into a dict."""
-    mapping: Dict[int, str] = {}
+def preload_to_memory() -> tuple:
+    """Load all anilist_id -> hianime_id AND mal_id -> hianime_id mappings.
+    Returns (anilist_mapping, mal_mapping) dicts."""
+    anilist_map: Dict[int, str] = {}
+    mal_map: Dict[int, str] = {}
+    
     # Load from local first (fast, no network)
     with _local_lock:
         for hid, data in _local_cache.items():
             aid = data.get("anilist_id", 0)
+            mid = data.get("mal_id", 0)
             if aid and aid > 0:
-                mapping[aid] = hid
+                anilist_map[aid] = hid
+            if mid and mid > 0:
+                mal_map[mid] = hid
+    
     # Then fill gaps from MongoDB
-    for doc in _col.find({"anilist_id": {"$gt": 0}}, {"_id": 1, "anilist_id": 1}):
-        if doc["anilist_id"] not in mapping:
-            mapping[doc["anilist_id"]] = doc["_id"]
-    return mapping
+    for doc in _col.find({}, {"_id": 1, "anilist_id": 1, "mal_id": 1}):
+        aid = doc.get("anilist_id", 0)
+        mid = doc.get("mal_id", 0)
+        if aid and aid > 0 and aid not in anilist_map:
+            anilist_map[aid] = doc["_id"]
+        if mid and mid > 0 and mid not in mal_map:
+            mal_map[mid] = doc["_id"]
+    
+    return anilist_map, mal_map
 
 
 def sync_local_from_mongodb():
