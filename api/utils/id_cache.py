@@ -245,3 +245,19 @@ def sync_local_from_mongodb():
         _save_local_cache()
     logger.info("Synced %d entries from MongoDB to local file %s", count, LOCAL_CACHE_PATH)
     return count
+
+
+def auto_cache_from_info(hianime_id: str, info: dict):
+    """Auto-save IDs to cache when a user views an anime page.
+    Call this after get_anime_info() returns — completely safe, never throws."""
+    try:
+        if not info or not isinstance(info, dict):
+            return
+        anilist_id = info.get("anilistId") or info.get("alID") or 0
+        mal_id = info.get("malId") or info.get("malID") or 0
+        title = info.get("title") or info.get("name") or ""
+        if anilist_id or mal_id:
+            save_id_mapping(hianime_id, anilist_id, mal_id, title)
+    except Exception:
+        pass  # never break the page
+

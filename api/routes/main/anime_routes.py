@@ -43,6 +43,13 @@ async def anime_info(anime_id: str):
         anime = anime_info["info"]
     else:
         anime = anime_info
+
+    # Auto-save IDs to cache (for Vercel — grows the DB as users browse)
+    try:
+        from api.utils.id_cache import auto_cache_from_info
+        auto_cache_from_info(anime_id, anime)
+    except Exception:
+        pass
         
     # Fallback to AniList if Hianime next episode schedule isn't available
     # OR if the schedule is expired/in the past (time < 0)

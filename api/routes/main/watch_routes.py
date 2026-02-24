@@ -190,6 +190,13 @@ def watch(eps_title):
     else:
         anime = anime_info or {}
 
+    # Auto-save IDs to cache (for Vercel — grows the DB as users browse)
+    try:
+        from api.utils.id_cache import auto_cache_from_info
+        auto_cache_from_info(eps_title_clean, anime)
+    except Exception:
+        pass
+
     needs_fallback = False
     if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
         needs_fallback = True
