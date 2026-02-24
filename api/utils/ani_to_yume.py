@@ -391,15 +391,6 @@ async def process_single_entry(user_id: str, entry: Dict[str, Any],
             anilist_id = media.get("id")
             mal_id = media.get("idMal")
             
-            if existing_anime_ids and anilist_id and await check_existing_watchlist_entry(existing_anime_ids, anilist_id, mal_id):
-                await progress.update(skipped=True)
-                return {
-                    "skipped": True,
-                    "reason": "already_exists",
-                    "anilist_id": anilist_id,
-                    "anime_title": media.get("title", {}).get("userPreferred")
-                }
-            
             hianime = await get_hianime_link_with_retry(media, config)
             if not hianime:
                 await progress.update(failed=True)
@@ -512,18 +503,6 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
             anilist_id = media.get("id")
             mal_id = media.get("idMal")
             
-            # Skip if already in local watchlist
-            if existing_anime_ids and anilist_id:
-                skip = await check_existing_watchlist_entry(existing_anime_ids, anilist_id, mal_id)
-                if skip:
-                    await progress.update(skipped=True)
-                    all_results.append({
-                        "skipped": True, "reason": "already_exists",
-                        "anilist_id": anilist_id,
-                        "anime_title": media.get("title", {}).get("userPreferred")
-                    })
-                    continue
-            
             # Check cache for hianime_id (instant lookup)
             hianime_id = None
             if config.enable_caching and anilist_id and anilist_id in id_mapping_cache:
@@ -532,7 +511,7 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
                 hianime_id = lookup_hianime_id(anilist_id or 0, mal_id or 0)
             
             if hianime_id:
-                # CACHE HIT — add to watchlist immediately, no API call
+                # CACHE HIT — add/update watchlist immediately, no API call
                 cached = get_ids_for_hianime(hianime_id)
                 title = (cached.get("title", "") if cached else "") or media.get("title", {}).get("userPreferred", "")
                 
