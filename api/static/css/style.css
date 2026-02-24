@@ -445,11 +445,14 @@ h6 {
 .user-avatar {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
     border-radius: var(--radius-full);
     background: var(--bg-surface);
     border: 2px solid var(--border-color);
     overflow: hidden;
     cursor: pointer;
+    padding: 0;
     transition: border-color var(--transition-fast);
 }
 
@@ -460,7 +463,9 @@ h6 {
 .user-avatar img {
     width: 100%;
     height: 100%;
+    display: block;
     object-fit: cover;
+    background-color: var(--bg-surface);
 }
 
 /* Mobile Menu */
@@ -2536,6 +2541,8 @@ h6 {
     .user-avatar {
         width: 32px;
         height: 32px;
+        min-width: 32px;
+        min-height: 32px;
     }
 }
 
