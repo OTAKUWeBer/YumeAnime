@@ -91,7 +91,6 @@ async def anime_info(anime_id: str):
                     if fallback_schedule and fallback_schedule.get("airingTimestamp"):
                         next_episode_schedule = fallback_schedule
 
-                    print(f"\n\n\n\n\n\n--------------------\nFallback schedule: {fallback_schedule}")
                 except Exception as e:
                     logger.error(f"Failed to fetch fallback schedule from AniList for AL: {hianime_al_id}, MAL: {hianime_mal_id}: {e}")
         
