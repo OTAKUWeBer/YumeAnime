@@ -17,6 +17,10 @@ from ..models.watchlist import (
     get_user_watchlist_paginated, get_watchlist_stats, warm_cache, add_to_watchlist
 )
 from ..providers.hianime import HianimeScraper
+from .id_cache import (
+    lookup_hianime_id, save_id_mapping, preload_to_memory,
+    get_ids_for_hianime,
+)
 
 HA = HianimeScraper()
 ANILIST_GRAPHQL = "https://graphql.anilist.co"
@@ -244,7 +248,12 @@ async def call_maybe_async(func: Callable, *args, **kwargs) -> Any:
     try:
         if inspect.iscoroutinefunction(func):
             return await func(*args, **kwargs)
-        return await asyncio.to_thread(func, *args, **kwargs)
+        # Call sync functions directly instead of asyncio.to_thread
+        # PyMongo operations are fast blocking I/O and NOT thread-safe
+        # (cursors can't be consumed across threads), so wrapping them
+        # in to_thread causes hangs / deadlocks when we are already
+        # running inside a background thread via threading.Thread.
+        return func(*args, **kwargs)
     except Exception as e:
         logger.warning(f"call_maybe_async error: {e}")
         return None
@@ -287,6 +296,7 @@ async def get_hianime_link_with_retry(media: Dict[str, Any], config: BatchConfig
     anilist_id = media.get("id")
     mal_id = media.get("idMal")
     
+    # 1) Check in-memory cache first (fastest)
     if config.enable_caching and anilist_id in id_mapping_cache:
         hianime_id = id_mapping_cache[anilist_id]
         if hianime_id in info_cache:
@@ -297,6 +307,21 @@ async def get_hianime_link_with_retry(media: Dict[str, Any], config: BatchConfig
                 "poster": cached_info.get("poster"),
                 "link": f"/anime/{hianime_id}"
             }
+
+    # 2) Check persistent MongoDB ID cache
+    persistent_hid = lookup_hianime_id(anilist_id or 0, mal_id or 0)
+    if persistent_hid:
+        # Found in persistent cache — populate in-memory cache too
+        if config.enable_caching and anilist_id:
+            id_mapping_cache[anilist_id] = persistent_hid
+        cached = get_ids_for_hianime(persistent_hid)
+        title = cached.get("title", "") if cached else ""
+        return {
+            "id": persistent_hid,
+            "name": title or media.get("title", {}).get("userPreferred", ""),
+            "poster": "",
+            "link": f"/anime/{persistent_hid}"
+        }
     
     candidates = _generate_title_candidates(media, config.max_search_candidates)
     
@@ -346,6 +371,13 @@ async def get_hianime_link_with_retry(media: Dict[str, Any], config: BatchConfig
                         (mal_id and info_data.get("malId") == mal_id)):
                         if config.enable_caching:
                             id_mapping_cache[anilist_id] = anime_id
+                        # Save to persistent cache for future syncs
+                        save_id_mapping(
+                            hianime_id=anime_id,
+                            anilist_id=info_data.get("anilistId") or 0,
+                            mal_id=info_data.get("malId") or 0,
+                            title=info_data.get("title") or anime.get("name") or "",
+                        )
                         return {
                             "id": anime_id,
                             "name": info_data.get("title") or anime.get("name"),
@@ -459,6 +491,14 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
             return {"error": "Failed to connect to AniList"}
 
         progress = SyncProgress(total=len(watchlist), callback=progress_callback)
+        
+        # Preload persistent ID cache into memory for fast lookups
+        try:
+            persistent_ids = preload_to_memory()
+            id_mapping_cache.update(persistent_ids)
+            logger.info("Preloaded %d ID mappings from persistent cache", len(persistent_ids))
+        except Exception as e:
+            logger.warning("Failed to preload ID cache: %s", e)
         
         all_results = []
         chunk_size = config.batch_size

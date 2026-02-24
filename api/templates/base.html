@@ -203,6 +203,7 @@
                 <div class="dropdown" id="user-dropdown">
                     <button class="user-avatar" onclick="toggleDropdown('user-dropdown')">
                         <img src="{{ session.get('avatar', '/static/images/default-avatar.png') }}" alt="Avatar"
+                            width="36" height="36" loading="eager" fetchpriority="high"
                             onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&background=1a1a1a&color=fff'">
                     </button>
                     <div class="dropdown-menu">
