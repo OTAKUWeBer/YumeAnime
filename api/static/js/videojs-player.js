@@ -1,3 +1,19 @@
+// ─── CODEC FIX ───────────────────────────────────────────────────────────────
+// Streams from owocdn / megacloud report mp4a.40.1 (AAC Main) in their codec
+// string, but browsers only support mp4a.40.2 (AAC-LC) in MSE. Remap it before
+// the SourceBuffer is created so Video.js never sees the bad profile flag.
+;(function () {
+  const _orig = MediaSource.prototype.addSourceBuffer
+  MediaSource.prototype.addSourceBuffer = function (mimeType) {
+    const fixed = mimeType.replace('mp4a.40.1', 'mp4a.40.2')
+    if (fixed !== mimeType) {
+      console.log('[codec-fix] Remapped codec:', mimeType, '->', fixed)
+    }
+    return _orig.call(this, fixed)
+  }
+})()
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Video.js Player with all existing functionality preserved
 class VideoJSPlayer {
   constructor() {
@@ -122,30 +138,16 @@ class VideoJSPlayer {
       muted: false,
       html5: {
         vhs: {
-          overrideNative: false, // Allow native HLS (better for mobile seeking)
+          // Must be true: forces VHS on every browser (including Safari).
+          // Native HLS rejects segments served as application/octet-stream,
+          // which is exactly what the proxy returns for disguised segments.
+          overrideNative: true,
           enableLowInitialPlaylist: true,
           smoothQualityChange: true,
           useBandwidthFromLocalStorage: true,
-          segmentDuration: 10,
           maxPlaylistRetries: 5,
-          segmentRetryOptions: {
-            maxRetries: 5,
-            retryDelay: 500,
-            backoffFactor: 2,
-          },
-          segmentRequestTimeout: 60000,
-          stalledMonitoringInterval: 1000,
-          highWaterMark: 62914560, // 60MB buffer cap
           bandwidth: 5242880,
-          minPlaylistRetryDelay: 500,
-          maxPlaylistRetryDelay: 30000,
-          playlistRetryDelayBase: 2,
-          playlistRetryDelayMax: 60,
-          discontinuitySequence: true,
           bufferBasedABR: true,
-          baseTolerance: 60,
-          baseTargetDuration: 10,
-          lowInitialPlaylistRetryDelay: 1000,
           llhls: false,
         },
         nativeVideoTracks: false,

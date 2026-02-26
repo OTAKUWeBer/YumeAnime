@@ -4,13 +4,11 @@
 {% block meta_description %}Watch {{ eps_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
 
 {% block extra_css %}
-<!-- Video.js CSS -->
 <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
 <style>
     .watch-layout {
         display: grid;
         grid-template-columns: 350px 1fr;
-        /* Sidebar on left, Video on right */
         gap: var(--space-xl);
         align-items: start;
     }
@@ -18,30 +16,6 @@
     @media (max-width: 1024px) {
         .watch-layout {
             grid-template-columns: 1fr;
-            display: flex;
-            flex-direction: column-reverse;
-            /* Video on top on mobile, but sidebar under it? checks... wait. 
-            On mobile we usually want video on top.
-            If flex-direction: column; -> Sidebar (top), Video (bottom).
-            If we want Video top, Sidebar bottom -> column-reverse is needed IF sidebar is first in DOM.
-            Let's check DOM order. 
-            If I put Sidebar first in DOM -> Layout works for Desktop (Left-Right).
-            On Mobile -> Sidebar first (Top), Video second (Bottom).
-            The user likely wants video on top on mobile. 
-            So on mobile: flex-direction: column-reverse; (Video is last in DOM? No.)
-            
-            Let's plan:
-            DOM Structure:
-            <div class="watch-layout">
-                <div class="episode-sidebar">...</div>
-                <div class="watch-main">...</div>
-            </div>
-            
-            Desktop (Grid): Sidebar(1), Main(2) -> Sidebar Left, Main Right. Correct.
-            Mobile (Flex Column): Sidebar(Top), Main(Bottom).
-            WE WANT: Main (Video) on Top.
-            So Mobile: try flex-direction: column-reverse; -> Main(Top), Sidebar(Bottom). Correct.
-            */
             display: flex;
             flex-direction: column-reverse;
         }
@@ -52,7 +26,6 @@
         border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
         height: calc(100vh - 100px);
-        /* Fixed height for sticky feel */
         max-height: 800px;
         position: sticky;
         top: 80px;
@@ -65,16 +38,13 @@
         .episode-sidebar {
             height: auto;
             max-height: 75vh;
-            /* Make it taller */
             position: relative;
             top: 0;
         }
     }
 
-
     @media (max-width: 768px) {
         .episode-sidebar {
-            /* Full width (Edge-to-Edge) on mobile */
             margin-left: calc(-1 * var(--space-md));
             margin-right: calc(-1 * var(--space-md));
             width: calc(100% + 2 * var(--space-md));
@@ -86,7 +56,6 @@
 
     @media (max-width: 480px) {
         .episode-sidebar {
-            /* Adjust for smaller container padding */
             margin-left: calc(-1 * var(--space-sm));
             margin-right: calc(-1 * var(--space-sm));
             width: calc(100% + 2 * var(--space-sm));
@@ -109,7 +78,6 @@
         justify-content: space-between;
     }
 
-    /* Toggle Buttons */
     .view-toggle {
         display: flex;
         background: var(--bg-elevated);
@@ -124,14 +92,11 @@
         color: var(--text-muted);
         transition: all 0.2s;
         display: flex;
-        /* Fix alignment of SVG */
         align-items: center;
         justify-content: center;
     }
 
-    .view-btn:hover {
-        color: var(--text-primary);
-    }
+    .view-btn:hover { color: var(--text-primary); }
 
     .view-btn.active {
         background: var(--bg-surface-hover);
@@ -139,7 +104,6 @@
         box-shadow: var(--shadow-sm);
     }
 
-    /* Search Bar */
     .episode-search-wrapper {
         position: relative;
         width: 100%;
@@ -157,9 +121,7 @@
     .episode-search-input {
         width: 100%;
         padding: 8px 12px 8px 36px;
-        /* Space for icon */
         background: rgba(255, 255, 255, 0.05);
-        /* Glass-like */
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
         color: var(--text-primary);
@@ -173,34 +135,24 @@
         background: rgba(255, 255, 255, 0.1);
     }
 
-    .episode-search-input::placeholder {
-        color: var(--text-muted);
-    }
+    .episode-search-input::placeholder { color: var(--text-muted); }
 
-    /* Sidebar List */
     .episode-sidebar-list {
         flex: 1;
         overflow-y: auto;
         padding: var(--space-sm);
-        /* Custom scrollbar */
         scrollbar-width: thin;
         scrollbar-color: var(--border-color) transparent;
     }
 
-    .episode-sidebar-list::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .episode-sidebar-list::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
+    .episode-sidebar-list::-webkit-scrollbar { width: 6px; }
+    .episode-sidebar-list::-webkit-scrollbar-track { background: transparent; }
     .episode-sidebar-list::-webkit-scrollbar-thumb {
         background-color: var(--border-color);
         border-radius: 20px;
     }
 
-    /* List View (Default) */
+    /* List View */
     .episode-sidebar-list[data-view="list"] .episode-sidebar-item {
         display: flex;
         align-items: center;
@@ -212,10 +164,7 @@
         text-align: left;
     }
 
-    .episode-sidebar-list[data-view="list"] .episode-sidebar-item:hover {
-        background: var(--bg-surface-hover);
-    }
-
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item:hover { background: var(--bg-surface-hover); }
     .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current {
         background: var(--text-primary);
         color: var(--bg-primary);
@@ -264,7 +213,6 @@
         gap: 8px;
         padding: 12px;
         align-content: start;
-        /* Fixes "blank spaces" by packing items to top */
     }
 
     .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
@@ -295,9 +243,7 @@
         border-color: transparent;
     }
 
-    .episode-sidebar-list[data-view="grid"] .episode-info {
-        display: none;
-    }
+    .episode-sidebar-list[data-view="grid"] .episode-info { display: none; }
 
     .episode-sidebar-list[data-view="grid"] .episode-sidebar-num {
         width: auto;
@@ -307,52 +253,26 @@
         display: block;
     }
 
-    /* Mobile grid improvements */
     @media (max-width: 768px) {
         .episode-sidebar-list[data-view="grid"] {
-            /* Fixed 5 columns on mobile for perfect fit */
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
             padding: 10px;
         }
-
-        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
-            height: 50px;
-        }
-
-        .episode-sidebar-list[data-view="grid"] .episode-sidebar-num {
-            font-size: 1rem;
-            font-weight: 600;
-        }
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item { height: 50px; }
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-num { font-size: 1rem; font-weight: 600; }
     }
 
     @media (max-width: 380px) {
         .episode-sidebar-list[data-view="grid"] {
-            /* Smaller phones: 4 columns */
             grid-template-columns: repeat(4, 1fr);
             gap: 5px;
             padding: 6px;
         }
-
-        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
-            height: 40px;
-        }
-
-        .episode-sidebar-list[data-view="list"] .episode-sidebar-item {
-            padding: var(--space-xs) var(--space-sm);
-        }
-
-        .episode-sidebar-list[data-view="list"] .episode-sidebar-num {
-            width: 32px;
-            height: 32px;
-            font-size: 0.85rem;
-        }
-
-        .episode-sidebar-list[data-view="list"] .episode-title {
-            font-size: 0.85rem;
-            -webkit-line-clamp: 1;
-            line-clamp: 1;
-        }
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item { height: 40px; }
+        .episode-sidebar-list[data-view="list"] .episode-sidebar-item { padding: var(--space-xs) var(--space-sm); }
+        .episode-sidebar-list[data-view="list"] .episode-sidebar-num { width: 32px; height: 32px; font-size: 0.85rem; }
+        .episode-sidebar-list[data-view="list"] .episode-title { font-size: 0.85rem; -webkit-line-clamp: 1; line-clamp: 1; }
     }
 
     .video-wrapper {
@@ -363,129 +283,34 @@
         overflow: hidden;
     }
 
-    .video-wrapper iframe,
     .video-wrapper video {
         width: 100%;
         aspect-ratio: 16/9;
         display: block;
     }
 
-    /* Watch Main container */
     .watch-main {
         width: 100%;
         min-width: 0;
     }
 
-    /* Mobile-Specific Watch Page Improvements */
     @media (max-width: 768px) {
-        .watch-layout {
-            gap: var(--space-md);
-            padding: 0;
-        }
-
-        .watch-main {
-            width: 100%;
-        }
-
+        .watch-layout { gap: var(--space-md); padding: 0; }
+        .watch-main { width: 100%; }
         .video-wrapper {
-            border-radius: var(--radius-md);
-            /* Ensure video takes full width on mobile */
             margin: 0 calc(-1 * var(--space-md));
             width: calc(100% + 2 * var(--space-md));
             border-radius: 0;
         }
-
-        /* Episode info section on mobile */
-        .watch-main>div:last-child {
-            padding: var(--space-md) !important;
-            margin-top: var(--space-md) !important;
-        }
-
-        .watch-main h2 {
-            font-size: 1.1rem;
-        }
+        .watch-main > div:last-child { padding: var(--space-md) !important; margin-top: var(--space-md) !important; }
+        .watch-main h2 { font-size: 1.1rem; }
     }
 
     @media (max-width: 480px) {
-        .watch-layout {
-            gap: var(--space-sm);
-        }
-
-        /* Very small screens - even tighter spacing */
+        .watch-layout { gap: var(--space-sm); }
         .video-wrapper {
             margin: 0 calc(-1 * var(--space-sm));
             width: calc(100% + 2 * var(--space-sm));
-        }
-    }
-
-    /* Subtitle Styling Override for VideoJS */
-    .video-js .vjs-text-track-display {
-        background-color: transparent !important;
-        pointer-events: none;
-        /* Push subtitles above the control bar */
-        padding-bottom: 50px !important;
-        box-sizing: border-box;
-    }
-
-    .video-js .vjs-text-track-cue,
-    .video-js .vjs-text-track-cue>div {
-        background-color: transparent !important;
-        color: white !important;
-        text-shadow:
-            2px 2px 4px rgba(0, 0, 0, 0.95),
-            -1px -1px 2px rgba(0, 0, 0, 0.8),
-            1px -1px 2px rgba(0, 0, 0, 0.8),
-            -1px 1px 2px rgba(0, 0, 0, 0.8) !important;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        font-size: clamp(14px, 2.5vw, 24px) !important;
-        font-weight: 600 !important;
-        line-height: 1.4 !important;
-        padding: 4px 12px !important;
-        /* Prevent text from going off-screen */
-        max-width: 90% !important;
-        margin: 0 auto !important;
-        word-wrap: break-word !important;
-        text-align: center !important;
-    }
-
-    /* Mobile subtitle adjustments */
-    @media (max-width: 768px) {
-        .video-js .vjs-text-track-display {
-            padding-bottom: 70px !important;
-        }
-
-        .video-js .vjs-text-track-cue,
-        .video-js .vjs-text-track-cue>div {
-            font-size: clamp(12px, 3vw, 16px) !important;
-            max-width: 95% !important;
-            padding: 3px 6px !important;
-        }
-    }
-
-    @media (max-width: 480px) {
-
-        .video-js .vjs-text-track-cue,
-        .video-js .vjs-text-track-cue>div {
-            font-size: 12px !important;
-            max-width: 98% !important;
-            line-height: 1.3 !important;
-        }
-    }
-
-    /* Fullscreen subtitle adjustments */
-    .video-js.vjs-fullscreen .vjs-text-track-cue,
-    .video-js.vjs-fullscreen .vjs-text-track-cue>div {
-        font-size: clamp(18px, 2.5vw, 32px) !important;
-        max-width: 80% !important;
-        padding-bottom: 70px !important;
-    }
-
-    @media (max-width: 768px) {
-
-        .video-js.vjs-fullscreen .vjs-text-track-cue,
-        .video-js.vjs-fullscreen .vjs-text-track-cue>div {
-            font-size: clamp(14px, 4vw, 20px) !important;
-            max-width: 90% !important;
         }
     }
 
@@ -499,12 +324,10 @@
         flex-direction: column;
         gap: 10px;
         pointer-events: none;
-        /* Let clicks pass through container */
     }
 
     .skip-btn {
         display: none;
-        /* Hidden by default */
         background: rgba(0, 0, 0, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.2);
         color: white;
@@ -515,14 +338,10 @@
         cursor: pointer;
         transition: all 0.2s;
         pointer-events: auto;
-        /* Enable clicks on buttons */
         backdrop-filter: blur(4px);
     }
 
-    .skip-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: scale(1.05);
-    }
+    .skip-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.05); }
 
     .skip-btn.show {
         display: block;
@@ -530,22 +349,14 @@
     }
 
     @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Back Link -->
     <a href="/anime/{{ back_to_ep }}" class="btn btn-ghost" style="margin-bottom: var(--space-md);">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6" />
@@ -554,15 +365,14 @@
     </a>
 
     <div class="watch-layout">
-        <!-- Sidebar (Now First for Left Column) -->
+        <!-- Sidebar -->
         <div class="episode-sidebar">
             <div class="episode-sidebar-header">
                 <div class="episode-sidebar-header-top">
                     <span>Episodes</span>
                     <div class="view-toggle">
                         <button class="view-btn active" id="view-grid-btn" title="Grid View">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="3" width="7" height="7"></rect>
                                 <rect x="14" y="3" width="7" height="7"></rect>
                                 <rect x="14" y="14" width="7" height="7"></rect>
@@ -570,8 +380,7 @@
                             </svg>
                         </button>
                         <button class="view-btn" id="view-list-btn" title="List View">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="8" y1="6" x2="21" y2="6"></line>
                                 <line x1="8" y1="12" x2="21" y2="12"></line>
                                 <line x1="8" y1="18" x2="21" y2="18"></line>
@@ -582,10 +391,8 @@
                         </button>
                     </div>
                 </div>
-                <!-- Search Input -->
                 <div class="episode-search-wrapper">
-                    <svg class="episode-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2">
+                    <svg class="episode-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
@@ -596,12 +403,9 @@
             <div class="episode-sidebar-list" id="episodeList" data-view="grid">
                 {% if episodes and episodes.episodes %}
                 {% for ep in episodes.episodes %}
-                <!-- Check if this is the current episode -->
                 {% set is_current = (ep.number|string == episode_number|string) %}
-                <!-- Extract ID -->
                 {% set ep_id = ep.episodeId %}
                 {% set ep_val = ep_id.split('?ep=')[1] if '?ep=' in ep_id else ep_id %}
-
                 <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' else '-sub')) }}"
                     class="episode-sidebar-item {% if is_current %}current{% endif %}" data-number="{{ ep.number }}">
                     <div class="episode-sidebar-num">{{ ep.number }}</div>
@@ -611,55 +415,44 @@
                 </a>
                 {% endfor %}
                 {% else %}
-                <div class="text-center p-lg text-muted">
-                    No episodes found
-                </div>
+                <div class="text-center p-lg text-muted">No episodes found</div>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Main -->
         <div class="watch-main">
-            <!-- Video Player -->
             <div class="video-wrapper" id="video-wrapper">
-                <!-- External Player (Megaplay Embed) - Always present but hidden by default -->
-                <iframe id="externalPlayer" src="about:blank" data-external-src="{{ external_link }}"
-                    style="display: none; width: 100%; aspect-ratio: 16/9; border: none; z-index: 10;" allowfullscreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerpolicy="origin"></iframe>
-
                 {% if video_link %}
                 <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls playsinline
                     data-video-url="{{ video_link }}"
-                    data-subtitles='{{ subtitles | tojson | safe if subtitles else "[]" }}'
                     data-intro='{{ intro | tojson | safe if intro else "{}" }}'
-                    data-outro='{{ outro | tojson | safe if outro else "{}" }}'>
+                    data-outro='{{ outro | tojson | safe if outro else "{}" }}'
+                    data-video-sources='{{ video_sources | tojson | safe if video_sources else "[]" }}'
+                    data-available-qualities='{{ available_qualities | tojson | safe if available_qualities else "[]" }}'>
                     <source src="{{ video_link }}" type="application/x-mpegURL">
                     Your browser does not support the video tag.
                 </video>
-
-                <!-- Skip Buttons Container -->
                 <div id="skipButtons" class="skip-buttons">
                     <button id="skipIntroBtn" class="skip-btn">
                         Skip Intro
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="3" style="margin-left: 6px; display: inline-block; vertical-align: middle;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                            style="margin-left:6px;display:inline-block;vertical-align:middle;">
                             <polyline points="13 17 18 12 13 7"></polyline>
                             <polyline points="6 17 11 12 6 7"></polyline>
                         </svg>
                     </button>
                     <button id="skipOutroBtn" class="skip-btn">
                         Skip Outro
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="3" style="margin-left: 6px; display: inline-block; vertical-align: middle;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                            style="margin-left:6px;display:inline-block;vertical-align:middle;">
                             <polyline points="13 17 18 12 13 7"></polyline>
                             <polyline points="6 17 11 12 6 7"></polyline>
                         </svg>
                     </button>
                 </div>
                 {% else %}
-                <!-- No Video Fallback - only shown when external player is also not active -->
-                <div id="noVideoFallback"
-                    style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: var(--bg-surface);">
+                <div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:var(--bg-surface);">
                     <div class="text-center">
                         <div class="no-results-icon">🎬</div>
                         <p class="text-muted">Video not available</p>
@@ -673,19 +466,16 @@
                 <div class="player-nav">
                     {% if prev_episode_url %}
                     <a href="{{ prev_episode_url }}" class="btn btn-secondary">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="15 18 9 12 15 6" />
                         </svg>
                         Ep {{ prev_episode_number or 'Prev' }}
                     </a>
                     {% endif %}
-
                     {% if next_episode_url %}
                     <a href="{{ next_episode_url }}" class="btn btn-primary">
                         Ep {{ next_episode_number or 'Next' }}
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="9 18 15 12 9 6" />
                         </svg>
                     </a>
@@ -693,498 +483,177 @@
                 </div>
 
                 <div class="player-options">
-                    <!-- Player Source Select -->
-                    <select class="server-select" id="player-select" style="margin-right: var(--space-sm);">
-                        <option value="internal">Internal</option>
-                        <option value="external">External (Megaplay)</option>
+                    {% if available_qualities and available_qualities|length > 1 %}
+                    <select class="server-select" id="quality-select" style="margin-right: var(--space-sm);">
+                        {% for q in available_qualities %}
+                        <option value="{{ q }}" {% if loop.first %}selected{% endif %}>{{ q }}</option>
+                        {% endfor %}
                     </select>
+                    {% endif %}
 
-                    <!-- Language Toggle -->
-                    <div
-                        style="display: flex; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color);">
+                    <div style="display:flex;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-color);">
                         {% if sub_url %}
-                        <a href="{{ sub_url }}"
-                            class="btn btn-sm {% if lang == 'sub' %}btn-primary{% else %}btn-ghost{% endif %}"
-                            style="border-radius: 0;">SUB</a>
+                        <a href="{{ sub_url }}" class="btn btn-sm {% if lang == 'sub' %}btn-primary{% else %}btn-ghost{% endif %}" style="border-radius:0;">SUB</a>
                         {% endif %}
                         {% if dub_url and dub_available %}
-                        <a href="{{ dub_url }}"
-                            class="btn btn-sm {% if lang == 'dub' %}btn-primary{% else %}btn-ghost{% endif %}"
-                            style="border-radius: 0;">DUB</a>
+                        <a href="{{ dub_url }}" class="btn btn-sm {% if lang == 'dub' %}btn-primary{% else %}btn-ghost{% endif %}" style="border-radius:0;">DUB</a>
                         {% elif not dub_available %}
-                        <span class="btn btn-sm btn-ghost"
-                            style="border-radius: 0; opacity: 0.5; cursor: not-allowed;">DUB</span>
+                        <span class="btn btn-sm btn-ghost" style="border-radius:0;opacity:0.5;cursor:not-allowed;">DUB</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Next Episode Schedule UI -->
+            <!-- Next Episode Countdown -->
             {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
             {% set next_ep = next_episode_schedule.episode %}
-            <div class="next-episode-banner"
-                style="position: relative; margin-top: var(--space-lg); background: var(--bg-surface); padding: var(--space-lg); border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); overflow: hidden;">
-
-                <!-- glowing background accent -->
-                <div
-                    style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); filter: blur(40px); opacity: 0.15; pointer-events: none;">
-                </div>
-
-                <div style="position: relative; z-index: 1;">
-                    <h3
-                        style="margin-bottom: var(--space-xs); font-size: 1.25rem; color: var(--text-primary); display: flex; align-items: center; gap: var(--space-sm); font-weight: 700;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                            style="filter: drop-shadow(0 0 8px rgba(var(--accent-rgb, 255,255,255), 0.5));">
+            <div style="position:relative;margin-top:var(--space-lg);background:var(--bg-surface);padding:var(--space-lg);border-radius:var(--radius-lg);border:1px solid var(--border-color);box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);overflow:hidden;">
+                <div style="position:absolute;top:-50px;right:-50px;width:300px;height:300px;background:radial-gradient(circle,var(--accent) 0%,transparent 70%);filter:blur(40px);opacity:.15;pointer-events:none;"></div>
+                <div style="position:relative;z-index:1;">
+                    <h3 style="margin-bottom:var(--space-xs);font-size:1.25rem;color:var(--text-primary);display:flex;align-items:center;gap:var(--space-sm);font-weight:700;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
                         Episode {{ next_ep if next_ep else '??' }} Airs In
                     </h3>
-                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); padding-left: 32px;">Don't miss
-                        the upcoming release!</p>
+                    <p style="margin:0;font-size:.85rem;color:var(--text-muted);padding-left:32px;">Don't miss the upcoming release!</p>
                 </div>
-
-                <div class="countdown-timer" id="next-ep-countdown"
-                    data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
-                    style="display: flex; gap: var(--space-sm); position: relative; z-index: 1;">
-                    <div class="time-block"
-                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
-                        <span class="days"
-                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
-                        <span class="label"
-                            style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Days</span>
+                <div id="next-ep-countdown" data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
+                    style="display:flex;gap:var(--space-sm);position:relative;z-index:1;">
+                    {% for label, cls in [('Days','days'),('Hrs','hours'),('Mins','minutes'),('Secs','seconds')] %}
+                    <div style="text-align:center;background:var(--bg-elevated);padding:var(--space-sm) var(--space-md);border-radius:var(--radius-md);min-width:60px;border:1px solid var(--border-color);">
+                        <span class="{{ cls }}" style="display:block;font-size:1.5rem;font-weight:800;font-family:var(--font-mono);color:var(--text-primary);">--</span>
+                        <span style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;">{{ label }}</span>
                     </div>
-                    <div class="time-block"
-                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
-                        <span class="hours"
-                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
-                        <span class="label"
-                            style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Hrs</span>
-                    </div>
-                    <div class="time-block"
-                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
-                        <span class="minutes"
-                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
-                        <span class="label"
-                            style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Mins</span>
-                    </div>
-                    <div class="time-block"
-                        style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--accent); box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);">
-                        <span class="seconds"
-                            style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--accent); text-shadow: 0 0 10px rgba(0, 0, 0, 0.3);">--</span>
-                        <span class="label"
-                            style="font-size: 0.7rem; color: var(--accent); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Secs</span>
-                    </div>
+                    {% endfor %}
                 </div>
             </div>
             <script>
                 document.addEventListener('DOMContentLoaded', () => {
-                    const container = document.getElementById('next-ep-countdown');
-                    if (!container) return;
-
-                    const timestamp = parseInt(container.getAttribute('data-timestamp'), 10);
-                    if (!timestamp) return;
-
-                    const daysEl = container.querySelector('.days');
-                    const hoursEl = container.querySelector('.hours');
-                    const minutesEl = container.querySelector('.minutes');
-                    const secondsEl = container.querySelector('.seconds');
-
-                    function updateTimer() {
-                        const now = Date.now();
-                        const jsTimestamp = timestamp > 9999999999 ? timestamp : timestamp * 1000;
-                        const diff = jsTimestamp - now;
-
-                        if (diff <= 0) {
-                            daysEl.textContent = "00";
-                            hoursEl.textContent = "00";
-                            minutesEl.textContent = "00";
-                            secondsEl.textContent = "00";
-                            return;
-                        }
-
-                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                        const m = Math.floor((diff / 1000 / 60) % 60);
-                        const s = Math.floor((diff / 1000) % 60);
-
-                        daysEl.textContent = d.toString().padStart(2, '0');
-                        hoursEl.textContent = h.toString().padStart(2, '0');
-                        minutesEl.textContent = m.toString().padStart(2, '0');
-                        secondsEl.textContent = s.toString().padStart(2, '0');
-                    }
-
-                    updateTimer();
-                    setInterval(updateTimer, 1000);
+                    const el = document.getElementById('next-ep-countdown');
+                    if (!el) return;
+                    const ts = parseInt(el.dataset.timestamp, 10);
+                    if (!ts) return;
+                    const update = () => {
+                        const diff = (ts > 9999999999 ? ts : ts * 1000) - Date.now();
+                        if (diff <= 0) { ['days','hours','minutes','seconds'].forEach(c => el.querySelector('.'+c).textContent = '00'); return; }
+                        el.querySelector('.days').textContent    = String(Math.floor(diff/86400000)).padStart(2,'0');
+                        el.querySelector('.hours').textContent   = String(Math.floor(diff/3600000)%24).padStart(2,'0');
+                        el.querySelector('.minutes').textContent = String(Math.floor(diff/60000)%60).padStart(2,'0');
+                        el.querySelector('.seconds').textContent = String(Math.floor(diff/1000)%60).padStart(2,'0');
+                    };
+                    update(); setInterval(update, 1000);
                 });
             </script>
             {% endif %}
 
             <!-- Episode Info -->
-            <div
-                style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: var(--space-lg); margin-top: var(--space-lg);">
-                <h2 style="margin-bottom: var(--space-sm);">
-                    Episode {{ Episode }}
-                </h2>
-                <p class="text-muted">
-                    {{ eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else 'Unknown' }}
-                </p>
-
-                <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap;">
-                    <span class="badge badge-sub" style="font-size: 0.8rem;">{{ lang | upper }}</span>
+            <div style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);margin-top:var(--space-lg);">
+                <h2 style="margin-bottom:var(--space-sm);">Episode {{ Episode }}</h2>
+                <p class="text-muted">{{ eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else 'Unknown' }}</p>
+                <div style="margin-top:var(--space-lg);display:flex;gap:var(--space-md);flex-wrap:wrap;">
+                    <span class="badge badge-sub" style="font-size:.8rem;">{{ lang | upper }}</span>
                     {% if selected_server %}
-                    <span class="badge" style="background: var(--bg-elevated); font-size: 0.8rem;">{{ selected_server |
-                        upper }}</span>
+                    <span class="badge" style="background:var(--bg-elevated);font-size:.8rem;">{{ selected_server | upper }}</span>
                     {% endif %}
                 </div>
             </div>
         </div>
-
-        <!-- Old Sidebar Removed -->
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Video.js Core -->
 <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
-<!-- Custom Video.js Player with Subtitle Support -->
 <script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
-<!-- Watch Progress Manager -->
 <script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
 <script>
-    // View Toggle Logic
     document.addEventListener('DOMContentLoaded', () => {
+        // Episode sidebar view toggle
         const episodeList = document.getElementById('episodeList');
         const viewListBtn = document.getElementById('view-list-btn');
         const viewGridBtn = document.getElementById('view-grid-btn');
-        const searchInput = document.getElementById('episodeSearch');
-
-        // Load saved preference
-        const savedView = localStorage.getItem('episodeView') || 'grid';
-        setEpisodeView(savedView);
 
         function setEpisodeView(view) {
             if (!episodeList) return;
-
             episodeList.setAttribute('data-view', view);
             localStorage.setItem('episodeView', view);
-
-            if (view === 'list') {
-                viewListBtn.classList.add('active');
-                viewGridBtn.classList.remove('active');
-            } else {
-                viewGridBtn.classList.add('active');
-                viewListBtn.classList.remove('active');
-            }
+            viewListBtn.classList.toggle('active', view === 'list');
+            viewGridBtn.classList.toggle('active', view === 'grid');
         }
 
-        if (viewListBtn) {
-            viewListBtn.addEventListener('click', () => setEpisodeView('list'));
-        }
-        if (viewGridBtn) {
-            viewGridBtn.addEventListener('click', () => setEpisodeView('grid'));
-        }
+        setEpisodeView(localStorage.getItem('episodeView') || 'grid');
+        viewListBtn?.addEventListener('click', () => setEpisodeView('list'));
+        viewGridBtn?.addEventListener('click', () => setEpisodeView('grid'));
 
-        // Search Functionality
-        if (searchInput) {
+        // Episode search
+        const searchInput = document.getElementById('episodeSearch');
+        if (searchInput && episodeList) {
             searchInput.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
-                const items = episodeList.querySelectorAll('.episode-sidebar-item');
-
-                items.forEach(item => {
-                    const num = item.dataset.number;
-                    // In list view we might search title too, but grid view only has numbers usually visible.
-                    // Let's search both number and text content (title)
-                    const text = item.textContent.toLowerCase();
-
-                    if (num.includes(term) || text.includes(term)) {
-                        item.style.display = '';
-                    } else {
-                        item.style.display = 'none';
-                    }
+                episodeList.querySelectorAll('.episode-sidebar-item').forEach(item => {
+                    const match = item.dataset.number.includes(term) || item.textContent.toLowerCase().includes(term);
+                    item.style.display = match ? '' : 'none';
                 });
             });
         }
 
         // Auto-scroll to current episode
-        const currentEp = episodeList.querySelector('.current');
-        if (currentEp) {
-            setTimeout(() => {
-                currentEp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 500);
-        }
-    });
+        const currentEp = episodeList?.querySelector('.current');
+        if (currentEp) setTimeout(() => currentEp.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500);
 
-    // Initialize Video.js player
-    document.addEventListener('DOMContentLoaded', function () {
-        // Initialize Progress Manager
+        // Init player
         window.progressManager = new WatchProgressManager();
 
-        try {
-            // Check if player already exists to prevent double init
-            if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
-                return;
+        const vjsPlayer = new VideoJSPlayer();
+        vjsPlayer.initialize();
+        window.videojsPlayer = vjsPlayer;
+
+        // Hook progress manager into player
+        setTimeout(() => {
+            const player = window.videojs?.getPlayer('videoPlayer');
+            if (player && window.progressManager) {
+                player.ready(() => {
+                    const vid = player.tech()?.el();
+                    if (vid) window.progressManager.startTracking(vid);
+                });
             }
-
-            const vjsPlayer = new VideoJSPlayer();
-            vjsPlayer.initialize();
-
-            // Connect Progress Manager to Video.js after initialization
-            // The player instance is stored in vjsPlayer.player
-            setTimeout(function () {
-                const player = window.videojs && window.videojs.getPlayer('videoPlayer');
-                if (player && window.progressManager) {
-                    player.ready(function () {
-                        const videoElement = player.tech().el();
-                        if (videoElement) {
-                            window.progressManager.startTracking(videoElement);
-                        }
-                    });
-                }
-            }, 500);
-
-        } catch (error) {
-            console.error("[Watch] Video player initialization error:", error);
-        }
+        }, 500);
     });
 
-
-    // Player Source Switching with Auto-Fallback
-    const playerSelect = document.getElementById('player-select');
-    const internalPlayer = document.getElementById('videoPlayer');
-    const externalPlayer = document.getElementById('externalPlayer');
-    const skipButtons = document.getElementById('skipButtons');
-
-    // Track fallback state to prevent infinite loops
-    let hasTriedFallback = false;
-    let currentPlayerMode = 'internal';
-
-    // Restore preference from settings
-    const savedPlayer = localStorage.getItem('preferred_player') || 'internal';
-    if (playerSelect) {
-        playerSelect.value = savedPlayer;
-        currentPlayerMode = savedPlayer;
-        togglePlayer(savedPlayer, false);
-    }
-
-    if (playerSelect) {
-        playerSelect.addEventListener('change', function () {
-            const mode = this.value;
-            hasTriedFallback = false; // Reset fallback state on manual change
-            localStorage.setItem('preferred_player', mode);
-            currentPlayerMode = mode;
-            togglePlayer(mode, false);
+    // Quality selector
+    const qualitySelect = document.getElementById('quality-select');
+    if (qualitySelect) {
+        const savedQuality = localStorage.getItem('preferred_quality');
+        if (savedQuality && qualitySelect.querySelector(`option[value="${savedQuality}"]`)) {
+            qualitySelect.value = savedQuality;
+            switchQuality(savedQuality);
+        }
+        qualitySelect.addEventListener('change', function () {
+            localStorage.setItem('preferred_quality', this.value);
+            switchQuality(this.value);
         });
     }
 
-    function togglePlayer(mode, isAutoFallback = false) {
-        const vjsWrapper = document.querySelector('.video-js');
-        const noVideoFallback = document.getElementById('noVideoFallback');
-        currentPlayerMode = mode;
-
-        if (mode === 'external') {
-            if (vjsWrapper) vjsWrapper.style.display = 'none';
-            if (internalPlayer) internalPlayer.style.display = 'none';
-            if (noVideoFallback) noVideoFallback.style.display = 'none';
-
-            if (externalPlayer) {
-                const externalSrc = externalPlayer.dataset.externalSrc;
-                if (externalSrc && externalPlayer.src !== externalSrc) {
-                    externalPlayer.src = externalSrc;
-                }
-                externalPlayer.style.display = 'block';
-
-                // Set up external player error detection (iframe load timeout)
-                if (!isAutoFallback) {
-                    setupExternalPlayerErrorDetection();
-                }
-
-                // Force save progress as "started" for external player
-                if (window.progressManager) {
-                    // Save 1 second of progress to mark as started in Continue Watching
-                    window.progressManager.saveProgress(1, 0, false);
-                }
-            }
-            if (skipButtons) skipButtons.style.display = 'none';
-
-            // Pause internal player if playing
-            try {
-                if (window.videojs && window.videojs.getPlayer('videoPlayer')) {
-                    window.videojs.getPlayer('videoPlayer').pause();
-                }
-            } catch (e) { }
-        } else {
-            if (vjsWrapper) vjsWrapper.style.display = '';
-            if (internalPlayer) internalPlayer.style.display = '';
-            if (externalPlayer) {
-                externalPlayer.style.display = 'none';
-                // Unload external player to stop background audio/video
-                externalPlayer.src = 'about:blank';
-            }
-            if (skipButtons) skipButtons.style.display = '';
-            if (noVideoFallback) noVideoFallback.style.display = vjsWrapper ? 'none' : '';
-
-            // Set up internal player error detection
-            if (!isAutoFallback) {
-                setupInternalPlayerErrorDetection();
-            }
-        }
-
-        // Update dropdown to reflect current state
-        if (playerSelect && playerSelect.value !== mode) {
-            playerSelect.value = mode;
-        }
-    }
-
-    // Internal player (Video.js) error detection
-    function setupInternalPlayerErrorDetection() {
-        // Check immediately if player exists
-        const player = window.videojs && window.videojs.getPlayer('videoPlayer');
-        if (!player) {
-            // Wait a brief moment in case init is just finishing, but shorter than before
-            setTimeout(() => {
-                const retryPlayer = window.videojs && window.videojs.getPlayer('videoPlayer');
-                if (!retryPlayer) {
-                    fallbackToAlternatePlayer('internal');
-                } else {
-                    attachErrorListeners(retryPlayer);
-                }
-            }, 500);
-            return;
-        }
-
-        attachErrorListeners(player);
-    }
-
-    function attachErrorListeners(player) {
-        // 1. Check if an error ALREADY happened (e.g. 403 on source load)
-        if (player.error()) {
-            console.log("[Watch] Player has existing error:", player.error());
-            fallbackToAlternatePlayer('internal');
-            return;
-        }
-
-        // 2. Listen for future errors
-        player.on('error', function () {
-            console.log("[Watch] Player reported error:", player.error());
-            fallbackToAlternatePlayer('internal');
-        });
-
-        // 3. Detect stalled playback (no progress for 10 seconds after play attempt)
-        let playbackStarted = false;
-        let stallCheckTimeout = null;
-
-        player.on('play', function () {
-            if (!playbackStarted) {
-                playbackStarted = true;
-                stallCheckTimeout = setTimeout(() => {
-                    if (player.currentTime() === 0 && !player.paused()) {
-                        console.log("[Watch] Playback stalled at 0s");
-                        fallbackToAlternatePlayer('internal');
-                    }
-                }, 10000);
-            }
-        });
-
-        player.on('timeupdate', function () {
-            if (stallCheckTimeout) {
-                clearTimeout(stallCheckTimeout);
-                stallCheckTimeout = null;
-            }
-        });
-    }
-
-    // External player (iframe) error detection
-    function setupExternalPlayerErrorDetection() {
-        if (!externalPlayer) return;
-
-        // Iframe load timeout - if nothing loads in 15 seconds, fallback
-        const loadTimeout = setTimeout(() => {
-            // Check if iframe is still empty/about:blank
-            try {
-                if (externalPlayer.style.display === 'block') {
-                    // Can't reliably detect iframe content due to CORS, but we can fallback on timeout
-                    // Only fallback if user hasn't interacted with it
-                }
-            } catch (e) {
-                fallbackToAlternatePlayer('external');
-            }
-        }, 15000);
-
-        // Clear timeout if user manually switches
-        externalPlayer.addEventListener('load', () => {
-            clearTimeout(loadTimeout);
-        }, { once: true });
-    }
-
-    // Fallback to alternate player
-    function fallbackToAlternatePlayer(failedPlayer) {
-        if (hasTriedFallback) return; // Prevent infinite loops
-        hasTriedFallback = true;
-
-        const alternatePlayer = failedPlayer === 'internal' ? 'external' : 'internal';
-
-        // Show brief notification
-        showFallbackNotification(failedPlayer, alternatePlayer);
-
-        // Switch to alternate player
-        togglePlayer(alternatePlayer, true);
-    }
-
-    // Show fallback notification
-    function showFallbackNotification(failed, switched) {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            animation: fadeIn 0.3s ease;
-        `;
-        notification.textContent = `${failed === 'internal' ? 'Internal' : 'External'} player failed. Switching to ${switched === 'internal' ? 'Internal' : 'External'}...`;
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-
-    // Episode sidebar search
-    const episodeSearch = document.getElementById('episode-sidebar-search');
-    const episodeList = document.getElementById('episode-sidebar-list');
-    const episodeCount = document.getElementById('episode-count');
-
-    if (episodeSearch && episodeList) {
-        const episodes = episodeList.querySelectorAll('.episode-sidebar-item');
-
-        episodeSearch.addEventListener('input', function () {
-            const query = this.value.toLowerCase().trim();
-            let visibleCount = 0;
-
-            episodes.forEach(ep => {
-                const epNum = ep.dataset.episode || '';
-                const epTitle = (ep.dataset.title || '').toLowerCase();
-
-                const matches = !query ||
-                    epNum.includes(query) ||
-                    epTitle.includes(query);
-
-                ep.style.display = matches ? '' : 'none';
-                if (matches) visibleCount++;
-            });
-
-            if (episodeCount) {
-                episodeCount.textContent = visibleCount;
-            }
+    function switchQuality(quality) {
+        const videoEl = document.getElementById('videoPlayer');
+        if (!videoEl) return;
+        let sources = [];
+        try { sources = JSON.parse(videoEl.dataset.videoSources || '[]'); } catch { return; }
+        const match = sources.find(s => s.quality === quality || s.label === quality);
+        if (!match) return;
+        const newUrl = match.file || match.url;
+        if (!newUrl) return;
+        const player = window.videojs?.getPlayer('videoPlayer');
+        if (!player) return;
+        const currentTime = player.currentTime() || 0;
+        const wasPlaying = !player.paused();
+        videoEl.dataset.videoUrl = newUrl;
+        player.src({ src: newUrl, type: 'application/x-mpegURL' });
+        player.one('loadedmetadata', () => {
+            if (currentTime > 0) player.currentTime(currentTime);
+            if (wasPlaying) player.play().catch(() => {});
         });
     }
 </script>

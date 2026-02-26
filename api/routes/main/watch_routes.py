@@ -138,6 +138,8 @@ def watch(eps_title):
     video_link = None
     subtitle_tracks = []
     intro = outro = None
+    video_sources = []  # All quality sources for quality selector
+    available_qualities = []
 
     if isinstance(raw, dict):
         # Video source - prioritize video_link if available (already proxied)
@@ -154,6 +156,13 @@ def watch(eps_title):
                     video_link = first_source.get("file") or first_source.get("url")
                 elif isinstance(first_source, str):
                     video_link = first_source
+
+        # All quality sources for frontend quality selector
+        all_sources = raw.get("sources", [])
+        if isinstance(all_sources, list):
+            video_sources = [s for s in all_sources if isinstance(s, dict) and s.get("file")]
+
+        available_qualities = raw.get("available_qualities", [])
 
         # Subtitles
         subtitle_tracks = raw.get("tracks", [])
@@ -304,6 +313,8 @@ def watch(eps_title):
             available_servers=available_servers,
             external_link=external_link,
             next_episode_schedule=next_episode_schedule,
+            video_sources=video_sources,
+            available_qualities=available_qualities,
         )
     except Exception as e:
         print("watch error:", e)

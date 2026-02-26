@@ -217,12 +217,13 @@ class UnifiedScraper:
     async def video(self, ep_id: Union[str, int], language: str = "sub", server: Optional[str] = None) -> Dict[str, Any]:
         """
         Get video streaming data.
-        3-tier fallback: Miruro sources → HiAnime → Megaplay
+        2-tier fallback: Miruro sources → Megaplay external
+        (HiAnime removed from video chain per user request)
         """
         ep_id_str = str(ep_id)
         miruro_ep_id, anilist_id = self._parse_miruro_ep(ep_id_str)
 
-        # === Source 1: Miruro (if we have a Miruro episode ID) ===
+        # === Source 1: Miruro (primary) ===
         if miruro_ep_id:
             try:
                 provider = "kiwi"  # default
@@ -248,17 +249,7 @@ class UnifiedScraper:
             except Exception as e:
                 logger.warning(f"[UnifiedScraper] Video Miruro failed: {e}")
 
-        # === Source 2: HiAnime ===
-        try:
-            result = await self.hianime.video(ep_id_str, language, server)
-            if result and result.get("video_link"):
-                logger.info(f"[UnifiedScraper] Video (HiAnime): OK for {ep_id_str}")
-                result["source_provider"] = "hianime"
-                return result
-        except Exception as e:
-            logger.warning(f"[UnifiedScraper] Video HiAnime failed for {ep_id_str}: {e}")
-
-        # === Source 3: Megaplay fallback ===
+        # === Source 2: Megaplay fallback ===
         try:
             from .hianime.megaplay_video import get_and_play_m3u8_and_vtt
             from .hianime.video_utils import extract_episode_id
