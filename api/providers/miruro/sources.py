@@ -2,36 +2,12 @@
 Video source fetching for Miruro API
 Handles the /sources endpoint to get streaming URLs
 """
-import base64
 import logging
-import os
 from typing import Dict, Any, Optional
 from .base import MiruroBaseClient
+from ..hianime.video_utils import encode_proxy
 
 logger = logging.getLogger(__name__)
-
-proxy_url = os.getenv("PROXY_URL", "")
-if proxy_url and proxy_url.startswith("http://"):
-    proxy_url = proxy_url.replace("http://", "https://", 1)
-
-
-def encode_proxy_with_referer(url: str, referer: str = "") -> str:
-    """Proxy a URL with optional referer header forwarding.
-    Format: PROXY_URL + base64(url) + ?referer=base64(referer)
-    """
-    if not url:
-        return url
-    try:
-        encoded_url = base64.b64encode(url.encode()).decode()
-        result = f"{proxy_url}{encoded_url}"
-        if referer:
-            encoded_referer = base64.b64encode(referer.encode()).decode()
-            result = f"{result}?referer={encoded_referer}"
-        if result.startswith("http://"):
-            result = result.replace("http://", "https://", 1)
-        return result
-    except Exception:
-        return url
 
 
 class MiruroSourcesService:
@@ -82,11 +58,10 @@ class MiruroSourcesService:
                 continue
             url = stream.get("url") or ""
             stream_type = stream.get("type", "").lower()
-            referer = stream.get("referer") or ""
 
             if stream_type == "hls" or url.endswith(".m3u8"):
-                # Proxy the URL with referer header
-                proxied_url = encode_proxy_with_referer(url, referer)
+                # Use same proxy encoding as HiAnime
+                proxied_url = encode_proxy(url)
                 sources.append({
                     "url": proxied_url,
                     "file": proxied_url,
@@ -100,8 +75,7 @@ class MiruroSourcesService:
                 if not isinstance(stream, dict):
                     continue
                 url = stream.get("url") or ""
-                referer = stream.get("referer") or ""
-                proxied_url = encode_proxy_with_referer(url, referer)
+                proxied_url = encode_proxy(url)
                 sources.append({
                     "url": proxied_url,
                     "file": proxied_url,
