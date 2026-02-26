@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(override=False)
 
 from api.core.config import Config
-from api.providers import HianimeScraper
+from api.providers import UnifiedScraper
 
 from api.routes.main import main_bp
 from api.routes.auth import auth_bp
@@ -97,7 +97,7 @@ def create_app():
     app.jinja_env.filters['strip_anime_id'] = strip_anime_id
 
     # Initialize scraper
-    app.ha_scraper = HianimeScraper()
+    app.ha_scraper = UnifiedScraper()
 
     # Initialize extensions
     from api.core.extensions import limiter
