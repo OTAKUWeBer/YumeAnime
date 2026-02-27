@@ -800,6 +800,71 @@
         color: var(--accent);
     }
 
+    /* Embed iframe player */
+    .embed-player-frame {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: var(--radius-lg);
+    }
+
+    /* Source Switcher Bar */
+    .source-switcher-bar {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        background: var(--bg-surface);
+        padding: 5px 10px;
+        border-radius: var(--radius-md);
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .source-switcher-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .source-switcher-options {
+        display: flex;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .source-switcher-btn {
+        border: none;
+        background: var(--bg-elevated);
+        color: var(--text-muted);
+        padding: 6px 14px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .source-switcher-btn:hover {
+        background: var(--bg-surface-hover);
+        color: var(--text-primary);
+    }
+
+    .source-switcher-btn.active {
+        background: var(--accent) !important;
+        color: white !important;
+    }
+
+    .source-switcher-btn+.source-switcher-btn {
+        border-left: 1px solid var(--border-color);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
         .watch-layout {
@@ -910,12 +975,12 @@
                 {% set is_current = (ep.number|string == episode_number|string) %}
                 {% set ep_id = ep.episodeId %}
                 {% if ep_id.startswith('watch/') %}
-                    {# New format: watch/provider/anilistid/category/slug - use as-is, no suffix #}
-                    {% set ep_val = ep_id %}
+                {# New format: watch/provider/anilistid/category/slug - use as-is, no suffix #}
+                {% set ep_val = ep_id %}
                 {% elif '?ep=' in ep_id %}
-                    {% set ep_val = ep_id.split('?ep=')[1] %}
+                {% set ep_val = ep_id.split('?ep=')[1] %}
                 {% else %}
-                    {% set ep_val = ep_id %}
+                {% set ep_val = ep_id %}
                 {% endif %}
                 <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' and not ep_id.startswith('watch/') else ('' if ep_id.startswith('watch/') else '-sub'))) }}"
                     class="episode-sidebar-item {% if is_current %}current{% endif %}" data-number="{{ ep.number }}">
@@ -934,7 +999,12 @@
         <!-- Main -->
         <div class="watch-main">
             <div class="video-wrapper paused" id="video-wrapper">
-                {% if video_link %}
+                {% if source_type == 'embed' and embed_sources %}
+                <!-- Embed iframe player (default) -->
+                <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
+                    sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"></iframe>
+                {% elif video_link %}
                 <video id="videoPlayer" class="video-js" playsinline data-video-url="{{ video_link }}"
                     data-intro='{{ intro | tojson | safe if intro else "{}" }}'
                     data-outro='{{ outro | tojson | safe if outro else "{}" }}'
@@ -1105,6 +1175,36 @@
                 {% endif %}
             </div>
 
+            <!-- Source Switcher -->
+            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
+            <div class="source-switcher-bar" id="sourceSwitcher">
+                <span class="source-switcher-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    Source:
+                </span>
+                <div class="source-switcher-options" id="sourceOptions">
+                    {% for es in embed_sources %}
+                    <button class="source-switcher-btn {% if source_type == 'embed' and loop.first %}active{% endif %}"
+                        data-source-type="embed" data-source-url="{{ es.url }}" data-source-label="{{ es.label }}">
+                        {{ es.label or ('Embed ' ~ loop.index) }}
+                    </button>
+                    {% endfor %}
+                    {% for hs in hls_sources %}
+                    <button
+                        class="source-switcher-btn {% if source_type == 'hls' and loop.first and not embed_sources %}active{% endif %}"
+                        data-source-type="hls" data-source-url="{{ hs.file or hs.url }}"
+                        data-source-label="{{ hs.label }}">
+                        {{ hs.quality or ('HLS ' ~ loop.index) }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Language selection -->
             <div
                 style="margin-top: 15px; display: flex; justify-content: flex-end; align-items: center; background: var(--bg-surface); padding: 5px 10px; border-radius: var(--radius-md); gap: 10px;">
@@ -1236,24 +1336,111 @@
         const currentEp = episodeList?.querySelector('.current');
         if (currentEp) setTimeout(() => currentEp.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500);
 
-        // Init player
+        // Init player — only if we're in HLS mode (videoPlayer exists)
         window.progressManager = new WatchProgressManager();
 
-        const vjsPlayer = new VideoJSPlayer();
-        vjsPlayer.initialize();
-        window.videojsPlayer = vjsPlayer;
+        const videoPlayerEl = document.getElementById('videoPlayer');
+        if (videoPlayerEl) {
+            const vjsPlayer = new VideoJSPlayer();
+            vjsPlayer.initialize();
+            window.videojsPlayer = vjsPlayer;
 
-        // Hook custom UI and progress manager via robust event listener
-        window.addEventListener('vjsPlayerReady', (e) => {
-            const player = window.videojs?.getPlayer('videoPlayer');
-            if (player) {
-                initCustomPlayerUI(player, vjsPlayer);
-                if (window.progressManager) {
-                    const vid = player.tech()?.el();
-                    if (vid) window.progressManager.startTracking(vid);
+            // Hook custom UI and progress manager via robust event listener
+            window.addEventListener('vjsPlayerReady', (e) => {
+                const player = window.videojs?.getPlayer('videoPlayer');
+                if (player) {
+                    initCustomPlayerUI(player, vjsPlayer);
+                    if (window.progressManager) {
+                        const vid = player.tech()?.el();
+                        if (vid) window.progressManager.startTracking(vid);
+                    }
                 }
-            }
-        });
+            });
+        }
+
+        // ─── Source Switcher ───
+        const sourceBtns = document.querySelectorAll('.source-switcher-btn');
+        if (sourceBtns.length > 0) {
+            sourceBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.dataset.sourceType;
+                    const url = btn.dataset.sourceUrl;
+
+                    // Mark active
+                    sourceBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const wrapper = document.getElementById('video-wrapper');
+                    if (!wrapper) return;
+
+                    if (type === 'embed') {
+                        // Switch to embed iframe
+                        // Dispose existing Video.js if any
+                        try {
+                            const existingPlayer = window.videojs?.getPlayer('videoPlayer');
+                            if (existingPlayer) {
+                                existingPlayer.dispose();
+                            }
+                        } catch (e) { console.log('[SourceSwitch] No VJS to dispose'); }
+
+                        // Destroy HLS.js instance if any
+                        try {
+                            if (window.videojsPlayer?.hlsInstance) {
+                                window.videojsPlayer.hlsInstance.destroy();
+                            }
+                        } catch (e) { }
+
+                        wrapper.innerHTML = `<iframe id="embedPlayer" class="embed-player-frame"
+                            src="${url}"
+                            allowfullscreen
+                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                            referrerpolicy="origin"
+                            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"></iframe>`;
+                        wrapper.classList.remove('paused', 'loading');
+
+                    } else if (type === 'hls') {
+                        // Switch to HLS Video.js player
+                        // Remove iframe if present
+                        const existingIframe = wrapper.querySelector('#embedPlayer');
+                        if (existingIframe) existingIframe.remove();
+
+                        // Dispose existing Video.js player if any
+                        try {
+                            const existingPlayer = window.videojs?.getPlayer('videoPlayer');
+                            if (existingPlayer) existingPlayer.dispose();
+                        } catch (e) { }
+
+                        // Create new video element
+                        const videoEl = document.createElement('video');
+                        videoEl.id = 'videoPlayer';
+                        videoEl.className = 'video-js';
+                        videoEl.setAttribute('playsinline', '');
+                        videoEl.dataset.videoUrl = url;
+                        videoEl.dataset.intro = '{}';
+                        videoEl.dataset.outro = '{}';
+                        videoEl.dataset.videoSources = '[]';
+                        videoEl.dataset.availableQualities = '[]';
+
+                        // Clear wrapper and add video
+                        wrapper.innerHTML = '';
+                        wrapper.appendChild(videoEl);
+                        wrapper.classList.add('paused');
+
+                        // Re-initialize Video.js
+                        const newVjsPlayer = new VideoJSPlayer();
+                        newVjsPlayer.initialize();
+                        window.videojsPlayer = newVjsPlayer;
+
+                        window.addEventListener('vjsPlayerReady', (e) => {
+                            const player = window.videojs?.getPlayer('videoPlayer');
+                            if (player) {
+                                initCustomPlayerUI(player, newVjsPlayer);
+                            }
+                        }, { once: true });
+                    }
+                });
+            });
+        }
     });
 
     // Quality selector

@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-db_name = os.getenv("db")
-users_collection_name = os.getenv("users_collection")
-watchlist_collection_name = os.getenv("watchlist_collection")
+db_name = os.getenv("db", "yumeanime")
+users_collection_name = os.getenv("users_collection", "users")
+watchlist_collection_name = os.getenv("watchlist_collection", "watchlist")
 
 # Centralized MongoDB connection with optimizations
 mongodb_uri = os.getenv("MONGODB_URI")

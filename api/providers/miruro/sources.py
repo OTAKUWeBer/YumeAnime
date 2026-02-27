@@ -155,25 +155,25 @@ class MiruroSourcesService:
 
         hls_sources.sort(key=quality_sort_key)
 
-        # Use all HLS sources, or embed as fallback
-        sources = hls_sources if hls_sources else embed_sources
         print(
-            f"[MiruroSources] hls_sources: {len(hls_sources)}, embed_sources: {len(embed_sources)}, sources: {len(sources)}"
+            f"[MiruroSources] hls_sources: {len(hls_sources)}, embed_sources: {len(embed_sources)}"
         )
 
-        # Default source = highest quality HLS (or first active one)
-        default_source = None
+        # Priority: embed first (default), HLS as fallback/alternative
+        # Determine source_type and default source
+        source_type = "embed" if embed_sources else ("hls" if hls_sources else None)
+
+        # Default HLS source (highest quality or first active)
+        default_hls_source = None
         for s in hls_sources:
             if s.get("isActive"):
-                default_source = s
+                default_hls_source = s
                 break
-        if not default_source and hls_sources:
-            default_source = hls_sources[0]
-
-        print(f"[MiruroSources] default_source: {default_source}")
+        if not default_hls_source and hls_sources:
+            default_hls_source = hls_sources[0]
 
         result = {
-            "sources": sources,
+            "sources": hls_sources,
             "tracks": tracks,
             "intro": intro if intro.get("start") is not None else None,
             "outro": outro if outro.get("start") is not None else None,
@@ -181,23 +181,31 @@ class MiruroSourcesService:
             "provider": provider,
             "download": download,
             "embed_sources": embed_sources,
+            "hls_sources": hls_sources,
+            "source_type": source_type,
             # Quality info for frontend
             "available_qualities": [s.get("quality") for s in hls_sources],
         }
 
-        # video_link = default (best) proxied source
-        print(f"[MiruroSources] Setting video_link, default_source: {default_source}")
-        if default_source:
+        # Set video_link based on source_type
+        if source_type == "embed" and embed_sources:
+            # Embed is default — video_link is the embed URL (for iframe)
+            result["video_link"] = embed_sources[0].get("url", "")
+            print(
+                f"[MiruroSources] video_link (embed): {result['video_link'][:100] if result['video_link'] else 'EMPTY'}"
+            )
+        elif source_type == "hls" and default_hls_source:
+            # HLS fallback — video_link is proxied m3u8
             result["video_link"] = (
-                default_source.get("file") or default_source.get("url") or ""
+                default_hls_source.get("file") or default_hls_source.get("url") or ""
             )
             print(
-                f"[MiruroSources] video_link set to: {result['video_link'][:100] if result['video_link'] else 'EMPTY'}"
+                f"[MiruroSources] video_link (hls): {result['video_link'][:100] if result['video_link'] else 'EMPTY'}"
             )
 
         logger.info(
             f"[MiruroSources] episode_id={episode_id}, provider={provider}, "
             f"category={category}, hls={len(hls_sources)}, embeds={len(embed_sources)}, "
-            f"qualities={result['available_qualities']}"
+            f"source_type={source_type}, qualities={result['available_qualities']}"
         )
         return result

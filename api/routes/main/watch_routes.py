@@ -207,15 +207,30 @@ def watch(eps_title):
     intro = outro = None
     video_sources = []  # All quality sources for quality selector
     available_qualities = []
+    embed_sources = []
+    hls_sources = []
+    source_type = None  # "embed" or "hls"
 
     if isinstance(raw, dict):
-        # Video source - prioritize video_link if available (already proxied)
+        # Determine source type from API response
+        source_type = raw.get("source_type")  # "embed" or "hls"
+        embed_sources = raw.get("embed_sources", [])
+        hls_sources = raw.get("hls_sources", raw.get("sources", []))
         video_link = raw.get("video_link")
-        print(f"[Watch] video_link from raw: {video_link}")
+
+        print(f"[Watch] source_type: {source_type}, video_link: {video_link}")
+        print(f"[Watch] embed_sources: {len(embed_sources)}, hls_sources: {len(hls_sources) if isinstance(hls_sources, list) else 0}")
         print(f"[Watch] raw keys: {raw.keys()}")
 
-        # Fallback to sources if video_link not available
-        if not video_link:
+        # If source_type is not set (older API), detect from available data
+        if not source_type:
+            if embed_sources:
+                source_type = "embed"
+            elif video_link or hls_sources:
+                source_type = "hls"
+
+        # For HLS source type, try to extract video_link from sources if not available
+        if source_type == "hls" and not video_link:
             sources = raw.get("sources")
             if isinstance(sources, dict):
                 video_link = sources.get("file") or sources.get("url")
@@ -226,7 +241,7 @@ def watch(eps_title):
                 elif isinstance(first_source, str):
                     video_link = first_source
 
-        print(f"[Watch] final video_link: {video_link}")
+        print(f"[Watch] final video_link: {video_link}, source_type: {source_type}")
 
         # All quality sources for frontend quality selector
         all_sources = raw.get("sources", [])
@@ -490,6 +505,9 @@ def watch(eps_title):
             next_episode_schedule=next_episode_schedule,
             video_sources=video_sources,
             available_qualities=available_qualities,
+            source_type=source_type,
+            embed_sources=embed_sources,
+            hls_sources=hls_sources,
         )
     except Exception as e:
         print("watch error:", e)

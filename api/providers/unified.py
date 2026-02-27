@@ -295,7 +295,7 @@ class UnifiedScraper:
                     anilist_id=anilist_id,
                     category=language,
                 )
-                if result and not result.get("error") and result.get("video_link"):
+                if result and not result.get("error") and (result.get("video_link") or result.get("embed_sources")):
                     logger.info(
                         f"[UnifiedScraper] Video (Miruro): OK for {miruro_ep_id}"
                     )
