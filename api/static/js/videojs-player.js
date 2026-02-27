@@ -2,7 +2,7 @@
 // Streams from owocdn / megacloud report mp4a.40.1 (AAC Main) in their codec
 // string, but browsers only support mp4a.40.2 (AAC-LC) in MSE. Remap it before
 // the SourceBuffer is created so Video.js never sees the bad profile flag.
-;(function () {
+; (function () {
   const _orig = MediaSource.prototype.addSourceBuffer
   MediaSource.prototype.addSourceBuffer = function (mimeType) {
     const fixed = mimeType.replace('mp4a.40.1', 'mp4a.40.2')
@@ -101,9 +101,10 @@ class VideoJSPlayer {
       this.intro = introData.start ? introData : null
       this.outro = outroData.start ? outroData : null
 
-      console.log("Subtitles:", subtitles.length, "tracks")
-      console.log("Intro:", this.intro)
-      console.log("Outro:", this.outro)
+      console.log("[DEBUG] Subtitles:", subtitles.length, "tracks")
+      console.log("[DEBUG] Intro:", this.intro)
+      console.log("[DEBUG] Outro:", this.outro)
+      console.log("[DEBUG] Hls.js supported statically? (if present)", typeof Hls !== 'undefined' ? Hls.isSupported() : 'N/A')
 
       // Initialize Video.js player
       this.setupVideoJS(videoElement, videoUrl, subtitles)
@@ -138,28 +139,19 @@ class VideoJSPlayer {
       muted: false,
       html5: {
         vhs: {
-          // Must be true: forces VHS on every browser (including Safari).
-          // Native HLS rejects segments served as application/octet-stream,
-          // which is exactly what the proxy returns for disguised segments.
-          overrideNative: true,
+          // Allow Safari to use its native player but force VHS on others
+          overrideNative: !window.videojs.browser.IS_ANY_SAFARI,
           enableLowInitialPlaylist: true,
           smoothQualityChange: true,
           useBandwidthFromLocalStorage: true,
           maxPlaylistRetries: 5,
           bandwidth: 5242880,
-          bufferBasedABR: true,
           llhls: false,
         },
         nativeVideoTracks: false,
         nativeAudioTracks: false,
         nativeTextTracks: false,
       },
-      sources: [
-        {
-          src: videoUrl,
-          type: "application/x-mpegURL",
-        },
-      ],
       tracks: this.formatSubtitlesForVideoJS(subtitles),
     }
 
@@ -174,6 +166,52 @@ class VideoJSPlayer {
       console.log("[v0] Creating Video.js instance...")
       this.player = videojs(videoElement, playerOptions)
       console.log("[v0] Video.js player created successfully")
+
+      // Use Hls.js explicitly for m3u8 playlists (mirrors Yoruhime proxy logic)
+      if (videoUrl && videoUrl.includes(".m3u8")) {
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+          console.log("[v0] Hls.js is supported, injecting stream explicitly...")
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: false,
+            backBufferLength: 90,
+            maxBufferSize: 60 * 1000 * 1000,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            progressive: true,
+            abrEwmaDefaultEstimate: 500000,
+            abrBandWidthFactor: 0.95,
+            abrBandWidthUpFactor: 0.7,
+            startLevel: -1,
+            autoStartLoad: true,
+            debug: false,
+          })
+
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (data.fatal) {
+              console.error('[HLS Fatal Error]', data.type, data.details)
+              if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                hls.startLoad()
+              } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                hls.recoverMediaError()
+              }
+            }
+          })
+
+          hls.loadSource(videoUrl)
+          hls.attachMedia(videoElement)
+
+          // Store ref to destroy later if needed
+          this.hlsInstance = hls
+        } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+          // Native safari
+          videoElement.src = videoUrl
+        }
+      } else {
+        // Fallback for non-m3u8 sources (like direct MP4s from embeds)
+        this.player.src({ src: videoUrl })
+      }
+
     } catch (error) {
       console.error("[v0] Error creating Video.js player:", error)
       return
@@ -193,6 +231,9 @@ class VideoJSPlayer {
         this.applySubtitleStyling()
         this.forceTransparentSubtitles()
         console.log("[v0] All player features initialized")
+
+        // Notify watch.html that player is ready to attach custom UI
+        window.dispatchEvent(new CustomEvent('vjsPlayerReady', { detail: { player: this.player } }))
       } catch (error) {
         console.error("[v0] Error during player setup:", error)
       }
@@ -431,20 +472,20 @@ class VideoJSPlayer {
           --vjs-subtitle-font-size-mobile-fullscreen: 18px;
         }
         
-        /* CRITICAL: Force transparent backgrounds on ALL subtitle elements */
+        /* CRITICAL: Control backgrounds on ALL subtitle elements dynamically via CSS vars */
         .video-js .vjs-text-track-cue,
         .video-js .vjs-text-track-cue > div,
         .video-js .vjs-text-track-display,
         .vjs-text-track-cue,
         video::cue,
         ::cue {
-          background: transparent !important;
-          background-color: transparent !important;
+          background: var(--vjs-subtitle-bg, transparent) !important;
+          background-color: var(--vjs-subtitle-bg, transparent) !important;
           color: white !important;
           font-size: var(--vjs-subtitle-font-size) !important;
           line-height: 1.5 !important;
-          padding: 0 !important;
-          border-radius: 0 !important;
+          padding: 4px 8px !important;
+          border-radius: 4px !important;
           font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
           font-weight: 600 !important;
           text-shadow: 
@@ -503,7 +544,10 @@ class VideoJSPlayer {
     root.style.setProperty('--vjs-subtitle-font-size-mobile', `${Math.max(14, fontSize - 14)}px`)
     root.style.setProperty('--vjs-subtitle-font-size-mobile-fullscreen', `${Math.max(18, fontSize - 10)}px`)
 
-    console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px`)
+    const bg = this.settings.subtitleBackground === 'transparent' ? 'transparent' : 'rgba(0,0,0,0.7)'
+    root.style.setProperty('--vjs-subtitle-bg', bg)
+
+    console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px and background: ${bg}`)
   }
 
   /**
@@ -516,20 +560,20 @@ class VideoJSPlayer {
 
     console.log("[Subtitles] Setting up forced transparent subtitle backgrounds")
 
-    // Function to remove backgrounds from all subtitle elements
+    // Function to set backgrounds from all subtitle elements
     const removeSubtitleBackgrounds = () => {
       const playerEl = this.player.el()
       if (!playerEl) return
+
+      const bg = this.settings.subtitleBackground === 'transparent' ? 'transparent' : 'rgba(0,0,0,0.7)'
 
       // Find all text track cue elements
       const cues = playerEl.querySelectorAll('.vjs-text-track-cue, .vjs-text-track-cue > div')
 
       cues.forEach(cue => {
-        // Force transparent background using inline styles (highest specificity)
-        cue.style.setProperty('background', 'transparent', 'important')
-        cue.style.setProperty('background-color', 'transparent', 'important')
-        cue.style.setProperty('padding', '0', 'important')
-        cue.style.setProperty('border', 'none', 'important')
+        // Set background using inline styles (highest specificity)
+        cue.style.setProperty('background', bg, 'important')
+        cue.style.setProperty('background-color', bg, 'important')
       })
 
       // Also target the text track display container
