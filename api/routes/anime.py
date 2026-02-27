@@ -6,51 +6,57 @@ Route Structure:
 - /anime/<anime_id> (GET) - Anime information page
 - /anime/watch/<eps_title> (GET) - Watch episode page
 """
+
 from flask import Blueprint, render_template, request, redirect, url_for
 from urllib.parse import parse_qs
 import asyncio
 import logging
 
 from ..providers import HianimeScraper
-from ..providers.hianime.megaplay_video import get_megaplay_url
 
-anime_bp = Blueprint('anime_bp', __name__)
+anime_bp = Blueprint("anime_bp", __name__)
 HA = HianimeScraper()
 logger = logging.getLogger(__name__)
 
 
-@anime_bp.route('/<anime_id>', methods=['GET'])
+@anime_bp.route("/<anime_id>", methods=["GET"])
 async def anime_info(anime_id: str):
     """
     Fetch and display anime information
     GET /anime/<anime_id>
     """
     current_path = request.path
-    
+
     try:
         get_info_method = getattr(HA, "get_anime_info", None)
         get_schedule_method = getattr(HA, "next_episode_schedule", None)
         if not get_info_method or not get_schedule_method:
             return "Anime info or schedule function not found", 500
-        
+
         anime_info, next_episode_schedule = await asyncio.gather(
             get_info_method(anime_id),
             get_schedule_method(anime_id),
-            return_exceptions=True
+            return_exceptions=True,
         )
-        
+
         if isinstance(anime_info, Exception):
             logger.error(f"Error fetching anime info for {anime_id}: {anime_info}")
             anime_info = None
         if isinstance(next_episode_schedule, Exception):
-            logger.error(f"Error fetching next episode schedule for {anime_id}: {next_episode_schedule}")
+            logger.error(
+                f"Error fetching next episode schedule for {anime_id}: {next_episode_schedule}"
+            )
             next_episode_schedule = None
 
         if not anime_info:
             return f"No info found for anime ID: {anime_id}", 404
-        
+
         # Normalize: if the payload nests under "info", extract it
-        if isinstance(anime_info, dict) and "info" in anime_info and isinstance(anime_info["info"], dict):
+        if (
+            isinstance(anime_info, dict)
+            and "info" in anime_info
+            and isinstance(anime_info["info"], dict)
+        ):
             anime = anime_info["info"]
         else:
             anime = anime_info
@@ -58,15 +64,20 @@ async def anime_info(anime_id: str):
         # Auto-save IDs to cache (for Vercel — grows the DB as users browse)
         try:
             from ..utils.id_cache import auto_cache_from_info
+
             auto_cache_from_info(anime_id, anime)
         except Exception:
             pass
         # OR if the schedule is expired/in the past (time < 0)
         needs_fallback = False
-        if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
+        if not next_episode_schedule or not next_episode_schedule.get(
+            "airingTimestamp"
+        ):
             needs_fallback = True
         else:
-            time_until = next_episode_schedule.get("secondsUntilAiring") or next_episode_schedule.get("timeUntilAiring")
+            time_until = next_episode_schedule.get(
+                "secondsUntilAiring"
+            ) or next_episode_schedule.get("timeUntilAiring")
             if time_until is not None:
                 try:
                     if int(time_until) < 0:
@@ -78,47 +89,56 @@ async def anime_info(anime_id: str):
             hianime_al_id = anime.get("anilistId") or anime.get("alID")
             hianime_mal_id = anime.get("malId") or anime.get("malID")
             hianime_title = anime.get("title")
-            
+
             # Skip if all are missing
             if hianime_al_id or hianime_mal_id or hianime_title:
                 try:
                     from ..utils.helpers import fetch_anilist_next_episode
+
                     fallback_schedule = await fetch_anilist_next_episode(
                         anilist_id=hianime_al_id,
                         mal_id=hianime_mal_id,
-                        search_title=hianime_title
+                        search_title=hianime_title,
                     )
                     if fallback_schedule and fallback_schedule.get("airingTimestamp"):
                         next_episode_schedule = fallback_schedule
 
                 except Exception as e:
-                    logger.error(f"Failed to fetch fallback schedule from AniList for AL: {hianime_al_id}, MAL: {hianime_mal_id}: {e}")
-        
+                    logger.error(
+                        f"Failed to fetch fallback schedule from AniList for AL: {hianime_al_id}, MAL: {hianime_mal_id}: {e}"
+                    )
+
         # Safety: ensure an 'id' exists so template doesn't blow up
         anime.setdefault("id", anime_id)
-        
+
         suggestions = {
             "related": anime.get("relatedAnimes", []),
-            "recommended": anime.get("recommendedAnimes", [])
+            "recommended": anime.get("recommendedAnimes", []),
         }
-        
-        logger.debug("Rendering anime page for id=%s, anime keys=%s", anime.get("id"), list(anime.keys()))
-        
+
+        logger.debug(
+            "Rendering anime page for id=%s, anime keys=%s",
+            anime.get("id"),
+            list(anime.keys()),
+        )
+
         return render_template(
             "info.html",
             anime=anime,
             suggestions=suggestions,
             next_episode_schedule=next_episode_schedule,
             current_path=current_path,
-            current_season_id=anime_id
+            current_season_id=anime_id,
         )
-        
+
     except Exception as e:
         logger.error(f"Error fetching anime info for {anime_id}: {e}")
-        return render_template('404.html', error_message=f"Error loading anime: {e}"), 500
+        return render_template(
+            "404.html", error_message=f"Error loading anime: {e}"
+        ), 500
 
 
-@anime_bp.route('/watch/<eps_title>', methods=['GET'])
+@anime_bp.route("/watch/<eps_title>", methods=["GET"])
 async def watch(eps_title):
     """
     Watch episode page with video player
@@ -137,10 +157,12 @@ async def watch(eps_title):
     try:
         # Check if dub is available
         dub_available = await HA.is_dub_available(eps_title, ep_number)
-        
+
         # Redirect to sub if dub requested but not available
         if lang == "dub" and not dub_available:
-            return redirect(url_for('anime.watch', eps_title=eps_title, ep=f"{ep_number}-sub"))
+            return redirect(
+                url_for("anime.watch", eps_title=eps_title, ep=f"{ep_number}-sub")
+            )
 
         # Get video embed URL
         raw = await HA.video(ep_number, lang, fetch_url=False)
@@ -149,8 +171,8 @@ async def watch(eps_title):
             embed_url = raw.get("url") or next(iter(raw.values()), None)
 
         # Fetch episodes list
-        eps_title_clean = eps_title.split('?', 1)[0]
-        
+        eps_title_clean = eps_title.split("?", 1)[0]
+
         try:
             all_episodes = await HA.episodes(eps_title_clean)
         except Exception as e:
@@ -164,13 +186,17 @@ async def watch(eps_title):
         episode_number = None
         eps_list = all_episodes.get("episodes", []) if all_episodes else []
 
-        ep_base = ep_number or (ep_param.split('-', 1)[0] if ep_param else None)
+        ep_base = ep_number or (ep_param.split("-", 1)[0] if ep_param else None)
         current_idx = None
 
         if ep_base and eps_list:
             for i, item in enumerate(eps_list):
                 eid = item.get("episodeId", "")
-                val = parse_qs(eid.split("?", 1)[1]).get("ep", [None])[0] if "?" in eid else eid
+                val = (
+                    parse_qs(eid.split("?", 1)[1]).get("ep", [None])[0]
+                    if "?" in eid
+                    else eid
+                )
                 if str(val) == str(ep_base):
                     current_idx = i
                     break
@@ -183,9 +209,17 @@ async def watch(eps_title):
             def build_episode_url(item_idx):
                 item = eps_list[item_idx]
                 eid = item.get("episodeId", "")
-                ep_val = parse_qs(eid.split("?", 1)[1]).get("ep", [None])[0] if "?" in eid else eid
+                ep_val = (
+                    parse_qs(eid.split("?", 1)[1]).get("ep", [None])[0]
+                    if "?" in eid
+                    else eid
+                )
                 slug = eid.split("?", 1)[0] if "?" in eid else eps_title_clean
-                return url_for('anime.watch', eps_title=slug, ep=f"{ep_val}-{lang}") if ep_val else None
+                return (
+                    url_for("anime.watch", eps_title=slug, ep=f"{ep_val}-{lang}")
+                    if ep_val
+                    else None
+                )
 
             if current_idx > 0:
                 prev_episode_url = build_episode_url(current_idx - 1)
@@ -195,36 +229,48 @@ async def watch(eps_title):
                 next_episode_number = eps_list[current_idx + 1].get("number")
 
         # Language switch URLs
-        sub_url = url_for('anime.watch', eps_title=eps_title_clean, ep=f"{ep_number}-sub") if ep_number else None
-        dub_url = url_for('anime.watch', eps_title=eps_title_clean, ep=f"{ep_number}-dub") if ep_number and dub_available else None
+        sub_url = (
+            url_for("anime.watch", eps_title=eps_title_clean, ep=f"{ep_number}-sub")
+            if ep_number
+            else None
+        )
+        dub_url = (
+            url_for("anime.watch", eps_title=eps_title_clean, ep=f"{ep_number}-dub")
+            if ep_number and dub_available
+            else None
+        )
 
         # Prepare intro/outro data
         intro = raw.get("intro") if isinstance(raw, dict) else None
         outro = raw.get("outro") if isinstance(raw, dict) else None
 
-        # External player link
-        external_link = get_megaplay_url(ep_number, lang)
+        # External player link (removed - using Miruro only)
+        external_link = ""
 
         # Render watch page
-        return render_template('watch.html',
-                               back_to_ep=eps_title_clean,
-                               video_link=embed_url,
-                               Episode=Episode,
-                               episode_number=episode_number,
-                               prev_episode_url=prev_episode_url,
-                               next_episode_url=next_episode_url,
-                               prev_episode_number=prev_episode_number,
-                               next_episode_number=next_episode_number,
-                               eps_title=eps_title,
-                               lang=lang,
-                               episodes=all_episodes,
-                               dub_available=dub_available,
-                               sub_url=sub_url,
-                               dub_url=dub_url,
-                               intro=intro,
-                               outro=outro,
-                               external_link=external_link)
+        return render_template(
+            "watch.html",
+            back_to_ep=eps_title_clean,
+            video_link=embed_url,
+            Episode=Episode,
+            episode_number=episode_number,
+            prev_episode_url=prev_episode_url,
+            next_episode_url=next_episode_url,
+            prev_episode_number=prev_episode_number,
+            next_episode_number=next_episode_number,
+            eps_title=eps_title,
+            lang=lang,
+            episodes=all_episodes,
+            dub_available=dub_available,
+            sub_url=sub_url,
+            dub_url=dub_url,
+            intro=intro,
+            outro=outro,
+            external_link=external_link,
+        )
 
     except Exception as e:
         logger.error(f"Watch error for {eps_title}: {e}")
-        return render_template('404.html', error_message="An error occurred while fetching the episode."), 500
+        return render_template(
+            "404.html", error_message="An error occurred while fetching the episode."
+        ), 500
