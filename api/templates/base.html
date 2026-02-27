@@ -55,8 +55,9 @@
                 console.log('%cThis is a browser feature intended for developers.', 'font-size: 16px;');
             };
 
-            // Check periodically
-            setInterval(checkDevTools, 1000);
+            const onDevToolsOpen = function () {
+                // Do not clear console
+            };
 
             // Override console methods when devtools detected
             const originalLog = console.log;
@@ -115,15 +116,7 @@
                 subtree: true
             });
 
-            // Debugger trap (triggers when devtools is open)
-            setInterval(function () {
-                const start = performance.now();
-                debugger;
-                const end = performance.now();
-                if (end - start > 100) {
-                    console.clear();
-                }
-            }, 1000);
+            // Debugger trap disabled
         })();
     </script>
 
