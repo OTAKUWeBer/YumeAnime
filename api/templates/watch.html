@@ -1312,11 +1312,13 @@
             if (!episodeList) return;
             episodeList.setAttribute('data-view', view);
             localStorage.setItem('episodeView', view);
-            viewListBtn.classList.toggle('active', view === 'list');
-            viewGridBtn.classList.toggle('active', view === 'grid');
+            viewListBtn?.classList.toggle('active', view === 'list');
+            viewGridBtn?.classList.toggle('active', view === 'grid');
         }
 
-        setEpisodeView(localStorage.getItem('episodeView') || 'grid');
+        try {
+            setEpisodeView(localStorage.getItem('episodeView') || 'grid');
+        } catch (e) { console.warn('[Watch] Episode view init error:', e); }
         viewListBtn?.addEventListener('click', () => setEpisodeView('list'));
         viewGridBtn?.addEventListener('click', () => setEpisodeView('grid'));
 
@@ -1358,91 +1360,108 @@
             });
         }
 
-        // ─── Source Switcher ───
-        const sourceBtns = document.querySelectorAll('.source-switcher-btn');
-        if (sourceBtns.length > 0) {
-            sourceBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const type = btn.dataset.sourceType;
-                    const url = btn.dataset.sourceUrl;
-
-                    // Mark active
-                    sourceBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    const wrapper = document.getElementById('video-wrapper');
-                    if (!wrapper) return;
-
-                    if (type === 'embed') {
-                        // Switch to embed iframe
-                        // Dispose existing Video.js if any
-                        try {
-                            const existingPlayer = window.videojs?.getPlayer('videoPlayer');
-                            if (existingPlayer) {
-                                existingPlayer.dispose();
-                            }
-                        } catch (e) { console.log('[SourceSwitch] No VJS to dispose'); }
-
-                        // Destroy HLS.js instance if any
-                        try {
-                            if (window.videojsPlayer?.hlsInstance) {
-                                window.videojsPlayer.hlsInstance.destroy();
-                            }
-                        } catch (e) { }
-
-                        wrapper.innerHTML = `<iframe id="embedPlayer" class="embed-player-frame"
-                            src="${url}"
-                            allowfullscreen
-                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                            referrerpolicy="origin"
-                            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"></iframe>`;
-                        wrapper.classList.remove('paused', 'loading');
-
-                    } else if (type === 'hls') {
-                        // Switch to HLS Video.js player
-                        // Remove iframe if present
-                        const existingIframe = wrapper.querySelector('#embedPlayer');
-                        if (existingIframe) existingIframe.remove();
-
-                        // Dispose existing Video.js player if any
-                        try {
-                            const existingPlayer = window.videojs?.getPlayer('videoPlayer');
-                            if (existingPlayer) existingPlayer.dispose();
-                        } catch (e) { }
-
-                        // Create new video element
-                        const videoEl = document.createElement('video');
-                        videoEl.id = 'videoPlayer';
-                        videoEl.className = 'video-js';
-                        videoEl.setAttribute('playsinline', '');
-                        videoEl.dataset.videoUrl = url;
-                        videoEl.dataset.intro = '{}';
-                        videoEl.dataset.outro = '{}';
-                        videoEl.dataset.videoSources = '[]';
-                        videoEl.dataset.availableQualities = '[]';
-
-                        // Clear wrapper and add video
-                        wrapper.innerHTML = '';
-                        wrapper.appendChild(videoEl);
-                        wrapper.classList.add('paused');
-
-                        // Re-initialize Video.js
-                        const newVjsPlayer = new VideoJSPlayer();
-                        newVjsPlayer.initialize();
-                        window.videojsPlayer = newVjsPlayer;
-
-                        window.addEventListener('vjsPlayerReady', (e) => {
-                            const player = window.videojs?.getPlayer('videoPlayer');
-                            if (player) {
-                                initCustomPlayerUI(player, newVjsPlayer);
-                            }
-                        }, { once: true });
-                    }
-                });
-            });
-        }
+    }
     });
 
+
+    // Quality selector
+</script>
+
+<!-- Source Switcher - Standalone script to avoid being affected by other JS errors -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('[SourceSwitcher] Initializing (standalone)...');
+        var sourceBtns = document.querySelectorAll('.source-switcher-btn');
+        console.log('[SourceSwitcher] Found ' + sourceBtns.length + ' source buttons');
+
+        sourceBtns.forEach(function (btn, idx) {
+            console.log('[SourceSwitcher] Button ' + idx + ': type=' + btn.dataset.sourceType + ', url=' + (btn.dataset.sourceUrl || '').substring(0, 80));
+
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var type = btn.dataset.sourceType;
+                var url = btn.dataset.sourceUrl;
+                console.log('[SourceSwitcher] Clicked: type=' + type + ', url=' + url);
+
+                if (!url) {
+                    console.error('[SourceSwitcher] No URL for this source!');
+                    return;
+                }
+
+                // Mark active
+                sourceBtns.forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+
+                var wrapper = document.getElementById('video-wrapper');
+                if (!wrapper) {
+                    console.error('[SourceSwitcher] No video-wrapper found!');
+                    return;
+                }
+
+                if (type === 'embed') {
+                    console.log('[SourceSwitcher] Switching to embed:', url);
+                    // Dispose existing Video.js if any
+                    try {
+                        var existingPlayer = window.videojs && window.videojs.getPlayer('videoPlayer');
+                        if (existingPlayer) existingPlayer.dispose();
+                    } catch (ex) { }
+                    // Destroy HLS.js instance if any
+                    try {
+                        if (window.videojsPlayer && window.videojsPlayer.hlsInstance) {
+                            window.videojsPlayer.hlsInstance.destroy();
+                        }
+                    } catch (ex) { }
+
+                    wrapper.innerHTML = '<iframe id="embedPlayer" class="embed-player-frame" ' +
+                        'src="' + url + '" ' +
+                        'allowfullscreen ' +
+                        'allow="autoplay; fullscreen; encrypted-media; picture-in-picture" ' +
+                        'referrerpolicy="origin" ' +
+                        'sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation">' +
+                        '</iframe>';
+                    wrapper.classList.remove('paused', 'loading');
+
+                } else if (type === 'hls') {
+                    console.log('[SourceSwitcher] Switching to HLS:', url);
+                    // Remove iframe if present
+                    var existingIframe = wrapper.querySelector('#embedPlayer');
+                    if (existingIframe) existingIframe.remove();
+                    // Dispose existing VJS
+                    try {
+                        var existingVJS = window.videojs && window.videojs.getPlayer('videoPlayer');
+                        if (existingVJS) existingVJS.dispose();
+                    } catch (ex) { }
+
+                    // Create new video element
+                    var videoEl = document.createElement('video');
+                    videoEl.id = 'videoPlayer';
+                    videoEl.className = 'video-js';
+                    videoEl.setAttribute('playsinline', '');
+                    videoEl.dataset.videoUrl = url;
+                    videoEl.dataset.intro = '{}';
+                    videoEl.dataset.outro = '{}';
+                    videoEl.dataset.videoSources = '[]';
+                    videoEl.dataset.availableQualities = '[]';
+
+                    wrapper.innerHTML = '';
+                    wrapper.appendChild(videoEl);
+                    wrapper.classList.add('paused');
+
+                    // Re-initialize Video.js
+                    if (typeof VideoJSPlayer !== 'undefined') {
+                        var newVjsPlayer = new VideoJSPlayer();
+                        newVjsPlayer.initialize();
+                        window.videojsPlayer = newVjsPlayer;
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+<script>
     // Quality selector
     function switchQuality(quality) {
         const videoEl = document.getElementById('videoPlayer');

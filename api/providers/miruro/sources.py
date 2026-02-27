@@ -110,6 +110,8 @@ class MiruroSourcesService:
             if not isinstance(stream, dict):
                 continue
             url = stream.get("url") or ""
+            if not url:
+                continue
             stream_type = stream.get("type", "").lower()
             quality = stream.get("quality") or "default"
             resolution = stream.get("resolution") or {}
