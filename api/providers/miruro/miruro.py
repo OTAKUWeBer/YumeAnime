@@ -25,7 +25,7 @@ class MiruroScraper:
     API base: https://yumero-api.vercel.app/
     """
 
-    api_url = os.getenv("MIRURO_API_URL", "https://yumero-api.vercel.app/")
+    api_url = os.getenv("MIRURO_API_URL")
 
     def __init__(self, base_url: Optional[str] = None, default_headers: Optional[Dict[str, str]] = None):
         url = base_url.rstrip("/") if base_url else self.api_url.rstrip("/")
