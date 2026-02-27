@@ -157,6 +157,9 @@ class MiruroSourcesService:
 
         # Use all HLS sources, or embed as fallback
         sources = hls_sources if hls_sources else embed_sources
+        print(
+            f"[MiruroSources] hls_sources: {len(hls_sources)}, embed_sources: {len(embed_sources)}, sources: {len(sources)}"
+        )
 
         # Default source = highest quality HLS (or first active one)
         default_source = None
@@ -166,6 +169,8 @@ class MiruroSourcesService:
                 break
         if not default_source and hls_sources:
             default_source = hls_sources[0]
+
+        print(f"[MiruroSources] default_source: {default_source}")
 
         result = {
             "sources": sources,
@@ -181,9 +186,13 @@ class MiruroSourcesService:
         }
 
         # video_link = default (best) proxied source
+        print(f"[MiruroSources] Setting video_link, default_source: {default_source}")
         if default_source:
             result["video_link"] = (
                 default_source.get("file") or default_source.get("url") or ""
+            )
+            print(
+                f"[MiruroSources] video_link set to: {result['video_link'][:100] if result['video_link'] else 'EMPTY'}"
             )
 
         logger.info(

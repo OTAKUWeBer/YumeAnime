@@ -909,8 +909,15 @@
                 {% for ep in episodes.episodes %}
                 {% set is_current = (ep.number|string == episode_number|string) %}
                 {% set ep_id = ep.episodeId %}
-                {% set ep_val = ep_id.split('?ep=')[1] if '?ep=' in ep_id else ep_id %}
-                <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' else '-sub')) }}"
+                {% if ep_id.startswith('watch/') %}
+                    {# New format: watch/provider/anilistid/category/slug - use as-is, no suffix #}
+                    {% set ep_val = ep_id %}
+                {% elif '?ep=' in ep_id %}
+                    {% set ep_val = ep_id.split('?ep=')[1] %}
+                {% else %}
+                    {% set ep_val = ep_id %}
+                {% endif %}
+                <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' and not ep_id.startswith('watch/') else ('' if ep_id.startswith('watch/') else '-sub'))) }}"
                     class="episode-sidebar-item {% if is_current %}current{% endif %}" data-number="{{ ep.number }}">
                     <div class="episode-sidebar-num">{{ ep.number }}</div>
                     <div class="episode-info">

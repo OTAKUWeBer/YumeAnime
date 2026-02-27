@@ -62,8 +62,10 @@ class UnifiedScraper:
         """
         Get anime info.
         - If anime_id is numeric → Miruro (AniList ID)
-        - If slug → Try to resolve to AniList ID using cache, then use Miruro
+        - If slug → Try to resolve to AniList ID using cache, then search Miruro
         """
+        print(f"[UnifiedScraper] get_anime_info() called with: {anime_id}")
+
         # Check if this is an AniList ID (numeric)
         if str(anime_id).isdigit():
             try:
@@ -83,6 +85,7 @@ class UnifiedScraper:
             from api.utils.id_cache import get_ids_for_hianime
 
             ids = get_ids_for_hianime(anime_id)
+            print(f"[UnifiedScraper] Cache lookup for '{anime_id}': {ids}")
             if ids and ids.get("anilist_id"):
                 anilist_id = ids["anilist_id"]
                 try:
@@ -96,8 +99,26 @@ class UnifiedScraper:
                     logger.warning(
                         f"[UnifiedScraper] AnimeInfo Miruro failed for resolved {anilist_id}: {e}"
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[UnifiedScraper] Error in cache lookup: {e}")
+
+        # Fallback: search Miruro using the slug
+        try:
+            search_result = await self.miruro.search(anime_id, 1)
+            if search_result and search_result.get("animes"):
+                first_match = search_result["animes"][0]
+                anilist_id = first_match.get("id") or first_match.get("anilistId")
+                if anilist_id:
+                    result = await self.miruro.get_anime_info(str(anilist_id))
+                    if result and result.get("title"):
+                        logger.debug(
+                            f"[UnifiedScraper] AnimeInfo (Miruro, search anilistId={anilist_id}): OK"
+                        )
+                        return result
+        except Exception as e:
+            logger.warning(
+                f"[UnifiedScraper] Search fallback failed for {anime_id}: {e}"
+            )
 
         return {}
 
@@ -152,6 +173,8 @@ class UnifiedScraper:
 
     async def episodes(self, anime_id: str) -> Dict[str, Any]:
         """Get episodes list — Miruro for numeric IDs, or resolve slug first"""
+        print(f"[UnifiedScraper] episodes() called with: {anime_id}")
+
         if str(anime_id).isdigit():
             try:
                 result = await self.miruro.episodes(anime_id)
@@ -165,6 +188,7 @@ class UnifiedScraper:
             from api.utils.id_cache import get_ids_for_hianime
 
             ids = get_ids_for_hianime(anime_id)
+            print(f"[UnifiedScraper] Cache lookup for '{anime_id}': {ids}")
             if ids and ids.get("anilist_id"):
                 anilist_id = str(ids["anilist_id"])
                 try:
@@ -173,8 +197,8 @@ class UnifiedScraper:
                         return result
                 except Exception:
                     pass
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[UnifiedScraper] Error in cache lookup: {e}")
 
         return {"episodes": [], "totalEpisodes": 0}
 
@@ -212,6 +236,8 @@ class UnifiedScraper:
         """
         import re
 
+        print(f"[UnifiedScraper] _parse_miruro_ep input: {ep_id_str}")
+
         # First, extract episode ID from query string if present
         # Format: "anime_slug?ep=watch/kiwi/178005/sub/animepahe-1"
         if "?" in ep_id_str:
@@ -221,11 +247,15 @@ class UnifiedScraper:
             ep_value = ep_values[0] if ep_values else None
             if ep_value:
                 ep_id_str = ep_value
+                print(f"[UnifiedScraper] After query extract: {ep_id_str}")
 
         # New format: watch/{provider}/{anilist_id}/{category}/{slug}
         pattern = r"watch/([^/]+)/(\d+)/([^/]+)/(.+)"
         match = re.match(pattern, ep_id_str)
         if match:
+            print(
+                f"[UnifiedScraper] Matched new format: provider={match.group(1)}, anilist_id={match.group(2)}, category={match.group(3)}, slug={match.group(4)}"
+            )
             return (ep_id_str, int(match.group(2)))
 
         # Old format with colons (animepahe:4171:47277:1)
@@ -235,6 +265,9 @@ class UnifiedScraper:
         if ":" in ep_id_str and not ep_id_str.startswith("http"):
             miruro_ep_id = ep_id_str
 
+        print(
+            f"[UnifiedScraper] Returning: miruro_ep_id={miruro_ep_id}, anilist_id={anilist_id}"
+        )
         return miruro_ep_id, anilist_id
 
     async def video(
