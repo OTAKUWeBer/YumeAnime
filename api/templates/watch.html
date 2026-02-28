@@ -324,13 +324,17 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
-    .video-wrapper video,
-    .video-wrapper .video-js {
+    /* Explicit Native Video Base Styling */
+    .video-wrapper .raw-video-player,
+    .video-wrapper video {
         position: absolute;
         top: 0;
         left: 0;
         width: 100% !important;
         height: 100% !important;
+        z-index: 1;
+        object-fit: contain;
+        background: #000;
     }
 
     /* Hide default videojs controls completely */
@@ -359,20 +363,25 @@
             1px 1px 0 #000 !important;
     }
 
-    /* Custom Player Container */
+    /* Custom Player Container Overlay (Must sit on top) */
     .player-container {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 10;
+        z-index: 2;
         pointer-events: none;
         opacity: 0;
+        background: transparent !important;
         transition: opacity 0.3s ease;
     }
 
-    .video-wrapper:hover .player-container,
+    .video-wrapper.user-inactive {
+        cursor: none;
+    }
+
+    .video-wrapper:hover:not(.user-inactive) .player-container,
     .video-wrapper.paused .player-container,
     .video-wrapper.menu-open .player-container {
         opacity: 1;
@@ -1004,162 +1013,100 @@
                 <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
                     allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
                     sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"></iframe>
-                {% elif video_link %}
-                <video id="videoPlayer" class="video-js" playsinline data-video-url="{{ video_link }}"
-                    data-intro='{{ intro | tojson | safe if intro else "{}" }}'
-                    data-outro='{{ outro | tojson | safe if outro else "{}" }}'
-                    data-video-sources='{{ video_sources | tojson | safe if video_sources else "[]" }}'
-                    data-available-qualities='{{ available_qualities | tojson | safe if available_qualities else "[]" }}'>
-                    <source src="{{ video_link }}" type="application/x-mpegURL">
-                    Your browser does not support the video tag.
-                </video>
+                {% endif %}
 
-                <!-- Premium Custom UI -->
-                <div class="player-container" id="customPlayerUI">
-                    <div class="player-bottom-gradient"></div>
+                {% if video_link %}
+                <!-- Minimalist Custom UI handled by clean backend integration -->
+                <div id="videoContainer"
+                    style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden;">
+                    <video id="videoPlayer" class="raw-video-player" playsinline data-video-url="{{ video_link }}"
+                        style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;">
+                        <source src="{{ video_link }}" type="application/x-mpegURL">
+                        Your browser does not support the video tag.
+                    </video>
 
-                    <div class="player-top-bar">
-                        <div class="player-title" style="display: flex; align-items: center; gap: 10px;">
-                            <span class="player-ep-badge"
-                                style="background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: bold;">EP
-                                {{ display_ep_number or Episode }}</span>
-                            <span style="font-size: 1.1rem; font-weight: 500;">{{ display_ep_title }}</span>
-                        </div>
-                    </div>
+                    <!-- Premium Custom UI Overlay -->
+                    <div class="player-container" id="customPlayerUI">
+                        <div class="player-bottom-gradient"></div>
 
-                    <div class="custom-loader" id="playerLoader"></div>
-
-                    <div class="center-play-pause" id="centerPlayBtn">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                    </div>
-
-                    <button id="customSkipBtn" class="custom-skip-btn">
-                        <span id="skipBtnText">Skip Intro</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <polyline points="13 17 18 12 13 7"></polyline>
-                            <polyline points="6 17 11 12 6 7"></polyline>
-                        </svg>
-                    </button>
-
-                    <div class="controls-bar">
-                        <div class="progress-container" id="progressBar">
-                            <div class="progress-buffer" id="progressBuffer"></div>
-                            <div class="progress-fill" id="progressFill"></div>
-                            <div class="progress-thumb" id="progressThumb"></div>
+                        <div class="player-top-bar">
+                            <div class="player-title" style="display: flex; align-items: center; gap: 10px;">
+                                <span class="player-ep-badge"
+                                    style="background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: bold;">EP
+                                    {{ Episode }}</span>
+                                <span style="font-size: 1.1rem; font-weight: 500;">{{ episode_title if episode_title
+                                    else (eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else
+                                    'Unknown') }}</span>
+                            </div>
                         </div>
 
-                        <div class="controls-main">
-                            <div class="controls-left">
-                                <button class="control-btn" id="playPauseBtn" title="Play (k)">
-                                    <svg viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M8 5v14l11-7z" />
-                                    </svg>
-                                </button>
+                        <div class="custom-loader" id="playerLoader"></div>
 
-                                <button class="control-btn" id="nextEpBtn" title="Next Episode (n)" {% if not
-                                    next_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif %}
-                                    onclick="{% if next_episode_url %}window.location.href='{{ next_episode_url }}'{% endif %}">
-                                    <svg viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-                                    </svg>
-                                </button>
+                        <div class="center-play-pause" id="centerPlayBtn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
+                            </svg>
+                        </div>
 
-                                <div class="volume-container">
-                                    <button class="control-btn" id="muteBtn" title="Mute (m)">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07">
-                                            </path>
-                                        </svg>
-                                    </button>
-                                    <div class="volume-slider-container">
-                                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1"
-                                            step="0.05" value="1">
-                                    </div>
-                                </div>
-
-                                <div class="time-display">
-                                    <span id="currentTimeDisplay">00:00</span> / <span id="durationDisplay">00:00</span>
-                                </div>
+                        <div class="controls-bar">
+                            <div class="progress-container" id="progressBar">
+                                <div class="progress-buffer" id="progressBuffer"></div>
+                                <div class="progress-fill" id="progressFill"></div>
+                                <div class="progress-thumb" id="progressThumb"></div>
                             </div>
 
-                            <div class="controls-right">
-                                <!-- Subtitles Menu Toggle -->
-                                <div class="menu-btn-container" id="ccMenuContainer">
-                                    <button class="control-btn" id="ccBtn" title="Subtitles / CC (c)"
-                                        style="display: none;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z">
-                                            </path>
-                                            <path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01"></path>
-                                        </svg>
-                                    </button>
-                                    <div class="player-menu" id="ccMenu">
-                                        <div class="player-menu-header">Subtitles</div>
-                                        <div id="subtitleList">
-                                            <div class="player-menu-item active" data-track="-1">Off</div>
-                                            <!-- Dynamically populated -->
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Quality Menu Toggle -->
-                                <div class="menu-btn-container" id="qualityMenuContainer">
-                                    <button class="control-btn" id="settingsBtn" title="Quality Settings">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="3"></circle>
+                            <div class="controls-main">
+                                <div class="controls-left">
+                                    <button class="control-btn" id="playPauseBtn" title="Play (k)">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
                                             <path
-                                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                            </path>
+                                                d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
                                         </svg>
                                     </button>
-                                    <div class="player-menu" id="qualityMenu" style="width: 220px;">
-                                        <div class="player-menu-header">Quality</div>
-                                        <div id="qualityList">
-                                            {% if available_qualities %}
-                                            {% for q in available_qualities %}
-                                            <div class="player-menu-item {% if loop.first %}active{% endif %}"
-                                                data-quality="{{ q }}">{{ q }}</div>
-                                            {% endfor %}
-                                            {% else %}
-                                            <div class="player-menu-item active" data-quality="auto">Auto</div>
-                                            {% endif %}
-                                        </div>
 
-                                        <div class="player-menu-divider"></div>
-                                        <div class="player-menu-header">Subtitle Size</div>
-                                        <div class="settings-row">
-                                            <button class="settings-opt-btn" data-setting="subtitleFontSize"
-                                                data-value="20">Small</button>
-                                            <button class="settings-opt-btn" data-setting="subtitleFontSize"
-                                                data-value="28">Normal</button>
-                                            <button class="settings-opt-btn" data-setting="subtitleFontSize"
-                                                data-value="36">Large</button>
+                                    <button class="control-btn" id="nextEpBtn" title="Next Episode (n)" {% if not
+                                        next_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif
+                                        %}
+                                        onclick="{% if next_episode_url %}window.location.href='{{ next_episode_url }}'{% endif %}">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                                        </svg>
+                                    </button>
+
+                                    <div class="volume-container">
+                                        <button class="control-btn" id="muteBtn" title="Mute (m)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                        <div class="volume-slider-container">
+                                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1"
+                                                step="0.05" value="1">
                                         </div>
-                                        <div class="player-menu-header">Subtitle Background</div>
-                                        <div class="settings-row" style="margin-bottom: 5px;">
-                                            <button class="settings-opt-btn" data-setting="subtitleBackground"
-                                                data-value="transparent">Off</button>
-                                            <button class="settings-opt-btn" data-setting="subtitleBackground"
-                                                data-value="rgba(0,0,0,0.7)">Dark</button>
-                                        </div>
+                                    </div>
+
+                                    <div class="time-display">
+                                        <span id="currentTimeDisplay">00:00</span> <span
+                                            style="opacity:0.5;margin:0 4px;">/</span> <span
+                                            id="durationDisplay">00:00</span>
                                     </div>
                                 </div>
 
-                                <button class="control-btn" id="fullscreenBtn" title="Fullscreen (f)">
-                                    <svg class="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path
-                                            d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
-                                        </path>
-                                    </svg>
-                                </button>
+                                <div class="controls-right">
+                                    <!-- Fullscreen Toggle -->
+                                    <button class="control-btn" id="fullscreenBtn" title="Fullscreen (f)">
+                                        <svg class="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path
+                                                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1175,16 +1122,55 @@
                 {% endif %}
             </div>
 
-            <!-- Source Switcher -->
+            <!-- Provider (Server) Switcher -->
+            {% if episodes and episodes.providers_map %}
+            <div class="source-switcher-bar" id="providerSwitcher">
+                <span class="source-switcher-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Server:
+                </span>
+                <div class="source-switcher-options">
+                    {% set current_ep_param = request.args.get('ep', '') %}
+                    {% for p_name, p_data in episodes.providers_map.items() %}
+                    {% set current_cat = 'dub' if lang == 'dub' else 'sub' %}
+                    {% set p_eps = p_data.get('episodes', {}).get(current_cat, []) %}
+
+                    {# Find the episode ID for the current episode number in this provider #}
+                    {% set ep_match = namespace(id=None) %}
+                    {% for ep_item in p_eps %}
+                    {% if ep_item.number|string == episode_number|string %}
+                    {% set ep_match.id = ep_item.id %}
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if ep_match.id %}
+                    {% set ep_val_encoded = ep_match.id %}
+                    {% set is_active = (p_name in current_ep_param) or (not current_ep_param and p_name ==
+                    episodes.default_provider) %}
+                    <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val_encoded) }}"
+                        class="source-switcher-btn {% if is_active %}active{% endif %}">
+                        {{ p_name | title }}
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stream Quality / Source Switcher -->
             {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
             <div class="source-switcher-bar" id="sourceSwitcher">
                 <span class="source-switcher-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         style="vertical-align: middle; margin-right: 4px;">
-                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="10 8 16 12 10 16 10 8"></polygon>
                     </svg>
-                    Source:
+                    Stream:
                 </span>
                 <div class="source-switcher-options" id="sourceOptions">
                     {% for es in embed_sources %}
@@ -1194,8 +1180,7 @@
                     </button>
                     {% endfor %}
                     {% for hs in hls_sources %}
-                    <button
-                        class="source-switcher-btn {% if source_type == 'hls' and loop.first and not embed_sources %}active{% endif %}"
+                    <button class="source-switcher-btn {% if source_type == 'hls' and loop.first %}active{% endif %}"
                         data-source-type="hls" data-source-url="{{ hs.file or hs.url }}"
                         data-source-label="{{ hs.label }}">
                         {{ hs.quality or ('HLS ' ~ loop.index) }}
@@ -1283,8 +1268,8 @@
             <div
                 style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);margin-top:var(--space-lg);">
                 <h2 style="margin-bottom:var(--space-sm);">Episode {{ Episode }}</h2>
-                <p class="text-muted">{{ eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else
-                    'Unknown' }}</p>
+                <p class="text-muted">{{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-',
+                    ' ') | title if eps_title else 'Unknown') }}</p>
                 <div style="margin-top:var(--space-lg);display:flex;gap:var(--space-md);flex-wrap:wrap;">
                     <span class="badge badge-sub" style="font-size:.8rem;">{{ lang | upper }}</span>
 
@@ -1296,12 +1281,17 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Video Player Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.14/dist/hls.min.js"></script>
-<script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
-<script src="{{ url_for('static', filename='js/videojs-player.js') }}"></script>
-<script src="{{ url_for('static', filename='js/watch-progress.js') }}"></script>
+<!-- Simple Clean Player Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
+    // --- CRITICAL AUDIO CODEC FIX ---
+    const _origAddSourceBuffer = MediaSource.prototype.addSourceBuffer;
+    MediaSource.prototype.addSourceBuffer = function (mimeType) {
+        const fixed = mimeType.replace('mp4a.40.1', 'mp4a.40.2');
+        if (fixed !== mimeType) console.log('[codec-fix] Remapped:', mimeType, '->', fixed);
+        return _origAddSourceBuffer.call(this, fixed);
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         // Episode sidebar view toggle
         const episodeList = document.getElementById('episodeList');
@@ -1318,7 +1308,7 @@
 
         try {
             setEpisodeView(localStorage.getItem('episodeView') || 'grid');
-        } catch (e) { console.warn('[Watch] Episode view init error:', e); }
+        } catch (e) { }
         viewListBtn?.addEventListener('click', () => setEpisodeView('list'));
         viewGridBtn?.addEventListener('click', () => setEpisodeView('grid'));
 
@@ -1338,195 +1328,169 @@
         const currentEp = episodeList?.querySelector('.current');
         if (currentEp) setTimeout(() => currentEp.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500);
 
-        // Init player — only if we're in HLS mode (videoPlayer exists)
-        window.progressManager = new WatchProgressManager();
+        // HLS Player Logic
+        const video = document.getElementById('videoPlayer');
+        if (video) {
+            const videoUrl = video.dataset.videoUrl;
+            console.log("[Player] Found URL:", videoUrl);
 
-        const videoPlayerEl = document.getElementById('videoPlayer');
-        if (videoPlayerEl) {
-            const vjsPlayer = new VideoJSPlayer();
-            vjsPlayer.initialize();
-            window.videojsPlayer = vjsPlayer;
+            if (Hls.isSupported() && (videoUrl.includes('.m3u8') || videoUrl.includes('/proxy/'))) {
+                console.log("[Player] Initializing Hls.js fallback");
+                const hls = new Hls({
+                    debug: false,
+                    enableWorker: true
+                });
 
-            // Hook custom UI and progress manager via robust event listener
-            window.addEventListener('vjsPlayerReady', (e) => {
-                const player = window.videojs?.getPlayer('videoPlayer');
-                if (player) {
-                    initCustomPlayerUI(player, vjsPlayer);
-                    if (window.progressManager) {
-                        const vid = player.tech()?.el();
-                        if (vid) window.progressManager.startTracking(vid);
+                hls.on(Hls.Events.ERROR, (e, data) => {
+                    console.error('[HLS Error]', data.type, data.details);
+                    if (data.fatal) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                            hls.startLoad();
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                            hls.recoverMediaError();
+                        }
                     }
-                }
-            });
-        }
+                });
 
-    }
+                window.hls = hls; // Store global reference
+
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native Safari
+                video.src = videoUrl;
+            } else {
+                console.log("[Player] Basic MP4 Embed");
+                video.src = videoUrl;
+            }
+        }
     });
 
-
-    // Quality selector
-</script>
-
-<!-- Source Switcher - Standalone script to avoid being affected by other JS errors -->
-<script>
+    // Source Switcher Logic
     document.addEventListener('DOMContentLoaded', function () {
-        console.log('[SourceSwitcher] Initializing (standalone)...');
-        var sourceBtns = document.querySelectorAll('.source-switcher-btn');
-        console.log('[SourceSwitcher] Found ' + sourceBtns.length + ' source buttons');
+        const sourceBtns = document.querySelectorAll('.source-switcher-btn');
+        const wrapper = document.getElementById('videoContainer'); // Clean wrapper name
 
-        sourceBtns.forEach(function (btn, idx) {
-            console.log('[SourceSwitcher] Button ' + idx + ': type=' + btn.dataset.sourceType + ', url=' + (btn.dataset.sourceUrl || '').substring(0, 80));
-
+        sourceBtns.forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
-                e.stopPropagation();
+                const type = btn.dataset.sourceType;
+                const url = btn.dataset.sourceUrl;
 
-                var type = btn.dataset.sourceType;
-                var url = btn.dataset.sourceUrl;
-                console.log('[SourceSwitcher] Clicked: type=' + type + ', url=' + url);
+                if (!url || !wrapper) return;
 
-                if (!url) {
-                    console.error('[SourceSwitcher] No URL for this source!');
-                    return;
-                }
-
-                // Mark active
-                sourceBtns.forEach(function (b) { b.classList.remove('active'); });
+                sourceBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
-                var wrapper = document.getElementById('video-wrapper');
-                if (!wrapper) {
-                    console.error('[SourceSwitcher] No video-wrapper found!');
-                    return;
-                }
-
                 if (type === 'embed') {
-                    console.log('[SourceSwitcher] Switching to embed:', url);
-                    // Dispose existing Video.js if any
-                    try {
-                        var existingPlayer = window.videojs && window.videojs.getPlayer('videoPlayer');
-                        if (existingPlayer) existingPlayer.dispose();
-                    } catch (ex) { }
-                    // Destroy HLS.js instance if any
-                    try {
-                        if (window.videojsPlayer && window.videojsPlayer.hlsInstance) {
-                            window.videojsPlayer.hlsInstance.destroy();
-                        }
-                    } catch (ex) { }
+                    // Hide video and UI, show embed
+                    let video = document.getElementById('videoPlayer');
+                    let ui = document.getElementById('customPlayerUI');
+                    if (video) video.style.display = 'none';
+                    if (ui) ui.style.display = 'none';
 
-                    wrapper.innerHTML = '<iframe id="embedPlayer" class="embed-player-frame" ' +
-                        'src="' + url + '" ' +
-                        'allowfullscreen ' +
-                        'allow="autoplay; fullscreen; encrypted-media; picture-in-picture" ' +
-                        'referrerpolicy="origin" ' +
-                        'sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation">' +
-                        '</iframe>';
-                    wrapper.classList.remove('paused', 'loading');
+                    let embedFrame = wrapper.querySelector('#embedPlayer');
+                    if (!embedFrame) {
+                        embedFrame = document.createElement('iframe');
+                        embedFrame.id = 'embedPlayer';
+                        embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
+                        embedFrame.allowFullscreen = true;
+                        wrapper.appendChild(embedFrame);
+                    }
+                    embedFrame.src = url;
+                    embedFrame.style.display = 'block';
 
                 } else if (type === 'hls') {
-                    console.log('[SourceSwitcher] Switching to HLS:', url);
-                    // Remove iframe if present
-                    var existingIframe = wrapper.querySelector('#embedPlayer');
-                    if (existingIframe) existingIframe.remove();
-                    // Dispose existing VJS
-                    try {
-                        var existingVJS = window.videojs && window.videojs.getPlayer('videoPlayer');
-                        if (existingVJS) existingVJS.dispose();
-                    } catch (ex) { }
+                    wrapper.innerHTML = '<video id="videoPlayer" class="raw-video-player" playsinline style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;" data-video-url="' + url + '"><source src="' + url + '" type="application/x-mpegURL"></video>';
 
-                    // Create new video element
-                    var videoEl = document.createElement('video');
-                    videoEl.id = 'videoPlayer';
-                    videoEl.className = 'video-js';
-                    videoEl.setAttribute('playsinline', '');
-                    videoEl.dataset.videoUrl = url;
-                    videoEl.dataset.intro = '{}';
-                    videoEl.dataset.outro = '{}';
-                    videoEl.dataset.videoSources = '[]';
-                    videoEl.dataset.availableQualities = '[]';
+                    const newVideo = document.getElementById('videoPlayer');
+                    let ui = document.getElementById('customPlayerUI');
+                    if (newVideo) newVideo.style.display = '';
+                    if (ui) ui.style.display = '';
 
-                    wrapper.innerHTML = '';
-                    wrapper.appendChild(videoEl);
-                    wrapper.classList.add('paused');
-
-                    // Re-initialize Video.js
-                    if (typeof VideoJSPlayer !== 'undefined') {
-                        var newVjsPlayer = new VideoJSPlayer();
-                        newVjsPlayer.initialize();
-                        window.videojsPlayer = newVjsPlayer;
+                    if (Hls.isSupported()) {
+                        if (window.hls) window.hls.destroy();
+                        window.hls = new Hls();
+                        window.hls.loadSource(url);
+                        window.hls.attachMedia(video);
+                        video.play().catch(e => console.log("Play rejected:", e));
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = url;
+                        video.play().catch(e => console.log("Play rejected:", e));
                     }
                 }
             });
         });
     });
-</script>
 
-<script>
-    // Quality selector
-    function switchQuality(quality) {
-        const videoEl = document.getElementById('videoPlayer');
-        if (!videoEl) return;
-        localStorage.setItem('preferred_quality', quality);
-        let sources = [];
-        try { sources = JSON.parse(videoEl.dataset.videoSources || '[]'); } catch { return; }
-        const match = sources.find(s => s.quality === quality || s.label === quality);
-        if (!match) return;
-        const newUrl = match.file || match.url;
-        if (!newUrl) return;
-        const player = window.videojs?.getPlayer('videoPlayer');
-        if (!player) return;
-        const currentTime = player.currentTime() || 0;
-        const wasPlaying = !player.paused();
-        videoEl.dataset.videoUrl = newUrl;
-        player.src({ src: newUrl, type: 'application/x-mpegURL' });
-        player.one('loadedmetadata', () => {
-            if (currentTime > 0) player.currentTime(currentTime);
-            if (wasPlaying) player.play().catch(() => { });
-        });
-    }
-
-    function initCustomPlayerUI(player, vjsPlayer) {
-        console.log("[CustomUI] Initializing robust custom UI layout...");
-
-        const wrapper = document.getElementById('video-wrapper');
+    // Custom Vanilla UI Driver
+    function initVanillaPlayerUI() {
+        const video = document.getElementById('videoPlayer');
+        const wrapper = document.getElementById('videoContainer');
         const playBtn = document.getElementById('playPauseBtn');
         const centerPlayBtn = document.getElementById('centerPlayBtn');
         const muteBtn = document.getElementById('muteBtn');
         const volumeSlider = document.getElementById('volumeSlider');
         const fsBtn = document.getElementById('fullscreenBtn');
-
         const progressContainer = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
         const progressThumb = document.getElementById('progressThumb');
         const progressBuffer = document.getElementById('progressBuffer');
-
         const currTimeDisp = document.getElementById('currentTimeDisplay');
         const durDisp = document.getElementById('durationDisplay');
-        const loader = document.getElementById('playerLoader');
 
-        if (!wrapper || !playBtn) {
-            console.error("[CustomUI] Aborting: Essential DOM nodes missing in custom UI");
-            return;
+        if (!video || !wrapper || !playBtn) return;
+
+        const masterWrapper = document.getElementById('video-wrapper');
+
+        // Mouse Inactivity Timeout (3 seconds)
+        let inactivityTimeout;
+        const resetInactivity = () => {
+            if (masterWrapper) masterWrapper.classList.remove('user-inactive');
+            clearTimeout(inactivityTimeout);
+            if (!video.paused) {
+                inactivityTimeout = setTimeout(() => {
+                    if (masterWrapper) masterWrapper.classList.add('user-inactive');
+                }, 3000);
+            }
+        };
+
+        if (masterWrapper) {
+            masterWrapper.addEventListener('mousemove', resetInactivity);
+            masterWrapper.addEventListener('mouseleave', () => {
+                if (!video.paused) {
+                    clearTimeout(inactivityTimeout);
+                    if (masterWrapper) masterWrapper.classList.add('user-inactive');
+                }
+            });
+            masterWrapper.addEventListener('touchstart', resetInactivity);
+            document.addEventListener('keydown', resetInactivity);
         }
 
-        // Disable original UI
-        player.controls(false);
-
         // Play/Pause
-        const togglePlay = () => { if (player.paused()) player.play(); else player.pause(); };
+        const togglePlay = () => { if (video.paused) video.play(); else video.pause(); };
         playBtn.addEventListener('click', togglePlay);
         centerPlayBtn.addEventListener('click', togglePlay);
         wrapper.addEventListener('click', (e) => {
             if (e.target === wrapper || e.target.tagName === 'VIDEO' || e.target.classList.contains('player-bottom-gradient')) togglePlay();
         });
 
-        player.on('play', () => { wrapper.classList.remove('paused'); playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v12l8.5-6L13 6z"/></svg>'; });
-        player.on('pause', () => { wrapper.classList.add('paused'); playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'; });
+        const iconPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/></svg>';
+        const iconPause = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/></svg>';
 
-        // Loader
-        player.on('waiting', () => wrapper.classList.add('loading'));
-        player.on('canplay', () => wrapper.classList.remove('loading'));
-        player.on('playing', () => wrapper.classList.remove('loading'));
+        video.addEventListener('play', () => {
+            if (masterWrapper) masterWrapper.classList.remove('paused');
+            playBtn.innerHTML = iconPause;
+            centerPlayBtn.innerHTML = iconPause;
+            resetInactivity();
+        });
+        video.addEventListener('pause', () => {
+            if (masterWrapper) masterWrapper.classList.add('paused');
+            playBtn.innerHTML = iconPlay;
+            centerPlayBtn.innerHTML = iconPlay;
+            clearTimeout(inactivityTimeout);
+            if (masterWrapper) masterWrapper.classList.remove('user-inactive');
+        });
 
         // Time & Progress
         const formatTime = (s) => {
@@ -1536,9 +1500,9 @@
             return (h > 0 ? h + ':' : '') + (m < 10 && h > 0 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
         };
 
-        player.on('timeupdate', () => {
-            const cur = player.currentTime();
-            const dur = player.duration();
+        video.addEventListener('timeupdate', () => {
+            const cur = video.currentTime;
+            const dur = video.duration;
             currTimeDisp.textContent = formatTime(cur);
             durDisp.textContent = formatTime(dur);
             if (dur > 0) {
@@ -1548,10 +1512,9 @@
             }
         });
 
-        player.on('progress', () => {
-            const buffered = player.buffered();
-            if (buffered && buffered.length > 0) {
-                const pct = (buffered.end(buffered.length - 1) / player.duration()) * 100;
+        video.addEventListener('progress', () => {
+            if (video.buffered.length > 0) {
+                const pct = (video.buffered.end(video.buffered.length - 1) / video.duration) * 100;
                 progressBuffer.style.width = pct + '%';
             }
         });
@@ -1559,215 +1522,34 @@
         progressContainer.addEventListener('click', (e) => {
             const rect = progressContainer.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
-            player.currentTime(pos * player.duration());
+            video.currentTime = pos * video.duration;
         });
 
         // Volume & Mute
-        muteBtn.addEventListener('click', () => player.muted(!player.muted()));
+        muteBtn.addEventListener('click', () => video.muted = !video.muted);
         volumeSlider.addEventListener('input', (e) => {
-            player.volume(e.target.value);
-            player.muted(e.target.value == 0);
+            video.volume = e.target.value;
+            video.muted = e.target.value == 0;
         });
-        player.on('volumechange', () => {
-            volumeSlider.value = player.muted() ? 0 : player.volume();
-            muteBtn.innerHTML = player.muted() || player.volume() === 0 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+        video.addEventListener('volumechange', () => {
+            volumeSlider.value = video.muted ? 0 : video.volume;
+            muteBtn.innerHTML = video.muted || video.volume === 0 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
         });
 
         // Fullscreen
         fsBtn.addEventListener('click', () => {
             if (document.fullscreenElement) document.exitFullscreen();
-            else wrapper.requestFullscreen();
+            else masterWrapper.requestFullscreen();
         });
         document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) wrapper.classList.add('vjs-fullscreen');
-            else wrapper.classList.remove('vjs-fullscreen');
+            if (document.fullscreenElement) masterWrapper.classList.add('vjs-fullscreen');
+            else masterWrapper.classList.remove('vjs-fullscreen');
         });
-
-        // Menus
-        const ccBtn = document.getElementById('ccBtn');
-        const ccMenu = document.getElementById('ccMenuContainer');
-        const qBtn = document.getElementById('settingsBtn');
-        const qMenu = document.getElementById('qualityMenuContainer');
-
-        console.log("[CustomUI] Menu bindings - ccBtn:", !!ccBtn, "qBtn:", !!qBtn);
-
-        if (ccBtn && ccMenu && qBtn && qMenu) {
-            ccBtn.addEventListener('click', (e) => { e.stopPropagation(); ccMenu.classList.toggle('active'); qMenu.classList.remove('active'); console.log("CC btn clicked"); });
-            qBtn.addEventListener('click', (e) => { e.stopPropagation(); qMenu.classList.toggle('active'); ccMenu.classList.remove('active'); console.log("Quality btn clicked"); });
-            document.addEventListener('click', () => { ccMenu.classList.remove('active'); qMenu.classList.remove('active'); wrapper.classList.remove('menu-open') });
-            ccMenu.addEventListener('click', (e) => { e.stopPropagation(); wrapper.classList.add('menu-open') });
-            qMenu.addEventListener('click', (e) => { e.stopPropagation(); wrapper.classList.add('menu-open') });
-            console.log("[CustomUI] Menu bindings complete.");
-        } else {
-            console.error("[CustomUI] Missing UI elements for settings menu!");
-        }
-
-        // Quality Handlers
-        const qItems = document.querySelectorAll('#qualityList .player-menu-item');
-        const savedQ = localStorage.getItem('preferred_quality');
-        console.log(`[CustomUI] Saved quality: ${savedQ}. Available quality items: ${qItems.length}`);
-
-        if (savedQ) {
-            qItems.forEach(i => {
-                i.classList.remove('active');
-                if (i.dataset.quality === savedQ) i.classList.add('active');
-            });
-            window.switchQuality(savedQ);
-        }
-        qItems.forEach(item => {
-            item.addEventListener('click', () => {
-                try {
-                    const qual = item.dataset.quality;
-                    console.log(`[CustomUI] Quality selected: ${qual}`)
-                    qItems.forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    wrapper.classList.remove('menu-open');
-                    qMenu.classList.remove('active');
-                    window.switchQuality(qual);
-                } catch (err) {
-                    console.error("[CustomUI] Quality switch crashed", err)
-                }
-            });
-        });
-
-        // Advanced Settings (Subtitles styling logic)
-        const initSettingsUI = () => {
-            console.log("[CustomUI] Initializing Advanced Settings UI (Subtitles)...");
-            try {
-                const size = vjsPlayer.settings.subtitleFontSize || 28;
-                const bg = vjsPlayer.settings.subtitleBackground || 'transparent';
-
-                document.querySelectorAll('.settings-opt-btn[data-setting="subtitleFontSize"]').forEach(btn => {
-                    btn.classList.toggle('active', parseInt(btn.dataset.value) === size);
-                });
-                document.querySelectorAll('.settings-opt-btn[data-setting="subtitleBackground"]').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.value === bg);
-                });
-            } catch (e) {
-                console.error("[CustomUI] Failed to init settings UI:", e)
-            }
-        };
-        initSettingsUI();
-
-        document.querySelectorAll('.settings-opt-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                try {
-                    const setting = btn.dataset.setting;
-                    const val = setting === 'subtitleFontSize' ? parseInt(btn.dataset.value) : btn.dataset.value;
-                    console.log(`[CustomUI] Advanced Settings Clicked: ${setting} -> ${val}`);
-                    vjsPlayer.updateSetting(setting, val);
-                    initSettingsUI();
-                } catch (err) {
-                    console.error("[CustomUI] Settings update crashed:", err)
-                }
-            });
-        });
-
-        // Subtitles
-        const processSubs = () => {
-            const tracks = player.textTracks();
-            const list = document.getElementById('subtitleList');
-            if (!list || tracks.length === 0) return;
-
-            let hasSubs = false;
-            let html = '<div class="player-menu-item active" data-track="-1">Off</div>';
-
-            for (let i = 0; i < tracks.length; i++) {
-                if (tracks[i].kind === 'subtitles' || tracks[i].kind === 'captions') {
-                    hasSubs = true;
-                    html += `<div class="player-menu-item" data-track="${i}">${tracks[i].label || tracks[i].language || 'Unknown'}</div>`;
-                }
-            }
-
-            if (hasSubs) {
-                ccBtn.style.display = 'flex';
-                list.innerHTML = html;
-
-                const items = list.querySelectorAll('.player-menu-item');
-                items.forEach(item => {
-                    item.addEventListener('click', () => {
-                        items.forEach(i => i.classList.remove('active'));
-                        item.classList.add('active');
-                        wrapper.classList.remove('menu-open');
-                        ccMenu.classList.remove('active');
-
-                        const idx = parseInt(item.dataset.track);
-                        for (let i = 0; i < tracks.length; i++) {
-                            if (tracks[i].kind === 'subtitles' || tracks[i].kind === 'captions') {
-                                tracks[i].mode = i === idx ? 'showing' : 'disabled';
-                            }
-                        }
-                    });
-                });
-
-                setTimeout(() => {
-                    let activeTrack = -1;
-                    for (let i = 0; i < tracks.length; i++) if ((tracks[i].kind === 'subtitles' || tracks[i].kind === 'captions') && tracks[i].mode === 'showing') activeTrack = i;
-                    items.forEach(i => i.classList.remove('active'));
-                    const matched = list.querySelector(`[data-track="${activeTrack}"]`);
-                    if (matched) matched.classList.add('active');
-                }, 1000);
-            }
-        };
-        player.on('loadedmetadata', processSubs);
-        setTimeout(processSubs, 2000);
-
-        // Advanced Skip Intro/Outro Logic that pulls real data
-        const skipBtn = document.getElementById('customSkipBtn');
-        const skipTxt = document.getElementById('skipBtnText');
-        const videoEl = document.getElementById('videoPlayer');
-
-        let introData = null;
-        let outroData = null;
-        try {
-            const iStr = videoEl.dataset.intro;
-            const oStr = videoEl.dataset.outro;
-            if (iStr && iStr !== '{}' && iStr !== 'null') introData = JSON.parse(iStr);
-            if (oStr && oStr !== '{}' && oStr !== 'null') outroData = JSON.parse(oStr);
-        } catch (e) { }
-
-        let currentSkipTarget = 0;
-
-        player.on('timeupdate', () => {
-            const cur = player.currentTime();
-            let showSkip = false;
-
-            // Check valid timestamps: > 0 duration.
-            if (introData && introData.start >= 0 && introData.end > introData.start && cur >= introData.start && cur <= introData.end) {
-                showSkip = true;
-                skipTxt.textContent = "Skip Intro";
-                currentSkipTarget = introData.end;
-            }
-            else if (outroData && outroData.start > 0 && outroData.end > outroData.start && cur >= outroData.start && cur <= outroData.end) {
-                showSkip = true;
-                skipTxt.textContent = "Skip Outro";
-                currentSkipTarget = outroData.end;
-            }
-
-            if (showSkip) skipBtn.classList.add('show');
-            else skipBtn.classList.remove('show');
-        });
-
-        skipBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (currentSkipTarget > 0) player.currentTime(currentSkipTarget);
-            skipBtn.classList.remove('show');
-        });
-
-        // Resume functionality natively!
-        const applyResumeIfAny = () => {
-            if (window.progressManager) {
-                const prog = window.progressManager.getCurrentProgress();
-                if (prog && prog.watchTime > 10) {
-                    player.currentTime(prog.watchTime);
-                    console.log("[CustomUI] Resumed cleanly from", prog.watchTime);
-                }
-            }
-        };
-        player.one('loadedmetadata', applyResumeIfAny);
     }
 
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initVanillaPlayerUI, 100);
     });
 </script>
 {% endblock %}

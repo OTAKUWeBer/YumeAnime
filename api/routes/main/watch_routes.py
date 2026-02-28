@@ -45,10 +45,20 @@ def watch(eps_title):
     # Parse episode number and language
     ep_number, lang = None, preferred_lang
     if ep_param:
-        parts = ep_param.split("-", 1)
-        ep_number = parts[0]
-        if len(parts) > 1:
-            lang = parts[1]
+        if ep_param.startswith("watch/"):
+            # New format: watch/{provider}/{anilist_id}/{category}/{slug}
+            parts = ep_param.split("/")
+            if len(parts) >= 5:
+                lang = parts[3]  # sub or dub
+                # ep_number is the entire slug part so we don't truncate names like animepahe-1
+                ep_number = "/".join(parts[4:])
+            else:
+                ep_number = ep_param
+        else:
+            parts = ep_param.split("-", 1)
+            ep_number = parts[0]
+            if len(parts) > 1:
+                lang = parts[1]
 
     # If no episode parameter is provided, determine the best episode to watch
     if not ep_param:
@@ -420,6 +430,7 @@ def watch(eps_title):
         current_item = eps_list[current_idx]
         episode_number = current_item.get("number")
         Episode = str(episode_number) if episode_number else "Special"
+        episode_title = current_item.get("title")
 
         def build_episode_url(item_idx):
             item = eps_list[item_idx]
@@ -459,21 +470,20 @@ def watch(eps_title):
             next_episode_url = build_episode_url(current_idx + 1)
             next_episode_number = eps_list[current_idx + 1].get("number")
 
-    # Language switch URLs
-    sub_url = (
-        url_for(
-            "main.watch_routes.watch", eps_title=eps_title_clean, ep=f"{ep_number}-sub"
-        )
-        if ep_number
-        else None
-    )
-    dub_url = (
-        url_for(
-            "main.watch_routes.watch", eps_title=eps_title_clean, ep=f"{ep_number}-dub"
-        )
-        if ep_number and dub_available
-        else None
-    )
+    # Language switch URLs for Miruro V2 slugs
+    def build_lang_url(target_lang):
+        if not ep_number:
+            return None
+        if "watch/" in ep_param:
+            # Replace the appropriate /sub/ or /dub/ segment in the Miruro slug
+            current_lang = "dub" if "/dub/" in ep_param else "sub"
+            new_ep_val = ep_param.replace(f"/{current_lang}/", f"/{target_lang}/")
+            return url_for("main.watch_routes.watch", eps_title=eps_title_clean, ep=new_ep_val)
+        else:
+            return url_for("main.watch_routes.watch", eps_title=eps_title_clean, ep=f"{ep_number}-{target_lang}")
+
+    sub_url = build_lang_url("sub")
+    dub_url = build_lang_url("dub") if dub_available else None
 
     # External player link (removed - using Miruro only)
     external_link = ""
@@ -489,6 +499,7 @@ def watch(eps_title):
             outro=outro,
             Episode=Episode,
             episode_number=episode_number,
+            episode_title=episode_title if current_idx is not None else None,
             prev_episode_url=prev_episode_url,
             next_episode_url=next_episode_url,
             prev_episode_number=prev_episode_number,

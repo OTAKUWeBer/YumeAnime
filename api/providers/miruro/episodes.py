@@ -110,6 +110,8 @@ class MiruroEpisodesService:
         mappings = resp.get("mappings", {}) or {}
         result["mappings"] = mappings
         result["all_providers"] = list(providers.keys())
+        result["providers_map"] = providers
+        result["default_provider"] = best_provider
 
         logger.info(
             f"[MiruroEpisodes] anilist_id={anilist_id}, provider={best_provider}, "
@@ -118,11 +120,13 @@ class MiruroEpisodesService:
         return result
 
     async def episodes(self, anilist_id) -> Dict[str, Any]:
-        """Alias that returns just episode list data (HiAnime compat)"""
+        """Alias that returns just episode list data (HiAnime compat) plus provider maps"""
         result = await self.get_episodes(anilist_id)
         return {
             "episodes": result.get("episodes", []),
             "totalEpisodes": result.get("total_episodes", 0),
+            "providers_map": result.get("providers_map", {}),
+            "default_provider": result.get("default_provider", "kiwi"),
         }
 
     async def is_dub_available(self, anilist_id, episode_id: str = None) -> bool:
