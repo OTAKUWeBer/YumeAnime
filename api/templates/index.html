@@ -86,7 +86,7 @@ series.{% endblock %}
                         </div>
 
                         <div class="spotlight-actions">
-                            <a href="/anime/{{ anime.id }}" class="btn btn-primary btn-lg">
+                            <a href="/watch/{{ anime.id }}" class="btn btn-primary btn-lg">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                     <polygon points="5 3 19 12 5 21 5 3" />
                                 </svg>
@@ -144,7 +144,7 @@ series.{% endblock %}
         </div>
         <div class="anime-grid">
             {% for anime in suggestions.data.trendingAnimes[:12] %}
-            <a href="/anime/{{ anime.id }}" class="anime-card">
+            <a href="/watch/{{ anime.id }}" class="anime-card">
                 <div class="anime-card-poster">
                     <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}" loading="lazy">
                     <div class="anime-card-badges">
@@ -198,7 +198,7 @@ series.{% endblock %}
         </div>
         <div class="anime-grid">
             {% for anime in suggestions.data.latestEpisodeAnimes[:12] %}
-            <a href="/anime/{{ anime.id }}" class="anime-card">
+            <a href="/watch/{{ anime.id }}" class="anime-card">
                 <div class="anime-card-poster">
                     <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}" loading="lazy">
                     <div class="anime-card-badges">
@@ -252,7 +252,7 @@ series.{% endblock %}
         </div>
         <div class="anime-grid">
             {% for anime in suggestions.data.mostPopularAnimes[:12] %}
-            <a href="/anime/{{ anime.id }}" class="anime-card">
+            <a href="/watch/{{ anime.id }}" class="anime-card">
                 <div class="anime-card-poster">
                     <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}" loading="lazy">
                     <div class="anime-card-badges">
@@ -312,7 +312,7 @@ series.{% endblock %}
         </div>
         <div class="anime-grid">
             {% for anime in movies[:12] %}
-            <a href="/anime/{{ anime.id }}" class="anime-card">
+            <a href="/watch/{{ anime.id }}" class="anime-card">
                 <div class="anime-card-poster">
                     <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}" loading="lazy">
                     <div class="anime-card-badges">
