@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block title %}{{ anime.name or anime.title or 'Anime' }} - YumeAnime{% endblock %}
+{% block meta_description %}Watch {{ anime.name or anime.title }} online. {{ (anime.description or anime.synopsis or
+'')[:150] }}{% endblock %}
+{% block extra_css %}
+<style>
+    /* Seasons Section Styles */
+    .seasons-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+    }
+
+    .season-card {
+        position: relative;
+        display: block;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        aspect-ratio: 2/3;
+        transition: all var(--transition-fast);
+        border: 2px solid transparent;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .season-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        z-index: 2;
+    }
+
+    /* Current Season Highlight */
+    .season-card.current {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 15px var(--primary-color-alpha, rgba(168, 85, 247, 0.4));
+        transform: scale(1.02);
+    }
+
+    .season-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+
+    .season-card:hover img {
+        transform: scale(1.05);
+    }
+
+    /* Improved Overlay */
+    .season-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 40px 8px 8px;
+        /* Extra top padding for gradient */
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%);
+        color: white;
+        text-align: center;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .season-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        line-height: 1.3;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Current Badge */
+    .season-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: var(--primary-color);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 5;
+    }
+
+    /* External Links Styles */
+    .external-links {
+        display: flex;
+        gap: var(--space-md);
+        margin-top: var(--space-md);
+        margin-bottom: var(--space-lg);
+    }
+
+    .external-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-full);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-fast);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .external-pill img {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+
+    .external-pill:hover {
+        background: var(--bg-surface-hover);
+        border-color: var(--accent-muted);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .external-pill.anilist:hover {
+        border-color: #3db4f2;
+        box-shadow: 0 0 10px rgba(61, 180, 242, 0.2);
+    }
+
+    .external-pill.mal:hover {
+        border-color: #2e51a2;
+        box-shadow: 0 0 10px rgba(46, 81, 162, 0.2);
+    }
+
+    /* Status Colors if not defined globally in this context */
+    :root {
+        --info: #3b82f6;
+        --success: #10b981;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="anime-hero">
+    <!-- Banner Background -->
+    <div class="anime-banner">
+        <img src="{{ anime.banner or anime.poster }}" alt="{{ anime.name or anime.title }}">
+    </div>
+
+    <div class="container">
+        <div class="anime-info-container">
+            <div class="anime-info-grid">
+                <!-- Poster -->
+                <div class="anime-poster">
+                    <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}">
+                </div>
+
+                <!-- Details -->
+                <div class="anime-details">
+                    <h1 class="anime-title">{{ anime.name or anime.title }}</h1>
+                    {% if anime.jname or anime.japanese_title %}
+                    <p class="anime-alt-title">{{ anime.jname or anime.japanese_title }}</p>
+                    {% endif %}
+
+                    <!-- Stats -->
+                    <div class="anime-stats">
+                        {% if anime.stats and anime.stats.rating %}
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: var(--warning);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+                                    style="vertical-align: middle;">
+                                    <polygon
+                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                                {{ anime.stats.rating }}
+                            </div>
+                            <div class="stat-label">Rating</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.episodes and anime.stats.episodes.sub %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.episodes.sub }}</div>
+                            <div class="stat-label">Episodes</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.episodes and anime.stats.episodes.dub %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.episodes.dub }}</div>
+                            <div class="stat-label">Dubbed</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.type %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.type }}</div>
+                            <div class="stat-label">Type</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.duration %}
+                        <div class="stat-item">
+                            <div class="stat-value">{{ anime.stats.duration }}</div>
+                            <div class="stat-label">Duration</div>
+                        </div>
+                        {% endif %}
+                        {% if anime.status %}
+                        <div class="stat-item">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value">{{ anime.status }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Episode Status Pills -->
+                    <div class="ep-status-pills">
+                        {% if anime.total_sub_episodes and anime.total_sub_episodes > 0 %}
+                        <div class="ep-pill sub" title="Subtitled Episodes">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>SUB {{ anime.total_sub_episodes }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if anime.total_dub_episodes and anime.total_dub_episodes > 0 %}
+                        <div class="ep-pill dub" title="Dubbed Episodes">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            </svg>
+                            <span>DUB {{ anime.total_dub_episodes }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actions - Placed first for quick access -->
+                    <div class="anime-actions" style="margin-bottom: var(--space-xl);">
+                        <a href="/watch/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg"
+                            id="watch-now-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                            <span id="watch-now-text">Watch Now</span>
+                        </a>
+                        <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
+                            data-anime-id="{{ anime.id or current_season_id }}"
+                            data-anime-title="{{ anime.name or anime.title }}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span id="watchlist-btn-text">Add to List</span>
+                        </button>
+                    </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const watchBtn = document.getElementById('watch-now-btn');
+                            const watchText = document.getElementById('watch-now-text');
+                            const animeId = "{{ anime.id or current_season_id }}";
+
+                            if (watchBtn && animeId) {
+                                try {
+                                    const watchData = JSON.parse(localStorage.getItem('animeWatchData') || '{}');
+                                    let lastWatchedEp = null;
+                                    let maxTimestamp = 0;
+
+                                    // Find the most recently watched episode for this anime
+                                    Object.keys(watchData).forEach(key => {
+                                        if (key.startsWith(animeId + '_')) {
+                                            const data = watchData[key];
+                                            if (data.lastWatched > maxTimestamp) {
+                                                maxTimestamp = data.lastWatched;
+                                                lastWatchedEp = {
+                                                    key: key,
+                                                    ...data
+                                                };
+                                            }
+                                        }
+                                    });
+
+                                    if (lastWatchedEp) {
+                                        // key format: animeId_episodeId_lang
+                                        const parts = lastWatchedEp.key.split('_');
+                                        if (parts.length >= 3) {
+                                            const episodeId = parts[1];
+                                            const lang = parts[2]; // 'default', 'sub', or 'dub'
+
+                                            // Construct safe URL
+                                            let newHref = `/watch/${animeId}?ep=${episodeId}`;
+                                            if (lang && lang !== 'default') {
+                                                newHref += `-${lang}`;
+                                            }
+
+                                            watchBtn.href = newHref;
+                                            watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber || ''}`;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Error updating watch button:", e);
+                                }
+                            }
+                        });
+                    </script>
+
+                    <!-- Genres -->
+                    {% if anime.genres %}
+                    <div class="anime-genres">
+                        {% for genre in anime.genres %}
+                        <a href="/genre/{{ genre | lower | replace(' ', '-') }}" class="genre-tag">{{ genre }}</a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Next Episode Schedule UI -->
+                    {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                    {% set next_ep = next_episode_schedule.episode %}
+                    <div class="next-episode-banner"
+                        style="position: relative; margin-bottom: var(--space-xl); background: var(--bg-surface); padding: var(--space-lg); border-radius: var(--radius-xl); border: 1px solid var(--border-color); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); overflow: hidden;">
+
+                        <!-- glowing background accent -->
+                        <div
+                            style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); filter: blur(40px); opacity: 0.15; pointer-events: none;">
+                        </div>
+
+                        <div style="position: relative; z-index: 1;">
+                            <h3
+                                style="margin-bottom: var(--space-xs); font-size: 1.25rem; color: var(--text-primary); display: flex; align-items: center; gap: var(--space-sm); font-weight: 700;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                    style="filter: drop-shadow(0 0 8px rgba(var(--accent-rgb, 255,255,255), 0.5));">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                Episode {{ next_ep if next_ep else '??' }} Airs In
+                            </h3>
+                            <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); padding-left: 32px;">
+                                Don't miss the upcoming release!</p>
+                        </div>
+
+                        <div class="countdown-timer" id="next-ep-countdown"
+                            data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
+                            style="display: flex; gap: var(--space-sm); position: relative; z-index: 1;">
+                            <div class="time-block"
+                                style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
+                                <span class="days"
+                                    style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
+                                <span class="label"
+                                    style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Days</span>
+                            </div>
+                            <div class="time-block"
+                                style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
+                                <span class="hours"
+                                    style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
+                                <span class="label"
+                                    style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Hrs</span>
+                            </div>
+                            <div class="time-block"
+                                style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--border-color);">
+                                <span class="minutes"
+                                    style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">--</span>
+                                <span class="label"
+                                    style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Mins</span>
+                            </div>
+                            <div class="time-block"
+                                style="text-align: center; background: var(--bg-elevated); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); min-width: 60px; border: 1px solid var(--accent); box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);">
+                                <span class="seconds"
+                                    style="display: block; font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); color: var(--accent); text-shadow: 0 0 10px rgba(0, 0, 0, 0.3);">--</span>
+                                <span class="label"
+                                    style="font-size: 0.7rem; color: var(--accent); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Secs</span>
+                            </div>
+                        </div>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', () => {
+                                const container = document.getElementById('next-ep-countdown');
+                                if (!container) return;
+
+                                const timestamp = parseInt(container.getAttribute('data-timestamp'), 10);
+                                if (!timestamp) return;
+
+                                const daysEl = container.querySelector('.days');
+                                const hoursEl = container.querySelector('.hours');
+                                const minutesEl = container.querySelector('.minutes');
+                                const secondsEl = container.querySelector('.seconds');
+
+                                function updateTimer() {
+                                    const now = Date.now();
+                                    // Handle MS vs SEC timestamps. The API gives ms or sec? Assuming seconds if it's 10 digits, MS if 13
+                                    const jsTimestamp = timestamp > 9999999999 ? timestamp : timestamp * 1000;
+                                    const diff = jsTimestamp - now;
+
+                                    if (diff <= 0) {
+                                        daysEl.textContent = "00";
+                                        hoursEl.textContent = "00";
+                                        minutesEl.textContent = "00";
+                                        secondsEl.textContent = "00";
+                                        return;
+                                    }
+
+                                    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                                    const m = Math.floor((diff / 1000 / 60) % 60);
+                                    const s = Math.floor((diff / 1000) % 60);
+
+                                    daysEl.textContent = d.toString().padStart(2, '0');
+                                    hoursEl.textContent = h.toString().padStart(2, '0');
+                                    minutesEl.textContent = m.toString().padStart(2, '0');
+                                    secondsEl.textContent = s.toString().padStart(2, '0');
+                                }
+
+                                updateTimer();
+                                setInterval(updateTimer, 1000);
+                            });
+                        </script>
+                    </div>
+                    {% endif %}
+
+                    <!-- Synopsis -->
+                    <div class="anime-synopsis">
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">
+                            <h3 style="margin-bottom: 0;">Synopsis</h3>
+                            {% if anime.anilistId or anime.malId %}
+                            <div class="external-links" style="margin-top: 0; margin-bottom: 0;">
+                                {% if anime.anilistId %}
+                                <a href="https://anilist.co/anime/{{ anime.anilistId }}" target="_blank"
+                                    class="external-pill anilist" title="View on AniList">
+                                    <img src="https://anilist.co/img/icons/icon.svg" alt="AniList">
+                                </a>
+                                {% endif %}
+                                {% if anime.malId %}
+                                <a href="https://myanimelist.net/anime/{{ anime.malId }}" target="_blank"
+                                    class="external-pill mal" title="View on MyAnimeList">
+                                    <img src="https://myanimelist.net/favicon.ico" alt="MAL">
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <p>{{ anime.description or anime.synopsis or 'No description available.' }}</p>
+                    </div>
+
+                    <!-- Additional Info -->
+                    {% if anime.moreInfo %}
+                    <div class="anime-more-info" style="margin-bottom: var(--space-xl);">
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+                            {% if anime.moreInfo.studios and anime.moreInfo.studios | length > 0 %}
+                            <div>
+                                <span class="text-muted text-sm">Studios:</span>
+                                <span>{{ anime.moreInfo.studios | join(', ') }}</span>
+                            </div>
+                            {% endif %}
+                            {% if anime.moreInfo.producers and anime.moreInfo.producers | length > 0 %}
+                            <div>
+                                <span class="text-muted text-sm">Producers:</span>
+                                <span>{{ anime.moreInfo.producers | join(', ') }}</span>
+                            </div>
+                            {% endif %}
+                            {% if anime.moreInfo.premiered %}
+                            <div>
+                                <span class="text-muted text-sm">Premiered:</span>
+                                <span>{{ anime.moreInfo.premiered }}</span>
+                            </div>
+                            {% endif %}
+                            {% if anime.moreInfo.aired %}
+                            <div>
+                                <span class="text-muted text-sm">Aired:</span>
+                                <span>{{ anime.moreInfo.aired }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Related & Recommended -->
+<div class="container" style="margin-top: var(--space-3xl);">
+
+    {% set has_related = (anime.seasons and anime.seasons|length > 0) or (anime.prequels and anime.prequels|length > 0)
+    or (anime.sequels and anime.sequels|length > 0) or (suggestions and suggestions.related and
+    suggestions.related|length > 0) %}
+
+    {% if has_related %}
+    <section class="section" style="margin-bottom: var(--space-2xl);">
+        <div class="section-header">
+            <h2 class="section-title">Franchise & Related</h2>
+        </div>
+        <div class="seasons-grid"
+            style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-lg);">
+
+            {# 1. Show Seasons If Any #}
+            {% for season in anime.seasons %}
+            <a href="/anime/{{ season.id }}" class="season-card {% if season.isCurrent %}current{% endif %}"
+                title="{{ season.title or season.name }}">
+                {% if season.isCurrent %}
+                <div class="season-badge" style="background: var(--primary-color);">NOW</div>
+                {% else %}
+                <div class="season-badge" style="background: var(--bg-surface); opacity: 0.9;">SEASON</div>
+                {% endif %}
+                <img src="{{ season.poster }}" alt="{{ season.title }}" loading="lazy">
+                <div class="season-overlay">
+                    <div class="season-title">{{ season.title or season.name }}</div>
+                </div>
+            </a>
+            {% endfor %}
+
+            {# 2. Collect other related items preventing duplicates #}
+            {% set related_items = [] %}
+            {% set seen_ids = [] %}
+
+            {# Add current anime to seen to prevent self-reference #}
+            {% set _ = seen_ids.append(anime.id | string) %}
+            {% if anime.anilistId %}
+            {% set _ = seen_ids.append(anime.anilistId | string) %}
+            {% endif %}
+            {% if anime.malId %}
+            {% set _ = seen_ids.append(anime.malId | string) %}
+            {% endif %}
+
+            {% for p in anime.prequels %}
+            {% if (p.id|string) not in seen_ids %}
+            {% set _ = related_items.append({"item": p, "badge": "PREQUEL", "color": "var(--info, #3b82f6)"}) %}
+            {% set _ = seen_ids.append(p.id|string) %}
+            {% endif %}
+            {% endfor %}
+
+            {% for s in anime.sequels %}
+            {% if (s.id|string) not in seen_ids %}
+            {% set _ = related_items.append({"item": s, "badge": "SEQUEL", "color": "var(--success, #10b981)"}) %}
+            {% set _ = seen_ids.append(s.id|string) %}
+            {% endif %}
+            {% endfor %}
+
+            {% if suggestions and suggestions.related %}
+            {% for r in suggestions.related %}
+            {% if (r.id|string) not in seen_ids %}
+            {% set badge_text = (r.relation or "RELATED") | upper %}
+            {% set _ = related_items.append({"item": r, "badge": badge_text, "color": "var(--accent)"}) %}
+            {% set _ = seen_ids.append(r.id|string) %}
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+
+            {# Display collected related items #}
+            {% for rel in related_items %}
+            <a href="/anime/{{ rel.item.id }}" class="season-card" title="{{ rel.item.name or rel.item.title }}">
+                <div class="season-badge"
+                    style="background-color: {{ rel.color }}; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">{{ rel.badge }}
+                </div>
+                <img src="{{ rel.item.poster or rel.item.image }}" alt="{{ rel.item.name or rel.item.title }}"
+                    loading="lazy">
+                <div class="season-overlay">
+                    <div class="season-title">{{ rel.item.name or rel.item.title }}</div>
+                </div>
+            </a>
+            {% endfor %}
+
+        </div>
+    </section>
+    {% endif %}
+
+    {% if suggestions and suggestions.recommended and suggestions.recommended | length > 0 %}
+    <section class="section">
+        <div class="section-header">
+            <h2 class="section-title">Recommended</h2>
+        </div>
+        <div class="anime-grid">
+            {% for rec in suggestions.recommended[:6] %}
+            <a href="/anime/{{ rec.id }}" class="anime-card">
+                <div class="anime-card-poster">
+                    <img src="{{ rec.poster or rec.image }}" alt="{{ rec.name or rec.title }}" loading="lazy">
+                    <div class="anime-card-badges">
+                        {% if rec.episodes and rec.episodes.sub %}
+                        <span class="badge badge-sub">{{ rec.episodes.sub }}</span>
+                        {% endif %}
+                        {% if rec.episodes and rec.episodes.dub %}
+                        <span class="badge badge-dub">{{ rec.episodes.dub }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="anime-card-info">
+                    <h3 class="anime-card-title">{{ rec.name or rec.title }}</h3>
+                    <div class="anime-card-meta">
+                        {% if rec.type %}<span>{{ rec.type }}</span>{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Watchlist functionality
+    const addToWatchlistBtn = document.getElementById('add-to-watchlist');
+    const watchlistBtnText = document.getElementById('watchlist-btn-text');
+
+    if (addToWatchlistBtn) {
+        // Check current status
+        const animeId = addToWatchlistBtn.dataset.animeId;
+
+        fetch(`/api/watchlist/status?anime_id=${encodeURIComponent(animeId)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.in_watchlist) {
+                    watchlistBtnText.textContent = data.status || 'In List';
+                    addToWatchlistBtn.classList.add('active');
+                }
+            })
+            .catch(() => { });
+
+        addToWatchlistBtn.addEventListener('click', async function () {
+            const animeId = this.dataset.animeId;
+            const animeTitle = this.dataset.animeTitle;
+
+            try {
+                const response = await fetch('/api/watchlist/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        anime_id: animeId,
+                        anime_title: animeTitle,
+                        status: 'watching'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    watchlistBtnText.textContent = 'Added!';
+                    this.classList.add('active');
+                } else if (response.status === 401) {
+                    openLoginModal();
+                } else {
+                    alert(data.message || 'Failed to add to watchlist');
+                }
+            } catch (e) {
+                console.error('Watchlist error:', e);
+            }
+        });
+    }
+</script>
+{% endblock %}

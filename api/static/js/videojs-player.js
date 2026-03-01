@@ -1,0 +1,1808 @@
+// ─── CODEC FIX ───────────────────────────────────────────────────────────────
+// Streams from owocdn / megacloud report mp4a.40.1 (AAC Main) in their codec
+// string, but browsers only support mp4a.40.2 (AAC-LC) in MSE. Remap it before
+// the SourceBuffer is created so Video.js never sees the bad profile flag.
+; (function () {
+  const _orig = MediaSource.prototype.addSourceBuffer
+  MediaSource.prototype.addSourceBuffer = function (mimeType) {
+    const fixed = mimeType.replace('mp4a.40.1', 'mp4a.40.2')
+    if (fixed !== mimeType) {
+      console.log('[codec-fix] Remapped codec:', mimeType, '->', fixed)
+    }
+    return _orig.call(this, fixed)
+  }
+})()
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Video.js Player with all existing functionality preserved
+class VideoJSPlayer {
+  constructor() {
+    this.player = null
+    this.intro = null
+    this.outro = null
+    this.skipButtonsContainer = null
+    this.skipIntroBtn = null
+    this.skipOutroBtn = null
+    this.isFullscreen = false
+    this.touchStartX = 0
+    this.touchStartTime = 0
+    this.isSeeking = false
+    this.keyboardEnabled = true
+    this.controlIndicatorTimeouts = new Map()
+    this.settings = this.loadSettings()
+    this.currentLanguage = "sub" // Track current language for subtitle visibility
+    this.stalledCheckInterval = null // For stalled playback monitoring
+    this.subtitleObserver = null // MutationObserver for subtitle styling
+  }
+
+  loadSettings() {
+    try {
+      const saved = localStorage.getItem("yumeAnimeSettings")
+      return saved
+        ? JSON.parse(saved)
+        : {
+          autoplayNext: true,
+          skipIntro: true,
+          rememberPosition: true,
+          defaultVolume: 100,
+          preferredLanguage: "sub",
+          videoQuality: "auto",
+          subtitleLanguage: "English",
+          subtitleBackground: "transparent",
+          forceSubtitlesOff: false,
+          subtitleFontSize: 28,
+        }
+    } catch (error) {
+      console.error("Error loading settings:", error)
+      return {
+        autoplayNext: true,
+        skipIntro: true,
+        rememberPosition: true,
+        defaultVolume: 80,
+        preferredLanguage: "sub",
+        videoQuality: "auto",
+        subtitleLanguage: "English",
+        subtitleBackground: "transparent",
+        forceSubtitlesOff: false,
+        subtitleFontSize: 28,
+      }
+    }
+  }
+
+  initialize() {
+    console.log("=== Video.js Player Initialization ===")
+
+    const videoElement = document.getElementById("videoPlayer")
+    this.skipButtonsContainer = document.getElementById("skipButtons")
+    this.skipIntroBtn = document.getElementById("skipIntroBtn")
+    this.skipOutroBtn = document.getElementById("skipOutroBtn")
+
+    if (!videoElement) {
+      console.error("ERROR: Video element not found!")
+      return false
+    }
+
+    // Get data from video element
+    const videoUrl = videoElement.dataset.videoUrl
+    console.log("Video URL:", videoUrl)
+
+    if (!videoUrl || videoUrl === "null" || videoUrl === "") {
+      console.error("ERROR: No valid video URL provided!")
+      this.showError("Video not available. Please try refreshing the page.")
+      return false
+    }
+
+    // Parse other data
+    try {
+      const subtitles = JSON.parse(videoElement.dataset.subtitles || "[]")
+      const introData = JSON.parse(videoElement.dataset.intro || "{}")
+      const outroData = JSON.parse(videoElement.dataset.outro || "{}")
+
+      this.intro = introData.start ? introData : null
+      this.outro = outroData.start ? outroData : null
+
+      console.log("[DEBUG] Subtitles:", subtitles.length, "tracks")
+      console.log("[DEBUG] Intro:", this.intro)
+      console.log("[DEBUG] Outro:", this.outro)
+      console.log("[DEBUG] Hls.js supported statically? (if present)", typeof Hls !== 'undefined' ? Hls.isSupported() : 'N/A')
+
+      // Initialize Video.js player
+      this.setupVideoJS(videoElement, videoUrl, subtitles)
+
+      window.addEventListener("settingsChanged", (event) => {
+        if (event.detail && event.detail.settings) {
+          this.updateSettings(event.detail.settings)
+        }
+      })
+
+      return true
+    } catch (error) {
+      console.error("Error parsing video data:", error)
+      this.showError("Error loading video data")
+      return false
+    }
+  }
+
+  setupVideoJS(videoElement, videoUrl, subtitles) {
+    console.log("[v0] Setting up Video.js with URL:", videoUrl)
+
+    // Video.js configuration with enhanced HLS support
+    const playerOptions = {
+      fluid: true,
+      responsive: true,
+      aspectRatio: "16:9",
+      controls: true,
+      autoplay: false,
+      preload: "metadata",
+      playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+      volume: Math.min(this.settings.defaultVolume / 100, 1),
+      muted: false,
+      html5: {
+        vhs: {
+          // Allow Safari to use its native player but force VHS on others
+          overrideNative: !window.videojs.browser.IS_ANY_SAFARI,
+          enableLowInitialPlaylist: true,
+          smoothQualityChange: true,
+          useBandwidthFromLocalStorage: true,
+          maxPlaylistRetries: 5,
+          bandwidth: 5242880,
+          llhls: false,
+        },
+        nativeVideoTracks: false,
+        nativeAudioTracks: false,
+        nativeTextTracks: false,
+      },
+      tracks: this.formatSubtitlesForVideoJS(subtitles),
+    }
+
+    // Initialize Video.js player with proper error handling
+    try {
+      const videojs = window.videojs
+      if (!videojs) {
+        console.error("[v0] Video.js library not loaded!")
+        return
+      }
+
+      console.log("[v0] Creating Video.js instance...")
+      this.player = videojs(videoElement, playerOptions)
+      console.log("[v0] Video.js player created successfully")
+
+      // Use Hls.js explicitly for m3u8 playlists (mirrors Yoruhime proxy logic)
+      if (videoUrl && videoUrl.includes(".m3u8")) {
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+          console.log("[v0] Hls.js is supported, injecting stream explicitly...")
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: false,
+            backBufferLength: 90,
+            maxBufferSize: 60 * 1000 * 1000,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            progressive: true,
+            abrEwmaDefaultEstimate: 500000,
+            abrBandWidthFactor: 0.95,
+            abrBandWidthUpFactor: 0.7,
+            startLevel: -1,
+            autoStartLoad: true,
+            debug: false,
+          })
+
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (data.fatal) {
+              console.error('[HLS Fatal Error]', data.type, data.details)
+              if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                hls.startLoad()
+              } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                hls.recoverMediaError()
+              }
+            }
+          })
+
+          hls.loadSource(videoUrl)
+          hls.attachMedia(videoElement)
+
+          // Store ref to destroy later if needed
+          this.hlsInstance = hls
+        } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+          // Native safari
+          videoElement.src = videoUrl
+        }
+      } else {
+        // Fallback for non-m3u8 sources (like direct MP4s from embeds)
+        this.player.src({ src: videoUrl })
+      }
+
+    } catch (error) {
+      console.error("[v0] Error creating Video.js player:", error)
+      return
+    }
+
+    // Setup event listeners and features
+    this.player.ready(() => {
+      console.log("[v0] Video.js player is ready and operational")
+      try {
+        this.setupPlayerEvents()
+        console.log("[v0] Player events setup complete")
+        this.setupKeyboardShortcuts()
+        this.setupMobileFeatures()
+        this.setupSkipButtons()
+        this.setupSubtitleHandling(subtitles)
+        this.hideVideoJSLoadingSpinner()
+        this.applySubtitleStyling()
+        this.forceTransparentSubtitles()
+        console.log("[v0] All player features initialized")
+
+        // Notify watch.html that player is ready to attach custom UI
+        window.dispatchEvent(new CustomEvent('vjsPlayerReady', { detail: { player: this.player } }))
+      } catch (error) {
+        console.error("[v0] Error during player setup:", error)
+      }
+    })
+
+    // Handle errors
+    this.player.on("error", (error) => {
+      console.error("Video.js error:", error)
+
+      const playerError = this.player.error()
+      if (playerError) {
+        console.error(`[v0] Error code: ${playerError.code}, message: ${playerError.message}`)
+
+        // Don't show error for subtitle issues (code 4)
+        if (playerError.code === 4) {
+          console.warn("Subtitle loading error detected, continuing without subtitles")
+          return
+        }
+
+        if (playerError.code === 2 || playerError.code === 3) {
+          console.warn("[v0] Network error detected, attempting recovery...")
+          setTimeout(() => {
+            this.attemptPlaybackRecovery()
+          }, 1000)
+          return
+        }
+      }
+
+      this.showError("Video playback failed. Please try refreshing the page.")
+    })
+  }
+
+  formatSubtitlesForVideoJS(subtitles) {
+    if (!subtitles || subtitles.length === 0) {
+      console.log("[Subtitles] No subtitles provided")
+      return []
+    }
+
+    console.log("[Subtitles] Raw subtitle data:", JSON.stringify(subtitles, null, 2))
+
+    // Language name to code mapping
+    const langToCode = {
+      english: "en",
+      "chinese - traditional": "zh-Hant",
+      "chinese - simplified": "zh-Hans",
+      indonesian: "id",
+      korean: "ko",
+      malay: "ms",
+      thai: "th",
+      spanish: "es",
+      french: "fr",
+      german: "de",
+      japanese: "ja",
+      arabic: "ar",
+      portuguese: "pt",
+      russian: "ru",
+      italian: "it",
+      vietnamese: "vi",
+    }
+
+    const normalizeLabel = (s) => {
+      if (!s || s === "null" || s === "undefined") return ""
+      s = String(s).trim()
+
+      // Title case each word while preserving separators
+      return s
+        .split(/(\s+|-)/)
+        .map((part) => {
+          if (!part || /^\s*$/.test(part) || part === "-") return part
+          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+        })
+        .join("")
+    }
+
+    // Try to extract language from filename
+    const extractLanguageFromFilename = (filename) => {
+      if (!filename) return null
+
+      // Remove query params and extension
+      const cleanName = filename.split("?")[0].replace(/\.(vtt|srt|ass|ssa)$/i, "")
+
+      // Common patterns: en.vtt, english.vtt, en-US.vtt, subtitle-en.vtt
+      const patterns = [
+        /[._-](en|english)[._-]?/i,
+        /[._-](zh[-_]?hant|chinese[-_]?traditional)[._-]?/i,
+        /[._-](zh[-_]?hans|chinese[-_]?simplified)[._-]?/i,
+        /[._-](id|indonesian)[._-]?/i,
+        /[._-](ko|korean)[._-]?/i,
+        /[._-](ms|malay)[._-]?/i,
+        /[._-](th|thai)[._-]?/i,
+        /[._-](es|spanish)[._-]?/i,
+        /[._-](fr|french)[._-]?/i,
+        /[._-](de|german)[._-]?/i,
+        /[._-](ja|japanese)[._-]?/i,
+        /[._-](ar|arabic)[._-]?/i,
+        /[._-](pt|portuguese)[._-]?/i,
+        /[._-](ru|russian)[._-]?/i,
+        /[._-](it|italian)[._-]?/i,
+        /[._-](vi|vietnamese)[._-]?/i,
+      ]
+
+      for (const pattern of patterns) {
+        const match = cleanName.match(pattern)
+        if (match) {
+          return match[1].toLowerCase()
+        }
+      }
+
+      return null
+    }
+
+    // ENHANCED: Filter valid subtitle tracks with stricter validation
+    const candidates = subtitles.filter((subtitle) => {
+      const subFile = subtitle.file || subtitle.url
+      if (!subFile || subFile === "null" || subFile === "") return false
+
+      const labelOrLang = (subtitle.lang || subtitle.label || "").toString().toLowerCase()
+      const kind = (subtitle.kind || "").toString().toLowerCase()
+
+      // CRITICAL: Skip any track that's explicitly NOT subtitles/captions
+      if (kind && kind !== "subtitles" && kind !== "captions" && kind !== "") {
+        console.warn("[Subtitles] Skipping non-subtitle track (wrong kind):", subtitle)
+        return false
+      }
+
+      // Skip thumbnails, posters, images, sprites, metadata
+      if (
+        labelOrLang.includes("thumb") ||
+        labelOrLang.includes("thumbnail") ||
+        labelOrLang.includes("poster") ||
+        labelOrLang.includes("image") ||
+        labelOrLang.includes("sprite") ||
+        labelOrLang.includes("preview") ||
+        labelOrLang.includes("metadata") ||
+        labelOrLang.includes("chapter")
+      ) {
+        console.warn("[Subtitles] Skipping non-subtitle track:", subtitle)
+        return false
+      }
+
+      // Skip image files and common sprite formats
+      if (/\.(jpe?g|png|gif|webp|bmp|svg|vtt\.jpg|vtt\.png)(\?.*)?$/i.test(subFile)) {
+        console.warn("[Subtitles] Skipping image file:", subFile)
+        return false
+      }
+      return true
+    })
+
+    console.log(`[Subtitles] Filtered ${candidates.length} valid subtitle tracks from ${subtitles.length} total`)
+
+    // Map to Video.js format
+    const tracks = candidates.map((subtitle, index) => {
+      const subFile = subtitle.file || subtitle.url
+
+      // Get the raw label/lang value
+      let rawLabel = subtitle.label || subtitle.lang || ""
+
+      // If no label/lang, try to extract from filename
+      if (!rawLabel || rawLabel === "null" || rawLabel === "undefined") {
+        const extractedLang = extractLanguageFromFilename(subFile)
+        if (extractedLang) {
+          rawLabel = extractedLang
+          console.log(`[Subtitles] Extracted language from filename: ${extractedLang}`)
+        }
+      }
+
+      // Create readable label
+      const label =
+        rawLabel && rawLabel !== "null" && rawLabel !== "undefined" ? normalizeLabel(rawLabel) : `Subtitle ${index + 1}`
+
+      // Get language code
+      const langKey = (rawLabel || "").toString().toLowerCase()
+      let srclang = subtitle.srclang || langToCode[langKey]
+
+      if (!srclang) {
+        // Try normalized version
+        const normalizedKey = normalizeLabel(langKey).toLowerCase()
+        srclang = langToCode[normalizedKey]
+      }
+
+      if (!srclang) {
+        // Try partial match (e.g., "english" in "english-us")
+        for (const [key, code] of Object.entries(langToCode)) {
+          if (langKey.includes(key)) {
+            srclang = code
+            break
+          }
+        }
+      }
+
+      if (!srclang) {
+        // Fallback: extract first two letters
+        const inferred = langKey.replace(/[^a-z]/gi, "").slice(0, 2) || "en"
+        srclang = inferred
+      }
+
+      // Check if this should be the default track
+      const isEnglish = label.toLowerCase().includes("english") || srclang.startsWith("en")
+      const shouldBeDefault =
+        isEnglish && this.settings.subtitleLanguage === "English" && this.currentLanguage === "sub"
+
+      console.log(
+        `[Subtitles] Track ${index}: label="${label}", srclang="${srclang}", file="${subFile}", default=${shouldBeDefault}`,
+      )
+
+      return {
+        kind: "subtitles",
+        src: subFile,
+        srclang,
+        label,
+        default: shouldBeDefault,
+        mode: shouldBeDefault ? "showing" : "disabled",
+      }
+    })
+
+    console.log(`[Subtitles] Formatted ${tracks.length} subtitle tracks`)
+    return tracks
+  }
+
+  applySubtitleStyling() {
+    // Use CSS custom properties to update styles without recreating the style tag
+    // This prevents flickering when changing settings
+    let existingStyle = document.getElementById("videojs-subtitle-custom-style")
+
+    // Only create the style tag once on first call
+    if (!existingStyle) {
+      existingStyle = document.createElement("style")
+      existingStyle.id = "videojs-subtitle-custom-style"
+
+      // Create the style template with CSS custom properties
+      existingStyle.textContent = `
+        :root {
+          --vjs-subtitle-font-size: 28px;
+          --vjs-subtitle-font-size-tablet: 20px;
+          --vjs-subtitle-font-size-mobile: 14px;
+          --vjs-subtitle-font-size-mobile-fullscreen: 18px;
+        }
+        
+        /* CRITICAL: Control backgrounds on ALL subtitle elements dynamically via CSS vars */
+        .video-js .vjs-text-track-cue,
+        .video-js .vjs-text-track-cue > div,
+        .video-js .vjs-text-track-display,
+        .vjs-text-track-cue,
+        video::cue,
+        ::cue {
+          background: var(--vjs-subtitle-bg, transparent) !important;
+          background-color: var(--vjs-subtitle-bg, transparent) !important;
+          color: white !important;
+          font-size: var(--vjs-subtitle-font-size) !important;
+          line-height: 1.5 !important;
+          padding: 4px 8px !important;
+          border-radius: 4px !important;
+          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+          font-weight: 600 !important;
+          text-shadow: 
+            2px 2px 4px rgba(0, 0, 0, 0.95),
+            -1px -1px 2px rgba(0, 0, 0, 0.8),
+            1px -1px 2px rgba(0, 0, 0, 0.8),
+            -1px 1px 2px rgba(0, 0, 0, 0.8),
+            1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+          border: none !important;
+          letter-spacing: 0.02em !important;
+          transition: none !important;
+          animation: none !important;
+        }
+        
+        /* Tablet adjustments */
+        @media (max-width: 1024px) {
+          .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-tablet) !important;
+          }
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+          .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile) !important;
+            padding: 0 !important;
+          }
+          
+          .video-container.fullscreen-active .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile-fullscreen) !important;
+            padding: 0 !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile) !important;
+            padding: 0 !important;
+          }
+          
+          .video-container.fullscreen-active .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile-fullscreen) !important;
+            padding: 0 !important;
+          }
+        }
+      `
+
+      document.head.appendChild(existingStyle)
+    }
+
+    // Update CSS custom properties without recreating the style
+    const fontSize = this.settings.subtitleFontSize || 28
+    const root = document.documentElement
+    root.style.setProperty('--vjs-subtitle-font-size', `${fontSize}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-tablet', `${Math.max(20, fontSize - 8)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-mobile', `${Math.max(14, fontSize - 14)}px`)
+    root.style.setProperty('--vjs-subtitle-font-size-mobile-fullscreen', `${Math.max(18, fontSize - 10)}px`)
+
+    const bg = this.settings.subtitleBackground === 'transparent' ? 'transparent' : 'rgba(0,0,0,0.7)'
+    root.style.setProperty('--vjs-subtitle-bg', bg)
+
+    console.log(`[v0] Applied subtitle styling with font size: ${fontSize}px and background: ${bg}`)
+  }
+
+  /**
+   * CRITICAL FIX: Force transparent backgrounds on subtitle elements
+   * This function uses direct DOM manipulation and MutationObserver to ensure
+   * that Video.js doesn't add black backgrounds to subtitle cues
+   */
+  forceTransparentSubtitles() {
+    if (!this.player) return
+
+    console.log("[Subtitles] Setting up forced transparent subtitle backgrounds")
+
+    // Function to set backgrounds from all subtitle elements
+    const removeSubtitleBackgrounds = () => {
+      const playerEl = this.player.el()
+      if (!playerEl) return
+
+      const bg = this.settings.subtitleBackground === 'transparent' ? 'transparent' : 'rgba(0,0,0,0.7)'
+
+      // Find all text track cue elements
+      const cues = playerEl.querySelectorAll('.vjs-text-track-cue, .vjs-text-track-cue > div')
+
+      cues.forEach(cue => {
+        // Set background using inline styles (highest specificity)
+        cue.style.setProperty('background', bg, 'important')
+        cue.style.setProperty('background-color', bg, 'important')
+      })
+
+      // Also target the text track display container
+      const display = playerEl.querySelector('.vjs-text-track-display')
+      if (display) {
+        display.style.setProperty('background', 'transparent', 'important')
+        display.style.setProperty('background-color', 'transparent', 'important')
+      }
+    }
+
+    // Apply immediately
+    removeSubtitleBackgrounds()
+
+    // Set up MutationObserver to catch dynamically added subtitle elements
+    const playerEl = this.player.el()
+    if (playerEl) {
+      // Disconnect existing observer if any
+      if (this.subtitleObserver) {
+        this.subtitleObserver.disconnect()
+      }
+
+      this.subtitleObserver = new MutationObserver((mutations) => {
+        let shouldUpdate = false
+
+        mutations.forEach(mutation => {
+          // Check if subtitle-related nodes were added
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) { // Element node
+                if (node.classList && (
+                  node.classList.contains('vjs-text-track-cue') ||
+                  node.classList.contains('vjs-text-track-display') ||
+                  node.querySelector('.vjs-text-track-cue')
+                )) {
+                  shouldUpdate = true
+                }
+              }
+            })
+          }
+        })
+
+        if (shouldUpdate) {
+          console.log("[Subtitles] Subtitle elements detected, forcing transparent backgrounds")
+          removeSubtitleBackgrounds()
+        }
+      })
+
+      // Observe the player element for changes
+      this.subtitleObserver.observe(playerEl, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      })
+
+      console.log("[Subtitles] MutationObserver initialized for subtitle background monitoring")
+    }
+
+    // Also apply on text track change events
+    this.player.textTracks().on('change', () => {
+      setTimeout(() => {
+        removeSubtitleBackgrounds()
+      }, 100)
+    })
+
+    // Apply periodically as a safety measure (every 500ms)
+    setInterval(() => {
+      removeSubtitleBackgrounds()
+    }, 500)
+  }
+
+  setupPlayerEvents() {
+    // Track progress for resume functionality
+    this.player.on("loadedmetadata", () => {
+      console.log("[Player] Video metadata loaded")
+      if (window.progressManager) {
+        window.progressManager.startTracking(this.player.el().querySelector("video"))
+      }
+
+      this.detectCurrentLanguage()
+      this.updateSubtitleVisibility()
+      this.setDefaultSubtitleTrack()
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
+    })
+
+    this.player.on("waiting", () => {
+      console.log("[Player] Video waiting for data")
+      if (window.progressManager) {
+        window.progressManager.showBufferIndicator()
+      }
+      this.monitorStalledPlayback()
+    })
+
+    this.player.on("canplay", () => {
+      console.log("[Player] Video can play")
+      if (window.progressManager) {
+        window.progressManager.hideBufferIndicator()
+      }
+      // Clear any stalled playback monitoring
+      if (this.stalledCheckInterval) {
+        clearInterval(this.stalledCheckInterval)
+        this.stalledCheckInterval = null
+      }
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
+    })
+
+    this.player.on("playing", () => {
+      if (window.progressManager) {
+        window.progressManager.hideBufferIndicator()
+      }
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
+    })
+
+    // Handle errors
+    this.player.on("error", (error) => {
+      console.error("Video.js error:", error)
+
+      // Check if it's a subtitle loading error
+      const playerError = this.player.error()
+      if (playerError && playerError.code === 4) {
+        console.warn("Subtitle loading error detected, continuing without subtitles")
+        // Don't show error for subtitle issues, just log it
+        return
+      }
+
+      this.showError("Video playback failed. Please try refreshing the page.")
+    })
+
+    // Handle video end for auto-next
+    this.player.on("ended", () => {
+      console.log("Video ended")
+      this.handleVideoEnd()
+    })
+
+    // Handle fullscreen changes
+    this.player.on("fullscreenchange", () => {
+      this.isFullscreen = this.player.isFullscreen()
+      this.handleFullscreenChange()
+    })
+
+    // Handle play/pause for subtitle visibility
+    this.player.on("play", () => {
+      this.updateSubtitleVisibility()
+      this.forceTransparentSubtitles() // Apply transparent backgrounds
+    })
+
+    this.player.on("pause", () => {
+      this.updateSubtitleVisibility()
+    })
+  }
+
+  monitorStalledPlayback() {
+    if (this.stalledCheckInterval) {
+      clearInterval(this.stalledCheckInterval)
+    }
+
+    let stalledCount = 0
+    const maxStalledAttempts = 3
+
+    this.stalledCheckInterval = setInterval(() => {
+      if (!this.player || this.player.paused()) {
+        clearInterval(this.stalledCheckInterval)
+        this.stalledCheckInterval = null
+        return
+      }
+
+      const time = this.player.currentTime()
+      const buffered = this.player.buffered()
+
+      // Check if playhead is stuck and buffered data is available
+      if (time >= 0 && buffered.length > 0 && buffered.end(buffered.length - 1) > time + 2) {
+        // Playhead is stuck but buffer has data ahead
+        stalledCount++
+        console.log(`[v0] Stalled playback detected (attempt ${stalledCount}/${maxStalledAttempts})`)
+
+        if (stalledCount >= maxStalledAttempts) {
+          clearInterval(this.stalledCheckInterval)
+          this.stalledCheckInterval = null
+          this.attemptPlaybackRecovery()
+        }
+      } else {
+        stalledCount = 0
+      }
+    }, 1000)
+  }
+
+  attemptPlaybackRecovery() {
+    if (!this.player) return
+
+    console.log("[v0] Attempting playback recovery...")
+
+    const currentTime = this.player.currentTime()
+    const wasPlaying = !this.player.paused()
+
+    try {
+      // Stop and seek to current position to flush buffers
+      this.player.pause()
+
+      // Clear the buffer by seeking to a slightly different position
+      const seekTime = Math.max(0, currentTime - 1)
+      this.player.currentTime(seekTime)
+
+      // Brief delay then attempt to resume
+      setTimeout(() => {
+        if (wasPlaying) {
+          console.log("[v0] Resuming playback after recovery...")
+          this.player.play().catch((err) => {
+            console.error("[v0] Failed to resume playback:", err)
+          })
+        }
+      }, 500)
+    } catch (error) {
+      console.error("[v0] Recovery attempt failed:", error)
+    }
+  }
+
+  setDefaultSubtitleTrack() {
+    if (!this.player || !this.player.textTracks) {
+      console.warn("[Subtitles] Player not ready for subtitle setup")
+      return
+    }
+
+    const textTracks = this.player.textTracks()
+    console.log(`[Subtitles] Total tracks available: ${textTracks.length}`)
+
+    let englishTrack = null
+    let firstTrack = null
+
+    for (let i = 0; i < textTracks.length; i++) {
+      const track = textTracks[i]
+      console.log(`[Subtitles] Track ${i}: kind=${track.kind}, label=${track.label}, mode=${track.mode}`)
+
+      if (track.kind === "subtitles" || track.kind === "captions") {
+        if (!firstTrack) firstTrack = track
+        if (track.label && track.label.toLowerCase().includes("english")) {
+          englishTrack = track
+        }
+      }
+    }
+
+    if (this.currentLanguage === "sub") {
+      const defaultTrack = englishTrack || firstTrack
+      if (defaultTrack) {
+        for (let i = 0; i < textTracks.length; i++) {
+          textTracks[i].mode = "disabled"
+        }
+        defaultTrack.mode = "showing"
+        console.log(`[Subtitles] Enabled subtitle track: ${defaultTrack.label}`)
+
+        // Force transparent backgrounds after enabling
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
+      } else {
+        console.warn("[Subtitles] No subtitle tracks found to enable")
+      }
+    } else {
+      console.log("[Subtitles] Dub mode - subtitles disabled")
+      for (let i = 0; i < textTracks.length; i++) {
+        textTracks[i].mode = "disabled"
+      }
+    }
+  }
+
+  setupSubtitleHandling(subtitles) {
+    console.log("[Subtitles] Setting up subtitle handling with", subtitles ? subtitles.length : 0, "tracks")
+
+    this.player.ready(() => {
+      this.detectCurrentLanguage()
+
+      setTimeout(() => {
+        this.updateSubtitleVisibility()
+        this.setDefaultSubtitleTrack()
+        this.forceTransparentSubtitles()
+      }, 200)
+
+      this.player.textTracks().on("change", () => {
+        console.log("[Subtitles] Text tracks changed")
+        this.handleTextTrackChange()
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
+      })
+
+      this.player.on("texttrackchange", () => {
+        console.log("[Subtitles] Text track change event fired")
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
+      })
+
+      // Setup captions button to toggle subtitles on/off
+      this.setupCaptionsToggle()
+    })
+
+    const languageToggle = document.querySelector(".language-toggle")
+    if (languageToggle) {
+      const observer = new MutationObserver(() => {
+        this.detectCurrentLanguage()
+        this.updateSubtitleVisibility()
+        this.setDefaultSubtitleTrack()
+      })
+      observer.observe(languageToggle, { childList: true, subtree: true })
+    }
+
+    // Listen for subtitle language changes from settings
+    document.addEventListener("subtitleLanguageChanged", (e) => {
+      console.log("[v0] Subtitle language changed to:", e.detail.language)
+      this.settings.subtitleLanguage = e.detail.language
+      this.setDefaultSubtitleTrack()
+      this.handleTextTrackChange()
+    })
+
+    // Listen for subtitle toggle changes
+    document.addEventListener("subtitleToggled", (e) => {
+      console.log("[v0] Subtitle toggled:", e.detail.enabled)
+      this.settings.forceSubtitlesOff = !e.detail.enabled
+      this.updateSubtitleVisibility()
+    })
+  }
+
+  setupCaptionsToggle() {
+    // Find the captions button and add click handler
+    const captionsBtn = this.player.controlBar.captionsButton
+    if (captionsBtn) {
+      captionsBtn.on("click", () => {
+        console.log("[v0] Captions button clicked")
+        const textTracks = this.player.textTracks()
+        let allDisabled = true
+
+        for (let i = 0; i < textTracks.length; i++) {
+          if ((textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") && textTracks[i].mode === "showing") {
+            allDisabled = false
+            break
+          }
+        }
+
+        // Toggle all subtitle tracks
+        for (let i = 0; i < textTracks.length; i++) {
+          if (textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") {
+            textTracks[i].mode = allDisabled ? "showing" : "disabled"
+          }
+        }
+
+        this.settings.forceSubtitlesOff = !allDisabled
+        this.saveSettings()
+        console.log("[v0] Subtitles", allDisabled ? "enabled" : "disabled")
+
+        // Force transparent backgrounds after toggle
+        setTimeout(() => this.forceTransparentSubtitles(), 100)
+      })
+    }
+  }
+
+  detectCurrentLanguage() {
+    const urlParams = new URLSearchParams(window.location.search)
+    const epParam = urlParams.get("ep")
+
+    if (epParam && epParam.includes("-dub")) {
+      this.currentLanguage = "dub"
+      console.log(`[Language] Detected from URL: dub`)
+      return
+    }
+
+    const languageToggle = document.querySelector(".language-toggle")
+    if (languageToggle) {
+      const activeButton = languageToggle.querySelector(".active")
+      if (activeButton) {
+        this.currentLanguage = activeButton.textContent.toLowerCase().includes("dub") ? "dub" : "sub"
+        console.log(`[Language] Detected from UI: ${this.currentLanguage}`)
+        return
+      }
+    }
+
+    this.currentLanguage = "sub"
+    console.log(`[Language] Default: sub`)
+  }
+
+  handleTextTrackChange() {
+    const textTracks = this.player.textTracks()
+
+    // If subtitles are forced off, disable all subtitle tracks
+    if (this.settings.forceSubtitlesOff) {
+      console.log("[v0] Subtitles forced off by user")
+      for (let i = 0; i < textTracks.length; i++) {
+        if (textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") {
+          textTracks[i].mode = "disabled"
+        }
+      }
+      return
+    }
+
+    for (let i = 0; i < textTracks.length; i++) {
+      const track = textTracks[i]
+
+      // Log track status for debugging
+      console.log(`[v0] Track ${i}: mode=${track.mode}, kind=${track.kind}, label=${track.label}, language=${track.language}`)
+
+      // Ensure metadata tracks don't show as subtitles
+      if (track.kind === "metadata" || track.kind === "chapters") {
+        track.mode = "hidden"
+        continue
+      }
+
+      // Handle subtitle tracks based on current language
+      if (track.kind === "subtitles" || track.kind === "captions") {
+        if (this.currentLanguage === "dub") {
+          track.mode = "disabled"
+        } else if (this.currentLanguage === "sub") {
+          const preferredLang = this.settings.subtitleLanguage.toLowerCase()
+          const trackLabel = (track.label || "").toLowerCase()
+
+          // Match by label or language code
+          const isPreferredLanguage =
+            trackLabel.includes(preferredLang) ||
+            (track.language && track.language.includes(preferredLang.substring(0, 2)))
+
+          const isFirstSubtitleTrack = i === this.getFirstSubtitleTrackIndex()
+
+          if (
+            isPreferredLanguage ||
+            (isFirstSubtitleTrack && !this.hasPreferredLanguageTrack(preferredLang))
+          ) {
+            track.mode = "showing"
+            console.log(`[v0] Showing subtitle: ${track.label}`)
+          } else {
+            track.mode = "disabled"
+          }
+        }
+      }
+    }
+
+    // Force transparent backgrounds after track change
+    setTimeout(() => this.forceTransparentSubtitles(), 100)
+  }
+
+  getFirstSubtitleTrackIndex() {
+    const textTracks = this.player.textTracks()
+    for (let i = 0; i < textTracks.length; i++) {
+      if (textTracks[i].kind === "subtitles" || textTracks[i].kind === "captions") {
+        return i
+      }
+    }
+    return -1
+  }
+
+  hasPreferredLanguageTrack(preferredLang) {
+    if (!this.player || !this.player.textTracks) return false
+
+    const textTracks = this.player.textTracks()
+    for (let i = 0; i < textTracks.length; i++) {
+      const track = textTracks[i]
+      if (track.kind === "subtitles" || track.kind === "captions") {
+        if (track.label && track.label.toLowerCase().includes(preferredLang.toLowerCase())) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  updateSubtitleVisibility() {
+    if (!this.player || !this.player.textTracks) return
+
+    const textTracks = this.player.textTracks()
+    console.log(`[v0] Updating subtitle visibility for language: ${this.currentLanguage}`)
+
+    if (this.settings.forceSubtitlesOff || this.settings.subtitleLanguage === "off") {
+      for (let i = 0; i < textTracks.length; i++) {
+        const track = textTracks[i]
+        if (track.kind === "subtitles" || track.kind === "captions") {
+          track.mode = "disabled"
+        }
+      }
+      console.log(`[v0] All subtitles disabled due to user preference`)
+      return
+    }
+
+    for (let i = 0; i < textTracks.length; i++) {
+      const track = textTracks[i]
+
+      // Skip non-subtitle tracks
+      if (track.kind !== "subtitles" && track.kind !== "captions") {
+        continue
+      }
+
+      if (this.currentLanguage === "dub") {
+        track.mode = "disabled"
+        console.log(`[v0] Disabled subtitle track ${i} for dub audio`)
+      } else if (this.currentLanguage === "sub") {
+        const preferredLang = this.settings.subtitleLanguage || "English"
+        const isPreferredLanguage = track.label && track.label.toLowerCase().includes(preferredLang.toLowerCase())
+        const isFirstTrack = i === 0
+
+        if (isPreferredLanguage || (isFirstTrack && !this.hasPreferredLanguageTrack(preferredLang))) {
+          track.mode = "showing"
+          console.log(`[v0] Enabled subtitle track ${i} (${track.label}) for sub audio`)
+        } else {
+          track.mode = "disabled"
+        }
+      }
+    }
+
+    // Force transparent backgrounds after visibility update
+    setTimeout(() => this.forceTransparentSubtitles(), 100)
+  }
+
+  hideVideoJSLoadingSpinner() {
+    // Hide Video.js default loading spinner and use our custom styling
+    setTimeout(() => {
+      const loadingSpinner = this.player.el().querySelector(".vjs-loading-spinner")
+      if (loadingSpinner) {
+        loadingSpinner.style.display = "none"
+      }
+    }, 1000)
+  }
+
+  setupKeyboardShortcuts() {
+    console.log("=== Setting up Keyboard Shortcuts ===")
+
+    // Make video container focusable
+    const videoContainer = this.player.el().parentElement
+    videoContainer.setAttribute("tabindex", "0")
+
+    // Add keyboard event listener to document
+    document.addEventListener("keydown", (e) => {
+      if (!this.keyboardEnabled) return
+
+      // Don't trigger shortcuts if user is typing in an input
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return
+
+      switch (e.code) {
+        case "Space":
+          e.preventDefault()
+          this.togglePlayPause()
+          break
+        case "KeyF":
+          e.preventDefault()
+          this.toggleFullscreen()
+          break
+        case "ArrowRight":
+          e.preventDefault()
+          this.skipForward(10)
+          break
+        case "ArrowLeft":
+          e.preventDefault()
+          this.skipBackward(10)
+          break
+        case "ArrowUp":
+          e.preventDefault()
+          this.adjustVolume(0.1)
+          break
+        case "ArrowDown":
+          e.preventDefault()
+          this.adjustVolume(-0.1)
+          break
+        case "KeyM":
+          e.preventDefault()
+          this.toggleMute()
+          break
+        case "KeyK":
+          e.preventDefault()
+          this.togglePlayPause()
+          break
+        case "KeyJ":
+          e.preventDefault()
+          this.skipBackward(10)
+          break
+        case "KeyL":
+          e.preventDefault()
+          this.skipForward(10)
+          break
+        case "Comma":
+          if (this.player.paused()) {
+            e.preventDefault()
+            this.skipBackward(1 / 30) // Frame by frame backward
+          }
+          break
+        case "Period":
+          if (this.player.paused()) {
+            e.preventDefault()
+            this.skipForward(1 / 30) // Frame by frame forward
+          }
+          break
+      }
+    })
+
+    console.log("Keyboard shortcuts enabled: Space, F, Arrow keys, M, K, J, L, comma, period")
+  }
+
+  setupMobileFeatures() {
+    console.log("=== Setting up Mobile Features ===")
+
+    const videoContainer = this.player.el().parentElement
+
+    if (this.isMobileDevice()) {
+      // On mobile, ensure video doesn't autoplay without user interaction
+      this.player.ready(() => {
+        // Disable autoplay on mobile to prevent issues
+        this.player.autoplay(false)
+
+        // Add user interaction detection for mobile resume
+        const handleFirstInteraction = () => {
+          console.log("[v0] User interaction detected on mobile")
+          // Check if we need to resume from saved position
+          if (window.progressManager) {
+            const currentProgress = window.progressManager.getCurrentProgress()
+            if (currentProgress.watchTime > 30) {
+              // Small delay to ensure video is ready
+              setTimeout(() => {
+                if (this.player.currentTime() < 5) {
+                  this.player.currentTime(currentProgress.watchTime)
+                  console.log(
+                    `[v0] Mobile resume applied: ${window.progressManager.formatTime(currentProgress.watchTime)}`,
+                  )
+                }
+              }, 200)
+            }
+          }
+
+          // Remove listeners after first interaction
+          videoContainer.removeEventListener("touchstart", handleFirstInteraction)
+          videoContainer.removeEventListener("click", handleFirstInteraction)
+        }
+
+        videoContainer.addEventListener("touchstart", handleFirstInteraction, { once: true })
+        videoContainer.addEventListener("click", handleFirstInteraction, { once: true })
+      })
+    }
+
+    videoContainer.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.touches.length === 1) {
+          this.touchStartX = e.touches[0].clientX
+          this.touchStartTime = Date.now()
+        }
+      },
+      { passive: true },
+    )
+
+    videoContainer.addEventListener(
+      "touchmove",
+      (e) => {
+        if (e.touches.length === 1 && !this.isSeeking) {
+          const touchX = e.touches[0].clientX
+          const deltaX = touchX - this.touchStartX
+          const containerWidth = videoContainer.offsetWidth
+
+          // Only start seeking if moved more than 30px
+          if (Math.abs(deltaX) > 30) {
+            this.isSeeking = true
+            const seekAmount = (deltaX / containerWidth) * this.player.duration()
+            const newTime = Math.max(0, Math.min(this.player.duration(), this.player.currentTime() + seekAmount))
+            this.player.currentTime(newTime)
+            this.showSeekIndicator(seekAmount > 0 ? "forward" : "backward", Math.abs(seekAmount))
+          }
+        }
+      },
+      { passive: true },
+    )
+
+    videoContainer.addEventListener(
+      "touchend",
+      (e) => {
+        this.isSeeking = false
+        this.hideSeekIndicator()
+      },
+      { passive: true },
+    )
+  }
+
+  setupSkipButtons() {
+    if (!this.intro && !this.outro) return
+
+    let introSkipTimeout = null
+    let outroSkipTimeout = null
+
+    this.player.on("timeupdate", () => {
+      const currentTime = this.player.currentTime()
+
+      // Show/hide intro skip button
+      if (this.intro && currentTime >= this.intro.start && currentTime <= this.intro.end) {
+        this.skipIntroBtn.style.display = "block"
+        this.skipIntroBtn.classList.add("show")
+
+        if (this.settings.skipIntro && !introSkipTimeout) {
+          introSkipTimeout = setTimeout(() => {
+            if (this.player.currentTime() >= this.intro.start && this.player.currentTime() <= this.intro.end) {
+              this.player.currentTime(this.intro.end)
+              this.showControlIndicator("auto-skip", "Intro skipped")
+              console.log("[v0] Auto-skipped intro")
+            }
+          }, 100)
+        }
+      } else {
+        this.skipIntroBtn.style.display = "none"
+        this.skipIntroBtn.classList.remove("show")
+        if (introSkipTimeout) {
+          clearTimeout(introSkipTimeout)
+          introSkipTimeout = null
+        }
+      }
+
+      // Show/hide outro skip button
+      if (this.outro && currentTime >= this.outro.start && currentTime <= this.outro.end) {
+        this.skipOutroBtn.style.display = "block"
+        this.skipOutroBtn.classList.add("show")
+
+        if (this.settings.skipIntro && !outroSkipTimeout) {
+          outroSkipTimeout = setTimeout(() => {
+            if (this.player.currentTime() >= this.outro.start && this.player.currentTime() <= this.outro.end) {
+              this.player.currentTime(this.outro.end)
+              this.showControlIndicator("auto-skip", "Outro skipped")
+              console.log("[v0] Auto-skipped outro")
+            }
+          }, 100)
+        }
+      } else {
+        this.skipOutroBtn.style.display = "none"
+        this.skipOutroBtn.classList.remove("show")
+        if (outroSkipTimeout) {
+          clearTimeout(outroSkipTimeout)
+          outroSkipTimeout = null
+        }
+      }
+    })
+
+    // Skip button event listeners
+    this.skipIntroBtn.addEventListener("click", () => {
+      if (this.intro) {
+        this.player.currentTime(this.intro.end)
+        if (introSkipTimeout) {
+          clearTimeout(introSkipTimeout)
+          introSkipTimeout = null
+        }
+        this.showControlIndicator("skip", "Intro skipped")
+      }
+    })
+
+    this.skipOutroBtn.addEventListener("click", () => {
+      if (this.outro) {
+        this.player.currentTime(this.outro.end)
+        if (outroSkipTimeout) {
+          clearTimeout(outroSkipTimeout)
+          outroSkipTimeout = null
+        }
+        this.showControlIndicator("skip", "Outro skipped")
+      }
+    })
+  }
+
+  handleFullscreenChange() {
+    const videoContainer = this.player.el().parentElement
+
+    if (this.isFullscreen) {
+      videoContainer.classList.add("fullscreen-active")
+
+      // Auto-rotate to landscape on mobile devices
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape").catch((err) => {
+          console.log("Screen orientation lock not supported:", err)
+        })
+      }
+    } else {
+      videoContainer.classList.remove("fullscreen-active")
+
+      // Unlock orientation when exiting fullscreen
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock()
+      }
+    }
+  }
+
+  togglePlayPause() {
+    if (this.player.paused()) {
+      this.player.play()
+      this.showControlIndicator("play")
+    } else {
+      this.player.pause()
+      this.showControlIndicator("pause")
+    }
+  }
+
+  toggleFullscreen() {
+    if (this.player.isFullscreen()) {
+      this.player.exitFullscreen()
+    } else {
+      this.player.requestFullscreen()
+    }
+  }
+
+  skipForward(seconds) {
+    const newTime = Math.min(this.player.duration(), this.player.currentTime() + seconds)
+    this.player.currentTime(newTime)
+    this.showControlIndicator("forward", seconds)
+  }
+
+  skipBackward(seconds) {
+    const newTime = Math.max(0, this.player.currentTime() - seconds)
+    this.player.currentTime(newTime)
+    this.showControlIndicator("backward", seconds)
+  }
+
+  adjustVolume(delta) {
+    const newVolume = Math.max(0, Math.min(1, this.player.volume() + delta))
+    this.player.volume(newVolume)
+    this.showControlIndicator("volume", Math.round(newVolume * 100))
+  }
+
+  toggleMute() {
+    this.player.muted(!this.player.muted())
+    this.showControlIndicator(this.player.muted() ? "muted" : "unmuted")
+  }
+
+  // Keep existing control indicator functionality
+  showControlIndicator(action, value = null) {
+    const indicator = document.createElement("div")
+    indicator.className = "control-indicator youtube-style"
+
+    let content = ""
+    let icon = ""
+    switch (action) {
+      case "play":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>`
+        content = ""
+        break
+      case "pause":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 19h4V5H6v14zm8-14v12l8.5-6L13 6z"/>
+        </svg>`
+        content = ""
+        break
+      case "forward":
+        icon = `<svg class="control-icon seek-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
+        </svg>`
+        content = `${value}s`
+        indicator.classList.add("seek-forward")
+        break
+      case "backward":
+        icon = `<svg class="control-icon seek-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>
+        </svg>`
+        content = `${value}s`
+        indicator.classList.add("seek-backward")
+        break
+      case "volume":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>`
+        content = `${value}%`
+        break
+      case "muted":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>`
+        content = "Muted"
+        break
+      case "unmuted":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+        </svg>`
+        content = "Unmuted"
+        break
+      case "auto-skip":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
+        </svg>`
+        content = value || "Auto-skipped"
+        indicator.classList.add("auto-skip")
+        break
+      case "skip":
+        icon = `<svg class="control-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
+        </svg>`
+        content = value || "Skipped"
+        indicator.classList.add("skip")
+        break
+    }
+
+    const showText =
+      !this.isMobileDevice() &&
+      (action === "forward" ||
+        action === "backward" ||
+        action === "volume" ||
+        action === "muted" ||
+        action === "unmuted" ||
+        action === "auto-skip" ||
+        action === "skip")
+
+    indicator.innerHTML = `
+      <div class="control-content">
+        ${icon}
+        ${showText ? `<span class="control-text">${content}</span>` : ""}
+      </div>
+    `
+
+    this.player.el().parentElement.appendChild(indicator)
+
+    if (action === "forward" || action === "backward") {
+      this.createSeekRipple(action === "forward" ? "right" : "left")
+    }
+
+    // Properly manage timeouts to ensure indicators are removed
+    const indicatorId = `indicator-${Date.now()}-${Math.random()}`
+    indicator.dataset.indicatorId = indicatorId
+
+    // Store timeout reference for cleanup
+    const timeoutId = setTimeout(
+      () => {
+        if (indicator && indicator.parentElement) {
+          indicator.classList.add("fade-out")
+          setTimeout(() => {
+            if (indicator && indicator.parentElement) {
+              indicator.remove()
+            }
+            // Clean up timeout reference
+            this.controlIndicatorTimeouts.delete(indicatorId)
+          }, 300)
+        }
+      },
+      action === "auto-skip" || action === "skip" ? 2500 : 1500,
+    )
+
+    this.controlIndicatorTimeouts.set(indicatorId, timeoutId)
+  }
+
+  createSeekRipple(direction) {
+    const ripple = document.createElement("div")
+    ripple.className = `seek-ripple ${direction}`
+
+    const videoRect = this.player.el().getBoundingClientRect()
+    const centerX = direction === "right" ? videoRect.width * 0.75 : videoRect.width * 0.25
+    const centerY = videoRect.height * 0.5
+
+    ripple.style.left = `${centerX}px`
+    ripple.style.top = `${centerY}px`
+
+    this.player.el().parentElement.appendChild(ripple)
+
+    setTimeout(() => {
+      if (ripple.parentElement) {
+        ripple.parentElement.removeChild(ripple)
+      }
+    }, 600)
+  }
+
+  showSeekIndicator(direction, seconds) {
+    let indicator = document.querySelector(".seek-indicator")
+    if (!indicator) {
+      indicator = document.createElement("div")
+      indicator.className = "seek-indicator youtube-seek"
+      this.player.el().parentElement.appendChild(indicator)
+    }
+
+    const isForward = direction === "forward"
+    const icon = isForward
+      ? `<svg class="seek-arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
+        </svg>`
+      : `<svg class="seek-arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>
+        </svg>`
+
+    const sign = isForward ? "+" : "-"
+    const showTime = !this.isMobileDevice()
+
+    indicator.innerHTML = `
+      <div class="seek-content ${direction}">
+        ${icon}
+        ${showTime ? `<span class="seek-time">${sign}${Math.round(seconds)}s</span>` : ""}
+      </div>
+    `
+
+    indicator.classList.remove("hide")
+    indicator.classList.add("show", direction)
+
+    // Clear existing timeout if any
+    if (indicator.dataset.timeoutId) {
+      clearTimeout(Number(indicator.dataset.timeoutId))
+    }
+
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
+      this.hideSeekIndicator()
+    }, 1000)
+
+    indicator.dataset.timeoutId = timeoutId.toString()
+  }
+
+  hideSeekIndicator() {
+    const indicator = document.querySelector(".seek-indicator")
+    if (indicator) {
+      // Clear timeout
+      if (indicator.dataset.timeoutId) {
+        clearTimeout(Number(indicator.dataset.timeoutId))
+        delete indicator.dataset.timeoutId
+      }
+
+      indicator.classList.add("hide")
+      setTimeout(() => {
+        if (indicator && indicator.parentElement) {
+          indicator.remove()
+        }
+      }, 300)
+    }
+  }
+
+  handleVideoEnd() {
+    console.log("Video ended - checking auto next settings")
+
+    // Check if auto next is enabled in settings
+    if (!this.settings.autoplayNext) {
+      console.log("Auto next disabled in settings")
+      return
+    }
+
+    const nextBtn = document.getElementById("nextEpisodeBtn")
+    if (nextBtn && nextBtn.href && !nextBtn.disabled) {
+      console.log("Auto next enabled - showing notification")
+      const nextUrl = nextBtn.href
+      this.showAutoNextNotification(nextUrl)
+      setTimeout(() => {
+        // Double check settings before navigating
+        const currentSettings = this.loadSettings()
+        if (currentSettings.autoplayNext) {
+          console.log("Navigating to next episode:", nextUrl)
+          window.location.href = nextUrl
+        } else {
+          console.log("Auto next was disabled during countdown")
+        }
+      }, 5000)
+    } else {
+      console.log("No next episode available or button disabled")
+    }
+  }
+
+  showAutoNextNotification(nextUrl) {
+    const notification = document.createElement("div")
+    notification.className =
+      "fixed top-4 right-4 z-50 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 rounded-xl shadow-2xl border border-purple-500/30 backdrop-blur-sm"
+    notification.id = "auto-next-notification"
+
+    let countdown = 3
+
+    notification.innerHTML = `
+      <div class="flex items-center gap-4">
+        <div class="flex-shrink-0">
+          <svg class="w-6 h-6 animate-spin text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-semibold">Auto-playing next episode</p>
+          <p class="text-sm text-purple-200" id="countdown-text">in <span id="countdown-number">${countdown}</span> seconds...</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="window.location.href='${nextUrl}'" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
+            Play Now
+          </button>
+          <button onclick="this.closest('#auto-next-notification').remove()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(notification)
+
+    // Animate in
+    setTimeout(() => {
+      notification.style.transform = "translateX(0)"
+      notification.style.opacity = "1"
+    }, 100)
+
+    // Countdown timer
+    const countdownInterval = setInterval(() => {
+      countdown--
+      const countdownElement = document.getElementById("countdown-number")
+      if (countdownElement) {
+        countdownElement.textContent = countdown
+      }
+
+      if (countdown <= 0) {
+        clearInterval(countdownInterval)
+      }
+    }, 1000)
+
+    // Auto remove after countdown
+    setTimeout(() => {
+      clearInterval(countdownInterval)
+      if (notification.parentElement) {
+        notification.remove()
+      }
+    }, 5500)
+  }
+
+  isMobileDevice() {
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform))
+    )
+  }
+
+  showError(message) {
+    // Remove existing error message
+    const existingError = document.querySelector(".error-message")
+    if (existingError) {
+      existingError.remove()
+    }
+
+    const errorDiv = document.createElement("div")
+    errorDiv.className = "error-message"
+    errorDiv.textContent = message
+
+    this.player.el().parentElement.appendChild(errorDiv)
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (errorDiv.parentElement) {
+        errorDiv.remove()
+      }
+    }, 5000)
+  }
+
+  destroy() {
+    if (this.player) {
+      this.player.dispose()
+    }
+    // Clear all timeouts
+    this.controlIndicatorTimeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+    this.controlIndicatorTimeouts.clear()
+    // Clear stalled playback interval
+    if (this.stalledCheckInterval) {
+      clearInterval(this.stalledCheckInterval)
+      this.stalledCheckInterval = null
+    }
+    // Disconnect subtitle observer
+    if (this.subtitleObserver) {
+      this.subtitleObserver.disconnect()
+      this.subtitleObserver = null
+    }
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem("yumeAnimeSettings", JSON.stringify(this.settings))
+      console.log("[v0] Settings saved to localStorage")
+    } catch (error) {
+      console.error("Error saving settings:", error)
+    }
+  }
+
+  updateSetting(key, value) {
+    this.settings[key] = value
+    this.saveSettings()
+    console.log(`[v0] Updated setting ${key} to ${value}`)
+
+    // Apply subtitle styling changes immediately
+    if (key === "subtitleBackground" || key === "subtitleFontSize") {
+      this.applySubtitleStyling()
+      this.forceTransparentSubtitles()
+    }
+
+    // Update subtitle language if changed
+    if (key === "subtitleLanguage") {
+      this.setDefaultSubtitleTrack()
+    }
+  }
+
+  updateSettings(newSettings) {
+    const oldSettings = { ...this.settings }
+    this.settings = { ...this.settings, ...newSettings }
+    this.saveSettings()
+
+    // Reapply subtitle styling with new settings
+    this.applySubtitleStyling()
+    this.forceTransparentSubtitles()
+
+    // Update subtitle visibility if language preference changed
+    if (
+      newSettings.preferredLanguage ||
+      newSettings.subtitleLanguage !== oldSettings.subtitleLanguage ||
+      newSettings.forceSubtitlesOff !== oldSettings.forceSubtitlesOff
+    ) {
+      this.currentLanguage = newSettings.preferredLanguage || this.currentLanguage
+      this.updateSubtitleVisibility()
+    }
+
+    console.log(`[v0] Updated settings:`, this.settings)
+  }
+}
+
+// Utility functions
+function jumpToEpisode() {
+  const input = document.getElementById("jumpToEpisode")
+  const episodeNumber = Number.parseInt(input.value)
+
+  if (episodeNumber) {
+    const episodeCard = document.querySelector(`[data-episode="${episodeNumber}"]`)
+    if (episodeCard) {
+      window.location.href = episodeCard.href
+    } else {
+      alert("Episode not found")
+    }
+  }
+}
+
+// Initialize everything when DOM is loaded
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize progress manager - WatchProgressManager is available from watch-progress.js
+  const WatchProgressManager = window.WatchProgressManager
+  if (typeof WatchProgressManager !== "undefined") {
+    window.progressManager = new WatchProgressManager()
+  }
+
+  // Initialize Video.js player
+  const videojsPlayer = new VideoJSPlayer()
+  videojsPlayer.initialize()
+
+  // Store player reference globally for cleanup
+  window.videojsPlayer = videojsPlayer
+})
+
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+  if (window.videojsPlayer) {
+    window.videojsPlayer.destroy()
+  }
+  if (window.progressManager) {
+    window.progressManager.stopTracking()
+  }
+})
+
+window.jumpToEpisode = jumpToEpisode

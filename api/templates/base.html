@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="{% block meta_description %}Watch anime online for free in HD quality{% endblock %}">
+    <title>{% block title %}YumeAnime{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Preconnect for avatar images -->
+    <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
+    <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    <!-- Anti-Scraping Protection -->
+    <script>
+        (function () {
+            // Clear console and detect DevTools
+            const devtools = { open: false, orientation: null };
+            const threshold = 160;
+
+            // Detect DevTools via window size difference
+            const checkDevTools = function () {
+                const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+                const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+
+                if (widthThreshold || heightThreshold) {
+                    if (!devtools.open) {
+                        devtools.open = true;
+                        onDevToolsOpen();
+                    }
+                } else {
+                    devtools.open = false;
+                }
+            };
+
+            const onDevToolsOpen = function () {
+                // Clear console repeatedly
+                console.clear();
+                console.log('%c⚠️ Stop!', 'color: red; font-size: 40px; font-weight: bold;');
+                console.log('%cThis is a browser feature intended for developers.', 'font-size: 16px;');
+            };
+
+            const onDevToolsOpen = function () {
+                // Do not clear console
+            };
+
+            // Override console methods when devtools detected
+            const originalLog = console.log;
+            const originalWarn = console.warn;
+            const originalError = console.error;
+
+            // Clear console on various triggers
+            document.addEventListener('keydown', function (e) {
+                // Detect F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+                if (e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
+                    (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
+                    e.preventDefault();
+                    console.clear();
+                    return false;
+                }
+            });
+
+            // Disable right-click on video and iframe elements
+            document.addEventListener('contextmenu', function (e) {
+                const target = e.target;
+                if (target.tagName === 'VIDEO' ||
+                    target.tagName === 'IFRAME' ||
+                    target.closest('.video-player') ||
+                    target.closest('.player-container') ||
+                    target.closest('[class*="player"]')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Protect video elements from inspection
+            const protectVideos = function () {
+                const videos = document.querySelectorAll('video, iframe');
+                videos.forEach(function (el) {
+                    el.setAttribute('controlslist', 'nodownload noremoteplayback');
+                    el.setAttribute('disablepictureinpicture', '');
+                    el.oncontextmenu = function () { return false; };
+                });
+            };
+
+            // Run on load and observe for new elements
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', protectVideos);
+            } else {
+                protectVideos();
+            }
+
+            // Observer for dynamically added videos
+            const observer = new MutationObserver(function (mutations) {
+                protectVideos();
+            });
+
+            observer.observe(document.body || document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+
+            // Debugger trap disabled
+        })();
+    </script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-container">
+            <!-- Brand -->
+            <a href="{{ url_for('main.home_routes.home') }}" class="navbar-brand">
+                <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                    style="height: 40px;">
+                <span>YumeAnime</span>
+            </a>
+
+            <!-- Navigation Links -->
+            <div class="navbar-nav" id="navbar-nav">
+                <a href="{{ url_for('main.home_routes.home') }}"
+                    class="nav-link {% if request.endpoint == 'main.home_routes.home' %}active{% endif %}">Home</a>
+                <a href="/genre/action" class="nav-link">Genres</a>
+                <a href="/category/movie" class="nav-link {% if 'movie' in request.path %}active{% endif %}">Movies</a>
+                {% if session.get('username') %}
+                <a href="{{ url_for('watchlist.watchlist') }}"
+                    class="nav-link {% if request.endpoint == 'watchlist.watchlist' %}active{% endif %}">Watchlist</a>
+                {% endif %}
+                <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="nav-link" title="Source Code">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
+                        </path>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Search -->
+            <div class="search-container">
+                <form action="{{ url_for('main.search_routes.search') }}" method="GET" class="search-input-wrapper"
+                    id="search-form">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" name="q" class="search-input" placeholder="Search anime..." autocomplete="off"
+                        id="search-input">
+                    <!-- Loading Indicator -->
+                    <div id="search-loading" class="search-loading hidden">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+                </form>
+                <!-- Search Error -->
+                <div id="search-error" class="hidden absolute top-full left-0 mt-1 text-xs text-red-500">
+                    <span></span>
+                </div>
+                <!-- Suggestions Box -->
+                <div class="search-suggestions hidden" id="suggestion-box">
+                    <div id="suggestions-content"></div>
+                </div>
+            </div>
+
+            <!-- User Menu -->
+            <div class="user-menu">
+                <!-- Mobile Search Toggle -->
+                <button class="mobile-search-toggle" id="mobile-search-toggle" aria-label="Search">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                </button>
+
+                {% if session.get('username') %}
+                <div class="dropdown" id="user-dropdown">
+                    <button class="user-avatar" onclick="toggleDropdown('user-dropdown')">
+                        <img src="{{ session.get('avatar', '/static/images/default-avatar.png') }}" alt="Avatar"
+                            width="36" height="36" loading="eager" fetchpriority="high"
+                            onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&background=1a1a1a&color=fff'">
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="{{ url_for('main.catalog_routes.profile') }}" class="dropdown-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Profile
+                        </a>
+                        <a href="{{ url_for('main.catalog_routes.settings') }}" class="dropdown-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" onclick="handleLogout(event)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <button class="btn btn-primary" onclick="openLoginModal()">Sign In</button>
+                {% endif %}
+
+                <!-- Mobile Toggle -->
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Search Overlay -->
+    <div id="mobile-search-overlay" class="mobile-search-overlay hidden">
+        <div class="mobile-search-container">
+            <div class="mobile-search-header">
+                <form action="{{ url_for('main.search_routes.search') }}" method="GET" class="mobile-search-form"
+                    id="mobile-search-form">
+                    <svg class="mobile-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" name="q" class="mobile-search-input" placeholder="Search anime..."
+                        autocomplete="off" id="mobile-search-input">
+                    <div id="mobile-search-loading" class="mobile-search-loading hidden">
+                        <svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+                    <button type="button" class="mobile-search-close" id="mobile-search-close">Cancel</button>
+                </form>
+            </div>
+            <div id="mobile-search-error" class="hidden text-center p-4 text-red-500">
+                <span></span>
+            </div>
+            <div class="mobile-suggestions" id="mobile-suggestion-box">
+                <div id="mobile-suggestions-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav" id="mobile-nav">
+        <!-- Removed inline search input, using overlay instead for better UX -->
+        <div class="mobile-nav-links">
+            <a href="{{ url_for('main.home_routes.home') }}" class="mobile-nav-link">Home</a>
+            <a href="/genre/action" class="mobile-nav-link">Genres</a>
+            <a href="/category/movie" class="mobile-nav-link">Movies</a>
+            {% if session.get('username') %}
+            <a href="{{ url_for('watchlist.watchlist') }}" class="mobile-nav-link">Watchlist</a>
+            <a href="{{ url_for('main.catalog_routes.profile') }}" class="mobile-nav-link">Profile</a>
+            <a href="{{ url_for('main.catalog_routes.settings') }}" class="mobile-nav-link">Settings</a>
+            {% else %}
+            <a href="#" onclick="openLoginModal()" class="mobile-nav-link">Sign In</a>
+            {% endif %}
+            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="mobile-nav-link">GitHub</a>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container" id="flash-container">
+        {% for category, message in messages %}
+        <div class="flash-message {{ category }}">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" class="btn-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <a href="{{ url_for('main.home_routes.home') }}" class="navbar-brand">
+                            <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                                style="height: 40px;">
+                            <span>YumeAnime</span>
+                        </a>
+                        <p>Your gateway to the best anime streaming experience. Watch thousands of anime series and
+                            movies in HD quality.</p>
+                        <div
+                            style="margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--border-color);">
+                            <p class="text-sm text-muted" style="margin-bottom: var(--space-sm);">Proudly Open Source.
+                                Join us to build the future of anime streaming.</p>
+                            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank"
+                                class="btn btn-sm btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
+                                    </path>
+                                </svg>
+                                Star on GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Browse</h4>
+                    <div class="footer-links">
+                        <a href="/genre/action">Action</a>
+                        <a href="/genre/romance">Romance</a>
+                        <a href="/genre/comedy">Comedy</a>
+                        <a href="/genre/fantasy">Fantasy</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Genres</h4>
+                    <div class="footer-links">
+                        <a href="/genre/adventure">Adventure</a>
+                        <a href="/genre/drama">Drama</a>
+                        <a href="/genre/sci-fi">Sci-Fi</a>
+                        <a href="/genre/horror">Horror</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Account</h4>
+                    <div class="footer-links">
+                        {% if session.get('username') %}
+                        <a href="{{ url_for('main.catalog_routes.profile') }}">Profile</a>
+                        <a href="{{ url_for('main.catalog_routes.settings') }}">Settings</a>
+                        <a href="{{ url_for('watchlist.watchlist') }}">Watchlist</a>
+                        {% else %}
+                        <a href="#" onclick="openLoginModal()">Sign In</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; {{ now().year if now else 2026 }} YumeAnime. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal Container -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeLoginModal()"></div>
+        <div class="modal-content" style="max-width: 400px;">
+            <button class="modal-close" onclick="closeLoginModal()" aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+
+            <!-- Login Form -->
+            <div id="login-view">
+                <h2 style="margin-bottom: var(--space-lg); text-align: center;">Welcome Back</h2>
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" name="username" required placeholder="Enter username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" name="password" required placeholder="Enter password"
+                            minlength="6">
+                    </div>
+                    <div id="login-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <!-- Cloudflare Turnstile Widget -->
+                    <div class="cf-turnstile" data-sitekey="0x4AAAAAABu3fPLT_Y5VwGsZ" data-theme="dark"
+                        data-appearance="always" style="margin-bottom: var(--space-md);"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="login-btn">
+                        <span id="login-btn-text">Sign In</span>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-lg);">
+                    <span class="text-muted">Don't have an account?</span>
+                    <button class="btn btn-ghost" onclick="showSignupView()" style="padding: 0; margin-left: 4px;">Sign
+                        Up</button>
+                </div>
+                <div style="text-align: center; margin-top: var(--space-md);">
+                    <button type="button" id="anilistLoginBtn" class="btn btn-secondary w-full"
+                        style="margin-top: var(--space-sm); display:flex; align-items:center; justify-content:center;">
+
+                        <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" width="18" height="18"
+                            style="margin-right:8px;" />
+
+                        Continue with AniList
+                    </button>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup-view" style="display: none;">
+                <h2 style="margin-bottom: var(--space-lg); text-align: center;">Create Account</h2>
+                <form id="signup-form" onsubmit="handleSignup(event)">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" name="username" required placeholder="Choose a username"
+                            minlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" name="email" required placeholder="Enter email">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" name="password" required
+                            placeholder="Choose a password" minlength="6">
+                    </div>
+                    <div id="signup-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <!-- Cloudflare Turnstile Widget -->
+                    <div class="cf-turnstile" data-sitekey="0x4AAAAAABu3fPLT_Y5VwGsZ" data-theme="dark"
+                        data-appearance="always" style="margin-bottom: var(--space-md);"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="signup-btn">
+                        <span id="signup-btn-text">Create Account</span>
+                    </button>
+                    <!-- AniList Signup Button -->
+                    <button type="button" id="anilistLoginBtn" class="btn btn-secondary w-full"
+                        style="margin-top: var(--space-sm); display:flex; align-items:center; justify-content:center;">
+
+                        <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" width="18" height="18"
+                            style="margin-right:8px;" />
+
+                        Continue with AniList
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-lg);">
+                    <span class="text-muted">Already have an account?</span>
+                    <button class="btn btn-ghost" onclick="showLoginView()" style="padding: 0; margin-left: 4px;">Sign
+                        In</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Dropdown toggle
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            dropdown.classList.toggle('open');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function (e) {
+            const dropdowns = document.querySelectorAll('.dropdown');
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('open');
+                }
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const mobileNav = document.getElementById('mobile-nav');
+
+        if (mobileMenuToggle && mobileNav) {
+            mobileMenuToggle.addEventListener('click', () => {
+                mobileNav.classList.toggle('open');
+            });
+        }
+
+
+
+        // Auto-hide flash messages
+        setTimeout(() => {
+            const flashContainer = document.getElementById('flash-container');
+            if (flashContainer) {
+                flashContainer.querySelectorAll('.flash-message').forEach((msg, i) => {
+                    setTimeout(() => {
+                        msg.style.animation = 'slideIn 0.3s ease reverse';
+                        setTimeout(() => msg.remove(), 300);
+                    }, i * 200);
+                });
+            }
+        }, 5000);
+
+        // Login Modal Functions
+        function openLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function showLoginView() {
+            document.getElementById('login-view').style.display = 'block';
+            document.getElementById('signup-view').style.display = 'none';
+        }
+
+        function showSignupView() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('signup-view').style.display = 'block';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('login-btn');
+            const btnText = document.getElementById('login-btn-text');
+            const errorDiv = document.getElementById('login-error');
+
+            // Get Turnstile token
+            const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
+            if (!turnstileToken) {
+                errorDiv.textContent = 'Please complete the security check.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.textContent = 'Signing in...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: form.username.value,
+                        password: form.password.value,
+                        cf_turnstile_response: turnstileToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    errorDiv.textContent = data.message || 'Login failed';
+                    errorDiv.style.display = 'block';
+                    // Reset Turnstile widget
+                    if (window.turnstile) {
+                        const widget = form.querySelector('.cf-turnstile');
+                        if (widget) turnstile.reset(widget);
+                    }
+                }
+            } catch (err) {
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = 'Sign In';
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('signup-btn');
+            const btnText = document.getElementById('signup-btn-text');
+            const errorDiv = document.getElementById('signup-error');
+
+            // Get Turnstile token
+            const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
+            if (!turnstileToken) {
+                errorDiv.textContent = 'Please complete the security check.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.textContent = 'Creating account...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: form.username.value,
+                        email: form.email.value,
+                        password: form.password.value,
+                        cf_turnstile_response: turnstileToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    errorDiv.textContent = data.message || 'Signup failed';
+                    errorDiv.style.display = 'block';
+                    // Reset Turnstile widget
+                    if (window.turnstile) {
+                        const widget = form.querySelector('.cf-turnstile');
+                        if (widget) turnstile.reset(widget);
+                    }
+                }
+            } catch (err) {
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = 'Create Account';
+            }
+        }
+
+        // Close modal on Escape
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeLoginModal();
+        });
+
+        // Handle logout via API
+        async function handleLogout(e) {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    alert('Logout failed. Please try again.');
+                }
+            } catch (err) {
+                console.error('Logout error:', err);
+                // Even if there's an error, redirect to home
+                window.location.href = '/';
+            }
+        }
+    </script>
+
+    <!-- Login Widget Script -->
+    <script src="{{ url_for('static', filename='js/login_widget.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - {{ username }} - YumeAnime{% endblock %}
+{% block meta_description %}Your YumeAnime profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="settings-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                {% if user.avatar %}
+                <img src="{{ user.avatar }}" alt="{{ username }}">
+                {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ username }}&size=120&background=1a1a1a&color=fff"
+                    alt="{{ username }}">
+                {% endif %}
+            </div>
+            <div class="profile-info">
+                <h1>{{ username }}</h1>
+                <p class="text-secondary">{{ user.email or 'No email' }}</p>
+                <p class="text-muted text-sm">Joined {{ user.joined_date or 'Unknown' }}</p>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="flash-message error" style="margin-bottom: var(--space-lg);">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- AniList Connection -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                AniList Integration
+            </h2>
+
+            {% if user.anilist_authenticated %}
+            <div
+                style="background: var(--bg-elevated); border-radius: var(--radius-md); padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-lg);">
+                <div
+                    style="width: 60px; height: 60px; border-radius: var(--radius-full); overflow: hidden; background: var(--bg-surface);">
+                    {% if user.avatar %}
+                    <img src="{{ user.avatar }}" alt="AniList avatar"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                    {% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Connected to AniList</div>
+                    <div class="text-muted text-sm">ID: {{ user.anilist_id }}</div>
+                </div>
+                <span class="badge" style="background: var(--success); color: white;">Connected</span>
+            </div>
+
+            {% if user.anilist_stats %}
+            <div class="watchlist-stats" style="margin-top: var(--space-lg);">
+                {% if user.anilist_stats.totalAnime is defined %}
+                <div class="stat-card">
+                    <div class="stat-card-value">{{ user.anilist_stats.totalAnime or 0 }}</div>
+                    <div class="stat-card-label">Total Anime</div>
+                </div>
+                {% endif %}
+                {% if user.anilist_stats.daysWatched is defined %}
+                <div class="stat-card">
+                    <div class="stat-card-value">{{ user.anilist_stats.daysWatched | round(1) if
+                        user.anilist_stats.daysWatched else 0 }}</div>
+                    <div class="stat-card-label">Days Watched</div>
+                </div>
+                {% endif %}
+                {% if user.anilist_stats.episodesWatched is defined %}
+                <div class="stat-card">
+                    <div class="stat-card-value">{{ user.anilist_stats.episodesWatched or 0 }}</div>
+                    <div class="stat-card-label">Episodes</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% else %}
+            <div style="text-align: center; padding: var(--space-xl);">
+                <div style="font-size: 3rem; margin-bottom: var(--space-md);">🔗</div>
+                <h3 style="margin-bottom: var(--space-sm);">Connect Your AniList</h3>
+                <p class="text-muted" style="margin-bottom: var(--space-lg);">
+                    Sync your watchlist and track your anime progress across platforms.
+                </p>
+                <a href="{{ url_for('auth.link_anilist_account') }}" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    Connect AniList
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Links -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">Quick Links</h2>
+            <div style="display: grid; gap: var(--space-md);">
+                <a href="{{ url_for('watchlist.watchlist') }}" class="settings-row"
+                    style="text-decoration: none; cursor: pointer;">
+                    <div class="settings-label">
+                        <span class="settings-label-text">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                            My Watchlist
+                        </span>
+                        <span class="settings-label-desc">View and manage your anime watchlist</span>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                </a>
+                <a href="{{ url_for('main.catalog_routes.settings') }}" class="settings-row"
+                    style="text-decoration: none; cursor: pointer;">
+                    <div class="settings-label">
+                        <span class="settings-label-text">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                            Settings
+                        </span>
+                        <span class="settings-label-desc">Manage account and preferences</span>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

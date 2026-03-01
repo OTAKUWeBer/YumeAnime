@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - YumeAnime{% endblock %}
+{% block meta_description %}Manage your YumeAnime account settings{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="settings-container">
+        <h1 style="margin-bottom: var(--space-xl);">Settings</h1>
+
+        <!-- Account Section -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                </svg>
+                Account
+            </h2>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Username</span>
+                    <span class="settings-label-desc">{{ user.username }}</span>
+                </div>
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Email</span>
+                    <span class="settings-label-desc">{{ user.email or 'Not set' }}</span>
+                </div>
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Member Since</span>
+                    <span class="settings-label-desc">{{ user.created_at.strftime('%B %d, %Y') if user.created_at else
+                        'Unknown' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AniList Integration -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                AniList Connection
+            </h2>
+
+            {% if user.anilist_authenticated %}
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">
+                        <span style="color: var(--success);">●</span> Connected
+                    </span>
+                    <span class="settings-label-desc">AniList ID: {{ user.anilist_id }}</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary" id="sync-anilist-btn" onclick="syncAniList()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" id="sync-icon">
+                            <path d="M21 2v6h-6" />
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                            <path d="M3 22v-6h6" />
+                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                        </svg>
+                        <span id="sync-btn-text">Sync Watchlist</span>
+                        <svg id="sync-spinner" class="hidden" width="16" height="16" viewBox="0 0 24 24"
+                            style="animation: spin 1s linear infinite;">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"
+                                stroke-dasharray="31.4 31.4" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                    <!-- Sync Progress Bar Container -->
+                    <!-- Sync Progress Bar Container -->
+                    <div id="sync-progress-container" class="sync-progress-container hidden">
+                        <div class="sync-info">
+                            <span class="sync-status-text">
+                                <span class="sync-status-dot"></span>
+                                <span id="sync-status-text">Syncing...</span>
+                            </span>
+                            <span id="sync-percent-text" class="sync-percent">0%</span>
+                        </div>
+                        <div class="sync-track">
+                            <div id="sync-progress-bar" class="sync-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" id="disconnect-anilist" style="color: var(--error);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                            <line x1="12" y1="2" x2="12" y2="12" />
+                        </svg>
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">
+                        <span style="color: var(--text-muted);">●</span> Not Connected
+                    </span>
+                    <span class="settings-label-desc">Sync your anime list with AniList</span>
+                </div>
+                <a href="{{ url_for('auth.connect_anilist_account') }}" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    Connect
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Playback Settings -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Playback
+            </h2>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Preferred Language</span>
+                    <span class="settings-label-desc">Default audio language for episodes</span>
+                </div>
+                <select class="server-select" id="preferred-lang">
+                    <option value="sub">Subbed (Japanese)</option>
+                    <option value="dub">Dubbed (English)</option>
+                </select>
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Autoplay Next Episode</span>
+                    <span class="settings-label-desc">Automatically play the next episode</span>
+                </div>
+                <div class="toggle" id="autoplay-toggle" data-setting="autoplay"></div>
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Skip Intro/Outro</span>
+                    <span class="settings-label-desc">Automatically skip intro and outro when available</span>
+                </div>
+                <div class="toggle" id="skip-toggle" data-setting="skip_intro"></div>
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Player Source</span>
+                    <span class="settings-label-desc">Choose your preferred video player</span>
+                </div>
+                <select class="server-select" id="preferred-player">
+                    <option value="internal">Internal</option>
+                    <option value="external">External (Megaplay)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+                Appearance
+            </h2>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Show Episode Titles</span>
+                    <span class="settings-label-desc">Display episode titles in lists (may contain spoilers)</span>
+                </div>
+                <div class="toggle" id="show-titles-toggle" data-setting="show_episode_titles"></div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="settings-section" style="border-color: var(--error);">
+            <h2 class="settings-section-title" style="color: var(--error);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <path
+                        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                Danger Zone
+            </h2>
+
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Clear Watch History</span>
+                    <span class="settings-label-desc">Remove all watch progress data</span>
+                </div>
+                <button class="btn btn-secondary" id="clear-history" style="color: var(--error);">
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script>
+    // Toggle functionality
+    document.querySelectorAll('.toggle').forEach(toggle => {
+        toggle.addEventListener('click', function () {
+            this.classList.toggle('active');
+            const setting = this.dataset.setting;
+            const value = this.classList.contains('active');
+            localStorage.setItem(`yume_${setting}`, value);
+        });
+
+        // Load saved state
+        const setting = toggle.dataset.setting;
+        const saved = localStorage.getItem(`yume_${setting}`);
+        if (saved === 'true') {
+            toggle.classList.add('active');
+        } else if (saved === 'false') {
+            toggle.classList.remove('active');
+        }
+    });
+
+    // Language preference
+    const langSelect = document.getElementById('preferred-lang');
+    if (langSelect) {
+        langSelect.value = localStorage.getItem('yume_preferred_lang') || 'sub';
+        langSelect.addEventListener('change', function () {
+            localStorage.setItem('yume_preferred_lang', this.value);
+        });
+    }
+
+    // Player preference (Internal/External)
+    const playerSelect = document.getElementById('preferred-player');
+    if (playerSelect) {
+        playerSelect.value = localStorage.getItem('preferred_player') || 'internal';
+        playerSelect.addEventListener('change', function () {
+            localStorage.setItem('preferred_player', this.value);
+        });
+    }
+
+    // Disconnect AniList
+    const disconnectBtn = document.getElementById('disconnect-anilist');
+    if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', async function () {
+            if (!confirm('Are you sure you want to disconnect your AniList account?')) return;
+
+            try {
+                const response = await fetch('/auth/anilist/disconnect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to disconnect');
+                }
+            } catch (e) {
+                console.error('Disconnect error:', e);
+                alert('An error occurred');
+            }
+        });
+    }
+
+    // Clear history
+    const clearBtn = document.getElementById('clear-history');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            if (!confirm('Are you sure you want to clear your watch history? This cannot be undone.')) return;
+
+            // Clear local storage watch data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('yume_watch_') || key.startsWith('yume_progress_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            alert('Watch history cleared!');
+        });
+    }
+</script>
+{% endblock %}

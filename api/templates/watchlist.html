@@ -1,0 +1,612 @@
+{% extends "base.html" %}
+
+{% block title %}My Watchlist - YumeAnime{% endblock %}
+{% block meta_description %}Manage your anime watchlist{% endblock %}
+
+{% block extra_css %}
+<style>
+    .watchlist-loading {
+        text-align: center;
+        padding: var(--space-3xl);
+    }
+
+    .watchlist-empty {
+        text-align: center;
+        padding: var(--space-3xl);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        margin-left: 8px;
+        vertical-align: middle;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-completed {
+        background-color: rgba(76, 175, 80, 0.15);
+        color: #81c784;
+        border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    .status-ongoing {
+        background-color: rgba(33, 150, 243, 0.15);
+        color: #64b5f6;
+        border: 1px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .status-other {
+        background-color: rgba(158, 158, 158, 0.15);
+        color: #e0e0e0;
+        border: 1px solid rgba(158, 158, 158, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: var(--space-sm);">
+        <h1 style="margin: 0;">My Watchlist</h1>
+        {% if session.get('anilist_authenticated') %}
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <button class="btn btn-primary" id="sync-watchlist-btn" onclick="syncFromAniList()"
+                style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 8px 16px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    id="wl-sync-icon">
+                    <path d="M21 2v6h-6" />
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                    <path d="M3 22v-6h6" />
+                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                </svg>
+                <span id="wl-sync-btn-text">Sync from AniList</span>
+                <svg id="wl-sync-spinner" class="hidden" width="16" height="16" viewBox="0 0 24 24"
+                    style="animation: spin 1s linear infinite;">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-dasharray="31.4 31.4" stroke-linecap="round" />
+                </svg>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sync Progress Bar -->
+    <div id="wl-sync-progress-container" class="hidden"
+        style="margin-bottom: var(--space-lg); padding: 12px 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span id="wl-sync-status-text" style="font-size: 0.85rem; color: var(--text-secondary);">Syncing...</span>
+            <span id="wl-sync-percent-text"
+                style="font-size: 0.85rem; font-weight: 600; color: var(--primary);">0%</span>
+        </div>
+        <div style="width: 100%; height: 4px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden;">
+            <div id="wl-sync-progress-bar"
+                style="width: 0%; height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s ease;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="watchlist-stats" id="watchlist-stats">
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-watching">-</div>
+            <div class="stat-card-label">Watching</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-completed">-</div>
+            <div class="stat-card-label">Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-plan">-</div>
+            <div class="stat-card-label">Plan to Watch</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" id="stat-total">-</div>
+            <div class="stat-card-label">Total</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="watchlist-tabs" id="watchlist-tabs">
+        <button class="watchlist-tab active" data-status="">All</button>
+        <button class="watchlist-tab" data-status="watching">Watching</button>
+        <button class="watchlist-tab" data-status="completed">Completed</button>
+        <button class="watchlist-tab" data-status="on_hold">On Hold</button>
+        <button class="watchlist-tab" data-status="dropped">Dropped</button>
+        <button class="watchlist-tab" data-status="plan_to_watch">Plan to Watch</button>
+    </div>
+
+    <!-- Watchlist Content -->
+    <div id="watchlist-content">
+        <div class="watchlist-loading">
+            <div class="loading-spinner" style="margin: 0 auto;"></div>
+            <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const watchlistContent = document.getElementById('watchlist-content');
+        const watchlistTabs = document.getElementById('watchlist-tabs');
+        // Sentinel for infinite scroll
+        let sentinel = null;
+
+        let currentStatus = '';
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMore = true;
+
+        // Status labels
+        const statusLabels = {
+            'watching': 'Watching',
+            'completed': 'Completed',
+            'on_hold': 'On Hold',
+            'dropped': 'Dropped',
+            'plan_to_watch': 'Plan to Watch'
+        };
+
+        // Fetch stats
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/watchlist/stats');
+                const stats = await response.json();
+
+                if (document.getElementById('stat-watching')) document.getElementById('stat-watching').textContent = stats.watching || 0;
+                if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = stats.completed || 0;
+                if (document.getElementById('stat-plan')) document.getElementById('stat-plan').textContent = stats.plan_to_watch || 0;
+                if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total || 0;
+            } catch (e) {
+                console.error('Stats error:', e);
+            }
+        }
+
+        // Create and append loading sentinel
+        function createSentinel() {
+            // Remove existing sentinel if any
+            if (sentinel) sentinel.remove();
+
+            const sentinelDiv = document.createElement('div');
+            sentinelDiv.id = 'watchlist-sentinel';
+            sentinelDiv.className = 'watchlist-loading';
+            // IMPORTANT: Sentinel must be in the DOM for IntersectionObserver to work.
+            // We use opacity to hide/show the spinner, but the element remains present.
+            sentinelDiv.style.opacity = '0';
+            sentinelDiv.style.minHeight = '1px'; // Ensure it takes up space
+            sentinelDiv.style.transition = 'opacity 0.2s';
+            sentinelDiv.innerText = 'Loading more...'; // Simple text or innerHTML
+            sentinelDiv.innerHTML = `
+                <div class="loading-spinner" style="margin: 0 auto;"></div>
+                <p class="text-muted" style="margin-top: var(--space-md);">Loading more...</p>
+            `;
+            if (watchlistContent && watchlistContent.parentNode) {
+                watchlistContent.parentNode.appendChild(sentinelDiv);
+            }
+            return sentinelDiv;
+        }
+
+
+        // Helper to generate status badge
+        function getStatusBadge(status) {
+            if (!status || status === 'Unknown') return '';
+            const s = status.toLowerCase();
+            let text = status;
+            let cls = 'status-other';
+
+            if (s.includes('ongoing') || s.includes('currently')) {
+                text = 'Ongoing';
+                cls = 'status-ongoing';
+            } else if (s.includes('completed') || s.includes('finished')) {
+                text = 'Completed';
+                cls = 'status-completed';
+            }
+
+            return `<span class="status-badge ${cls}">${text}</span>`;
+        }
+
+        // Fetch watchlist
+        async function fetchWatchlist(status = '', page = 1, append = false) {
+            if (isLoading) return;
+            isLoading = true;
+
+            // If not appending (new filter or fresh load), show initial loading state
+            if (!append) {
+                if (watchlistContent) {
+                    watchlistContent.innerHTML = `
+                        <div class="watchlist-loading">
+                            <div class="loading-spinner" style="margin: 0 auto;"></div>
+                            <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
+                        </div>
+                    `;
+                }
+                // Reset state
+                currentPage = 1;
+                hasMore = true;
+                // Re-create sentinel
+                if (!sentinel) sentinel = createSentinel();
+                sentinel.style.display = 'block';
+                sentinel.style.opacity = '0';
+            } else {
+                // Show sentinel spinner
+                if (sentinel) sentinel.style.opacity = '1';
+            }
+
+            try {
+                const params = new URLSearchParams({ page, limit: 20 });
+                if (status) params.append('status', status);
+
+                const response = await fetch(`/api/watchlist/paginated?${params}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const items = data.data || [];
+                const pagination = data.pagination || {};
+
+                // Check if we have more pages
+                hasMore = pagination.has_next && page < pagination.total_pages;
+
+                if (items.length === 0 && !append) {
+                    if (watchlistContent) {
+                        watchlistContent.innerHTML = `
+                            <div class="watchlist-empty">
+                                <div style="font-size: 4rem; margin-bottom: var(--space-md);">📚</div>
+                                <h3>Your watchlist is empty</h3>
+                                <p class="text-muted" style="margin-bottom: var(--space-lg);">
+                                    Start adding anime to your watchlist to track your progress!
+                                </p>
+                                <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
+                            </div>
+                        `;
+                    }
+                    if (sentinel) sentinel.style.display = 'none'; // No items, hide sentinel
+                    return;
+                }
+
+                const itemsHTML = items.map(item => `
+                    <div class="watchlist-item" data-id="${item.anime_id}">
+                        <a href="/anime/${item.anime_id}" class="watchlist-item-poster">
+                            <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
+                        </a>
+                        <div class="watchlist-item-info">
+                            <div>
+                                <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
+                                ${getStatusBadge(item.status)}
+                            </div>
+                            <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
+                                <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
+                                    ${Object.entries(statusLabels).map(([val, label]) =>
+                    `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
+                ).join('')}
+                                </select>
+                            </div>
+                            <div class="watchlist-item-progress">
+                                <span class="text-sm">${item.watched_episodes || 0}/${item.total_episodes || '?'}</span>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: ${item.total_episodes ? (item.watched_episodes / item.total_episodes * 100) : 0}%"></div>
+                                </div>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) - 1})">-</button>
+                                    <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) + 1})">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-icon btn-ghost" onclick="removeFromWatchlist('${item.anime_id}')" title="Remove">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </div>
+                `).join('');
+
+                if (watchlistContent) {
+                    if (!append) {
+                        watchlistContent.innerHTML = itemsHTML;
+                    } else {
+                        watchlistContent.insertAdjacentHTML('beforeend', itemsHTML);
+                    }
+                }
+
+            } catch (e) {
+                console.error('Watchlist error:', e);
+                if (!append && watchlistContent) {
+                    watchlistContent.innerHTML = `
+                        <div class="watchlist-empty">
+                            <div style="font-size: 4rem; margin-bottom: var(--space-md);">⚠️</div>
+                            <h3>Error loading watchlist</h3>
+                            <p class="text-muted">${e.message}</p>
+                        </div>
+                    `;
+                }
+            } finally {
+                isLoading = false;
+                if (!hasMore && sentinel) {
+                    sentinel.style.display = 'none'; // Absolutely no more items
+                } else if (sentinel) {
+                    sentinel.style.opacity = '0'; // Keep element for intersection, but hide spinner
+                }
+            }
+        }
+
+        // Initialize Intersection Observer
+        function initInfiniteScroll() {
+            if (!sentinel) sentinel = createSentinel();
+
+            const observer = new IntersectionObserver((entries) => {
+                // Must be intersecting, have more pages, and not currently loading
+                if (entries[0].isIntersecting && hasMore && !isLoading) {
+                    // Show spinner immediately for feedback
+                    sentinel.style.opacity = '1';
+                    currentPage++;
+                    fetchWatchlist(currentStatus, currentPage, true);
+                }
+            }, {
+                root: null,
+                rootMargin: '100px', // Pre-fetch before reaching exact bottom
+                threshold: 0.1
+            });
+
+            if (sentinel) observer.observe(sentinel);
+        }
+
+        // Global function wrappers for inline event handlers
+        window.updateStatus = async function (animeId, status) {
+            try {
+                const response = await fetch('/api/watchlist/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anime_id: animeId, action: 'status', status })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    alert(data.message || 'Failed to update status');
+                } else {
+                    if (currentStatus && currentStatus !== status) {
+                        const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                        if (item) {
+                            item.style.transition = 'opacity 0.3s, height 0.3s';
+                            item.style.opacity = '0';
+                            setTimeout(() => item.remove(), 300);
+                        }
+                    }
+                    fetchStats();
+                }
+            } catch (e) {
+                console.error('Update error:', e);
+            }
+        };
+
+        window.updateEpisodes = async function (animeId, count) {
+            if (count < 0) count = 0;
+            try {
+                const response = await fetch('/api/watchlist/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: count })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Update local DOM
+                    const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                    if (item) {
+                        const progressText = item.querySelector('.watchlist-item-progress span');
+                        const progressBar = item.querySelector('.progress-bar-fill');
+
+                        if (progressText) {
+                            const parts = progressText.textContent.split('/');
+                            const totalStr = parts[1];
+                            const total = totalStr === '?' ? 0 : parseInt(totalStr);
+
+                            progressText.textContent = `${count}/${totalStr}`;
+                            if (total > 0) {
+                                progressBar.style.width = `${Math.min(100, (count / total * 100))}%`;
+                            }
+                        }
+                    }
+                    fetchStats();
+                } else {
+                    alert(data.message || 'Failed to update');
+                }
+            } catch (e) {
+                console.error('Update error:', e);
+            }
+        };
+
+        window.removeFromWatchlist = async function (animeId) {
+            if (!confirm('Remove this anime from your watchlist?')) return;
+
+            try {
+                const response = await fetch('/api/watchlist/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anime_id: animeId })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Remove element locally
+                    const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                    if (item) {
+                        item.style.transition = 'opacity 0.3s, height 0.3s';
+                        item.style.opacity = '0';
+                        setTimeout(() => item.remove(), 300);
+                    }
+
+                    fetchStats();
+                } else {
+                    alert(data.message || 'Failed to remove');
+                }
+            } catch (e) {
+                console.error('Remove error:', e);
+            }
+        };
+
+        // Tab click handlers
+        if (watchlistTabs) {
+            watchlistTabs.querySelectorAll('.watchlist-tab').forEach(tab => {
+                tab.addEventListener('click', function () {
+                    watchlistTabs.querySelector('.active').classList.remove('active');
+                    this.classList.add('active');
+                    currentStatus = this.dataset.status;
+
+                    // Reset for new filter
+                    currentPage = 1;
+                    hasMore = true;
+                    isLoading = false;
+                    fetchWatchlist(currentStatus, 1, false);
+                });
+            });
+        }
+
+        // Initial load
+        fetchStats();
+        fetchWatchlist();
+        initInfiniteScroll();
+
+        // Check if there's an ongoing auto-sync when page loads
+        checkOngoingSync();
+
+        async function checkOngoingSync() {
+            try {
+                const resp = await fetch('/api/anilist/sync-progress');
+                const data = await resp.json();
+                if (data.status === 'syncing' || data.status === 'starting') {
+                    showSyncProgress();
+                    pollSyncProgress();
+                }
+            } catch (e) { /* ignore */ }
+        }
+    });
+
+    // === Manual Sync from AniList ===
+    let syncPolling = false;
+
+    async function syncFromAniList() {
+        const btn = document.getElementById('sync-watchlist-btn');
+        if (!btn || btn.disabled) return;
+
+        btn.disabled = true;
+        const btnText = document.getElementById('wl-sync-btn-text');
+        const icon = document.getElementById('wl-sync-icon');
+        const spinner = document.getElementById('wl-sync-spinner');
+
+        if (btnText) btnText.textContent = 'Syncing...';
+        if (icon) icon.classList.add('hidden');
+        if (spinner) spinner.classList.remove('hidden');
+
+        showSyncProgress();
+
+        try {
+            const response = await fetch('/api/anilist/sync-anilist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                hideSyncProgress();
+                resetSyncButton('Sync Failed');
+                setTimeout(() => resetSyncButton('Sync from AniList'), 3000);
+                return;
+            }
+
+            pollSyncProgress();
+
+        } catch (e) {
+            console.error('Sync error:', e);
+            hideSyncProgress();
+            resetSyncButton('Sync Failed');
+            setTimeout(() => resetSyncButton('Sync from AniList'), 3000);
+        }
+    }
+
+    function showSyncProgress() {
+        const container = document.getElementById('wl-sync-progress-container');
+        if (container) container.classList.remove('hidden');
+    }
+
+    function hideSyncProgress() {
+        const container = document.getElementById('wl-sync-progress-container');
+        if (container) container.classList.add('hidden');
+    }
+
+    function updateSyncProgressUI(data) {
+        const statusText = document.getElementById('wl-sync-status-text');
+        const percentText = document.getElementById('wl-sync-percent-text');
+        const progressBar = document.getElementById('wl-sync-progress-bar');
+
+        if (statusText) statusText.textContent = data.message || 'Syncing...';
+        if (percentText) percentText.textContent = `${Math.round(data.percentage || 0)}%`;
+        if (progressBar) progressBar.style.width = `${data.percentage || 0}%`;
+    }
+
+    function resetSyncButton(text = 'Sync from AniList') {
+        const btn = document.getElementById('sync-watchlist-btn');
+        const btnText = document.getElementById('wl-sync-btn-text');
+        const icon = document.getElementById('wl-sync-icon');
+        const spinner = document.getElementById('wl-sync-spinner');
+
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = text;
+        if (icon) icon.classList.remove('hidden');
+        if (spinner) spinner.classList.add('hidden');
+    }
+
+    function pollSyncProgress() {
+        if (syncPolling) return;
+        syncPolling = true;
+
+        const poll = async () => {
+            try {
+                const resp = await fetch('/api/anilist/sync-progress');
+                const data = await resp.json();
+
+                updateSyncProgressUI(data);
+
+                if (data.status === 'completed') {
+                    syncPolling = false;
+                    setTimeout(() => {
+                        hideSyncProgress();
+                        resetSyncButton('Sync from AniList');
+                        // Refresh the watchlist
+                        location.reload();
+                    }, 2000);
+                    return;
+                }
+
+                if (data.status === 'error') {
+                    syncPolling = false;
+                    updateSyncProgressUI({ message: data.message || 'Sync error', percentage: 0 });
+                    setTimeout(() => {
+                        hideSyncProgress();
+                        resetSyncButton('Sync from AniList');
+                    }, 3000);
+                    return;
+                }
+
+                // Continue polling
+                setTimeout(poll, 1500);
+
+            } catch (e) {
+                syncPolling = false;
+                hideSyncProgress();
+                resetSyncButton('Sync from AniList');
+            }
+        };
+
+        poll();
+    }
+</script>
+{% endblock %}
