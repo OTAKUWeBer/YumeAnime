@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Error - YumeAnime{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-code">404</div>
+    <p class="error-message">{{ error_message or "Oops! Page not found" }}</p>
+    <p class="text-muted" style="margin-bottom: var(--space-xl); max-width: 400px;">
+        The page you're looking for might have been removed, had its name changed, or is temporarily unavailable.
+    </p>
+    <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center;">
+        <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary btn-lg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Go Home
+        </a>
+        <button onclick="history.back()" class="btn btn-secondary btn-lg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Go Back
+        </button>
+    </div>
+</div>
+{% endblock %}

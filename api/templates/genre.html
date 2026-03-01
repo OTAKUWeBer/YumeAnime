@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{{ genreName }} - YumeAnime{% endblock %}
+{% block meta_description %}Browse {{ genreName }} anime on YumeAnime. Find the best anime in this category.{% endblock
+%}
+
+{% block content %}
+<div class="container">
+    <div class="section-header" style="margin-top: 30px; margin-bottom: var(--space-xl);">
+        <h1 class="section-title">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            {{ genreName }}
+        </h1>
+        <span class="text-secondary">{{ animes | length }} anime found</span>
+    </div>
+
+    {% if animes and animes | length > 0 %}
+    <div class="anime-grid">
+        {% for anime in animes %}
+        <a href="/anime/{{ anime.id }}" class="anime-card">
+            <div class="anime-card-poster">
+                <img src="{{ anime.poster }}" alt="{{ anime.name }}" loading="lazy"
+                    onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'">
+                <div class="anime-card-badges">
+                    {% if anime.episodes and anime.episodes.sub %}
+                    <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                    {% endif %}
+                    {% if anime.episodes and anime.episodes.dub %}
+                    <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
+                    {% endif %}
+                    {% if anime.rating %}
+                    <span class="badge badge-rating">★ {{ anime.rating }}</span>
+                    {% endif %}
+                </div>
+                <div class="anime-card-overlay">
+                    <span class="btn btn-primary btn-sm">Watch Now</span>
+                </div>
+            </div>
+            <div class="anime-card-info">
+                <h3 class="anime-card-title">{{ anime.name }}</h3>
+                <div class="anime-card-meta">
+                    {% if anime.type %}<span>{{ anime.type }}</span>{% endif %}
+                    {% if anime.duration %}<span>{{ anime.duration }}</span>{% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-results">
+        <div class="no-results-icon">📚</div>
+        <h3>No anime found</h3>
+        <p class="text-muted" style="margin-bottom: var(--space-lg);">
+            No anime found in this genre. Try browsing other genres.
+        </p>
+        <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Go Home
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Genre Navigation -->
+    <div style="margin-top: var(--space-3xl);">
+        <h3 class="section-title" style="margin-bottom: var(--space-lg);">Browse Other Genres</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+            {% for g in ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror', 'Mystery', 'Romance', 'Sci-Fi',
+            'Slice of Life', 'Sports', 'Supernatural', 'Thriller'] %}
+            <a href="/genre/{{ g | lower | replace(' ', '-') }}" class="genre-tag">{{ g }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

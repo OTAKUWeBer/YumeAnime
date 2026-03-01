@@ -1,0 +1,1779 @@
+{% extends "base.html" %}
+
+{% block title %}Episode {{ Episode }} - {{ eps_title }} - YumeAnime{% endblock %}
+{% block meta_description %}Watch {{ eps_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
+
+{% block extra_css %}
+<link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+<style>
+    .watch-layout {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: var(--space-xl);
+        align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+        .watch-layout {
+            grid-template-columns: 1fr;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+    }
+
+    .episode-sidebar {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        height: calc(100vh - 100px);
+        max-height: 800px;
+        position: sticky;
+        top: 80px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @media (max-width: 1024px) {
+        .episode-sidebar {
+            height: auto;
+            max-height: 75vh;
+            position: relative;
+            top: 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .episode-sidebar {
+            margin-left: calc(-1 * var(--space-md));
+            margin-right: calc(-1 * var(--space-md));
+            width: calc(100% + 2 * var(--space-md));
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .episode-sidebar {
+            margin-left: calc(-1 * var(--space-sm));
+            margin-right: calc(-1 * var(--space-sm));
+            width: calc(100% + 2 * var(--space-sm));
+        }
+    }
+
+    .episode-sidebar-header {
+        padding: var(--space-md);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+        background: var(--bg-surface);
+        z-index: 10;
+    }
+
+    .episode-sidebar-header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .view-toggle {
+        display: flex;
+        background: var(--bg-elevated);
+        border-radius: var(--radius-md);
+        padding: 2px;
+        border: 1px solid var(--border-color);
+    }
+
+    .view-btn {
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .view-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .view-btn.active {
+        background: var(--bg-surface-hover);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .episode-search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .episode-search-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+
+    .episode-search-input {
+        width: 100%;
+        padding: 8px 12px 8px 36px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        outline: none;
+        transition: all var(--transition-fast);
+    }
+
+    .episode-search-input:focus {
+        border-color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .episode-search-input::placeholder {
+        color: var(--text-muted);
+    }
+
+    .episode-sidebar-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-sm);
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-color) transparent;
+    }
+
+    .episode-sidebar-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .episode-sidebar-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .episode-sidebar-list::-webkit-scrollbar-thumb {
+        background-color: var(--border-color);
+        border-radius: 20px;
+    }
+
+    /* List View */
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+        margin-bottom: 2px;
+        text-align: left;
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item:hover {
+        background: var(--bg-surface-hover);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-num {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-elevated);
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current .episode-sidebar-num {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-info {
+        display: block;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+    }
+
+    /* Grid View */
+    .episode-sidebar-list[data-view="grid"] {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+        gap: 8px;
+        padding: 12px;
+        align-content: start;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 0;
+        cursor: pointer;
+        transition: all 0.2s;
+        height: 50px;
+        margin-bottom: 0;
+        text-decoration: none;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item:hover {
+        transform: translateY(-2px);
+        border-color: var(--text-primary);
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.current {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        font-weight: bold;
+        border-color: transparent;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-info {
+        display: none;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-num {
+        width: auto;
+        height: auto;
+        background: transparent;
+        font-size: 0.95rem;
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        .episode-sidebar-list[data-view="grid"] {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
+            height: 50px;
+        }
+
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-num {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .episode-sidebar-list[data-view="grid"] {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            padding: 6px;
+        }
+
+        .episode-sidebar-list[data-view="grid"] .episode-sidebar-item {
+            height: 40px;
+        }
+
+        .episode-sidebar-list[data-view="list"] .episode-sidebar-item {
+            padding: var(--space-xs) var(--space-sm);
+        }
+
+        .episode-sidebar-list[data-view="list"] .episode-sidebar-num {
+            width: 32px;
+            height: 32px;
+            font-size: 0.85rem;
+        }
+
+        .episode-sidebar-list[data-view="list"] .episode-title {
+            font-size: 0.85rem;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+        }
+    }
+
+    /* --- Premium Custom Video Player --- */
+    .video-wrapper {
+        position: relative;
+        width: 100%;
+        background: #000;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        aspect-ratio: 16/9;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Explicit Native Video Base Styling */
+    .video-wrapper .raw-video-player,
+    .video-wrapper video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 1;
+        object-fit: contain;
+        background: #000;
+    }
+
+    /* Hide default videojs controls completely */
+    .video-js .vjs-control-bar {
+        display: none !important;
+    }
+
+    .video-js .vjs-big-play-button {
+        display: none !important;
+    }
+
+    .video-js .vjs-loading-spinner {
+        display: none !important;
+    }
+
+    /* Fix Subtitle White Background Bug */
+    .video-js .vjs-text-track-cue>div {
+        background-color: transparent !important;
+        background: transparent !important;
+        color: white !important;
+        text-shadow:
+            2px 2px 0 #000,
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000 !important;
+    }
+
+    /* Custom Player Container Overlay (Must sit on top) */
+    .player-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        background: transparent !important;
+        transition: opacity 0.3s ease;
+    }
+
+    .video-wrapper.user-inactive {
+        cursor: none;
+    }
+
+    .video-wrapper:hover:not(.user-inactive) .player-container,
+    .video-wrapper.paused .player-container,
+    .video-wrapper.menu-open .player-container {
+        opacity: 1;
+    }
+
+    /* Gradients */
+    .player-bottom-gradient {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 40%;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, transparent 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Center Play Button */
+    .center-play-pause {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        background: rgba(var(--accent-rgb), 0.85);
+        backdrop-filter: blur(8px);
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        cursor: pointer;
+        pointer-events: auto;
+        z-index: 5;
+        opacity: 0;
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .video-wrapper.paused .center-play-pause {
+        opacity: 1;
+    }
+
+    .center-play-pause:hover {
+        transform: translate(-50%, -50%) scale(1.1);
+        background: var(--accent);
+    }
+
+    .center-play-pause svg {
+        width: 40px;
+        height: 40px;
+        margin-left: 5px;
+    }
+
+    .video-wrapper:not(.paused) .center-play-pause svg {
+        margin-left: 0;
+    }
+
+    /* Loading Spinner */
+    .custom-loader {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        z-index: 4;
+        display: none;
+    }
+
+    .video-wrapper.loading .custom-loader {
+        display: block;
+    }
+
+    .video-wrapper.loading .center-play-pause {
+        display: none;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: translate(-50%, -50%) rotate(360deg);
+        }
+    }
+
+    /* Control Bar */
+    .controls-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 0 20px 20px;
+        z-index: 10;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-sizing: border-box;
+    }
+
+    /* Progress */
+    .progress-container {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        cursor: pointer;
+        position: relative;
+        transition: height 0.1s ease;
+    }
+
+    .progress-container:hover {
+        height: 8px;
+    }
+
+    .progress-buffer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 3px;
+        width: 0%;
+        pointer-events: none;
+    }
+
+    .progress-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: var(--accent);
+        border-radius: 3px;
+        width: 0%;
+        pointer-events: none;
+        box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.8);
+    }
+
+    .progress-thumb {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        width: 16px;
+        height: 16px;
+        background: white;
+        border-radius: 50%;
+        left: 0%;
+        pointer-events: none;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        transition: transform 0.1s ease;
+    }
+
+    .progress-container:hover .progress-thumb {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Buttons */
+    .controls-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .controls-left,
+    .controls-right {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .control-btn {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        opacity: 0.8;
+    }
+
+    .control-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+        color: var(--accent);
+    }
+
+    .control-btn svg {
+        width: 22px;
+        height: 22px;
+        filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+    }
+
+    /* Volume */
+    .volume-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .volume-slider-container {
+        width: 0;
+        overflow: hidden;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .volume-container:hover .volume-slider-container {
+        width: 80px;
+    }
+
+    .volume-slider {
+        width: 80px;
+        height: 4px;
+        -webkit-appearance: none;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px;
+        height: 12px;
+        background: white;
+        border-radius: 50%;
+    }
+
+    .time-display {
+        color: white;
+        font-size: 0.85rem;
+        font-family: var(--font-mono);
+        font-weight: 500;
+        user-select: none;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        margin-left: 10px;
+    }
+
+    /* Menus */
+    .menu-btn-container {
+        position: relative;
+    }
+
+    .player-menu {
+        position: absolute;
+        bottom: 45px;
+        right: -10px;
+        background: rgba(20, 20, 25, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-md);
+        padding: 10px 0;
+        min-width: 150px;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        pointer-events: auto;
+        transform: translateY(10px) scale(0.95);
+        transform-origin: bottom right;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+        z-index: 20;
+    }
+
+    .menu-btn-container.active .player-menu {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0) scale(1);
+    }
+
+    .player-menu-header {
+        padding: 5px 15px 10px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 5px;
+        font-weight: 700;
+    }
+
+    .player-menu-item {
+        padding: 8px 25px 8px 35px;
+        color: white;
+        cursor: pointer;
+        font-size: 0.85rem;
+        position: relative;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+    }
+
+    .player-menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .player-menu-item.active {
+        color: var(--accent);
+    }
+
+    .player-menu-item.active::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        width: 6px;
+        height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+    }
+
+    .player-menu-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 5px 0;
+    }
+
+    .settings-row {
+        display: flex;
+        gap: 5px;
+        padding: 5px 15px;
+        margin-bottom: 10px;
+    }
+
+    .settings-opt-btn {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid transparent;
+        color: white;
+        padding: 4px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+        text-align: center;
+    }
+
+    .settings-opt-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .settings-opt-btn.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+
+    /* Top Bar & Title */
+    .player-top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 10;
+        pointer-events: auto;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .video-wrapper:hover .player-top-bar,
+    .video-wrapper.paused .player-top-bar,
+    .video-wrapper.menu-open .player-top-bar {
+        opacity: 1;
+    }
+
+    .player-title {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .player-ep-badge {
+        background: var(--accent);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    /* Skip overlay inside player */
+    .custom-skip-btn {
+        position: absolute;
+        bottom: 80px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        pointer-events: auto;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transform: translateX(150%);
+    }
+
+    .custom-skip-btn.show {
+        transform: translateX(0);
+    }
+
+    .custom-skip-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+        color: var(--accent);
+    }
+
+    /* Embed iframe player */
+    .embed-player-frame {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: var(--radius-lg);
+    }
+
+    /* Source Switcher Bar */
+    .source-switcher-bar {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        background: var(--bg-surface);
+        padding: 5px 10px;
+        border-radius: var(--radius-md);
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .source-switcher-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .source-switcher-options {
+        display: flex;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .source-switcher-btn {
+        border: none;
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        padding: 6px 14px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        text-decoration: none;
+    }
+
+    .source-switcher-btn:hover {
+        background: var(--bg-surface-hover);
+        color: var(--text-primary);
+    }
+
+    .source-switcher-btn.active {
+        background: var(--accent) !important;
+        color: var(--bg-primary) !important;
+    }
+
+    .source-switcher-btn+.source-switcher-btn {
+        border-left: 1px solid var(--border-color);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .watch-layout {
+            gap: var(--space-md);
+            padding: 0;
+        }
+
+        .watch-main {
+            width: 100%;
+        }
+
+        .video-wrapper {
+            margin: 0 calc(-1 * var(--space-md));
+            width: calc(100% + 2 * var(--space-md));
+            border-radius: 0;
+        }
+
+        .watch-main>div:last-child {
+            padding: var(--space-md) !important;
+            margin-top: var(--space-md) !important;
+        }
+
+        .watch-main h2 {
+            font-size: 1.1rem;
+        }
+
+        .time-display {
+            display: none;
+        }
+
+        .player-title {
+            font-size: 0.9rem;
+        }
+
+        .controls-bar {
+            padding: 0 10px 10px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .watch-layout {
+            gap: var(--space-sm);
+        }
+
+        .video-wrapper {
+            margin: 0 calc(-1 * var(--space-sm));
+            width: calc(100% + 2 * var(--space-sm));
+        }
+
+        .volume-container {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="/anime/{{ back_to_ep }}" class="btn btn-ghost" style="margin-bottom: var(--space-md);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back to Details
+    </a>
+
+    <div class="watch-layout">
+        <!-- Sidebar -->
+        <div class="episode-sidebar">
+            <div class="episode-sidebar-header">
+                <div class="episode-sidebar-header-top">
+                    <span>Episodes</span>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="view-grid-btn" title="Grid View">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </button>
+                        <button class="view-btn" id="view-list-btn" title="List View">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="episode-search-wrapper">
+                    <svg class="episode-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="episodeSearch" class="episode-search-input" placeholder="Search episode...">
+                </div>
+            </div>
+
+            <div class="episode-sidebar-list" id="episodeList" data-view="grid">
+                {% if episodes and episodes.episodes %}
+                {% for ep in episodes.episodes %}
+                {% set is_current = (ep.number|string == episode_number|string) %}
+                {% set ep_id = ep.episodeId %}
+                {% if ep_id.startswith('watch/') %}
+                {# New format: watch/provider/anilistid/category/slug - use as-is, no suffix #}
+                {% set ep_val = ep_id %}
+                {% elif '?ep=' in ep_id %}
+                {% set ep_val = ep_id.split('?ep=')[1] %}
+                {% else %}
+                {% set ep_val = ep_id %}
+                {% endif %}
+                <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' and not ep_id.startswith('watch/') else ('' if ep_id.startswith('watch/') else '-sub'))) }}"
+                    class="episode-sidebar-item {% if is_current %}current{% endif %}" data-number="{{ ep.number }}">
+                    <div class="episode-sidebar-num">{{ ep.number }}</div>
+                    <div class="episode-info">
+                        <div class="episode-title">{{ ep.title }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+                {% else %}
+                <div class="text-center p-lg text-muted">No episodes found</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Main -->
+        <div class="watch-main">
+            <div class="video-wrapper paused" id="video-wrapper">
+                {% if source_type == 'embed' and embed_sources %}
+                <!-- Embed iframe player (default) -->
+                <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
+                    style="width: 100%; height: 100%; display: block;"
+                    sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"></iframe>
+                {% endif %}
+
+                {% if video_link %}
+                <!-- Minimalist Custom UI handled by clean backend integration -->
+                <div id="videoContainer"
+                    style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden;">
+                    <video id="videoPlayer" class="raw-video-player" playsinline webkit-playsinline="true"
+                        preload="auto" x-webkit-airplay="allow" data-video-url="{{ video_link }}"
+                        style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;">
+                        <source src="{{ video_link }}" type="application/x-mpegURL">
+                        Your browser does not support the video tag.
+                    </video>
+
+                    <!-- Premium Custom UI Overlay -->
+                    <div class="player-container" id="customPlayerUI">
+                        <div class="player-bottom-gradient"></div>
+
+                        <div class="player-top-bar">
+                            <div class="player-title" style="display: flex; align-items: center; gap: 10px;">
+                                <span class="player-ep-badge"
+                                    style="background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: bold;">EP
+                                    {{ Episode }}</span>
+                                <span style="font-size: 1.1rem; font-weight: 500;">{{ episode_title if episode_title
+                                    else (eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else
+                                    'Unknown') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="custom-loader" id="playerLoader" style="display: none;"></div>
+
+                        <!-- Big Mobile Play Overlay -->
+                        <div id="mobilePlayOverlay"
+                            style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); cursor: pointer;">
+                            <div
+                                style="background: var(--accent); color: white; border-radius: 50%; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                                <svg viewBox="0 0 24 24" fill="currentColor"
+                                    style="width: 40px; height: 40px; margin-left: 5px;">
+                                    <path
+                                        d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="center-play-pause" id="centerPlayBtn" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
+                            </svg>
+                        </div>
+
+                        <div class="controls-bar">
+                            <div class="progress-container" id="progressBar">
+                                <div class="progress-buffer" id="progressBuffer"></div>
+                                <div class="progress-fill" id="progressFill"></div>
+                                <div class="progress-thumb" id="progressThumb"></div>
+                            </div>
+
+                            <div class="controls-main">
+                                <div class="controls-left">
+                                    <button class="control-btn" id="playPauseBtn" title="Play (k)">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path
+                                                d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
+                                        </svg>
+                                    </button>
+
+                                    <button class="control-btn" id="prevEpBtn" title="Previous Episode (p)" {% if not
+                                        prev_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif
+                                        %}
+                                        onclick="{% if prev_episode_url %}window.location.href='{{ prev_episode_url }}'{% endif %}">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M18 6l-8.5 6 8.5 6V6zM8 6v12h-2V6h2z" />
+                                        </svg>
+                                    </button>
+
+                                    <button class="control-btn" id="nextEpBtn" title="Next Episode (n)" {% if not
+                                        next_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif
+                                        %}
+                                        onclick="{% if next_episode_url %}window.location.href='{{ next_episode_url }}'{% endif %}">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                                        </svg>
+                                    </button>
+
+                                    <div class="volume-container">
+                                        <button class="control-btn" id="muteBtn" title="Mute (m)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                        <div class="volume-slider-container">
+                                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1"
+                                                step="0.05" value="1">
+                                        </div>
+                                    </div>
+
+                                    <div class="time-display">
+                                        <span id="currentTimeDisplay">00:00</span> <span
+                                            style="opacity:0.5;margin:0 4px;">/</span> <span
+                                            id="durationDisplay">00:00</span>
+                                    </div>
+                                </div>
+
+                                <div class="controls-right">
+                                    <!-- Fullscreen Toggle -->
+                                    <button class="control-btn" id="fullscreenBtn" title="Fullscreen (f)">
+                                        <svg class="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path
+                                                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div
+                    style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:var(--bg-surface);">
+                    <div class="text-center">
+                        <div class="no-results-icon">🎬</div>
+                        <p class="text-muted">Video not available</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Provider (Server) Switcher -->
+            {% if episodes and episodes.providers_map %}
+            <div class="source-switcher-bar" id="providerSwitcher">
+                <span class="source-switcher-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Server:
+                </span>
+                <div class="source-switcher-options">
+                    {% set current_ep_param = request.args.get('ep', '') %}
+                    {% for p_name, p_data in episodes.providers_map.items() %}
+                    {% set current_cat = 'dub' if lang == 'dub' else 'sub' %}
+                    {% set p_eps = p_data.get('episodes', {}).get(current_cat, []) %}
+
+                    {# Find the episode ID for the current episode number in this provider #}
+                    {% set ep_match = namespace(id=None) %}
+                    {% for ep_item in p_eps %}
+                    {% if ep_item.number|string == episode_number|string %}
+                    {% set ep_match.id = ep_item.id %}
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if ep_match.id %}
+                    {% set ep_val_encoded = ep_match.id %}
+                    {% set is_active = (p_name in current_ep_param) or (not current_ep_param and p_name ==
+                    episodes.default_provider) %}
+                    <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val_encoded) }}"
+                        class="source-switcher-btn {% if is_active %}active{% endif %}">
+                        {{ p_name | title }}
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stream Quality / Source Switcher -->
+            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
+            <div class="source-switcher-bar" id="sourceSwitcher">
+                <span class="source-switcher-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                    </svg>
+                    Stream:
+                </span>
+                <div class="source-switcher-options" id="sourceOptions">
+                    {% for es in embed_sources %}
+                    <button class="source-switcher-btn {% if source_type == 'embed' and loop.first %}active{% endif %}"
+                        data-source-type="embed" data-source-url="{{ es.url }}" data-source-label="{{ es.label }}">
+                        {{ es.label or ('Embed ' ~ loop.index) }}
+                    </button>
+                    {% endfor %}
+                    {% for hs in hls_sources %}
+                    <button class="source-switcher-btn {% if source_type == 'hls' and loop.first %}active{% endif %}"
+                        data-source-type="hls" data-source-url="{{ hs.file or hs.url }}"
+                        data-source-label="{{ hs.label }}">
+                        {{ hs.quality or ('HLS ' ~ loop.index) }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Language selection -->
+            <div
+                style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+
+                <!-- Navigation Buttons -->
+                <div style="display: flex; gap: 10px; flex: 1;">
+                    <a {% if prev_episode_url %}href="{{ prev_episode_url }}" {% endif %}
+                        class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
+                        style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                        Prev
+                    </a>
+                    <a {% if next_episode_url %}href="{{ next_episode_url }}" {% endif %}
+                        class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
+                        style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px;">
+                        Next
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <div
+                    style="display: flex; justify-content: flex-end; align-items: center; background: var(--bg-surface); padding: 5px 10px; border-radius: var(--radius-md); gap: 10px;">
+                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Language:</span>
+                    <div
+                        style="display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);">
+                        {% if sub_url %}
+                        <a href="{{ sub_url }}" class="btn btn-sm"
+                            style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:60px;">SUB</a>
+                        {% endif %}
+                        {% if dub_url and dub_available %}
+                        <a href="{{ dub_url }}" class="btn btn-sm"
+                            style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:60px;">DUB</a>
+                        {% elif not dub_available %}
+                        <span class="btn btn-sm btn-ghost"
+                            style="border-radius:0;border:none;background-color:var(--bg-elevated) !important;opacity:0.5;cursor:not-allowed;color:var(--text-primary) !important;min-width:60px;">DUB</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Episode Countdown -->
+            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+            {% set next_ep = next_episode_schedule.episode %}
+            <div
+                style="position:relative;margin-top:var(--space-lg);background:var(--bg-surface);padding:var(--space-lg);border-radius:var(--radius-lg);border:1px solid var(--border-color);box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);overflow:hidden;">
+                <div
+                    style="position:absolute;top:-50px;right:-50px;width:300px;height:300px;background:radial-gradient(circle,var(--accent) 0%,transparent 70%);filter:blur(40px);opacity:.15;pointer-events:none;">
+                </div>
+                <div style="position:relative;z-index:1;">
+                    <h3
+                        style="margin-bottom:var(--space-xs);font-size:1.25rem;color:var(--text-primary);display:flex;align-items:center;gap:var(--space-sm);font-weight:700;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Episode {{ next_ep if next_ep else '??' }} Airs In
+                    </h3>
+                    <p style="margin:0;font-size:.85rem;color:var(--text-muted);padding-left:32px;">Don't miss the
+                        upcoming release!</p>
+                </div>
+                <div id="next-ep-countdown" data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
+                    style="display:flex;gap:var(--space-sm);position:relative;z-index:1;">
+                    {% for label, cls in [('Days','days'),('Hrs','hours'),('Mins','minutes'),('Secs','seconds')] %}
+                    <div
+                        style="text-align:center;background:var(--bg-elevated);padding:var(--space-sm) var(--space-md);border-radius:var(--radius-md);min-width:60px;border:1px solid var(--border-color);">
+                        <span class="{{ cls }}"
+                            style="display:block;font-size:1.5rem;font-weight:800;font-family:var(--font-mono);color:var(--text-primary);">--</span>
+                        <span
+                            style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;">{{
+                            label }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const el = document.getElementById('next-ep-countdown');
+                    if (!el) return;
+                    const ts = parseInt(el.dataset.timestamp, 10);
+                    if (!ts) return;
+                    const update = () => {
+                        const diff = (ts > 9999999999 ? ts : ts * 1000) - Date.now();
+                        if (diff <= 0) { ['days', 'hours', 'minutes', 'seconds'].forEach(c => el.querySelector('.' + c).textContent = '00'); return; }
+                        el.querySelector('.days').textContent = String(Math.floor(diff / 86400000)).padStart(2, '0');
+                        el.querySelector('.hours').textContent = String(Math.floor(diff / 3600000) % 24).padStart(2, '0');
+                        el.querySelector('.minutes').textContent = String(Math.floor(diff / 60000) % 60).padStart(2, '0');
+                        el.querySelector('.seconds').textContent = String(Math.floor(diff / 1000) % 60).padStart(2, '0');
+                    };
+                    update(); setInterval(update, 1000);
+                });
+            </script>
+            {% endif %}
+
+            <!-- Episode Info -->
+            <div
+                style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);margin-top:var(--space-lg);">
+                <h2 style="margin-bottom:var(--space-sm);">Episode {{ Episode }}</h2>
+                <p class="text-muted">{{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-',
+                    ' ') | title if eps_title else 'Unknown') }}</p>
+                <div style="margin-top:var(--space-lg);display:flex;gap:var(--space-md);flex-wrap:wrap;">
+                    <span class="badge badge-sub" style="font-size:.8rem;">{{ lang | upper }}</span>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Simple Clean Player Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+    // --- CRITICAL AUDIO CODEC FIX ---
+    if (window.MediaSource && MediaSource.prototype?.addSourceBuffer) {
+        try {
+            const _origAddSourceBuffer = MediaSource.prototype.addSourceBuffer;
+            MediaSource.prototype.addSourceBuffer = function (mimeType) {
+                const fixed = mimeType.replace('mp4a.40.1', 'mp4a.40.2');
+                if (fixed !== mimeType) console.log('[codec-fix] Remapped:', mimeType, '->', fixed);
+                return _origAddSourceBuffer.call(this, fixed);
+            };
+        } catch (e) {
+            console.warn('[codec-fix] Could not patch addSourceBuffer:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Episode sidebar view toggle
+        const episodeList = document.getElementById('episodeList');
+        const viewListBtn = document.getElementById('view-list-btn');
+        const viewGridBtn = document.getElementById('view-grid-btn');
+
+        function setEpisodeView(view) {
+            if (!episodeList) return;
+            episodeList.setAttribute('data-view', view);
+            localStorage.setItem('episodeView', view);
+            viewListBtn?.classList.toggle('active', view === 'list');
+            viewGridBtn?.classList.toggle('active', view === 'grid');
+        }
+
+        try {
+            setEpisodeView(localStorage.getItem('episodeView') || 'grid');
+        } catch (e) { }
+        viewListBtn?.addEventListener('click', () => setEpisodeView('list'));
+        viewGridBtn?.addEventListener('click', () => setEpisodeView('grid'));
+
+        // Episode search
+        const searchInput = document.getElementById('episodeSearch');
+        if (searchInput && episodeList) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                episodeList.querySelectorAll('.episode-sidebar-item').forEach(item => {
+                    const match = item.dataset.number.includes(term) || item.textContent.toLowerCase().includes(term);
+                    item.style.display = match ? '' : 'none';
+                });
+            });
+        }
+
+        // Auto-scroll to current episode
+        const currentEp = episodeList?.querySelector('.current');
+        if (currentEp) {
+            setTimeout(() => {
+                // Use 'nearest' to avoid scrolling the whole page down on mobile
+                currentEp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 500);
+        }
+
+        // HLS Player Logic
+        const video = document.getElementById('videoPlayer');
+        if (video) {
+            const videoUrl = video.dataset.videoUrl;
+            console.log("[Player] Found URL:", videoUrl);
+
+            if (Hls.isSupported() && (videoUrl.includes('.m3u8') || videoUrl.includes('/proxy/'))) {
+                console.log("[Player] Initializing Hls.js fallback");
+                const hls = new Hls({
+                    debug: false,
+                    enableWorker: true
+                });
+
+                hls.on(Hls.Events.ERROR, (e, data) => {
+                    console.error('[HLS Error]', data.type, data.details);
+                    if (data.fatal) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                            hls.startLoad();
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                            hls.recoverMediaError();
+                        }
+                    }
+                });
+
+                window.hls = hls; // Store global reference
+
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                    console.log('[Player] HLS media attached!');
+                    hls.loadSource(videoUrl);
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native Safari HLS
+                console.log("[Player] Using Native HLS (iOS/Safari)");
+                video.src = videoUrl;
+                video.load(); // Force iOS Safari to load metadata immediately
+            } else {
+                console.log("[Player] Basic MP4 Embed");
+                video.src = videoUrl;
+                video.load();
+            }
+        }
+    });
+
+    // Source Switcher Logic
+    document.addEventListener('DOMContentLoaded', function () {
+        const sourceBtns = document.querySelectorAll('.source-switcher-btn');
+        const videoContainer = document.getElementById('videoContainer');
+        const masterWrapper = document.getElementById('video-wrapper');
+
+        sourceBtns.forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                const type = btn.dataset.sourceType;
+                const url = btn.dataset.sourceUrl;
+
+                if (!type) return; // Allow normal navigation for provider links
+
+                e.preventDefault();
+
+                if (!url || !masterWrapper) return;
+
+                sourceBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                if (type === 'embed') {
+                    if (videoContainer) videoContainer.style.display = 'none';
+
+                    let embedFrame = masterWrapper.querySelector('#embedPlayer');
+                    if (!embedFrame) {
+                        embedFrame = document.createElement('iframe');
+                        embedFrame.id = 'embedPlayer';
+                        embedFrame.className = 'embed-player-frame';
+                        embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
+                        embedFrame.allowFullscreen = true;
+                        masterWrapper.insertBefore(embedFrame, masterWrapper.firstChild);
+                    }
+                    embedFrame.src = url;
+                    embedFrame.style.display = 'block';
+
+                } else if (type === 'hls') {
+                    let embedFrame = masterWrapper.querySelector('#embedPlayer');
+                    if (embedFrame) {
+                        embedFrame.style.display = 'none';
+                        embedFrame.src = '';
+                    }
+
+                    if (videoContainer) videoContainer.style.display = 'block';
+
+                    let newVideo = document.getElementById('videoPlayer');
+                    if (!newVideo) {
+                        newVideo = document.createElement('video');
+                        newVideo.id = 'videoPlayer';
+                        newVideo.className = 'raw-video-player';
+                        newVideo.setAttribute('playsinline', '');
+                        newVideo.setAttribute('webkit-playsinline', 'true');
+                        newVideo.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;';
+                        if (videoContainer) videoContainer.insertBefore(newVideo, videoContainer.firstChild || null);
+                    } else {
+                        newVideo.pause();
+                        newVideo.removeAttribute('src');
+                        newVideo.load();
+                    }
+
+                    newVideo.setAttribute('data-video-url', url);
+                    newVideo.innerHTML = '<source src="' + url + '" type="application/x-mpegURL">';
+                    newVideo.style.display = '';
+
+                    let ui = document.getElementById('customPlayerUI');
+                    if (ui) ui.style.display = '';
+
+                    if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
+                        if (window.hls) window.hls.destroy();
+
+                        window.hls = new Hls({ debug: false, enableWorker: true });
+                        window.hls.on(Hls.Events.ERROR, (e, data) => {
+                            console.error('[HLS Error]', data.type, data.details);
+                            if (data.fatal) {
+                                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                                    window.hls.startLoad();
+                                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                                    window.hls.recoverMediaError();
+                                }
+                            }
+                        });
+
+                        window.hls.loadSource(url);
+                        window.hls.attachMedia(newVideo);
+                        newVideo.play().catch(e => console.log("Play rejected:", e));
+                    } else if (newVideo.canPlayType('application/vnd.apple.mpegurl')) {
+                        newVideo.src = url;
+                        newVideo.play().catch(e => console.log("Play rejected:", e));
+                    } else {
+                        newVideo.src = url;
+                        newVideo.play().catch(e => console.log("Play rejected:", e));
+                    }
+                }
+            });
+        });
+    });
+
+    // Custom Vanilla UI Driver
+    function initVanillaPlayerUI() {
+        const video = document.getElementById('videoPlayer');
+        const wrapper = document.getElementById('videoContainer');
+        const playBtn = document.getElementById('playPauseBtn');
+        const centerPlayBtn = document.getElementById('centerPlayBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const fsBtn = document.getElementById('fullscreenBtn');
+        const progressContainer = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const progressThumb = document.getElementById('progressThumb');
+        const progressBuffer = document.getElementById('progressBuffer');
+        const currTimeDisp = document.getElementById('currentTimeDisplay');
+        const durDisp = document.getElementById('durationDisplay');
+
+        if (!video || !wrapper || !playBtn) return;
+
+        const masterWrapper = document.getElementById('video-wrapper');
+
+        // Mouse Inactivity Timeout (3 seconds)
+        let inactivityTimeout;
+        const resetInactivity = () => {
+            if (masterWrapper) masterWrapper.classList.remove('user-inactive');
+            clearTimeout(inactivityTimeout);
+            if (!video.paused) {
+                inactivityTimeout = setTimeout(() => {
+                    if (masterWrapper) masterWrapper.classList.add('user-inactive');
+                }, 3000);
+            }
+        };
+
+        if (masterWrapper) {
+            masterWrapper.addEventListener('mousemove', resetInactivity);
+            masterWrapper.addEventListener('mouseleave', () => {
+                if (!video.paused) {
+                    clearTimeout(inactivityTimeout);
+                    if (masterWrapper) masterWrapper.classList.add('user-inactive');
+                }
+            });
+            masterWrapper.addEventListener('touchstart', resetInactivity);
+            document.addEventListener('keydown', resetInactivity);
+        }
+
+        // Play/Pause
+        const togglePlay = () => {
+            if (video.paused) {
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        console.error("Play error:", e);
+                    });
+                }
+            } else {
+                video.pause();
+            }
+        };
+        playBtn.addEventListener('click', togglePlay);
+        centerPlayBtn.addEventListener('click', togglePlay);
+        wrapper.addEventListener('click', (e) => {
+            if (e.target === wrapper || e.target.tagName === 'VIDEO' || e.target.classList.contains('player-bottom-gradient')) {
+                togglePlay();
+            }
+        });
+
+        // Mobile Overlay Logic
+        const mobilePlayOverlay = document.getElementById('mobilePlayOverlay');
+        if (mobilePlayOverlay) {
+            mobilePlayOverlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                mobilePlayOverlay.style.display = 'none';
+                centerPlayBtn.style.display = ''; // Restore normal center button behavior 
+
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        console.error("Mobile overlay play error:", e);
+                        // If it fails, fallback to standard play UI
+                        togglePlay();
+                    });
+                }
+            });
+        }
+
+        const iconPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/></svg>';
+        const iconPause = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/></svg>';
+
+        video.addEventListener('play', () => {
+            if (masterWrapper) masterWrapper.classList.remove('paused');
+            if (mobilePlayOverlay) mobilePlayOverlay.style.display = 'none';
+            if (centerPlayBtn) centerPlayBtn.style.display = '';
+            playBtn.innerHTML = iconPause;
+            centerPlayBtn.innerHTML = iconPause;
+            resetInactivity();
+        });
+        video.addEventListener('pause', () => {
+            if (masterWrapper) masterWrapper.classList.add('paused');
+            playBtn.innerHTML = iconPlay;
+            centerPlayBtn.innerHTML = iconPlay;
+            clearTimeout(inactivityTimeout);
+            if (masterWrapper) masterWrapper.classList.remove('user-inactive');
+        });
+
+        // Time & Progress
+        const formatTime = (s) => {
+            if (isNaN(s)) return '00:00';
+            let m = Math.floor(s / 60); let sec = Math.floor(s % 60);
+            let h = Math.floor(m / 60); m = m % 60;
+            return (h > 0 ? h + ':' : '') + (m < 10 && h > 0 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+        };
+
+        video.addEventListener('timeupdate', () => {
+            const cur = video.currentTime;
+            const dur = video.duration;
+            currTimeDisp.textContent = formatTime(cur);
+            durDisp.textContent = formatTime(dur);
+            if (dur > 0) {
+                const pct = (cur / dur) * 100;
+                progressFill.style.width = pct + '%';
+                progressThumb.style.left = pct + '%';
+            }
+        });
+
+        video.addEventListener('progress', () => {
+            if (video.buffered.length > 0) {
+                const pct = (video.buffered.end(video.buffered.length - 1) / video.duration) * 100;
+                progressBuffer.style.width = pct + '%';
+            }
+        });
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration;
+        });
+
+        // Volume & Mute
+        muteBtn.addEventListener('click', () => video.muted = !video.muted);
+        volumeSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = e.target.value == 0;
+        });
+        video.addEventListener('volumechange', () => {
+            volumeSlider.value = video.muted ? 0 : video.volume;
+            muteBtn.innerHTML = video.muted || video.volume === 0 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+        });
+
+        // Fullscreen
+        fsBtn.addEventListener('click', () => {
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                } else {
+                    // Use wrapper for Android/Desktop so custom UI stays over video
+                    if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+                    else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+                    else if (video.webkitEnterFullscreen) {
+                        // iOS Safari native fullscreen on the video element itself
+                        if (video.readyState === 0) {
+                            alert("Video is still loading. Please tap play first to load the stream before entering fullscreen on iOS.");
+                            video.play().catch(e => console.log(e));
+                        } else {
+                            video.webkitEnterFullscreen();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Fullscreen error:", err);
+            }
+        });
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) wrapper.classList.add('vjs-fullscreen');
+            else wrapper.classList.remove('vjs-fullscreen');
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (document.webkitFullscreenElement) wrapper.classList.add('vjs-fullscreen');
+            else wrapper.classList.remove('vjs-fullscreen');
+        });
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ignore if typing in an input or textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // Play/Pause (Space or k)
+            if (e.code === 'Space' || e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                togglePlay();
+            }
+            // Fullscreen (f)
+            else if (e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                if (document.fullscreenElement) document.exitFullscreen();
+                else masterWrapper.requestFullscreen();
+            }
+            // Mute (m)
+            else if (e.key.toLowerCase() === 'm') {
+                e.preventDefault();
+                video.muted = !video.muted;
+            }
+            // Forward 5s (ArrowRight)
+            else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                video.currentTime = Math.min(video.duration, video.currentTime + 5);
+            }
+            // Back 5s (ArrowLeft)
+            else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                video.currentTime = Math.max(0, video.currentTime - 5);
+            }
+            // Volume Up (ArrowUp)
+            else if (e.code === 'ArrowUp') {
+                e.preventDefault();
+                video.volume = Math.min(1, video.volume + 0.05);
+                video.muted = false;
+            }
+            // Volume Down (ArrowDown)
+            else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                video.volume = Math.max(0, video.volume - 0.05);
+                if (video.volume === 0) video.muted = true;
+            }
+            // Previous Episode (p)
+            else if (e.key.toLowerCase() === 'p') {
+                const prevBtn = document.getElementById('prevEpBtn');
+                if (prevBtn && !prevBtn.hasAttribute('disabled')) {
+                    prevBtn.click();
+                }
+            }
+            // Next Episode (n)
+            else if (e.key.toLowerCase() === 'n') {
+                const nextBtn = document.getElementById('nextEpBtn');
+                if (nextBtn && !nextBtn.hasAttribute('disabled')) {
+                    nextBtn.click();
+                }
+            }
+        });
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initVanillaPlayerUI, 100);
+    });
+</script>
+{% endblock %}
