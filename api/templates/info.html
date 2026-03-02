@@ -152,7 +152,7 @@
         padding: var(--space-sm) var(--space-lg);
         border: none;
         background: transparent;
-        color: var(--text-muted);
+        color: var(--text-secondary);
         font-weight: 600;
         font-size: 0.9rem;
         cursor: pointer;
@@ -169,8 +169,9 @@
 
     .info-tab-btn.active {
         background: var(--accent);
-        color: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        color: var(--bg-primary);
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        z-index: 2;
     }
 
     .info-tab-content {
@@ -331,22 +332,6 @@
                                 {{ anime.stats.rating }}
                             </div>
                             <div class="stat-label">Rating</div>
-                        </div>
-                        {% endif %}
-                        {% if anime.stats and anime.stats.episodes and anime.stats.episodes.sub %}
-                        <div class="stat-item">
-                            <div class="stat-value">{% if anime.stats.episodes.sub != anime.total_sub_episodes and
-                                anime.total_sub_episodes %}{{ anime.stats.episodes.sub }}/{{ anime.total_sub_episodes
-                                }}{% else %}{{ anime.stats.episodes.sub }}{% endif %}</div>
-                            <div class="stat-label">Episodes</div>
-                        </div>
-                        {% endif %}
-                        {% if anime.stats and anime.stats.episodes and anime.stats.episodes.dub %}
-                        <div class="stat-item">
-                            <div class="stat-value">{% if anime.stats.episodes.dub != anime.total_dub_episodes and
-                                anime.total_dub_episodes %}{{ anime.stats.episodes.dub }}/{{ anime.total_dub_episodes
-                                }}{% else %}{{ anime.stats.episodes.dub }}{% endif %}</div>
-                            <div class="stat-label">Dubbed</div>
                         </div>
                         {% endif %}
                         {% if anime.stats and anime.stats.type %}
@@ -691,8 +676,11 @@
                     class="season-card {% if entry.isCurrent is defined and entry.isCurrent %}current{% endif %}"
                     title="{{ entry.name or entry.title }}">
                     {% if entry.isCurrent is defined and entry.isCurrent %}
-                    <div class="season-badge" style="background: var(--primary-color);">CURRENT</div>
+                    <div class="season-badge" style="background: var(--primary-color, #a855f7);">CURRENT</div>
                     {% else %}
+                    <div class="season-badge"
+                        style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);">
+                        {{ (entry.relation or "SEASON") | upper }}</div>
                     {% endif %}
                     <img src="{{ entry.poster or entry.image }}" alt="{{ entry.name or entry.title }}" loading="lazy">
                     <div class="season-overlay">
