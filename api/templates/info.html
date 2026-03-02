@@ -30,7 +30,6 @@
         z-index: 2;
     }
 
-    /* Current Season Highlight */
     .season-card.current {
         border-color: var(--primary-color);
         box-shadow: 0 0 15px var(--primary-color-alpha, rgba(168, 85, 247, 0.4));
@@ -48,14 +47,12 @@
         transform: scale(1.05);
     }
 
-    /* Improved Overlay */
     .season-overlay {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
         padding: 40px 8px 8px;
-        /* Extra top padding for gradient */
         background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%);
         color: white;
         text-align: center;
@@ -69,14 +66,12 @@
         font-weight: 600;
         line-height: 1.3;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
 
-    /* Current Badge */
     .season-badge {
         position: absolute;
         top: 6px;
@@ -91,7 +86,7 @@
         z-index: 5;
     }
 
-    /* External Links Styles */
+    /* External Links */
     .external-links {
         display: flex;
         gap: var(--space-md);
@@ -135,10 +130,168 @@
         box-shadow: 0 0 10px rgba(46, 81, 162, 0.2);
     }
 
-    /* Status Colors if not defined globally in this context */
     :root {
         --info: #3b82f6;
         --success: #10b981;
+    }
+
+    /* ===== Tab System ===== */
+    .info-tabs {
+        display: flex;
+        gap: 0;
+        background: var(--bg-surface);
+        border-radius: var(--radius-lg);
+        padding: 4px;
+        margin-bottom: var(--space-xl);
+        border: 1px solid var(--border-color);
+        overflow-x: auto;
+    }
+
+    .info-tab-btn {
+        flex: 1;
+        padding: var(--space-sm) var(--space-lg);
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .info-tab-btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-surface-hover);
+    }
+
+    .info-tab-btn.active {
+        background: var(--accent);
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .info-tab-content {
+        display: none;
+    }
+
+    .info-tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* ===== Characters & VA Grid (screenshot style) ===== */
+    .char-va-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: var(--space-sm);
+    }
+
+    .char-va-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-md);
+        transition: all var(--transition-fast);
+    }
+
+    .char-va-row:hover {
+        border-color: var(--accent-muted, var(--border-color));
+        background: var(--bg-surface-hover);
+    }
+
+    .char-side,
+    .va-side {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        min-width: 0;
+    }
+
+    .va-side {
+        flex-direction: row-reverse;
+        text-align: right;
+    }
+
+    .char-va-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 2px solid var(--border-color);
+    }
+
+    .char-va-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .char-va-info {
+        min-width: 0;
+    }
+
+    .char-va-name {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+
+    .char-va-role {
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 2px;
+    }
+
+    .char-va-role.main {
+        color: var(--accent);
+    }
+
+    .char-va-role.supporting {
+        color: var(--text-muted);
+    }
+
+    .char-va-role.va-lang {
+        color: var(--text-secondary, var(--text-muted));
+    }
+
+    @media (max-width: 700px) {
+        .char-va-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .char-va-name {
+            max-width: 90px;
+        }
+
+        .char-va-avatar {
+            width: 40px;
+            height: 40px;
+        }
     }
 </style>
 {% endblock %}
@@ -182,13 +335,17 @@
                         {% endif %}
                         {% if anime.stats and anime.stats.episodes and anime.stats.episodes.sub %}
                         <div class="stat-item">
-                            <div class="stat-value">{{ anime.stats.episodes.sub }}</div>
+                            <div class="stat-value">{% if anime.stats.episodes.sub != anime.total_sub_episodes and
+                                anime.total_sub_episodes %}{{ anime.stats.episodes.sub }}/{{ anime.total_sub_episodes
+                                }}{% else %}{{ anime.stats.episodes.sub }}{% endif %}</div>
                             <div class="stat-label">Episodes</div>
                         </div>
                         {% endif %}
                         {% if anime.stats and anime.stats.episodes and anime.stats.episodes.dub %}
                         <div class="stat-item">
-                            <div class="stat-value">{{ anime.stats.episodes.dub }}</div>
+                            <div class="stat-value">{% if anime.stats.episodes.dub != anime.total_dub_episodes and
+                                anime.total_dub_episodes %}{{ anime.stats.episodes.dub }}/{{ anime.total_dub_episodes
+                                }}{% else %}{{ anime.stats.episodes.dub }}{% endif %}</div>
                             <div class="stat-label">Dubbed</div>
                         </div>
                         {% endif %}
@@ -220,7 +377,9 @@
                                 stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                             </svg>
-                            <span>SUB {{ anime.total_sub_episodes }}</span>
+                            <span>SUB {% if anime.released_episodes is defined and anime.released_episodes !=
+                                anime.total_sub_episodes %}{{ anime.released_episodes }}/{{ anime.total_sub_episodes
+                                }}{% else %}{{ anime.total_sub_episodes }}{% endif %}</span>
                         </div>
                         {% endif %}
 
@@ -231,12 +390,14 @@
                                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                             </svg>
-                            <span>DUB {{ anime.total_dub_episodes }}</span>
+                            <span>DUB {% if anime.released_episodes is defined and anime.released_episodes !=
+                                anime.total_dub_episodes %}{{ anime.released_episodes }}/{{ anime.total_dub_episodes
+                                }}{% else %}{{ anime.total_dub_episodes }}{% endif %}</span>
                         </div>
                         {% endif %}
                     </div>
 
-                    <!-- Actions - Placed first for quick access -->
+                    <!-- Actions -->
                     <div class="anime-actions" style="margin-bottom: var(--space-xl);">
                         <a href="/watch/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg"
                             id="watch-now-btn">
@@ -268,40 +429,28 @@
                                     let lastWatchedEp = null;
                                     let maxTimestamp = 0;
 
-                                    // Find the most recently watched episode for this anime
                                     Object.keys(watchData).forEach(key => {
                                         if (key.startsWith(animeId + '_')) {
                                             const data = watchData[key];
                                             if (data.lastWatched > maxTimestamp) {
                                                 maxTimestamp = data.lastWatched;
-                                                lastWatchedEp = {
-                                                    key: key,
-                                                    ...data
-                                                };
+                                                lastWatchedEp = { key: key, ...data };
                                             }
                                         }
                                     });
 
                                     if (lastWatchedEp) {
-                                        // key format: animeId_episodeId_lang
                                         const parts = lastWatchedEp.key.split('_');
                                         if (parts.length >= 3) {
                                             const episodeId = parts[1];
-                                            const lang = parts[2]; // 'default', 'sub', or 'dub'
-
-                                            // Construct safe URL
+                                            const lang = parts[2];
                                             let newHref = `/watch/${animeId}?ep=${episodeId}`;
-                                            if (lang && lang !== 'default') {
-                                                newHref += `-${lang}`;
-                                            }
-
+                                            if (lang && lang !== 'default') { newHref += `-${lang}`; }
                                             watchBtn.href = newHref;
                                             watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber || ''}`;
                                         }
                                     }
-                                } catch (e) {
-                                    console.error("Error updating watch button:", e);
-                                }
+                                } catch (e) { console.error("Error updating watch button:", e); }
                             }
                         });
                     </script>
@@ -320,12 +469,9 @@
                     {% set next_ep = next_episode_schedule.episode %}
                     <div class="next-episode-banner"
                         style="position: relative; margin-bottom: var(--space-xl); background: var(--bg-surface); padding: var(--space-lg); border-radius: var(--radius-xl); border: 1px solid var(--border-color); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); overflow: hidden;">
-
-                        <!-- glowing background accent -->
                         <div
                             style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); filter: blur(40px); opacity: 0.15; pointer-events: none;">
                         </div>
-
                         <div style="position: relative; z-index: 1;">
                             <h3
                                 style="margin-bottom: var(--space-xs); font-size: 1.25rem; color: var(--text-primary); display: flex; align-items: center; gap: var(--space-sm); font-weight: 700;">
@@ -340,7 +486,6 @@
                             <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); padding-left: 32px;">
                                 Don't miss the upcoming release!</p>
                         </div>
-
                         <div class="countdown-timer" id="next-ep-countdown"
                             data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
                             style="display: flex; gap: var(--space-sm); position: relative; z-index: 1;">
@@ -377,40 +522,26 @@
                             document.addEventListener('DOMContentLoaded', () => {
                                 const container = document.getElementById('next-ep-countdown');
                                 if (!container) return;
-
                                 const timestamp = parseInt(container.getAttribute('data-timestamp'), 10);
                                 if (!timestamp) return;
-
                                 const daysEl = container.querySelector('.days');
                                 const hoursEl = container.querySelector('.hours');
                                 const minutesEl = container.querySelector('.minutes');
                                 const secondsEl = container.querySelector('.seconds');
-
                                 function updateTimer() {
                                     const now = Date.now();
-                                    // Handle MS vs SEC timestamps. The API gives ms or sec? Assuming seconds if it's 10 digits, MS if 13
                                     const jsTimestamp = timestamp > 9999999999 ? timestamp : timestamp * 1000;
                                     const diff = jsTimestamp - now;
-
-                                    if (diff <= 0) {
-                                        daysEl.textContent = "00";
-                                        hoursEl.textContent = "00";
-                                        minutesEl.textContent = "00";
-                                        secondsEl.textContent = "00";
-                                        return;
-                                    }
-
+                                    if (diff <= 0) { daysEl.textContent = "00"; hoursEl.textContent = "00"; minutesEl.textContent = "00"; secondsEl.textContent = "00"; return; }
                                     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
                                     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
                                     const m = Math.floor((diff / 1000 / 60) % 60);
                                     const s = Math.floor((diff / 1000) % 60);
-
                                     daysEl.textContent = d.toString().padStart(2, '0');
                                     hoursEl.textContent = h.toString().padStart(2, '0');
                                     minutesEl.textContent = m.toString().padStart(2, '0');
                                     secondsEl.textContent = s.toString().padStart(2, '0');
                                 }
-
                                 updateTimer();
                                 setInterval(updateTimer, 1000);
                             });
@@ -481,133 +612,239 @@
     </div>
 </div>
 
-<!-- Related & Recommended -->
-<div class="container" style="margin-top: var(--space-3xl);">
+<!-- ===== Tabbed Content Area ===== -->
+<div class="container" style="margin-top: var(--space-2xl);">
 
-    {% set has_related = (anime.seasons and anime.seasons|length > 0) or (anime.prequels and anime.prequels|length > 0)
-    or (anime.sequels and anime.sequels|length > 0) or (suggestions and suggestions.related and
-    suggestions.related|length > 0) %}
+    <!-- Tab Buttons -->
+    <div class="info-tabs" id="info-tabs">
+        <button class="info-tab-btn active" data-tab="overview">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="vertical-align: -2px; margin-right: 4px;">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            Overview
+        </button>
+        {% if anime.characters and anime.characters | length > 0 %}
+        <button class="info-tab-btn" data-tab="characters">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="vertical-align: -2px; margin-right: 4px;">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Characters
+        </button>
+        {% endif %}
+    </div>
 
-    {% if has_related %}
-    <section class="section" style="margin-bottom: var(--space-2xl);">
-        <div class="section-header">
-            <h2 class="section-title">Franchise & Related</h2>
-        </div>
-        <div class="seasons-grid"
-            style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-lg);">
+    <!-- ===== Tab: Overview ===== -->
+    <div class="info-tab-content active" id="tab-overview">
 
-            {# 1. Show Seasons If Any #}
-            {% for season in anime.seasons %}
-            <a href="/anime/{{ season.id }}" class="season-card {% if season.isCurrent %}current{% endif %}"
-                title="{{ season.title or season.name }}">
-                {% if season.isCurrent %}
-                <div class="season-badge" style="background: var(--primary-color);">NOW</div>
-                {% else %}
-                <div class="season-badge" style="background: var(--bg-surface); opacity: 0.9;">SEASON</div>
-                {% endif %}
-                <img src="{{ season.poster }}" alt="{{ season.title }}" loading="lazy">
-                <div class="season-overlay">
-                    <div class="season-title">{{ season.title or season.name }}</div>
+        {# Build a unified season list from prequels + current + sequels #}
+        {% set all_seasons = [] %}
+        {% set seen_season_ids = [] %}
+
+        {# Add prequels as earlier seasons #}
+        {% for p in anime.prequels %}
+        {% if (p.id|string) not in seen_season_ids %}
+        {% set _ = all_seasons.append(p) %}
+        {% set _ = seen_season_ids.append(p.id|string) %}
+        {% endif %}
+        {% endfor %}
+
+        {# Add current anime #}
+        {% set current_entry = {"id": anime.id or current_season_id, "name": anime.name or anime.title, "poster":
+        anime.poster, "isCurrent": true} %}
+        {% if (current_entry.id|string) not in seen_season_ids %}
+        {% set _ = all_seasons.append(current_entry) %}
+        {% set _ = seen_season_ids.append(current_entry.id|string) %}
+        {% endif %}
+
+        {# Add sequels as later seasons #}
+        {% for s in anime.sequels %}
+        {% if (s.id|string) not in seen_season_ids %}
+        {% set _ = all_seasons.append(s) %}
+        {% set _ = seen_season_ids.append(s.id|string) %}
+        {% endif %}
+        {% endfor %}
+
+        {# Show Seasons section if more than just current anime #}
+        {% if all_seasons | length > 1 %}
+        <section class="section" style="margin-bottom: var(--space-2xl);">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="18" rx="2" ry="2" />
+                        <line x1="8" y1="21" x2="8" y2="3" />
+                        <line x1="16" y1="21" x2="16" y2="3" />
+                    </svg>
+                    Seasons
+                </h2>
+            </div>
+            <div class="seasons-grid"
+                style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-lg);">
+                {% for entry in all_seasons %}
+                <a href="/anime/{{ entry.id }}"
+                    class="season-card {% if entry.isCurrent is defined and entry.isCurrent %}current{% endif %}"
+                    title="{{ entry.name or entry.title }}">
+                    {% if entry.isCurrent is defined and entry.isCurrent %}
+                    <div class="season-badge" style="background: var(--primary-color);">CURRENT</div>
+                    {% else %}
+                    {% endif %}
+                    <img src="{{ entry.poster or entry.image }}" alt="{{ entry.name or entry.title }}" loading="lazy">
+                    <div class="season-overlay">
+                        <div class="season-title">{{ entry.name or entry.title }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {# Other related anime (not prequel/sequel) #}
+        {% if suggestions and suggestions.related and suggestions.related | length > 0 %}
+        {% set other_related = [] %}
+        {% for r in suggestions.related %}
+        {% if (r.id|string) not in seen_season_ids %}
+        {% set _ = other_related.append(r) %}
+        {% endif %}
+        {% endfor %}
+
+        {% if other_related | length > 0 %}
+        <section class="section" style="margin-bottom: var(--space-2xl);">
+            <div class="section-header">
+                <h2 class="section-title">Related</h2>
+            </div>
+            <div class="seasons-grid"
+                style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-lg);">
+                {% for r in other_related %}
+                <a href="/anime/{{ r.id }}" class="season-card" title="{{ r.name or r.title }}">
+                    <div class="season-badge" style="background: var(--accent);">{{ (r.relation or "RELATED") | upper }}
+                    </div>
+                    <img src="{{ r.poster or r.image }}" alt="{{ r.name or r.title }}" loading="lazy">
+                    <div class="season-overlay">
+                        <div class="season-title">{{ r.name or r.title }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+        {% endif %}
+
+        {# Recommended #}
+        {% if suggestions and suggestions.recommended and suggestions.recommended | length > 0 %}
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Recommended</h2>
+            </div>
+            <div class="anime-grid">
+                {% for rec in suggestions.recommended[:6] %}
+                <a href="/anime/{{ rec.id }}" class="anime-card">
+                    <div class="anime-card-poster">
+                        <img src="{{ rec.poster or rec.image }}" alt="{{ rec.name or rec.title }}" loading="lazy">
+                        <div class="anime-card-badges">
+                            {% if rec.episodes and rec.episodes.sub %}
+                            <span class="badge badge-sub">{% if rec.episodes.released and rec.episodes.released !=
+                                rec.episodes.sub %}{{ rec.episodes.released }}/{{ rec.episodes.sub }}{% else %}{{
+                                rec.episodes.sub }}{% endif %}</span>
+                            {% endif %}
+                            {% if rec.episodes and rec.episodes.dub %}
+                            <span class="badge badge-dub">{{ rec.episodes.dub }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="anime-card-info">
+                        <h3 class="anime-card-title">{{ rec.name or rec.title }}</h3>
+                        <div class="anime-card-meta">
+                            {% if rec.type %}<span>{{ rec.type }}</span>{% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <!-- ===== Tab: Characters & Voice Actors ===== -->
+    {% if anime.characters and anime.characters | length > 0 %}
+    <div class="info-tab-content" id="tab-characters">
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    Characters & Voice Actors
+                </h2>
+            </div>
+            <div class="char-va-grid">
+                {% for char_data in anime.characters %}
+                <div class="char-va-row">
+                    <!-- Character Side -->
+                    <div class="char-side">
+                        <div class="char-va-avatar">
+                            <img src="{{ char_data.character.poster }}" alt="{{ char_data.character.name }}"
+                                loading="lazy" onerror="this.src='https://via.placeholder.com/48?text=?'">
+                        </div>
+                        <div class="char-va-info">
+                            <div class="char-va-name">{{ char_data.character.name }}</div>
+                            <div
+                                class="char-va-role {% if char_data.character.cast == 'Main' %}main{% else %}supporting{% endif %}">
+                                {{ char_data.character.cast }}</div>
+                        </div>
+                    </div>
+                    <!-- Voice Actor Side -->
+                    {% if char_data.voiceActor %}
+                    <div class="va-side">
+                        <div class="char-va-avatar">
+                            <img src="{{ char_data.voiceActor.poster }}" alt="{{ char_data.voiceActor.name }}"
+                                loading="lazy" onerror="this.src='https://via.placeholder.com/48?text=?'">
+                        </div>
+                        <div class="char-va-info">
+                            <div class="char-va-name">{{ char_data.voiceActor.name }}</div>
+                            <div class="char-va-role va-lang">{{ char_data.voiceActor.cast }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-            </a>
-            {% endfor %}
-
-            {# 2. Collect other related items preventing duplicates #}
-            {% set related_items = [] %}
-            {% set seen_ids = [] %}
-
-            {# Add current anime to seen to prevent self-reference #}
-            {% set _ = seen_ids.append(anime.id | string) %}
-            {% if anime.anilistId %}
-            {% set _ = seen_ids.append(anime.anilistId | string) %}
-            {% endif %}
-            {% if anime.malId %}
-            {% set _ = seen_ids.append(anime.malId | string) %}
-            {% endif %}
-
-            {% for p in anime.prequels %}
-            {% if (p.id|string) not in seen_ids %}
-            {% set _ = related_items.append({"item": p, "badge": "PREQUEL", "color": "var(--info, #3b82f6)"}) %}
-            {% set _ = seen_ids.append(p.id|string) %}
-            {% endif %}
-            {% endfor %}
-
-            {% for s in anime.sequels %}
-            {% if (s.id|string) not in seen_ids %}
-            {% set _ = related_items.append({"item": s, "badge": "SEQUEL", "color": "var(--success, #10b981)"}) %}
-            {% set _ = seen_ids.append(s.id|string) %}
-            {% endif %}
-            {% endfor %}
-
-            {% if suggestions and suggestions.related %}
-            {% for r in suggestions.related %}
-            {% if (r.id|string) not in seen_ids %}
-            {% set badge_text = (r.relation or "RELATED") | upper %}
-            {% set _ = related_items.append({"item": r, "badge": badge_text, "color": "var(--accent)"}) %}
-            {% set _ = seen_ids.append(r.id|string) %}
-            {% endif %}
-            {% endfor %}
-            {% endif %}
-
-            {# Display collected related items #}
-            {% for rel in related_items %}
-            <a href="/anime/{{ rel.item.id }}" class="season-card" title="{{ rel.item.name or rel.item.title }}">
-                <div class="season-badge"
-                    style="background-color: {{ rel.color }}; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">{{ rel.badge }}
-                </div>
-                <img src="{{ rel.item.poster or rel.item.image }}" alt="{{ rel.item.name or rel.item.title }}"
-                    loading="lazy">
-                <div class="season-overlay">
-                    <div class="season-title">{{ rel.item.name or rel.item.title }}</div>
-                </div>
-            </a>
-            {% endfor %}
-
-        </div>
-    </section>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
     {% endif %}
 
-    {% if suggestions and suggestions.recommended and suggestions.recommended | length > 0 %}
-    <section class="section">
-        <div class="section-header">
-            <h2 class="section-title">Recommended</h2>
-        </div>
-        <div class="anime-grid">
-            {% for rec in suggestions.recommended[:6] %}
-            <a href="/anime/{{ rec.id }}" class="anime-card">
-                <div class="anime-card-poster">
-                    <img src="{{ rec.poster or rec.image }}" alt="{{ rec.name or rec.title }}" loading="lazy">
-                    <div class="anime-card-badges">
-                        {% if rec.episodes and rec.episodes.sub %}
-                        <span class="badge badge-sub">{{ rec.episodes.sub }}</span>
-                        {% endif %}
-                        {% if rec.episodes and rec.episodes.dub %}
-                        <span class="badge badge-dub">{{ rec.episodes.dub }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="anime-card-info">
-                    <h3 class="anime-card-title">{{ rec.name or rec.title }}</h3>
-                    <div class="anime-card-meta">
-                        {% if rec.type %}<span>{{ rec.type }}</span>{% endif %}
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    // Tab switching
+    document.querySelectorAll('.info-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            // Deactivate all
+            document.querySelectorAll('.info-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.info-tab-content').forEach(c => c.classList.remove('active'));
+            // Activate selected
+            btn.classList.add('active');
+            const target = document.getElementById('tab-' + tabId);
+            if (target) target.classList.add('active');
+        });
+    });
+
     // Watchlist functionality
     const addToWatchlistBtn = document.getElementById('add-to-watchlist');
     const watchlistBtnText = document.getElementById('watchlist-btn-text');
 
     if (addToWatchlistBtn) {
-        // Check current status
         const animeId = addToWatchlistBtn.dataset.animeId;
 
         fetch(`/api/watchlist/status?anime_id=${encodeURIComponent(animeId)}`)

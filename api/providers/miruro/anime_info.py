@@ -76,6 +76,14 @@ class MiruroAnimeInfoService:
         }
         status = status_map.get(resp.get("status", ""), resp.get("status", ""))
 
+        # Episode counts
+        total_episodes = resp.get("episodes") or 0
+        # For currently airing shows, released = nextAiringEpisode.episode - 1
+        if next_airing and next_airing.get("episode"):
+            released_episodes = next_airing["episode"] - 1
+        else:
+            released_episodes = total_episodes
+
         return {
             "anilistId": resp.get("id"),
             "malId": resp.get("idMal"),
@@ -90,8 +98,9 @@ class MiruroAnimeInfoService:
             "type": resp.get("format") or "",
             "rating": str(resp.get("averageScore") or "") if resp.get("averageScore") else "",
             "quality": "",
-            "total_sub_episodes": resp.get("episodes") or 0,
-            "total_dub_episodes": 0,
+            "total_sub_episodes": total_episodes,
+            "total_dub_episodes": total_episodes,
+            "released_episodes": released_episodes,
             "japanese": title.get("native") or "",
             "synonyms": ", ".join(resp.get("synonyms", []) or []),
             "aired": aired,
@@ -107,6 +116,16 @@ class MiruroAnimeInfoService:
             "recommendedAnimes": recommended,
             "prequels": prequels,
             "sequels": sequels,
+            # Stats for info page template
+            "stats": {
+                "rating": str(resp.get("averageScore") or "") if resp.get("averageScore") else "",
+                "episodes": {
+                    "sub": released_episodes,
+                    "dub": released_episodes,
+                },
+                "type": resp.get("format") or "",
+                "duration": f"{resp.get('duration', '')} min" if resp.get("duration") else "",
+            },
             # Extra fields from Miruro
             "bannerImage": resp.get("bannerImage") or "",
             "nextAiringEpisode": {

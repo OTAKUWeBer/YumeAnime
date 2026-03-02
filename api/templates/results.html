@@ -26,7 +26,9 @@
                     onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'">
                 <div class="anime-card-badges">
                     {% if data.episodes and data.episodes.sub %}
-                    <span class="badge badge-sub">{{ data.episodes.sub }}</span>
+                    <span class="badge badge-sub">{% if data.episodes.released and data.episodes.released !=
+                        data.episodes.sub %}{{ data.episodes.released }}/{{ data.episodes.sub }}{% else %}{{
+                        data.episodes.sub }}{% endif %}</span>
                     {% endif %}
                     {% if data.episodes and data.episodes.dub %}
                     <span class="badge badge-dub">{{ data.episodes.dub }}</span>
@@ -44,7 +46,8 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M5 3l14 9-14 9V3z" />
                         </svg>
-                        {{ data.episodes.sub or 0 }}
+                        {{ data.episodes.released or data.episodes.sub or 0 }}{% if data.episodes.released and
+                        data.episodes.released != data.episodes.sub %}/{{ data.episodes.sub }}{% endif %}
                     </span>
                     {% if data.episodes.dub %}
                     <span class="ep-count dub">

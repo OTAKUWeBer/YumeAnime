@@ -23,6 +23,13 @@ class MiruroSearchService:
         studio_name = studios_nodes[0].get("name") if studios_nodes else ""
         english_title = title.get("english") or title.get("romaji") or "Unknown"
 
+        total_episodes = item.get("episodes") or 0
+        next_ep = item.get("nextAiringEpisode") or {}
+        if next_ep and next_ep.get("episode"):
+            released = next_ep["episode"] - 1
+        else:
+            released = total_episodes
+
         return {
             "id": str(item.get("id", "")),
             "anilistId": item.get("id"),
@@ -30,8 +37,9 @@ class MiruroSearchService:
             "jname": title.get("native") or title.get("romaji") or "",
             "poster": cover.get("extraLarge") or cover.get("large") or "",
             "episodes": {
-                "sub": item.get("episodes") or 0,
+                "sub": total_episodes,
                 "dub": 0,
+                "released": released,
             },
             "type": item.get("format") or "",
             "duration": f"{item.get('duration', '')} min" if item.get("duration") else "",
