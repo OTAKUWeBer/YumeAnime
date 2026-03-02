@@ -710,7 +710,9 @@
                 style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-lg);">
                 {% for r in other_related %}
                 <a href="/anime/{{ r.id }}" class="season-card" title="{{ r.name or r.title }}">
-                    <div class="season-badge" style="background: var(--accent);">{{ (r.relation or "RELATED") | upper }}
+                    <div class="season-badge"
+                        style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);">
+                        {{ (r.relation or "RELATED") | upper }}
                     </div>
                     <img src="{{ r.poster or r.image }}" alt="{{ r.name or r.title }}" loading="lazy">
                     <div class="season-overlay">
