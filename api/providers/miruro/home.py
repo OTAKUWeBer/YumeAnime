@@ -76,7 +76,8 @@ class MiruroHomeService:
         base["studio"] = studios_nodes[0].get("name") if studios_nodes else ""
         base["totalEpisodes"] = item.get("episodes") or None
         # released episode count for spotlight (from episodes dict already set by _normalize_anime)
-        base["releasedEpisodes"] = base["episodes"].get("released") or base.get("totalEpisodes")
+        released_count = base["episodes"].get("released")
+        base["releasedEpisodes"] = released_count if released_count is not None else base.get("totalEpisodes")
         base["season"] = item.get("season") or ""
         base["seasonYear"] = item.get("seasonYear") or ""
         next_ep = item.get("nextAiringEpisode") or {}

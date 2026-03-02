@@ -46,7 +46,7 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M5 3l14 9-14 9V3z" />
                         </svg>
-                        {{ data.episodes.released or data.episodes.sub or 0 }}{% if data.episodes.released and
+                        {{ data.episodes.released or data.episodes.sub or 0 }}{% if data.episodes.sub and data.episodes.released and
                         data.episodes.released != data.episodes.sub %}/{{ data.episodes.sub }}{% endif %}
                     </span>
                     {% if data.episodes.dub %}
