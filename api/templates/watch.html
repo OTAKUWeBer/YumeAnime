@@ -17,7 +17,43 @@
         .watch-layout {
             grid-template-columns: 1fr;
             display: flex;
-            flex-direction: column-reverse;
+            flex-direction: column;
+        }
+
+        .watch-main {
+            display: contents;
+        }
+
+        .watch-main>* {
+            order: 10;
+        }
+
+        .watch-main>.video-wrapper {
+            order: 1;
+        }
+
+        .watch-main>#providerSwitcher {
+            order: 2;
+        }
+
+        .watch-main>#sourceSwitcher {
+            order: 3;
+        }
+
+        .watch-main>#watch-navigation {
+            order: 4;
+        }
+
+        .episode-sidebar {
+            order: 5;
+        }
+
+        .watch-main>#watch-countdown {
+            order: 6;
+        }
+
+        .watch-main>#watch-info {
+            order: 7;
         }
     }
 
@@ -37,7 +73,7 @@
     @media (max-width: 1024px) {
         .episode-sidebar {
             height: auto;
-            max-height: 75vh;
+            max-height: 400px;
             position: relative;
             top: 0;
         }
@@ -51,6 +87,7 @@
             border-radius: 0;
             border-left: none;
             border-right: none;
+            max-height: 350px;
         }
     }
 
@@ -59,6 +96,7 @@
             margin-left: calc(-1 * var(--space-sm));
             margin-right: calc(-1 * var(--space-sm));
             width: calc(100% + 2 * var(--space-sm));
+            max-height: 300px;
         }
     }
 
@@ -1216,7 +1254,7 @@
             {% endif %}
 
             <!-- Language selection -->
-            <div
+            <div id="watch-navigation"
                 style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
 
                 <!-- Navigation Buttons -->
@@ -1264,7 +1302,7 @@
             <!-- Next Episode Countdown -->
             {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
             {% set next_ep = next_episode_schedule.episode %}
-            <div
+            <div id="watch-countdown"
                 style="position:relative;margin-top:var(--space-lg);background:var(--bg-surface);padding:var(--space-lg);border-radius:var(--radius-lg);border:1px solid var(--border-color);box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);overflow:hidden;">
                 <div
                     style="position:absolute;top:-50px;right:-50px;width:300px;height:300px;background:radial-gradient(circle,var(--accent) 0%,transparent 70%);filter:blur(40px);opacity:.15;pointer-events:none;">
@@ -1316,7 +1354,7 @@
             {% endif %}
 
             <!-- Episode Info -->
-            <div
+            <div id="watch-info"
                 style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);margin-top:var(--space-lg);">
                 <h2 style="margin-bottom:var(--space-sm);">Episode {{ Episode }}</h2>
                 <p class="text-muted">{{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-',
