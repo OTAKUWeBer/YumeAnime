@@ -1303,7 +1303,7 @@ h6 {
 
 .stat-label {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: #22c55e;
     text-transform: uppercase;
 }
 
@@ -2760,12 +2760,12 @@ h6 {
 
     /* Bigger buttons */
     .btn {
-        padding: var(--space-md) var(--space-xl);
+        padding: calc(var(--space-md) * 0.7) calc(var(--space-xl) * 0.8);
         font-size: 1rem;
     }
 
     .btn-lg {
-        padding: var(--space-lg) var(--space-2xl);
+        padding: calc(var(--space-lg) * 0.6) var(--space-2xl);
         font-size: 1.1rem;
     }
 
