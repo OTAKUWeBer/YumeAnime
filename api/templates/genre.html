@@ -26,7 +26,9 @@
                     onerror="this.src='https://via.placeholder.com/200x280?text=No+Image'">
                 <div class="anime-card-badges">
                     {% if anime.episodes and anime.episodes.sub %}
-                    <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                    <span class="badge badge-sub">{% if anime.episodes.released and anime.episodes.released !=
+                        anime.episodes.sub %}{{ anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{
+                        anime.episodes.sub }}{% endif %}</span>
                     {% endif %}
                     {% if anime.episodes and anime.episodes.dub %}
                     <span class="badge badge-dub">{{ anime.episodes.dub }}</span>

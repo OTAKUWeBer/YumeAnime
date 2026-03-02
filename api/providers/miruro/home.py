@@ -27,6 +27,14 @@ class MiruroHomeService:
         studio_name = studios_nodes[0].get("name") if studios_nodes else ""
 
         english_title = title.get("english") or title.get("romaji") or "Unknown"
+
+        total_episodes = item.get("episodes") or 0
+        next_ep = item.get("nextAiringEpisode") or {}
+        # If currently airing, released = next episode - 1; otherwise released = total
+        if next_ep and next_ep.get("episode"):
+            released = next_ep["episode"] - 1
+        else:
+            released = total_episodes
         
         return {
             "id": str(item.get("id", "")),
@@ -36,8 +44,9 @@ class MiruroHomeService:
             "poster": cover.get("extraLarge") or cover.get("large") or "",
             "banner": item.get("bannerImage") or "",
             "episodes": {
-                "sub": item.get("episodes") or 0,
+                "sub": total_episodes,
                 "dub": 0,
+                "released": released,
             },
             "type": item.get("format") or "",
             "duration": f"{item.get('duration', '')} min" if item.get("duration") else "",
@@ -66,6 +75,8 @@ class MiruroHomeService:
         studios_nodes = (item.get("studios", {}) or {}).get("nodes", [])
         base["studio"] = studios_nodes[0].get("name") if studios_nodes else ""
         base["totalEpisodes"] = item.get("episodes") or None
+        # released episode count for spotlight (from episodes dict already set by _normalize_anime)
+        base["releasedEpisodes"] = base["episodes"].get("released") or base.get("totalEpisodes")
         base["season"] = item.get("season") or ""
         base["seasonYear"] = item.get("seasonYear") or ""
         next_ep = item.get("nextAiringEpisode") or {}

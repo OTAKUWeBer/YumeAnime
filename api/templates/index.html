@@ -58,7 +58,9 @@ series.{% endblock %}
                                     <rect x="2" y="3" width="20" height="18" rx="2" ry="2" />
                                     <line x1="8" y1="21" x2="8" y2="3" />
                                     <line x1="16" y1="21" x2="16" y2="3" />
-                                </svg> {{ anime.totalEpisodes }} Episodes</span>{% endif %}
+                                </svg> {% if anime.releasedEpisodes and anime.releasedEpisodes != anime.totalEpisodes
+                                %}{{ anime.releasedEpisodes }}/{{ anime.totalEpisodes }}{% else %}{{ anime.totalEpisodes
+                                }}{% endif %} Episodes</span>{% endif %}
                             {% if anime.rating %}
                             <span class="spotlight-badge spotlight-badge-rating">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--warning)"
@@ -155,7 +157,9 @@ series.{% endblock %}
                         <span class="badge badge-rating">⭐ {{ (anime.rating / 10) | round(1) }}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.sub %}
-                        <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                        <span class="badge badge-sub">{% if anime.episodes.released and anime.episodes.released !=
+                            anime.episodes.sub %}{{ anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{
+                            anime.episodes.sub }}{% endif %}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.dub %}
                         <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
@@ -209,7 +213,9 @@ series.{% endblock %}
                         <span class="badge badge-rating">⭐ {{ (anime.rating / 10) | round(1) }}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.sub %}
-                        <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                        <span class="badge badge-sub">{% if anime.episodes.released and anime.episodes.released !=
+                            anime.episodes.sub %}{{ anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{
+                            anime.episodes.sub }}{% endif %}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.dub %}
                         <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
@@ -263,7 +269,9 @@ series.{% endblock %}
                         <span class="badge badge-rating">⭐ {{ (anime.rating / 10) | round(1) }}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.sub %}
-                        <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                        <span class="badge badge-sub">{% if anime.episodes.released and anime.episodes.released !=
+                            anime.episodes.sub %}{{ anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{
+                            anime.episodes.sub }}{% endif %}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.dub %}
                         <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
@@ -323,7 +331,9 @@ series.{% endblock %}
                         <span class="badge badge-rating">⭐ {{ (anime.rating / 10) | round(1) }}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.sub %}
-                        <span class="badge badge-sub">{{ anime.episodes.sub }}</span>
+                        <span class="badge badge-sub">{% if anime.episodes.released and anime.episodes.released !=
+                            anime.episodes.sub %}{{ anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{
+                            anime.episodes.sub }}{% endif %}</span>
                         {% endif %}
                         {% if anime.episodes and anime.episodes.dub %}
                         <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
