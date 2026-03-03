@@ -3,7 +3,7 @@ language: "en-US"
 early_access: false
 
 reviews:
-  profile: "anime-dev"
+  profile: "chill"                  # ONLY chill or assertive
   request_changes_workflow: true
   high_level_summary: true
   poem: false
