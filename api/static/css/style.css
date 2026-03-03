@@ -785,8 +785,55 @@ h6 {
 }
 
 /* ============================================
+/* ============================================
    Spotlight Carousel
    ============================================ */
+
+/* Slide animations */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
 .spotlight-section {
     margin-bottom: var(--space-3xl);
     margin-top: var(--space-lg);
@@ -810,6 +857,14 @@ h6 {
 .spotlight-slide.active {
     display: block;
     opacity: 1;
+}
+
+.spotlight-slide.slide-right {
+  animation: slideInFromRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.spotlight-slide.slide-left {
+  animation: slideInFromLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .spotlight-backdrop {
@@ -1022,7 +1077,8 @@ h6 {
 }
 
 @media (max-width: 480px) {
-    .spotlight-nav {
+    .spotlight-nav,
+    .spotlight-nav-btn {
         display: none;
     }
 }
