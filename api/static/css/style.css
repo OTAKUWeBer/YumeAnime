@@ -1005,6 +1005,28 @@ h6 {
     box-shadow: 0 0 20px var(--primary-color-alpha, rgba(168, 85, 247, 0.5));
 }
 
+/* Mobile responsive adjustments for spotlight navigation */
+@media (max-width: 768px) {
+    .spotlight-nav {
+        bottom: auto;
+        top: var(--space-md);
+        right: var(--space-md);
+        gap: var(--space-xs);
+    }
+
+    .spotlight-nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .spotlight-nav {
+        display: none;
+    }
+}
+
 /* ============================================
    Episode Grid & Sidebar Fixes
    ============================================ */
