@@ -52,9 +52,6 @@
             order: 6;
         }
 
-        .watch-main>#watch-info {
-            order: 7;
-        }
     }
 
     .episode-sidebar {
@@ -1187,9 +1184,9 @@
                 {% endif %}
             </div>
 
-            <!-- Provider (Server) Switcher -->
+            <!-- Provider (Server) Switcher - Hidden in favor of integrated control -->
             {% if episodes and episodes.providers_map %}
-            <div class="source-switcher-bar" id="providerSwitcher">
+            <div class="source-switcher-bar" id="providerSwitcher" style="display: none;">
                 <span class="source-switcher-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         style="vertical-align: middle; margin-right: 4px;">
@@ -1226,9 +1223,9 @@
             </div>
             {% endif %}
 
-            <!-- Stream Quality / Source Switcher -->
+            <!-- Stream Quality / Source Switcher - Hidden in favor of integrated control -->
             {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
-            <div class="source-switcher-bar" id="sourceSwitcher">
+            <div class="source-switcher-bar" id="sourceSwitcher" style="display: none;">
                 <span class="source-switcher-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         style="vertical-align: middle; margin-right: 4px;">
@@ -1255,117 +1252,153 @@
             </div>
             {% endif %}
 
-            <!-- Language selection -->
-            <div id="watch-navigation"
-                style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-
-                <!-- Navigation Buttons -->
-                <div style="display: flex; gap: 10px; flex: 1;">
+            <!-- Episode Controls & Info Section -->
+            <div id="watch-navigation" style="margin-top: 15px;">
+                <!-- Small Navigation Buttons -->
+                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
                     <a {% if prev_episode_url %}href="{{ prev_episode_url }}" {% endif %}
                         class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
-                        style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <polyline points="15 18 9 12 15 6"></polyline>
                         </svg>
-                        Prev
+                        Previous
                     </a>
                     <a {% if next_episode_url %}href="{{ next_episode_url }}" {% endif %}
                         class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
-                        style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px;">
+                        style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                         Next
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </a>
                 </div>
 
-                <div
-                    style="display: flex; justify-content: flex-end; align-items: center; background: var(--bg-surface); padding: 5px 10px; border-radius: var(--radius-md); gap: 10px;">
-                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Language:</span>
-                    <div
-                        style="display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);">
-                        {% if sub_url %}
-                        <a href="{{ sub_url }}" class="btn btn-sm"
-                            style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:60px;">SUB</a>
+                <!-- Episode Info Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: var(--bg-surface); padding: 12px 15px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                    <!-- Episode Title -->
+                    <div>
+                        <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">
+                            <span style="background: var(--accent); padding: 2px 8px; border-radius: 4px; color: var(--bg-primary); font-weight: 600; margin-right: 8px;">EP {{ Episode }}</span>
+                            {{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else 'Episode') }}
+                        </h3>
+                    </div>
+
+                    <!-- Server/Source Dropdown & Language -->
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <!-- Stream Quality Dropdown -->
+                        {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
+                        <select id="streamDropdown" 
+                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer;">
+                            <option value="">Stream Quality</option>
+                            {% for es in embed_sources %}
+                            <option value="embed|{{ es.url }}" {% if source_type == 'embed' and loop.first %}selected{% endif %}>
+                                {{ es.label or ('Embed ' ~ loop.index) }}
+                            </option>
+                            {% endfor %}
+                            {% for hs in hls_sources %}
+                            <option value="hls|{{ hs.file or hs.url }}" {% if source_type == 'hls' and loop.first %}selected{% endif %}>
+                                {{ hs.quality or ('HLS ' ~ loop.index) }}
+                            </option>
+                            {% endfor %}
+                        </select>
                         {% endif %}
-                        {% if dub_url and dub_available %}
-                        <a href="{{ dub_url }}" class="btn btn-sm"
-                            style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:60px;">DUB</a>
-                        {% elif not dub_available %}
-                        <span class="btn btn-sm btn-ghost"
-                            style="border-radius:0;border:none;background-color:var(--bg-elevated) !important;opacity:0.5;cursor:not-allowed;color:var(--text-primary) !important;min-width:60px;">DUB</span>
+
+                        <!-- Provider (Server) Switcher -->
+                        {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
+                        <select id="providerDropdown" 
+                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer;">
+                            {% set current_ep_param = request.args.get('ep', '') %}
+                            {% for p_name, p_data in episodes.providers_map.items() %}
+                            {% set current_cat = 'dub' if lang == 'dub' else 'sub' %}
+                            {% set p_eps = p_data.get('episodes', {}).get(current_cat, []) %}
+                            {% set ep_match = namespace(id=None) %}
+                            {% for ep_item in p_eps %}
+                            {% if ep_item.number|string == episode_number|string %}
+                            {% set ep_match.id = ep_item.id %}
+                            {% endif %}
+                            {% endfor %}
+                            {% if ep_match.id %}
+                            {% set is_active = (p_name in current_ep_param) or (not current_ep_param and p_name == episodes.default_provider) %}
+                            <option value="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_match.id) }}" {% if is_active %}selected{% endif %}>
+                                {{ p_name | title }}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
                         {% endif %}
+
+                        <!-- Language Selection -->
+                        <div style="display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);">
+                            {% if sub_url %}
+                            <a href="{{ sub_url }}" class="btn btn-sm"
+                                style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;">SUB</a>
+                            {% endif %}
+                            {% if dub_url and dub_available %}
+                            <a href="{{ dub_url }}" class="btn btn-sm"
+                                style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</a>
+                            {% elif not dub_available %}
+                            <span class="btn btn-sm btn-ghost"
+                                style="border-radius:0;border:none;background-color:var(--bg-elevated) !important;opacity:0.5;cursor:not-allowed;color:var(--text-primary) !important;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
+
+                <!-- Next Episode Air Time (if available) -->
+                {% if next_air_time %}
+                <div style="background: rgba(var(--warning-rgb, 245, 158, 11), 0.1); border-left: 3px solid var(--warning); padding: 10px 12px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                        <strong>Episode {{ Episode|int + 1 }} will air on:</strong> {{ next_air_time }}
+                    </p>
+                </div>
+                {% endif %}
             </div>
 
-            <!-- Next Episode Countdown -->
+            <!-- Next Episode Countdown - Compact -->
             {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
             {% set next_ep = next_episode_schedule.episode %}
-            <div id="watch-countdown"
-                style="position:relative;margin-top:var(--space-lg);background:var(--bg-surface);padding:var(--space-lg);border-radius:var(--radius-lg);border:1px solid var(--border-color);box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);overflow:hidden;">
-                <div
-                    style="position:absolute;top:-50px;right:-50px;width:300px;height:300px;background:radial-gradient(circle,var(--accent) 0%,transparent 70%);filter:blur(40px);opacity:.15;pointer-events:none;">
-                </div>
-                <div style="position:relative;z-index:1;">
-                    <h3
-                        style="margin-bottom:var(--space-xs);font-size:1.25rem;color:var(--text-primary);display:flex;align-items:center;gap:var(--space-sm);font-weight:700;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        Episode {{ next_ep if next_ep else '??' }} Airs In
-                    </h3>
-                    <p style="margin:0;font-size:.85rem;color:var(--text-muted);padding-left:32px;">Don't miss the
-                        upcoming release!</p>
-                </div>
-                <div id="next-ep-countdown" data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
-                    style="display:flex;gap:var(--space-sm);position:relative;z-index:1;">
-                    {% for label, cls in [('Days','days'),('Hrs','hours'),('Mins','minutes'),('Secs','seconds')] %}
-                    <div
-                        style="text-align:center;background:var(--bg-elevated);padding:var(--space-sm) var(--space-md);border-radius:var(--radius-md);min-width:60px;border:1px solid var(--border-color);">
-                        <span class="{{ cls }}"
-                            style="display:block;font-size:1.5rem;font-weight:800;font-family:var(--font-mono);color:var(--text-primary);">--</span>
-                        <span
-                            style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;">{{
-                            label }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
+            <div id="watch-countdown" data-timestamp="{{ next_episode_schedule.airingTimestamp }}"
+                style="background: rgba(var(--info-rgb, 59, 130, 246), 0.1); border-left: 3px solid var(--info); padding: 10px 12px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                    <strong>Episode {{ next_ep if next_ep else '??' }} will air on:</strong> <span id="countdown-text">Loading...</span>
+                </p>
             </div>
             <script>
                 document.addEventListener('DOMContentLoaded', () => {
-                    const el = document.getElementById('next-ep-countdown');
+                    const el = document.getElementById('watch-countdown');
                     if (!el) return;
                     const ts = parseInt(el.dataset.timestamp, 10);
                     if (!ts) return;
+                    
                     const update = () => {
-                        const diff = (ts > 9999999999 ? ts : ts * 1000) - Date.now();
-                        if (diff <= 0) { ['days', 'hours', 'minutes', 'seconds'].forEach(c => el.querySelector('.' + c).textContent = '00'); return; }
-                        el.querySelector('.days').textContent = String(Math.floor(diff / 86400000)).padStart(2, '0');
-                        el.querySelector('.hours').textContent = String(Math.floor(diff / 3600000) % 24).padStart(2, '0');
-                        el.querySelector('.minutes').textContent = String(Math.floor(diff / 60000) % 60).padStart(2, '0');
-                        el.querySelector('.seconds').textContent = String(Math.floor(diff / 1000) % 60).padStart(2, '0');
+                        const now = Date.now();
+                        const diff = (ts > 9999999999 ? ts : ts * 1000) - now;
+                        const countdownText = document.getElementById('countdown-text');
+                        
+                        if (diff <= 0) {
+                            countdownText.textContent = 'Airing now!';
+                            return;
+                        }
+                        
+                        const days = Math.floor(diff / 86400000);
+                        const hours = Math.floor(diff / 3600000) % 24;
+                        const minutes = Math.floor(diff / 60000) % 60;
+                        
+                        let timeStr = '';
+                        if (days > 0) timeStr += days + ' day' + (days > 1 ? 's' : '') + ', ';
+                        timeStr += hours + ' hour' + (hours !== 1 ? 's' : '');
+                        
+                        countdownText.innerHTML = '<span style="color: var(--accent);">(' + timeStr + ')</span>';
                     };
-                    update(); setInterval(update, 1000);
+                    
+                    update();
+                    setInterval(update, 60000); // Update every minute
                 });
             </script>
             {% endif %}
-
-            <!-- Episode Info -->
-            <div id="watch-info"
-                style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);margin-top:var(--space-lg);">
-                <h2 style="margin-bottom:var(--space-sm);">Episode {{ Episode }}</h2>
-                <p class="text-muted">{{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-',
-                    ' ') | title if eps_title else 'Unknown') }}</p>
-                <div style="margin-top:var(--space-lg);display:flex;gap:var(--space-md);flex-wrap:wrap;">
-                    <span class="badge badge-sub" style="font-size:.8rem;">{{ lang | upper }}</span>
-
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -1859,6 +1892,57 @@
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(initVanillaPlayerUI, 100);
+
+        // Provider dropdown functionality
+        const providerDropdown = document.getElementById('providerDropdown');
+        if (providerDropdown) {
+            providerDropdown.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    window.location.href = e.target.value;
+                }
+            });
+        }
+
+        // Stream dropdown functionality
+        const streamDropdown = document.getElementById('streamDropdown');
+        if (streamDropdown) {
+            streamDropdown.addEventListener('change', (e) => {
+                if (!e.target.value) return;
+                
+                const [sourceType, sourceUrl] = e.target.value.split('|');
+                
+                // Update the video player with new source
+                const videoContainer = document.getElementById('videoContainer');
+                const embedPlayer = document.getElementById('embedPlayer');
+                const videoPlayer = document.getElementById('videoPlayer');
+                
+                if (sourceType === 'embed' && embedPlayer) {
+                    // Show embed player, hide video container
+                    videoContainer.style.display = 'none';
+                    embedPlayer.src = sourceUrl;
+                    embedPlayer.style.display = 'block';
+                } else if (sourceType === 'hls' && videoPlayer && videoContainer) {
+                    // Show video container, hide embed
+                    embedPlayer.style.display = 'none';
+                    videoContainer.style.display = 'block';
+                    
+                    // Update video source
+                    videoPlayer.src = sourceUrl;
+                    if (videoPlayer.canPlayType('application/x-mpegURL')) {
+                        const source = videoPlayer.querySelector('source');
+                        if (source) {
+                            source.src = sourceUrl;
+                        }
+                    }
+                    
+                    // Reload video player
+                    videoPlayer.load();
+                }
+                
+                // Mark as active in dropdown
+                e.target.classList.add('active');
+            });
+        }
     });
 </script>
 {% endblock %}
