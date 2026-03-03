@@ -79,6 +79,9 @@ Follow these steps to set up YumeAnime locally:
     FLASK_ENV=development
     SECRET_KEY=your_secret_key_here
     MONGODB_URI=your_mongodb_connection_string
+
+    # API
+    MIRURO_API_URL="https://your-api.vercel.app/"
     
     # AniList Configuration (Optional, for sync)
     ANILIST_CLIENT_ID=your_anilist_client_id
