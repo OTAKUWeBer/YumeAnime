@@ -360,7 +360,7 @@ series.{% endblock %}
 
 {% block extra_js %}
 <script>
-    // Spotlight Carousel
+    // Spotlight Carousel with improved animations and mobile support
     const carousel = document.getElementById('spotlight-carousel');
     if (carousel) {
         const slides = carousel.querySelectorAll('.spotlight-slide');
@@ -369,27 +369,46 @@ series.{% endblock %}
         const nextBtn = document.getElementById('spotlight-next');
         let currentIndex = 0;
         let autoplayInterval;
+        let isAnimating = false;
+        let touchStartX = 0;
+        let touchEndX = 0;
 
-        function showSlide(index) {
+        function showSlide(index, direction = 'next') {
+            if (isAnimating) return;
             if (index < 0) index = slides.length - 1;
             if (index >= slides.length) index = 0;
 
+            isAnimating = true;
+
             slides.forEach((slide, i) => {
-                slide.classList.toggle('active', i === index);
+                if (i === index) {
+                    slide.classList.remove('slide-left', 'slide-right');
+                    slide.classList.add('active', direction === 'next' ? 'slide-right' : 'slide-left');
+                    setTimeout(() => {
+                        slide.classList.remove('slide-left', 'slide-right');
+                    }, 600);
+                } else {
+                    slide.classList.remove('active', 'slide-left', 'slide-right');
+                }
             });
+
             dots.forEach((dot, i) => {
                 dot.classList.toggle('active', i === index);
             });
 
             currentIndex = index;
+
+            setTimeout(() => {
+                isAnimating = false;
+            }, 600);
         }
 
         function nextSlide() {
-            showSlide(currentIndex + 1);
+            showSlide(currentIndex + 1, 'next');
         }
 
         function prevSlide() {
-            showSlide(currentIndex - 1);
+            showSlide(currentIndex - 1, 'prev');
         }
 
         function startAutoplay() {
@@ -400,16 +419,86 @@ series.{% endblock %}
             clearInterval(autoplayInterval);
         }
 
-        // Event listeners
-        if (nextBtn) nextBtn.addEventListener('click', () => { stopAutoplay(); nextSlide(); startAutoplay(); });
-        if (prevBtn) prevBtn.addEventListener('click', () => { stopAutoplay(); prevSlide(); startAutoplay(); });
+        // Event listeners - Navigation buttons
+        if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                stopAutoplay();
+                nextSlide();
+                startAutoplay();
+            });
+        }
+        if (prevBtn) {
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                stopAutoplay();
+                prevSlide();
+                startAutoplay();
+            });
+        }
 
+        // Dot navigation
         dots.forEach(dot => {
             dot.addEventListener('click', () => {
                 stopAutoplay();
-                showSlide(parseInt(dot.dataset.index));
+                const newIndex = parseInt(dot.dataset.index);
+                const direction = newIndex > currentIndex ? 'next' : 'prev';
+                showSlide(newIndex, direction);
                 startAutoplay();
             });
+        });
+
+        // Touch/Swipe support for mobile
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            stopAutoplay();
+        }, false);
+
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    nextSlide();
+                } else {
+                    prevSlide();
+                }
+            }
+            startAutoplay();
+        }, false);
+
+        // Mouse swipe/drag support for desktop
+        let mouseStartX = 0;
+        let isMouseDown = false;
+
+        carousel.addEventListener('mousedown', (e) => {
+            mouseStartX = e.clientX;
+            isMouseDown = true;
+            stopAutoplay();
+        });
+
+        carousel.addEventListener('mouseup', (e) => {
+            if (!isMouseDown) return;
+            isMouseDown = false;
+            const mouseEndX = e.clientX;
+            const swipeThreshold = 50;
+            const diff = mouseStartX - mouseEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    nextSlide();
+                } else {
+                    prevSlide();
+                }
+            }
+            startAutoplay();
+        });
+
+        carousel.addEventListener('mouseleave', () => {
+            isMouseDown = false;
+            startAutoplay();
         });
 
         // Start autoplay
@@ -417,7 +506,9 @@ series.{% endblock %}
 
         // Pause on hover
         carousel.addEventListener('mouseenter', stopAutoplay);
-        carousel.addEventListener('mouseleave', startAutoplay);
+        carousel.addEventListener('mouseleave', () => {
+            if (!isMouseDown) startAutoplay();
+        });
     }
 </script>
 {% endblock %}
