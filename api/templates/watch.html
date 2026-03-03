@@ -1263,7 +1263,7 @@
                             stroke-width="2">
                             <polyline points="15 18 9 12 15 6"></polyline>
                         </svg>
-                        Previous
+                        Prev
                     </a>
                     <a {% if next_episode_url %}href="{{ next_episode_url }}" {% endif %}
                         class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
@@ -1276,22 +1276,19 @@
                     </a>
                 </div>
 
-                <!-- Episode Info Bar -->
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: var(--bg-surface); padding: 12px 15px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                <!-- Episode Info Bar - Responsive -->
+                <div style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-surface); padding: 12px 15px; border-radius: var(--radius-md); margin-bottom: 15px;">
                     <!-- Episode Title -->
-                    <div>
-                        <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">
-                            <span style="background: var(--accent); padding: 2px 8px; border-radius: 4px; color: var(--bg-primary); font-weight: 600; margin-right: 8px;">EP {{ Episode }}</span>
-                            {{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else 'Episode') }}
-                        </h3>
-                    </div>
+                    <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary); line-height: 1.4;">
+                        {{ Episode }}. {{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else 'Episode') }}
+                    </h3>
 
-                    <!-- Server/Source Dropdown & Language -->
-                    <div style="display: flex; gap: 10px; align-items: center;">
+                    <!-- Controls Row -->
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <!-- Stream Quality Dropdown -->
                         {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
                         <select id="streamDropdown" 
-                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer;">
+                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; flex: 1; min-width: 140px;">
                             <option value="">Stream Quality</option>
                             {% for es in embed_sources %}
                             <option value="embed|{{ es.url }}" {% if source_type == 'embed' and loop.first %}selected{% endif %}>
@@ -1309,7 +1306,7 @@
                         <!-- Provider (Server) Switcher -->
                         {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
                         <select id="providerDropdown" 
-                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer;">
+                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; flex: 1; min-width: 140px;">
                             {% set current_ep_param = request.args.get('ep', '') %}
                             {% for p_name, p_data in episodes.providers_map.items() %}
                             {% set current_cat = 'dub' if lang == 'dub' else 'sub' %}
@@ -1336,10 +1333,10 @@
                             <a href="{{ sub_url }}" class="btn btn-sm"
                                 style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;">SUB</a>
                             {% endif %}
-                            {% if dub_url and dub_available %}
+                            {% if dub_url %}
                             <a href="{{ dub_url }}" class="btn btn-sm"
                                 style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</a>
-                            {% elif not dub_available %}
+                            {% else %}
                             <span class="btn btn-sm btn-ghost"
                                 style="border-radius:0;border:none;background-color:var(--bg-elevated) !important;opacity:0.5;cursor:not-allowed;color:var(--text-primary) !important;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</span>
                             {% endif %}
