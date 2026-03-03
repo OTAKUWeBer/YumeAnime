@@ -59,6 +59,36 @@ class SpotlightCarousel {
     if (carousel) {
       carousel.addEventListener("mouseenter", () => this.stopAutoSlide())
       carousel.addEventListener("mouseleave", () => this.startAutoSlide())
+      
+      // Touch/Swipe support for mobile
+      let touchStartX = 0
+      let touchEndX = 0
+      
+      carousel.addEventListener("touchstart", (e) => {
+        touchStartX = e.changedTouches[0].screenX
+        this.stopAutoSlide()
+      }, false)
+      
+      carousel.addEventListener("touchend", (e) => {
+        touchEndX = e.changedTouches[0].screenX
+        this.handleSwipe()
+        this.startAutoSlide()
+      }, false)
+    }
+  }
+
+  handleSwipe() {
+    const swipeThreshold = 50
+    const diff = touchStartX - touchEndX
+    
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0) {
+        // Swiped left, go to next slide
+        this.nextSlide()
+      } else {
+        // Swiped right, go to previous slide
+        this.previousSlide()
+      }
     }
   }
 }
