@@ -421,7 +421,8 @@
 
     .video-wrapper:hover:not(.user-inactive) .player-container,
     .video-wrapper.paused .player-container,
-    .video-wrapper.menu-open .player-container {
+    .video-wrapper.menu-open .player-container,
+    .video-wrapper.controls-visible .player-container {
         opacity: 1;
     }
 
@@ -791,7 +792,8 @@
 
     .video-wrapper:hover .player-top-bar,
     .video-wrapper.paused .player-top-bar,
-    .video-wrapper.menu-open .player-top-bar {
+    .video-wrapper.menu-open .player-top-bar,
+    .video-wrapper.controls-visible .player-top-bar {
         opacity: 1;
     }
 
@@ -1600,6 +1602,23 @@
             }
         };
 
+        // Mobile: tap to toggle controls visibility
+        let mobileControlsVisible = false;
+        const showMobileControls = () => {
+            if (!masterWrapper) return;
+            masterWrapper.classList.add('controls-visible');
+            masterWrapper.classList.remove('user-inactive');
+            mobileControlsVisible = true;
+            clearTimeout(inactivityTimeout);
+            if (!video.paused) {
+                inactivityTimeout = setTimeout(() => {
+                    masterWrapper.classList.remove('controls-visible');
+                    if (!video.paused) masterWrapper.classList.add('user-inactive');
+                    mobileControlsVisible = false;
+                }, 3000);
+            }
+        };
+
         if (masterWrapper) {
             masterWrapper.addEventListener('mousemove', resetInactivity);
             masterWrapper.addEventListener('mouseleave', () => {
@@ -1608,7 +1627,16 @@
                     if (masterWrapper) masterWrapper.classList.add('user-inactive');
                 }
             });
-            masterWrapper.addEventListener('touchstart', resetInactivity);
+            // On mobile: single tap toggles control bar visibility
+            masterWrapper.addEventListener('touchstart', (e) => {
+                // Only toggle if the tap isn't on a control button/progress bar
+                const tag = e.target.tagName.toLowerCase();
+                const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.id === 'mobilePlayOverlay';
+                if (!isControl) {
+                    showMobileControls();
+                }
+                resetInactivity();
+            }, { passive: true });
             document.addEventListener('keydown', resetInactivity);
         }
 
@@ -1703,6 +1731,25 @@
             const rect = progressContainer.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
             video.currentTime = pos * video.duration;
+        });
+
+        // Touch seeking for mobile progress bar
+        let isTouchSeeking = false;
+        progressContainer.addEventListener('touchstart', (e) => {
+            isTouchSeeking = true;
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
+            video.currentTime = pos * video.duration;
+            showMobileControls();
+        }, { passive: true });
+        progressContainer.addEventListener('touchmove', (e) => {
+            if (!isTouchSeeking) return;
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
+            video.currentTime = pos * video.duration;
+        }, { passive: true });
+        progressContainer.addEventListener('touchend', () => {
+            isTouchSeeking = false;
         });
 
         // Volume & Mute
