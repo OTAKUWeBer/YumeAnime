@@ -531,6 +531,34 @@ class VideoJSPlayer {
             padding: 0 !important;
           }
         }
+        
+        /* Fullscreen landscape orientation on mobile - applies to both custom player and vanilla UI */
+        @media (orientation: landscape) and (max-height: 500px) {
+          #videoContainer.fullscreen-active,
+          .video-wrapper.vjs-fullscreen {
+            width: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            border-radius: 0 !important;
+            z-index: 999999 !important;
+          }
+          
+          #videoContainer.fullscreen-active .video-js,
+          .video-wrapper.vjs-fullscreen video,
+          .video-wrapper.vjs-fullscreen .embed-player-frame {
+            width: 100% !important;
+            height: 100% !important;
+          }
+          
+          #videoContainer.fullscreen-active .video-js .vjs-text-track-cue {
+            font-size: var(--vjs-subtitle-font-size-mobile-fullscreen) !important;
+          }
+        }
       `
 
       document.head.appendChild(existingStyle)
@@ -1334,6 +1362,27 @@ class VideoJSPlayer {
         console.log("Screen orientation lock failed:", err)
       })
     }
+
+    // Add orientationchange listener to handle viewport updates on rotation
+    const handleOrientationChange = () => {
+      console.log("[Fullscreen] Device rotated, updating layout")
+      // Request fullscreen again to ensure it fills the new viewport after rotation
+      if (this.isFullscreen && this.player) {
+        const playerEl = this.player.el()
+        if (playerEl) {
+          const videoContainer = playerEl.parentElement
+          if (videoContainer) {
+            videoContainer.style.width = "100%"
+            videoContainer.style.height = "100%"
+            videoContainer.style.maxHeight = "100dvh" // Dynamic viewport height for mobile
+          }
+        }
+      }
+    }
+
+    // Remove any existing listener to prevent duplicates
+    window.removeEventListener("orientationchange", handleOrientationChange)
+    window.addEventListener("orientationchange", handleOrientationChange)
   }
 
   unlockOrientation() {
@@ -1357,10 +1406,18 @@ class VideoJSPlayer {
 
     if (this.isFullscreen) {
       videoContainer.classList.add("fullscreen-active")
+      // Ensure the container is properly sized for fullscreen
+      videoContainer.style.width = "100%"
+      videoContainer.style.height = "100%"
+      videoContainer.style.maxHeight = "100dvh"
       // we already attempted to lock orientation in toggleFullscreen() which
       // runs during a user gesture; this listener is kept for class management
     } else {
       videoContainer.classList.remove("fullscreen-active")
+      // Reset styles when exiting fullscreen
+      videoContainer.style.width = ""
+      videoContainer.style.height = ""
+      videoContainer.style.maxHeight = ""
       // unlock orientation as a fallback when exiting fullscreen
       this.unlockOrientation()
     }
