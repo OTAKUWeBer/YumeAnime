@@ -1320,25 +1320,49 @@ class VideoJSPlayer {
     })
   }
 
+  // Helpers for managing screen orientation with cross-browser fallbacks
+  lockOrientation() {
+    const lockFn =
+      (screen.orientation && screen.orientation.lock) ||
+      screen.lockOrientation ||
+      screen.mozLockOrientation ||
+      screen.msLockOrientation
+
+    if (lockFn) {
+      // must be called during a user gesture in some browsers
+      lockFn.call(screen.orientation || screen, "landscape").catch((err) => {
+        console.log("Screen orientation lock failed:", err)
+      })
+    }
+  }
+
+  unlockOrientation() {
+    const unlockFn =
+      (screen.orientation && screen.orientation.unlock) ||
+      screen.unlockOrientation ||
+      screen.mozUnlockOrientation ||
+      screen.msUnlockOrientation
+
+    if (unlockFn) {
+      try {
+        unlockFn.call(screen.orientation || screen)
+      } catch (err) {
+        console.log("Screen orientation unlock failed:", err)
+      }
+    }
+  }
+
   handleFullscreenChange() {
     const videoContainer = this.player.el().parentElement
 
     if (this.isFullscreen) {
       videoContainer.classList.add("fullscreen-active")
-
-      // Auto-rotate to landscape on mobile devices
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock("landscape").catch((err) => {
-          console.log("Screen orientation lock not supported:", err)
-        })
-      }
+      // we already attempted to lock orientation in toggleFullscreen() which
+      // runs during a user gesture; this listener is kept for class management
     } else {
       videoContainer.classList.remove("fullscreen-active")
-
-      // Unlock orientation when exiting fullscreen
-      if (screen.orientation && screen.orientation.unlock) {
-        screen.orientation.unlock()
-      }
+      // unlock orientation as a fallback when exiting fullscreen
+      this.unlockOrientation()
     }
   }
 
@@ -1355,7 +1379,12 @@ class VideoJSPlayer {
   toggleFullscreen() {
     if (this.player.isFullscreen()) {
       this.player.exitFullscreen()
+      this.unlockOrientation()
     } else {
+      // orientation lock must be triggered by a user interaction, so call it
+      // before requesting fullscreen (the click that invokes toggleFullscreen
+      // is considered a user gesture)
+      this.lockOrientation()
       this.player.requestFullscreen()
     }
   }
