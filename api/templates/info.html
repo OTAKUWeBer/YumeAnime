@@ -424,16 +424,10 @@
                                         }
                                     });
 
-                                    if (lastWatchedEp) {
-                                        const parts = lastWatchedEp.key.split('_');
-                                        if (parts.length >= 3) {
-                                            const episodeId = parts[1];
-                                            const lang = parts[2];
-                                            let newHref = `/watch/${animeId}?ep=${episodeId}`;
-                                            if (lang && lang !== 'default') { newHref += `-${lang}`; }
-                                            watchBtn.href = newHref;
-                                            watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber || ''}`;
-                                        }
+                                    if (lastWatchedEp && lastWatchedEp.episodeNumber) {
+                                        // Clean URL format: /watch/<anime_id>/ep-<N>
+                                        watchBtn.href = `/watch/${animeId}/ep-${lastWatchedEp.episodeNumber}`;
+                                        watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber}`;
                                     }
                                 } catch (e) { console.error("Error updating watch button:", e); }
                             }

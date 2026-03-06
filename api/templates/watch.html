@@ -1068,37 +1068,15 @@
             <!-- Provider (Server) Switcher - Hidden in favor of integrated control -->
             {% if episodes and episodes.providers_map %}
             <div class="source-switcher-bar" id="providerSwitcher" style="display: none;">
-                <span class="source-switcher-label">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="vertical-align: middle; margin-right: 4px;">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                        <polyline points="22,6 12,13 2,6"></polyline>
-                    </svg>
-                    Server:
-                </span>
+                <span class="source-switcher-label">Server:</span>
                 <div class="source-switcher-options">
-                    {% set current_ep_param = request.args.get('ep', '') %}
                     {% for p_name, p_data in episodes.providers_map.items() %}
-                    {% set current_cat = 'dub' if lang == 'dub' else 'sub' %}
-                    {% set p_eps = p_data.get('episodes', {}).get(current_cat, []) %}
-
-                    {# Find the episode ID for the current episode number in this provider #}
-                    {% set ep_match = namespace(id=None) %}
-                    {% for ep_item in p_eps %}
-                    {% if ep_item.number|string == episode_number|string %}
-                    {% set ep_match.id = ep_item.id %}
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if ep_match.id %}
-                    {% set ep_val_encoded = ep_match.id %}
-                    {% set is_active = (p_name in current_ep_param) or (not current_ep_param and p_name ==
-                    episodes.default_provider) %}
-                    <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val_encoded) }}"
-                        class="source-switcher-btn {% if is_active %}active{% endif %}">
+                    {% set is_active = (p_name == selected_server) or (p_name == episodes.default_provider and not
+                    selected_server) %}
+                    <button class="source-switcher-btn {% if is_active %}active{% endif %}" data-provider="{{ p_name }}"
+                        onclick="switchProvider('{{ p_name }}')">
                         {{ p_name | title }}
-                    </a>
-                    {% endif %}
+                    </button>
                     {% endfor %}
                 </div>
             </div>
@@ -1193,39 +1171,24 @@
                         {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
                         <select id="providerDropdown"
                             style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; flex: 1; min-width: 140px;">
-                            {% set current_ep_param = request.args.get('ep', '') %}
                             {% for p_name, p_data in episodes.providers_map.items() %}
-                            {% set current_cat = 'dub' if lang == 'dub' else 'sub' %}
-                            {% set p_eps = p_data.get('episodes', {}).get(current_cat, []) %}
-                            {% set ep_match = namespace(id=None) %}
-                            {% for ep_item in p_eps %}
-                            {% if ep_item.number|string == episode_number|string %}
-                            {% set ep_match.id = ep_item.id %}
-                            {% endif %}
-                            {% endfor %}
-                            {% if ep_match.id %}
-                            {% set is_active = (p_name in current_ep_param) or (not current_ep_param and p_name ==
-                            episodes.default_provider) %}
-                            <option
-                                value="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_match.id) }}"
-                                {% if is_active %}selected{% endif %}>
+                            {% set is_active = (p_name == selected_server) or (p_name == episodes.default_provider and
+                            not selected_server) %}
+                            <option value="{{ p_name }}" {% if is_active %}selected{% endif %}>
                                 {{ p_name | title }}
                             </option>
-                            {% endif %}
                             {% endfor %}
                         </select>
                         {% endif %}
 
-                        <!-- Language Selection -->
+                        <!-- Language Selection (AJAX, no page reload) -->
                         <div
                             style="display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);">
-                            {% if sub_url %}
-                            <a href="{{ sub_url }}" class="btn btn-sm"
-                                style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;">SUB</a>
-                            {% endif %}
-                            {% if dub_url %}
-                            <a href="{{ dub_url }}" class="btn btn-sm"
-                                style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</a>
+                            <button id="btnSub" class="btn btn-sm" onclick="switchLanguage('sub')"
+                                style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;cursor:pointer;">SUB</button>
+                            {% if dub_available %}
+                            <button id="btnDub" class="btn btn-sm" onclick="switchLanguage('dub')"
+                                style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;cursor:pointer;">DUB</button>
                             {% else %}
                             <span class="btn btn-sm btn-ghost"
                                 style="border-radius:0;border:none;background-color:var(--bg-elevated) !important;opacity:0.5;cursor:not-allowed;color:var(--text-primary) !important;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</span>
@@ -1352,16 +1315,7 @@
                     {% if episodes and episodes.episodes %}
                     {% for ep in episodes.episodes %}
                     {% set is_current = (ep.number|string == episode_number|string) %}
-                    {% set ep_id = ep.episodeId %}
-                    {% if ep_id.startswith('watch/') %}
-                    {# New format: watch/provider/anilistid/category/slug - use as-is, no suffix #}
-                    {% set ep_val = ep_id %}
-                    {% elif '?ep=' in ep_id %}
-                    {% set ep_val = ep_id.split('?ep=')[1] %}
-                    {% else %}
-                    {% set ep_val = ep_id %}
-                    {% endif %}
-                    <a href="{{ url_for('main.watch_routes.watch', eps_title=eps_title.split('?')[0], ep=ep_val + ('-dub' if lang == 'dub' and not ep_id.startswith('watch/') else ('' if ep_id.startswith('watch/') else '-sub'))) }}"
+                    <a href="/watch/{{ anime_id or eps_title.split('?')[0] }}/ep-{{ ep.number }}"
                         class="episode-sidebar-item {% if is_current %}current{% endif %}"
                         data-number="{{ ep.number }}">
                         <div class="episode-sidebar-num">{{ ep.number }}</div>
@@ -1972,12 +1926,12 @@
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(initVanillaPlayerUI, 100);
 
-        // Provider dropdown functionality
+        // Provider dropdown functionality (AJAX — no page reload)
         const providerDropdown = document.getElementById('providerDropdown');
         if (providerDropdown) {
             providerDropdown.addEventListener('change', (e) => {
                 if (e.target.value) {
-                    window.location.href = e.target.value;
+                    switchProvider(e.target.value);
                 }
             });
         }
@@ -1998,18 +1952,15 @@
                 const videoPlayer = document.getElementById('videoPlayer');
 
                 if (sourceType === 'embed') {
-                    // Show embed player, hide video container
                     if (videoContainer) videoContainer.style.display = 'none';
                     if (embedPlayer) {
                         embedPlayer.src = sourceUrl;
                         embedPlayer.style.display = 'block';
                     }
                 } else if (sourceType === 'hls' && videoPlayer && videoContainer) {
-                    // Show video container, hide embed
                     if (embedPlayer) embedPlayer.style.display = 'none';
                     videoContainer.style.display = 'block';
 
-                    // Re-initialize HLS.js for m3u8 URLs
                     if (Hls.isSupported() && (sourceUrl.includes('.m3u8') || sourceUrl.includes('/proxy/'))) {
                         window.hls = new Hls({ debug: false, enableWorker: true });
                         window.hls.on(Hls.Events.ERROR, (_e, data) => {
@@ -2026,7 +1977,6 @@
                         window.hls.attachMedia(videoPlayer);
                         videoPlayer.play().catch(err => console.log("Play rejected:", err));
                     } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                        // Native Safari HLS
                         videoPlayer.src = sourceUrl;
                         videoPlayer.play().catch(err => console.log("Play rejected:", err));
                     } else {
@@ -2035,10 +1985,175 @@
                     }
                 }
 
-                // Mark as active in dropdown
                 e.target.classList.add('active');
             });
         }
     });
+
+    // ── AJAX Source Switching (server / language) — no page reload ──
+
+    // Current state tracked in JS
+    window._watchState = {
+        animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        episodeNumber: {{ episode_number or 1 }},
+    language: '{{ lang }}',
+        provider: '{{ selected_server or "" }}'
+    };
+
+    function switchProvider(provider) {
+        window._watchState.provider = provider;
+        fetchAndLoadSources();
+    }
+
+    function switchLanguage(lang) {
+        window._watchState.language = lang;
+        fetchAndLoadSources();
+    }
+
+    function fetchAndLoadSources() {
+        const state = window._watchState;
+        console.log('[AJAX] Fetching sources:', state);
+
+        // Show a loading indicator
+        const videoContainer = document.getElementById('videoContainer');
+        const masterWrapper = document.getElementById('video-wrapper');
+
+        // Cleanup current player first
+        cleanupCurrentPlayer();
+
+        fetch('/api/watch/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                anime_id: state.animeId,
+                episode_number: state.episodeNumber,
+                language: state.language,
+                provider: state.provider
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('[AJAX] Source error:', data.error);
+                    return;
+                }
+
+                console.log('[AJAX] Got sources:', data);
+
+                // Update language button styles
+                const btnSub = document.getElementById('btnSub');
+                const btnDub = document.getElementById('btnDub');
+                if (btnSub) {
+                    btnSub.style.backgroundColor = state.language === 'sub' ? 'var(--accent)' : 'var(--bg-elevated)';
+                    btnSub.style.color = state.language === 'sub' ? 'var(--bg-primary)' : 'var(--text-primary)';
+                }
+                if (btnDub) {
+                    btnDub.style.backgroundColor = state.language === 'dub' ? 'var(--accent)' : 'var(--bg-elevated)';
+                    btnDub.style.color = state.language === 'dub' ? 'var(--bg-primary)' : 'var(--text-primary)';
+                }
+
+                // Update provider dropdown selection
+                const providerDD = document.getElementById('providerDropdown');
+                if (providerDD && data.provider) {
+                    for (let opt of providerDD.options) {
+                        if (opt.value === data.provider) {
+                            opt.selected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Load the new video source
+                const sourceType = data.source_type;
+                const videoLink = data.video_link;
+                const embedSources = data.embed_sources || [];
+                const hlsSources = data.hls_sources || [];
+
+                const embedPlayer = document.getElementById('embedPlayer');
+                const videoPlayer = document.getElementById('videoPlayer');
+
+                if (sourceType === 'embed' && embedSources.length > 0) {
+                    // Use first embed source
+                    if (videoContainer) videoContainer.style.display = 'none';
+                    let frame = masterWrapper ? masterWrapper.querySelector('#embedPlayer') : null;
+                    if (!frame) {
+                        frame = document.createElement('iframe');
+                        frame.id = 'embedPlayer';
+                        frame.className = 'embed-player-frame';
+                        frame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
+                        frame.allowFullscreen = true;
+                        if (masterWrapper) masterWrapper.insertBefore(frame, masterWrapper.firstChild);
+                    }
+                    frame.src = embedSources[0].url;
+                    frame.style.display = 'block';
+                } else if (videoLink || (hlsSources && hlsSources.length > 0)) {
+                    // HLS / direct video
+                    const url = videoLink || (hlsSources[0] && (hlsSources[0].file || hlsSources[0].url));
+                    if (!url) return;
+
+                    if (embedPlayer) embedPlayer.style.display = 'none';
+                    if (videoContainer) videoContainer.style.display = 'block';
+
+                    let vid = document.getElementById('videoPlayer');
+                    if (!vid && videoContainer) {
+                        vid = document.createElement('video');
+                        vid.id = 'videoPlayer';
+                        vid.className = 'raw-video-player';
+                        vid.setAttribute('playsinline', '');
+                        vid.setAttribute('webkit-playsinline', 'true');
+                        vid.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;object-fit:contain;';
+                        videoContainer.insertBefore(vid, videoContainer.firstChild || null);
+                    }
+
+                    if (vid) {
+                        vid.setAttribute('data-video-url', url);
+                        vid.style.display = '';
+
+                        if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
+                            window.hls = new Hls({ debug: false, enableWorker: true });
+                            window.hls.on(Hls.Events.ERROR, (e, d) => {
+                                console.error('[HLS Error]', d.type, d.details);
+                                if (d.fatal) {
+                                    if (d.type === Hls.ErrorTypes.NETWORK_ERROR) window.hls.startLoad();
+                                    else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) window.hls.recoverMediaError();
+                                }
+                            });
+                            window.hls.loadSource(url);
+                            window.hls.attachMedia(vid);
+                            vid.play().catch(err => console.log("Play rejected:", err));
+                        } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+                            vid.src = url;
+                            vid.play().catch(err => console.log("Play rejected:", err));
+                        } else {
+                            vid.src = url;
+                            vid.load();
+                        }
+
+                        // Re-init subtitle tracks if available
+                        if (data.subtitles && data.subtitles.length > 0) {
+                            // Remove existing tracks
+                            vid.querySelectorAll('track').forEach(t => t.remove());
+                            data.subtitles.forEach((track, i) => {
+                                if (track.file || track.src) {
+                                    const t = document.createElement('track');
+                                    t.kind = track.kind || 'subtitles';
+                                    t.label = track.label || `Track ${i + 1}`;
+                                    t.srclang = track.srclang || 'en';
+                                    t.src = track.file || track.src;
+                                    if (i === 0 || track.default) t.default = true;
+                                    vid.appendChild(t);
+                                }
+                            });
+                        }
+
+                        let ui = document.getElementById('customPlayerUI');
+                        if (ui) ui.style.display = '';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('[AJAX] Fetch error:', err);
+            });
+    }
 </script>
 {% endblock %}
