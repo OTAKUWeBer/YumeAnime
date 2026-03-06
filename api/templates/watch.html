@@ -1475,6 +1475,29 @@
         }
     });
 
+    // Shared cleanup helper — tears down ALL active players (HLS, video, embed)
+    function cleanupCurrentPlayer() {
+        // Destroy any active HLS.js instance
+        if (window.hls) {
+            try { window.hls.destroy(); } catch (e) { console.warn('[cleanup] hls destroy error:', e); }
+            window.hls = null;
+        }
+        // Pause and reset the native video element
+        const video = document.getElementById('videoPlayer');
+        if (video) {
+            try {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            } catch (e) { console.warn('[cleanup] video reset error:', e); }
+        }
+        // Clear any embed iframe so its audio/video stops
+        const embedFrame = document.getElementById('embedPlayer');
+        if (embedFrame) {
+            embedFrame.src = '';
+        }
+    }
+
     // Source Switcher Logic
     document.addEventListener('DOMContentLoaded', function () {
         const sourceBtns = document.querySelectorAll('.source-switcher-btn');
@@ -1491,6 +1514,9 @@
                 e.preventDefault();
 
                 if (!url || !masterWrapper) return;
+
+                // --- CRITICAL: tear down ALL old players before switching ---
+                cleanupCurrentPlayer();
 
                 sourceBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -1514,7 +1540,6 @@
                     let embedFrame = masterWrapper.querySelector('#embedPlayer');
                     if (embedFrame) {
                         embedFrame.style.display = 'none';
-                        embedFrame.src = '';
                     }
 
                     if (videoContainer) videoContainer.style.display = 'block';
@@ -1528,10 +1553,6 @@
                         newVideo.setAttribute('webkit-playsinline', 'true');
                         newVideo.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;';
                         if (videoContainer) videoContainer.insertBefore(newVideo, videoContainer.firstChild || null);
-                    } else {
-                        newVideo.pause();
-                        newVideo.removeAttribute('src');
-                        newVideo.load();
                     }
 
                     newVideo.setAttribute('data-video-url', url);
@@ -1542,8 +1563,6 @@
                     if (ui) ui.style.display = '';
 
                     if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
-                        if (window.hls) window.hls.destroy();
-
                         window.hls = new Hls({ debug: false, enableWorker: true });
                         window.hls.on(Hls.Events.ERROR, (e, data) => {
                             console.error('[HLS Error]', data.type, data.details);
@@ -1963,32 +1982,49 @@
                 
                 const [sourceType, sourceUrl] = e.target.value.split('|');
                 
-                // Update the video player with new source
+                // --- CRITICAL: tear down ALL old players before switching ---
+                cleanupCurrentPlayer();
+                
                 const videoContainer = document.getElementById('videoContainer');
                 const embedPlayer = document.getElementById('embedPlayer');
                 const videoPlayer = document.getElementById('videoPlayer');
                 
-                if (sourceType === 'embed' && embedPlayer) {
+                if (sourceType === 'embed') {
                     // Show embed player, hide video container
-                    videoContainer.style.display = 'none';
-                    embedPlayer.src = sourceUrl;
-                    embedPlayer.style.display = 'block';
+                    if (videoContainer) videoContainer.style.display = 'none';
+                    if (embedPlayer) {
+                        embedPlayer.src = sourceUrl;
+                        embedPlayer.style.display = 'block';
+                    }
                 } else if (sourceType === 'hls' && videoPlayer && videoContainer) {
                     // Show video container, hide embed
-                    embedPlayer.style.display = 'none';
+                    if (embedPlayer) embedPlayer.style.display = 'none';
                     videoContainer.style.display = 'block';
                     
-                    // Update video source
-                    videoPlayer.src = sourceUrl;
-                    if (videoPlayer.canPlayType('application/x-mpegURL')) {
-                        const source = videoPlayer.querySelector('source');
-                        if (source) {
-                            source.src = sourceUrl;
-                        }
+                    // Re-initialize HLS.js for m3u8 URLs
+                    if (Hls.isSupported() && (sourceUrl.includes('.m3u8') || sourceUrl.includes('/proxy/'))) {
+                        window.hls = new Hls({ debug: false, enableWorker: true });
+                        window.hls.on(Hls.Events.ERROR, (_e, data) => {
+                            console.error('[HLS Error]', data.type, data.details);
+                            if (data.fatal) {
+                                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                                    window.hls.startLoad();
+                                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                                    window.hls.recoverMediaError();
+                                }
+                            }
+                        });
+                        window.hls.loadSource(sourceUrl);
+                        window.hls.attachMedia(videoPlayer);
+                        videoPlayer.play().catch(err => console.log("Play rejected:", err));
+                    } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                        // Native Safari HLS
+                        videoPlayer.src = sourceUrl;
+                        videoPlayer.play().catch(err => console.log("Play rejected:", err));
+                    } else {
+                        videoPlayer.src = sourceUrl;
+                        videoPlayer.load();
                     }
-                    
-                    // Reload video player
-                    videoPlayer.load();
                 }
                 
                 // Mark as active in dropdown

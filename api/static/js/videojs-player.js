@@ -1783,6 +1783,11 @@ class VideoJSPlayer {
   }
 
   destroy() {
+    // Destroy HLS.js instance first (before disposing Video.js)
+    if (this.hlsInstance) {
+      this.hlsInstance.destroy()
+      this.hlsInstance = null
+    }
     if (this.player) {
       this.player.dispose()
     }
