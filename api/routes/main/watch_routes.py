@@ -1,8 +1,11 @@
 """
-Watch episode routes
+Watch episode routes — Clean URL format: /watch/<anime_id>/ep-<number>
+Server, language, and provider are resolved internally (not in URL).
 """
 
 import asyncio
+import json
+import re
 from flask import (
     Blueprint,
     request,
@@ -11,6 +14,8 @@ from flask import (
     url_for,
     render_template,
     current_app,
+    jsonify,
+    make_response,
 )
 from urllib.parse import parse_qs
 
@@ -19,229 +24,109 @@ from ...models.watchlist import get_watchlist_entry
 watch_routes_bp = Blueprint("watch_routes", __name__)
 
 
-@watch_routes_bp.route("/watch/<eps_title>", methods=["GET", "POST"])
-def watch(eps_title):
-    """Watch episode page with video player"""
-    ep_param = request.args.get("ep")
+def _get_preferred_lang():
+    """Get the user's preferred language from cookie → session → default."""
+    lang = request.cookies.get("preferred_language")
+    if lang in ("sub", "dub"):
+        return lang
+    return session.get("preferred_language", "sub")
 
-    # full slug + query
-    full_slug = (
-        f"{eps_title}?{request.query_string.decode()}"
-        if request.query_string
-        else eps_title
-    )
 
-    # Check user's preferred language setting
-    preferred_lang = "sub"  # default
-    last_server = session.get("last_used_server", "hd-2")
+def _get_preferred_provider():
+    """Get the user's preferred provider from cookie → session → default."""
+    return request.cookies.get("preferred_server") or session.get("last_used_server", None)
 
-    if "username" in session and "_id" in session:
-        try:
-            # Try to get from user settings (stored in localStorage on frontend)
-            pass
-        except Exception:
-            pass
 
-    # Parse episode number and language
-    ep_number, lang = None, preferred_lang
-    if ep_param:
-        if ep_param.startswith("watch/"):
-            # New format: watch/{provider}/{anilist_id}/{category}/{slug}
-            parts = ep_param.split("/")
-            if len(parts) >= 5:
-                lang = parts[3]  # sub or dub
-                # ep_number is the entire slug part so we don't truncate names like animepahe-1
-                ep_number = "/".join(parts[4:])
-            else:
-                ep_number = ep_param
-        else:
-            parts = ep_param.split("-", 1)
-            ep_number = parts[0]
-            if len(parts) > 1:
-                lang = parts[1]
+def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
+    """
+    Given episodes data and a target episode number, resolve the full internal
+    episode ID and provider info.
 
-    # If no episode parameter is provided, determine the best episode to watch
-    if not ep_param:
-        try:
-            # Fetch episodes list first
-            eps_title_clean = eps_title.split("?", 1)[0]
-            all_episodes = asyncio.run(current_app.ha_scraper.episodes(eps_title_clean))
-            eps_list = all_episodes.get("episodes", []) if all_episodes else []
+    Returns dict with: episode_item, episode_id, provider_name, or None.
+    """
+    eps_list = episodes_data.get("episodes", []) if episodes_data else []
+    providers_map = episodes_data.get("providers_map", {}) if episodes_data else {}
+    default_provider = episodes_data.get("default_provider", "kiwi") if episodes_data else "kiwi"
 
-            if not eps_list:
-                return render_template(
-                    "404.html", error_message="No episodes found for this anime."
-                ), 404
+    if not eps_list:
+        return None
 
-            # Default to first episode
-            target_ep = eps_list[0]
+    # Find the episode item by number
+    target_item = None
+    target_idx = None
+    for i, ep in enumerate(eps_list):
+        if str(ep.get("number", "")) == str(ep_number):
+            target_item = ep
+            target_idx = i
+            break
 
-            # Check user watchlist for progress if logged in
-            if "username" in session and "_id" in session:
-                try:
-                    user_id = session.get("_id")
-                    # Use eps_title_clean as anime_id
-                    watchlist_entry = get_watchlist_entry(user_id, eps_title_clean)
+    if target_item is None:
+        return None
 
-                    if watchlist_entry:
-                        watched_count = watchlist_entry.get("watched_episodes", 0)
-                        if watched_count > 0:
-                            # If watched 1, index 1 is Ep 2.
-                            # If watched_count is valid index, use it.
-                            if watched_count < len(eps_list):
-                                target_ep = eps_list[watched_count]
-                            else:
-                                # If completed or out of bounds, maybe show the last one?
-                                # Or keep default to 0?
-                                # Usually if completed, user might want to rewatch or just go to last.
-                                # Let's go to the last one they watched (which is index - 1)
-                                target_ep = eps_list[-1]
-                except Exception as e:
-                    current_app.logger.error(
-                        f"Error fetching watchlist entry in watch route: {e}"
-                    )
+    # Try to find the episode ID from the preferred provider
+    provider_name = preferred_provider or default_provider
 
-            # Extract the 'ep' parameter from the target episode's ID
-            target_ep_id = target_ep.get("episodeId", "")
-            if "?ep=" in target_ep_id:
-                ep_val = target_ep_id.split("?ep=")[1]
-            else:
-                ep_val = target_ep_id  # Fallback
+    # If the preferred provider doesn't exist, fall back to default
+    if provider_name not in providers_map:
+        provider_name = default_provider
 
-            return redirect(
-                url_for("main.watch_routes.watch", eps_title=eps_title, ep=ep_val)
-            )
+    return {
+        "episode_item": target_item,
+        "episode_idx": target_idx,
+        "episode_id": target_item.get("episodeId", ""),
+        "provider_name": provider_name,
+        "eps_list": eps_list,
+    }
 
-        except Exception as e:
-            current_app.logger.error(f"Error checking default episode: {e}")
-            # If anything fails, let it fall through or error out,
-            # but ideally we should have redirected.
-            pass
 
-    # If no language specified in URL, check if dub is available
-    if ep_param and "-" not in ep_param:
-        try:
-            dub_available = asyncio.run(
-                current_app.ha_scraper.is_dub_available(eps_title, ep_number)
-            )
-        except Exception:
-            pass
+def _find_episode_id_for_provider(providers_map, provider_name, ep_number, category="sub"):
+    """Find the episode ID for a specific provider and episode number."""
+    if not providers_map or provider_name not in providers_map:
+        return None
 
-    # Check if dub is available
-    try:
-        dub_available = asyncio.run(
-            current_app.ha_scraper.is_dub_available(eps_title, ep_number)
-        )
-    except Exception:
-        dub_available = False
+    provider_data = providers_map[provider_name]
+    episodes_data = provider_data.get("episodes", {})
+    cat_episodes = episodes_data.get(category, [])
 
-    # Redirect to sub if dub requested but not available
-    if lang == "dub" and not dub_available:
-        if ep_param and ep_param.startswith("watch/"):
-            new_ep_val = ep_param.replace("/dub/", "/sub/")
-            return redirect(
-                url_for("main.watch_routes.watch", eps_title=eps_title, ep=new_ep_val)
-            )
-        else:
-            return redirect(
-                url_for(
-                    "main.watch_routes.watch", eps_title=eps_title, ep=f"{ep_number}-sub"
-                )
-            )
+    for ep in cat_episodes:
+        if str(ep.get("number", "")) == str(ep_number):
+            return ep.get("id", "")
 
-    # --- Fetch available servers first ---
-    available_servers = []
-    try:
-        servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
-        print(f"[Watch] servers_data: {servers_data}")
-        if servers_data:
-            available_servers = servers_data.get(lang, [])
-    except Exception as e:
-        print(f"Error fetching servers: {e}")
+    return None
 
-    # --- Determine which server to use with fallback logic ---
-    # Check if frontend sent a preferred server via cookie/header
-    preferred_server = request.cookies.get("preferred_server", last_server)
-    selected_server = preferred_server
 
-    # If selected server not in available servers, use first available or fallback to hd-1
-    if available_servers:
-        server_names = [
-            s.get("serverName") for s in available_servers if s.get("serverName")
-        ]
-        if selected_server not in server_names and server_names:
-            selected_server = server_names[0]
-            print(f"Server {preferred_server} not available, using {selected_server}")
-    else:
-        selected_server = "hd-1"
+def _build_clean_url(anime_id, ep_number):
+    """Build a clean episode URL."""
+    return f"/watch/{anime_id}/ep-{ep_number}"
 
-    print(
-        f"Selected server: {selected_server}, Available: {[s.get('serverName') for s in available_servers]}"
-    )
 
-    # --- Fetch video data from the API ---
-    anilist_id = None
-    eps_title_clean = eps_title.split("?", 1)[0]
-    print(
-        f"[Watch] eps_title: {eps_title}, eps_title_clean: {eps_title_clean}, ep_param: {ep_param}, full_slug: {full_slug}"
-    )
-
-    # Get anime info first to resolve anilist_id
-    try:
-        anime_info_for_video = asyncio.run(
-            current_app.ha_scraper.get_anime_info(eps_title_clean)
-        )
-        if isinstance(anime_info_for_video, dict):
-            if "info" in anime_info_for_video and isinstance(
-                anime_info_for_video["info"], dict
-            ):
-                anime_for_video = anime_info_for_video["info"]
-            else:
-                anime_for_video = anime_info_for_video
-            anilist_id = anime_for_video.get("anilistId") or anime_for_video.get(
-                "alID"
-            )
-            if anilist_id:
-                try:
-                    anilist_id = int(anilist_id)
-                except (ValueError, TypeError):
-                    anilist_id = None
-        print(f"[Watch] resolved anilist_id: {anilist_id}")
-    except Exception as e:
-        print(f"[Watch] Error getting anime info: {e}")
-
+def _fetch_video_data(full_slug, lang, server, anilist_id):
+    """Fetch video data from the scraper and return structured result."""
     raw = asyncio.run(
-        current_app.ha_scraper.video(full_slug, lang, selected_server, anilist_id)
+        current_app.ha_scraper.video(full_slug, lang, server, anilist_id)
     )
 
     video_link = None
     subtitle_tracks = []
     intro = outro = None
-    video_sources = []  # All quality sources for quality selector
+    video_sources = []
     available_qualities = []
     embed_sources = []
     hls_sources = []
-    source_type = None  # "embed" or "hls"
+    source_type = None
 
     if isinstance(raw, dict):
-        # Determine source type from API response
-        source_type = raw.get("source_type")  # "embed" or "hls"
+        source_type = raw.get("source_type")
         embed_sources = raw.get("embed_sources", [])
         hls_sources = raw.get("hls_sources", raw.get("sources", []))
         video_link = raw.get("video_link")
 
-        print(f"[Watch] source_type: {source_type}, video_link: {video_link}")
-        print(f"[Watch] embed_sources: {len(embed_sources)}, hls_sources: {len(hls_sources) if isinstance(hls_sources, list) else 0}")
-        print(f"[Watch] raw keys: {raw.keys()}")
-
-        # If source_type is not set (older API), detect from available data
         if not source_type:
             if embed_sources:
                 source_type = "embed"
             elif video_link or hls_sources:
                 source_type = "hls"
 
-        # For HLS source type, try to extract video_link from sources if not available
         if source_type == "hls" and not video_link:
             sources = raw.get("sources")
             if isinstance(sources, dict):
@@ -253,9 +138,6 @@ def watch(eps_title):
                 elif isinstance(first_source, str):
                     video_link = first_source
 
-        print(f"[Watch] final video_link: {video_link}, source_type: {source_type}")
-
-        # All quality sources for frontend quality selector
         all_sources = raw.get("sources", [])
         if isinstance(all_sources, list):
             video_sources = [
@@ -263,30 +145,131 @@ def watch(eps_title):
             ]
 
         available_qualities = raw.get("available_qualities", [])
-
-        # Subtitles
         subtitle_tracks = raw.get("tracks", [])
-        print(f"[Watch] Subtitle tracks received: {len(subtitle_tracks)} tracks")
-        if subtitle_tracks:
-            print(
-                f"[Watch] First track sample: {subtitle_tracks[0] if subtitle_tracks else 'none'}"
-            )
-
-        # Intro/outro markers
         intro = raw.get("intro")
         outro = raw.get("outro")
 
-    # ✅ --- Save last used server in cache (session) ---
-    if selected_server:
-        session["last_used_server"] = selected_server
+    return {
+        "video_link": video_link,
+        "subtitle_tracks": subtitle_tracks,
+        "intro": intro,
+        "outro": outro,
+        "video_sources": video_sources,
+        "available_qualities": available_qualities,
+        "embed_sources": embed_sources,
+        "hls_sources": hls_sources,
+        "source_type": source_type,
+    }
 
-    # Fetch anime info FIRST to get anilist_id
-    eps_title_clean = eps_title.split("?", 1)[0]
+
+# ──────────────────────────────────────────────────────────────
+#  LEGACY REDIRECT: old ?ep= format → new clean URL
+# ──────────────────────────────────────────────────────────────
+
+@watch_routes_bp.route("/watch/<eps_title>", methods=["GET"])
+def watch_legacy(eps_title):
+    """Handle old URL format and redirect to clean URLs."""
+    ep_param = request.args.get("ep")
+
+    # If there's no ?ep= param, this is just /watch/<anime_id> — redirect to best episode
+    if not ep_param:
+        return _redirect_to_best_episode(eps_title)
+
+    # Try to extract episode number from old ep_param formats
+    ep_number = _extract_ep_number_from_legacy(ep_param, eps_title)
+
+    if ep_number is not None:
+        return redirect(_build_clean_url(eps_title, ep_number), code=301)
+
+    # If we can't extract, try fetching episodes to resolve
+    return _redirect_to_best_episode(eps_title)
+
+
+def _extract_ep_number_from_legacy(ep_param, anime_id):
+    """Try to extract a simple episode number from the old ?ep= format."""
+    # Format: watch/kiwi/179062/sub/animepahe-1 → extract trailing number
+    if ep_param.startswith("watch/"):
+        parts = ep_param.split("/")
+        if len(parts) >= 5:
+            slug = parts[-1]  # e.g. animepahe-1
+            num_match = re.search(r"(\d+)$", slug)
+            if num_match:
+                return int(num_match.group(1))
+
+    # Format: 12345-sub or just 12345
+    parts = ep_param.split("-", 1)
+    if parts[0].isdigit():
+        return int(parts[0])
+
+    # Try extracting trailing number from any format
+    num_match = re.search(r"(\d+)$", ep_param.split("-sub")[0].split("-dub")[0])
+    if num_match:
+        return int(num_match.group(1))
+
+    return None
+
+
+def _redirect_to_best_episode(anime_id):
+    """Redirect to the best episode to watch (first or continue-watching)."""
+    try:
+        anime_id_clean = anime_id.split("?", 1)[0]
+        all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean))
+        eps_list = all_episodes.get("episodes", []) if all_episodes else []
+
+        if not eps_list:
+            return render_template(
+                "404.html", error_message="No episodes found for this anime."
+            ), 404
+
+        # Default to first episode
+        target_ep = eps_list[0]
+
+        # Check user watchlist for progress if logged in
+        if "username" in session and "_id" in session:
+            try:
+                user_id = session.get("_id")
+                watchlist_entry = get_watchlist_entry(user_id, anime_id_clean)
+
+                if watchlist_entry:
+                    watched_count = watchlist_entry.get("watched_episodes", 0)
+                    if watched_count > 0:
+                        if watched_count < len(eps_list):
+                            target_ep = eps_list[watched_count]
+                        else:
+                            target_ep = eps_list[-1]
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error fetching watchlist entry in watch route: {e}"
+                )
+
+        ep_number = target_ep.get("number", 1)
+        return redirect(_build_clean_url(anime_id_clean, ep_number))
+
+    except Exception as e:
+        current_app.logger.error(f"Error finding best episode: {e}")
+        return render_template(
+            "404.html", error_message="An error occurred while fetching episodes."
+        ), 404
+
+
+# ──────────────────────────────────────────────────────────────
+#  MAIN CLEAN ROUTE: /watch/<anime_id>/ep-<number>
+# ──────────────────────────────────────────────────────────────
+
+@watch_routes_bp.route("/watch/<anime_id>/ep-<int:ep_number>", methods=["GET", "POST"])
+def watch(anime_id, ep_number):
+    """Watch episode page — clean URL format."""
+    # User preferences (not in URL)
+    lang = _get_preferred_lang()
+    preferred_provider = _get_preferred_provider()
+
+    # ── Fetch anime info ──
     anime_info = None
     anilist_id = None
+    anime_id_clean = anime_id.split("?", 1)[0]
 
     try:
-        anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(eps_title_clean))
+        anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(anime_id_clean))
         if isinstance(anime_info, dict):
             if "info" in anime_info and isinstance(anime_info["info"], dict):
                 anime = anime_info["info"]
@@ -298,35 +281,105 @@ def watch(eps_title):
                     anilist_id = int(anilist_id)
                 except (ValueError, TypeError):
                     anilist_id = None
-        print(f"[Watch] resolved anilist_id from anime_info: {anilist_id}")
     except Exception as e:
-        print(f"[Watch] Error getting anime info: {e}")
+        current_app.logger.error(f"[Watch] Error getting anime info: {e}")
 
-    # Fetch episodes list using anilist_id if available
+    # ── Fetch episodes list ──
     try:
         if anilist_id:
             all_episodes = asyncio.run(
                 current_app.ha_scraper.episodes(str(anilist_id))
             )
         else:
-            all_episodes = asyncio.run(current_app.ha_scraper.episodes(eps_title_clean))
+            all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean))
     except Exception:
         all_episodes = None
 
+    eps_list = all_episodes.get("episodes", []) if all_episodes else []
+    providers_map = all_episodes.get("providers_map", {}) if all_episodes else {}
+    default_provider = all_episodes.get("default_provider", "kiwi") if all_episodes else "kiwi"
+
+    if not eps_list:
+        return render_template(
+            "404.html", error_message="No episodes found for this anime."
+        ), 404
+
+    # ── Resolve episode ──
+    resolved = _resolve_episode(all_episodes, ep_number, preferred_provider)
+    if not resolved:
+        return render_template(
+            "404.html", error_message=f"Episode {ep_number} not found."
+        ), 404
+
+    current_item = resolved["episode_item"]
+    current_idx = resolved["episode_idx"]
+    episode_id = resolved["episode_id"]
+    provider_name = resolved["provider_name"]
+
+    # Find the episode ID for the chosen provider specifically
+    provider_ep_id = _find_episode_id_for_provider(
+        providers_map, provider_name, ep_number, lang
+    )
+    if provider_ep_id:
+        episode_id = provider_ep_id
+
+    # If provider episode ID format is watch/..., use it directly
+    # Otherwise construct the full slug
+    if episode_id.startswith("watch/"):
+        # Replace category in the ID to match the currently selected language
+        parts = episode_id.split("/")
+        if len(parts) >= 5:
+            parts[3] = lang  # Set category to sub/dub
+        full_slug = "/".join(parts)
+    else:
+        full_slug = episode_id
+
+    # ── Check dub availability ──
     try:
-        # Also try to fetch next episode schedule for the watch page
-        get_schedule_method = getattr(
-            current_app.ha_scraper, "next_episode_schedule", None
-        )
-        next_episode_schedule = (
-            asyncio.run(get_schedule_method(eps_title_clean))
-            if get_schedule_method
-            else None
+        dub_available = asyncio.run(
+            current_app.ha_scraper.is_dub_available(anime_id_clean, episode_id)
         )
     except Exception:
-        anime_info = None
-        next_episode_schedule = None
+        dub_available = False
 
+    # If dub requested but not available, fall back to sub
+    if lang == "dub" and not dub_available:
+        lang = "sub"
+        if full_slug.startswith("watch/"):
+            parts = full_slug.split("/")
+            if len(parts) >= 5:
+                parts[3] = "sub"
+            full_slug = "/".join(parts)
+
+    # ── Fetch available servers ──
+    available_servers = []
+    try:
+        servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
+        if servers_data:
+            available_servers = servers_data.get(lang, [])
+    except Exception:
+        pass
+
+    # Determine which server to use
+    selected_server = preferred_provider or default_provider
+    if available_servers:
+        server_names = [
+            s.get("serverName") for s in available_servers if s.get("serverName")
+        ]
+        if selected_server not in server_names and server_names:
+            selected_server = server_names[0]
+    else:
+        if not selected_server:
+            selected_server = "hd-1"
+
+    # ── Fetch video data ──
+    video_data = _fetch_video_data(full_slug, lang, selected_server, anilist_id)
+
+    # Save last used server
+    if selected_server:
+        session["last_used_server"] = selected_server
+
+    # ── Resolve anime info dict ──
     if (
         isinstance(anime_info, dict)
         and "info" in anime_info
@@ -336,8 +389,21 @@ def watch(eps_title):
     else:
         anime = anime_info or {}
 
+    # ── Fetch next episode schedule ──
+    next_episode_schedule = None
+    try:
+        get_schedule_method = getattr(
+            current_app.ha_scraper, "next_episode_schedule", None
+        )
+        next_episode_schedule = (
+            asyncio.run(get_schedule_method(anime_id_clean))
+            if get_schedule_method
+            else None
+        )
+    except Exception:
+        next_episode_schedule = None
 
-
+    # Fallback schedule from AniList
     needs_fallback = False
     if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
         needs_fallback = True
@@ -353,17 +419,17 @@ def watch(eps_title):
                 needs_fallback = True
 
     if needs_fallback:
-        anilist_id = anime.get("anilistId") or anime.get("alID")
-        mal_id = anime.get("malId") or anime.get("malID")
-        anime_title = anime.get("title")
+        al_id = anime.get("anilistId") or anime.get("alID") if isinstance(anime, dict) else None
+        mal_id = anime.get("malId") or anime.get("malID") if isinstance(anime, dict) else None
+        anime_title = anime.get("title") if isinstance(anime, dict) else None
 
-        if anilist_id or mal_id or anime_title:
+        if al_id or mal_id or anime_title:
             try:
                 from api.utils.helpers import fetch_anilist_next_episode
 
                 async def fetch_fallback():
                     return await fetch_anilist_next_episode(
-                        anilist_id=anilist_id,
+                        anilist_id=al_id,
                         mal_id=mal_id,
                         search_title=anime_title,
                     )
@@ -380,157 +446,170 @@ def watch(eps_title):
                 current_app.logger.error(
                     f"Failed to fetch fallback schedule from AniList in watch: {e}"
                 )
-    # Build previous/next episode URLs
+
+    # ── Build prev/next episode info ──
+    episode_number = current_item.get("number")
+    episode_title = current_item.get("title")
+    Episode = str(episode_number) if episode_number else "Special"
+
     prev_episode_url = next_episode_url = None
     prev_episode_number = next_episode_number = None
-    Episode = "Special"
-    episode_number = None
-    eps_list = all_episodes.get("episodes", []) if all_episodes else []
 
-    ep_base = ep_number or (ep_param.split("-", 1)[0] if ep_param else None)
-    current_idx = None
+    if current_idx > 0:
+        prev_ep = eps_list[current_idx - 1]
+        prev_episode_number = prev_ep.get("number")
+        prev_episode_url = _build_clean_url(anime_id_clean, prev_episode_number)
 
-    if ep_base and eps_list:
-        for i, item in enumerate(eps_list):
-            eid = item.get("episodeId", "")
+    if current_idx < len(eps_list) - 1:
+        next_ep = eps_list[current_idx + 1]
+        next_episode_number = next_ep.get("number")
+        next_episode_url = _build_clean_url(anime_id_clean, next_episode_number)
 
-            # Try to extract episode value from different formats:
-            # 1. watch/kiwi/178005/sub/animepahe-1 -> extract animepahe-1
-            # 2. anime_slug?ep=12345 -> extract 12345
-            # 3. plain id
-
-            if eid.startswith("watch/"):
-                # New format: watch/{provider}/{anilist_id}/{category}/{slug}
-                parts = eid.split("/")
-                if len(parts) >= 5:
-                    val = "/".join(parts[4:])  # slug part
-                else:
-                    val = eid
-            elif "?" in eid:
-                # Old format with query string
-                val = (
-                    parse_qs(eid.split("?", 1)[1]).get("ep", [None])[0]
-                    if "?" in eid
-                    else eid
-                )
-            else:
-                val = eid
-
-            if str(val) == str(ep_base):
-                current_idx = i
-                break
-
-        # Fallback: if slug didn't match (cross-provider switch, e.g. zoro-1 vs animepahe-1),
-        # extract the episode number from the slug and match by number
-        if current_idx is None:
-            import re
-            num_match = re.search(r"(\d+)$", str(ep_base))
-            if num_match:
-                target_num = int(num_match.group(1))
-                for i, item in enumerate(eps_list):
-                    if item.get("number") == target_num:
-                        current_idx = i
-                        break
-
-    if current_idx is not None:
-        current_item = eps_list[current_idx]
-        episode_number = current_item.get("number")
-        Episode = str(episode_number) if episode_number else "Special"
-        episode_title = current_item.get("title")
-
-        def build_episode_url(item_idx):
-            item = eps_list[item_idx]
-            eid = item.get("episodeId", "")
-
-            # Handle new format: watch/{provider}/{anilist_id}/{category}/{slug}
-            if eid.startswith("watch/"):
-                parts = eid.split("/")
-                if len(parts) >= 5:
-                    if lang in ["sub", "dub"] and parts[3] in ["sub", "dub"]:
-                        parts[3] = lang
-                    ep_val = "/".join(parts)
-                else:
-                    ep_val = eid
-                return url_for("main.watch_routes.watch", eps_title=eps_title_clean, ep=ep_val)
-
-            elif "?" in eid:
-                ep_val = (
-                    parse_qs(eid.split("?", 1)[1]).get("ep", [None])[0]
-                    if "?" in eid
-                    else eid
-                )
-                slug = eid.split("?", 1)[0] if "?" in eid else eps_title_clean
-            else:
-                ep_val = eid
-                slug = eps_title_clean
-
-            return (
-                url_for(
-                    "main.watch_routes.watch", eps_title=slug, ep=f"{ep_val}-{lang}"
-                )
-                if ep_val
-                else None
-            )
-
-        if current_idx > 0:
-            prev_episode_url = build_episode_url(current_idx - 1)
-            prev_episode_number = eps_list[current_idx - 1].get("number")
-        if current_idx < len(eps_list) - 1:
-            next_episode_url = build_episode_url(current_idx + 1)
-            next_episode_number = eps_list[current_idx + 1].get("number")
-
-    # Language switch URLs for Miruro V2 slugs
-    def build_lang_url(target_lang):
-        if not ep_number:
-            return None
-        if "watch/" in ep_param:
-            # Replace the appropriate /sub/ or /dub/ segment in the Miruro slug
-            current_lang = "dub" if "/dub/" in ep_param else "sub"
-            new_ep_val = ep_param.replace(f"/{current_lang}/", f"/{target_lang}/")
-            return url_for("main.watch_routes.watch", eps_title=eps_title_clean, ep=new_ep_val)
-        else:
-            return url_for("main.watch_routes.watch", eps_title=eps_title_clean, ep=f"{ep_number}-{target_lang}")
-
-    sub_url = build_lang_url("sub")
-    dub_url = build_lang_url("dub") if dub_available else None
-
-    # External player link (removed - using Miruro only)
-    external_link = ""
-
-    # Render watch page
+    # ── Render ──
     try:
         return render_template(
             "watch.html",
-            back_to_ep=eps_title_clean,
-            video_link=video_link,
-            subtitles=subtitle_tracks,
-            intro=intro,
-            outro=outro,
+            back_to_ep=anime_id_clean,
+            anime_id=anime_id_clean,
+            video_link=video_data["video_link"],
+            subtitles=video_data["subtitle_tracks"],
+            intro=video_data["intro"],
+            outro=video_data["outro"],
             Episode=Episode,
             episode_number=episode_number,
-            episode_title=episode_title if current_idx is not None else None,
+            episode_title=episode_title,
             prev_episode_url=prev_episode_url,
             next_episode_url=next_episode_url,
             prev_episode_number=prev_episode_number,
             next_episode_number=next_episode_number,
-            eps_title=eps_title,
+            eps_title=anime_id_clean,
             lang=lang,
             episodes=all_episodes,
             dub_available=dub_available,
-            sub_url=sub_url,
-            dub_url=dub_url,
             selected_server=selected_server,
             available_servers=available_servers,
-            external_link=external_link,
             next_episode_schedule=next_episode_schedule,
-            video_sources=video_sources,
-            available_qualities=available_qualities,
-            source_type=source_type,
-            embed_sources=embed_sources,
-            hls_sources=hls_sources,
+            video_sources=video_data["video_sources"],
+            available_qualities=video_data["available_qualities"],
+            source_type=video_data["source_type"],
+            embed_sources=video_data["embed_sources"],
+            hls_sources=video_data["hls_sources"],
         )
     except Exception as e:
         print("watch error:", e)
         return render_template(
             "404.html", error_message="An error occurred while fetching the episode."
         )
+
+
+# ──────────────────────────────────────────────────────────────
+#  AJAX ENDPOINT: Switch server/language without page reload
+# ──────────────────────────────────────────────────────────────
+
+@watch_routes_bp.route("/api/watch/sources", methods=["POST"])
+def get_watch_sources():
+    """
+    AJAX endpoint for switching server/language/provider without changing the URL.
+    Accepts JSON: { anime_id, episode_number, language, provider }
+    Returns JSON with video sources data.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
+
+    anime_id = data.get("anime_id")
+    ep_number = data.get("episode_number")
+    lang = data.get("language", "sub")
+    provider = data.get("provider")
+
+    if not anime_id or ep_number is None:
+        return jsonify({"error": "Missing anime_id or episode_number"}), 400
+
+    anime_id_clean = str(anime_id).split("?", 1)[0]
+
+    # Resolve anilist_id
+    anilist_id = None
+    try:
+        anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(anime_id_clean))
+        if isinstance(anime_info, dict):
+            info = anime_info.get("info", anime_info)
+            if isinstance(info, dict):
+                anilist_id = info.get("anilistId") or info.get("alID")
+                if anilist_id:
+                    anilist_id = int(anilist_id)
+    except Exception:
+        pass
+
+    # Fetch episodes
+    try:
+        if anilist_id:
+            all_episodes = asyncio.run(
+                current_app.ha_scraper.episodes(str(anilist_id))
+            )
+        else:
+            all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean))
+    except Exception:
+        return jsonify({"error": "Failed to fetch episodes"}), 500
+
+    providers_map = all_episodes.get("providers_map", {}) if all_episodes else {}
+    default_provider = all_episodes.get("default_provider", "kiwi") if all_episodes else "kiwi"
+
+    # Resolve provider
+    provider_name = provider or default_provider
+    if provider_name not in providers_map:
+        provider_name = default_provider
+
+    # Find episode ID for this provider
+    episode_id = _find_episode_id_for_provider(
+        providers_map, provider_name, ep_number, lang
+    )
+
+    # Fallback: try the default episode list
+    if not episode_id:
+        resolved = _resolve_episode(all_episodes, ep_number, provider_name)
+        if resolved:
+            episode_id = resolved["episode_id"]
+
+    if not episode_id:
+        return jsonify({"error": f"Episode {ep_number} not found"}), 404
+
+    # Build full slug
+    if episode_id.startswith("watch/"):
+        parts = episode_id.split("/")
+        if len(parts) >= 5:
+            parts[3] = lang
+        full_slug = "/".join(parts)
+    else:
+        full_slug = episode_id
+
+    # Determine server
+    selected_server = provider_name
+
+    # Fetch video data
+    video_data = _fetch_video_data(full_slug, lang, selected_server, anilist_id)
+
+    # Save preferences
+    if selected_server:
+        session["last_used_server"] = selected_server
+
+    # Build response
+    response_data = {
+        "video_link": video_data["video_link"],
+        "subtitles": video_data["subtitle_tracks"],
+        "intro": video_data["intro"],
+        "outro": video_data["outro"],
+        "source_type": video_data["source_type"],
+        "embed_sources": video_data["embed_sources"],
+        "hls_sources": video_data["hls_sources"],
+        "video_sources": video_data["video_sources"],
+        "available_qualities": video_data["available_qualities"],
+        "provider": provider_name,
+        "language": lang,
+    }
+
+    resp = make_response(jsonify(response_data))
+    # Save preferences in cookies too
+    resp.set_cookie("preferred_language", lang, max_age=365*24*60*60, samesite="Lax")
+    resp.set_cookie("preferred_server", provider_name, max_age=365*24*60*60, samesite="Lax")
+
+    return resp

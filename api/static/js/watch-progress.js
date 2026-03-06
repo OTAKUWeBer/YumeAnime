@@ -72,12 +72,21 @@ class WatchProgressManager {
       return watchLayout.dataset.animeId;
     }
     const path = window.location.pathname
-    // Matches /watch/anime-slug
+    // New format: /watch/<anime_id>/ep-<N>
+    const newMatch = path.match(/\/watch\/([^\/]+)\/ep-/)
+    if (newMatch) return newMatch[1]
+    // Old format: /watch/<anime_slug>
     const match = path.match(/\/watch\/([^?\/]+)/)
     return match ? match[1] : null
   }
 
   extractEpisodeId() {
+    // New format: /watch/<anime_id>/ep-<N> -> use episode number as ID
+    const path = window.location.pathname
+    const newMatch = path.match(/\/watch\/[^\/]+\/ep-(\d+)/)
+    if (newMatch) return newMatch[1]
+
+    // Fallback: old ?ep= format
     const urlParams = new URLSearchParams(window.location.search)
     const ep = urlParams.get("ep")
     if (!ep) return null
@@ -85,11 +94,15 @@ class WatchProgressManager {
   }
 
   extractEpisodeNumber() {
-    // Priority: URL param -> DOM attribute -> Regex fallback
+    // New format: /watch/<anime_id>/ep-<N>
+    const path = window.location.pathname
+    const newMatch = path.match(/\/watch\/[^\/]+\/ep-(\d+)/)
+    if (newMatch) return parseInt(newMatch[1], 10)
+
+    // Fallback: check URL param
     const urlParams = new URLSearchParams(window.location.search)
     const ep = urlParams.get("ep")
     if (ep) {
-      // "4-sub" -> 4
       const parts = ep.split('-');
       if (parts.length > 0 && !isNaN(parts[0])) {
         return parseFloat(parts[0]);
@@ -106,9 +119,8 @@ class WatchProgressManager {
   }
 
   getEpisodeKey(animeId, episodeId) {
-    const urlParams = new URLSearchParams(window.location.search)
-    const ep = urlParams.get("ep")
-    const langType = ep && ep.includes("-") ? ep.split("-").pop() : "default"
+    // Use episode number as key — language is not in URL anymore
+    const langType = (window._watchState && window._watchState.language) || 'sub'
     return `${animeId}_${episodeId}_${langType}`
   }
 
