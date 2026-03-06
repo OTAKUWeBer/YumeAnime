@@ -420,6 +420,18 @@ def watch(eps_title):
                 current_idx = i
                 break
 
+        # Fallback: if slug didn't match (cross-provider switch, e.g. zoro-1 vs animepahe-1),
+        # extract the episode number from the slug and match by number
+        if current_idx is None:
+            import re
+            num_match = re.search(r"(\d+)$", str(ep_base))
+            if num_match:
+                target_num = int(num_match.group(1))
+                for i, item in enumerate(eps_list):
+                    if item.get("number") == target_num:
+                        current_idx = i
+                        break
+
     if current_idx is not None:
         current_item = eps_list[current_idx]
         episode_number = current_item.get("number")
