@@ -15,6 +15,21 @@ class MiruroSearchService:
     def __init__(self, client: MiruroBaseClient):
         self.client = client
 
+    @staticmethod
+    def _is_valid_result(anime: Dict[str, Any]) -> bool:
+        """Filter out empty/useless anime entries"""
+        name = anime.get("name", "")
+        if not name or name == "Unknown":
+            return False
+        if not anime.get("poster"):
+            return False
+        eps = anime.get("episodes") or {}
+        sub = eps.get("sub", 0) or 0
+        released = eps.get("released", 0) or 0
+        if sub == 0 and released == 0:
+            return False
+        return True
+
     def _normalize_search_result(self, item: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize a Miruro search result to standard shape"""
         title = item.get("title", {}) or {}
@@ -81,7 +96,10 @@ class MiruroSearchService:
         has_next = resp.get("hasNextPage", False)
         per_page = resp.get("perPage", 20)
 
-        animes = [self._normalize_search_result(item) for item in filtered_results]
+        animes = [
+            a for a in (self._normalize_search_result(item) for item in filtered_results)
+            if self._is_valid_result(a)
+        ]
 
         total_pages = max(1, (total + per_page - 1) // per_page) if total else 1
 
@@ -109,15 +127,19 @@ class MiruroSearchService:
             if not s.get("isAdult", False) and "Hentai" not in s.get("genres", [])
         ]
 
-        # Normalize each suggestion to standard shape
+        # Normalize each suggestion to standard shape, skip empty entries
         normalized = []
         for s in filtered_suggestions:
+            name = s.get("title") or s.get("title_romaji") or ""
+            poster = s.get("poster") or ""
+            if not name or name == "Unknown" or not poster:
+                continue
             normalized.append({
                 "id": str(s.get("id", "")),
                 "anilistId": s.get("id"),
-                "name": s.get("title") or s.get("title_romaji") or "Unknown",
+                "name": name,
                 "jname": s.get("title_romaji") or "",
-                "poster": s.get("poster") or "",
+                "poster": poster,
                 "moreInfo": [
                     s.get("format") or "",
                     s.get("status") or "",
@@ -142,7 +164,10 @@ class MiruroSearchService:
             item for item in results 
             if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
         ]
-        animes = [self._normalize_search_result(item) for item in filtered_results]
+        animes = [
+            a for a in (self._normalize_search_result(item) for item in filtered_results)
+            if self._is_valid_result(a)
+        ]
         
         return {
             "animes": animes,
