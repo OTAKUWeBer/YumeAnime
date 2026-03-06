@@ -45,6 +45,7 @@ class MiruroSourcesService:
         """
         Fetch streaming sources from Miruro /watch/{provider}/{anilistId}/{category}/{slug} endpoint.
         Returns ALL quality options for the frontend quality selector.
+        For the 'zoro' provider, constructs a megaplay.buzz embed URL directly.
         """
         # Try to parse the new episode ID format first
         parsed = self._parse_episode_id(episode_id)
@@ -55,7 +56,68 @@ class MiruroSourcesService:
             category = parsed["category"]
             slug = parsed["slug"]
 
-            # Use new /watch endpoint
+            # --- Zoro provider: direct megaplay.buzz embed ---
+            if provider == "zoro":
+                # The slug is like 'zoro-1' — extract the episode number
+                # then look up the actual ep ID from the episodes API
+                import re
+                ep_num_match = re.search(r"(\d+)$", slug)
+                ep_number = int(ep_num_match.group(1)) if ep_num_match else None
+
+                embed_ep_id = None
+                if ep_number is not None and anilist_id:
+                    try:
+                        # Fetch episodes from the API to get the zoro url field
+                        episodes_resp = await self.client._get(f"episodes/{anilist_id}")
+                        if episodes_resp:
+                            zoro_data = episodes_resp.get("providers", {}).get("zoro", {})
+                            zoro_eps = zoro_data.get("episodes", {}).get(category, []) or []
+                            for ep in zoro_eps:
+                                if ep.get("number") == ep_number:
+                                    ep_url = ep.get("url", "")
+                                    if "?ep=" in ep_url:
+                                        embed_ep_id = ep_url.split("?ep=")[1]
+                                    break
+                    except Exception as e:
+                        logger.warning(f"[MiruroSources] Failed to fetch zoro ep ID: {e}")
+
+                if not embed_ep_id:
+                    logger.warning(
+                        f"[MiruroSources] Could not resolve zoro ep ID for slug={slug}, ep_number={ep_number}"
+                    )
+                    return {
+                        "error": "no_sources",
+                        "message": "Could not resolve zoro episode ID for embed",
+                    }
+
+                embed_url = f"https://megaplay.buzz/stream/s-2/{embed_ep_id}/{category}"
+                logger.info(
+                    f"[MiruroSources] Zoro embed: {embed_url}"
+                )
+                embed_sources = [
+                    {
+                        "url": embed_url,
+                        "quality": "default",
+                        "label": "Megaplay (Embed)",
+                        "type": "embed",
+                    }
+                ]
+                return {
+                    "sources": [],
+                    "tracks": [],
+                    "intro": None,
+                    "outro": None,
+                    "headers": {},
+                    "provider": "zoro",
+                    "download": "",
+                    "embed_sources": embed_sources,
+                    "hls_sources": [],
+                    "source_type": "embed",
+                    "available_qualities": [],
+                    "video_link": embed_url,
+                }
+
+            # Use new /watch endpoint for other providers
             endpoint = f"watch/{provider}/{anilist_id}/{category}/{slug}"
             resp = await self.client._get(endpoint)
         else:
