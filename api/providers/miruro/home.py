@@ -117,8 +117,6 @@ class MiruroHomeService:
                 name = anime.get("name", "")
                 if not name or name == "Unknown":
                     return False
-                if not anime.get("poster"):
-                    return False
                 eps = anime.get("episodes") or {}
                 sub = eps.get("sub", 0) or 0
                 released = eps.get("released", 0) or 0
