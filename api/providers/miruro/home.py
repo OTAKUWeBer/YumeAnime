@@ -112,6 +112,21 @@ class MiruroHomeService:
                     if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
                 ]
 
+            def is_valid_entry(anime):
+                """Filter out empty/useless anime entries"""
+                name = anime.get("name", "")
+                if not name or name == "Unknown":
+                    return False
+                if not anime.get("poster"):
+                    return False
+                eps = anime.get("episodes") or {}
+                sub = eps.get("sub", 0) or 0
+                released = eps.get("released", 0) or 0
+                # Keep if it has episodes OR is upcoming (nextAiringEpisode set released > 0)
+                if sub == 0 and released == 0:
+                    return False
+                return True
+
             spotlight_items = filter_adult(safe_results(spotlight_resp))
             trending_items = filter_adult(safe_results(trending_resp))
             popular_items = filter_adult(safe_results(popular_resp))
@@ -119,26 +134,34 @@ class MiruroHomeService:
 
             # spotlightAnimes = top trending (up to 10)
             spotlight = [
-                self._normalize_spotlight(item, i + 1) 
-                for i, item in enumerate(spotlight_items)
+                a for a in (
+                    self._normalize_spotlight(item, i + 1) 
+                    for i, item in enumerate(spotlight_items)
+                ) if is_valid_entry(a)
             ]
 
             # trendingAnimes = all trending
             trending = [
-                self._normalize_anime(item, i + 1) 
-                for i, item in enumerate(trending_items)
+                a for a in (
+                    self._normalize_anime(item, i + 1) 
+                    for i, item in enumerate(trending_items)
+                ) if is_valid_entry(a)
             ]
 
             # mostPopularAnimes = popular
             popular = [
-                self._normalize_anime(item, i + 1)
-                for i, item in enumerate(popular_items)
+                a for a in (
+                    self._normalize_anime(item, i + 1)
+                    for i, item in enumerate(popular_items)
+                ) if is_valid_entry(a)
             ]
 
             # latestEpisodeAnimes = recent
             latest = [
-                self._normalize_anime(item, i + 1)
-                for i, item in enumerate(recent_items)
+                a for a in (
+                    self._normalize_anime(item, i + 1)
+                    for i, item in enumerate(recent_items)
+                ) if is_valid_entry(a)
             ]
 
             # Add episode count annotations (standard home service)

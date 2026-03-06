@@ -31,19 +31,31 @@ def genre(genre_name):
             anime_id = anime.get("id")
             if not anime_id:
                 continue
+
+            name = anime.get("name") or anime.get("title") or ""
+            poster = anime.get("poster") or anime.get("image") or ""
+            eps = anime.get("episodes") or {}
+            sub = eps.get("sub") if eps else None
+            dub = eps.get("dub") if eps else None
+
+            # Skip entries with no useful data
+            if (not name or name == "Unknown") and not poster:
+                continue
+            if not poster and not sub and not dub:
+                continue
                 
             # Map all required fields for the template
             mapped_anime = {
                 "id": anime_id,
-                "name": anime.get("name") or anime.get("title") or anime_id,
+                "name": name or anime_id,
                 "jname": anime.get("jname") or anime.get("japanese_name") or "",
-                "poster": anime.get("poster") or anime.get("image") or "",
+                "poster": poster,
                 "duration": anime.get("duration") or "N/A",
                 "type": anime.get("type") or "Unknown",
                 "rating": anime.get("rating"),
                 "episodes": {
-                    "sub": anime.get("episodes", {}).get("sub") if anime.get("episodes") else None,
-                    "dub": anime.get("episodes", {}).get("dub") if anime.get("episodes") else None
+                    "sub": sub,
+                    "dub": dub
                 }
             }
             genre_data['animes'].append(mapped_anime)
@@ -76,19 +88,31 @@ def category(category_name):
             anime_id = anime.get("id")
             if not anime_id:
                 continue
+
+            name = anime.get("name") or anime.get("title") or ""
+            poster = anime.get("poster") or anime.get("image") or ""
+            eps = anime.get("episodes") or {}
+            sub = eps.get("sub") if eps else None
+            dub = eps.get("dub") if eps else None
+
+            # Skip entries with no useful data
+            if (not name or name == "Unknown") and not poster:
+                continue
+            if not poster and not sub and not dub:
+                continue
                 
             # Map all required fields for the template
             mapped_anime = {
                 "id": anime_id,
-                "name": anime.get("name") or anime.get("title") or anime_id,
+                "name": name or anime_id,
                 "jname": anime.get("jname") or anime.get("japanese_name") or "",
-                "poster": anime.get("poster") or anime.get("image") or "",
+                "poster": poster,
                 "duration": anime.get("duration") or "N/A",
                 "type": anime.get("type") or "Unknown",
                 "rating": anime.get("rating"),
                 "episodes": {
-                    "sub": anime.get("episodes", {}).get("sub") if anime.get("episodes") else None,
-                    "dub": anime.get("episodes", {}).get("dub") if anime.get("episodes") else None
+                    "sub": sub,
+                    "dub": dub
                 }
             }
             category_data['animes'].append(mapped_anime)

@@ -26,13 +26,21 @@ def search():
             if not name:
                 continue
 
+            poster = anime.get("poster") or anime.get("image") or ""
             episodes = anime.get("episodes") or {}
+            sub = episodes.get("sub") if episodes else None
+            dub = episodes.get("dub") if episodes else None
+
+            # Skip entries with no poster and no episodes (empty/useless entries)
+            if not poster and not sub and not dub:
+                continue
+
             mapped[name] = {
                 "link": f"/anime/{anime.get('id')}",
-                "image_url": anime.get("poster") or anime.get("image") or "",
+                "image_url": poster,
                 "episodes": {
-                    "sub": episodes.get("sub") if episodes else None,
-                    "dub": episodes.get("dub") if episodes else None,
+                    "sub": sub,
+                    "dub": dub,
                 }
             }
 
