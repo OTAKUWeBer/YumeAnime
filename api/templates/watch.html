@@ -13,6 +13,34 @@
         align-items: stretch;
     }
 
+    @media (min-width: 1025px) {
+        .watch-main {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 0 var(--space-xl);
+            align-items: start;
+        }
+
+        .watch-main>.episode-sidebar {
+            grid-column: 1;
+            grid-row: 1 / span 20;
+            position: sticky !important;
+            top: 80px !important;
+            height: calc(100vh - 100px) !important;
+            max-height: calc(100vh - 100px) !important;
+            margin-top: 0 !important;
+        }
+
+        .watch-main> :not(.episode-sidebar) {
+            grid-column: 2;
+        }
+
+        .episode-sidebar-list {
+            max-height: none !important;
+            flex: 1;
+        }
+    }
+
     @media (max-width: 1024px) {
         .watch-layout {
             gap: var(--space-md);
