@@ -204,17 +204,26 @@ class MiruroSourcesService:
                     }
                 )
 
-        # Sort HLS by quality: 1080p > 720p > 480p > 360p
+        # Filter sources: only show streams > 700p
+        # For HLS: use height field
+        hls_sources = [
+            s for s in hls_sources 
+            if s.get("height", 0) > 700 or (s.get("height", 0) == 0 and "480" not in s.get("quality", "").lower() and "360" not in s.get("quality", "").lower())
+        ]
+        
+        # For embed sources: filter based on quality string (exclude low resolutions)
+        embed_sources = [
+            s for s in embed_sources 
+            if not any(low_res in s.get("quality", "").lower() for low_res in ["480", "360", "240", "144"])
+        ]
+
+        # Sort HLS by quality: 1080p > 720p
         def quality_sort_key(s):
             q = s.get("quality", "").lower()
             if "1080" in q:
                 return 0
             if "720" in q:
                 return 1
-            if "480" in q:
-                return 2
-            if "360" in q:
-                return 3
             return 4
 
         hls_sources.sort(key=quality_sort_key)
