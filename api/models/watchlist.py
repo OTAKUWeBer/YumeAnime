@@ -378,42 +378,37 @@ def search_user_watchlist(user_id: int, query: str, limit: int = 20) -> List[Dic
         return [w for w in wl if query.lower() in (w.get("anime_title") or "").lower()][:limit]
 
 def get_watchlist_stats(user_id: int) -> Dict[str, Any]:
-    """Produce per-user stats by unwinding the user's watchlist array."""
+    """Produce per-user stats by counting unique anime across all statuses."""
     try:
-        pipeline = [
-            {"$match": {"_id": user_id}},
-            {"$unwind": {"path": "$watchlist", "preserveNullAndEmptyArrays": True}},
-            {"$group": {
-                "_id": "$watchlist.status",
-                "count": {"$sum": {"$cond": [{"$ifNull": ["$watchlist", False]}, 1, 0]}},
-                "watched_episodes": {"$sum": {"$ifNull": ["$watchlist.watched_episodes", 0]}}
-            }}
-        ]
+        # Get the user's full watchlist document
+        user_doc = watchlist_collection.find_one({"_id": user_id}, {"watchlist": 1})
+        watchlist = user_doc.get("watchlist", []) or [] if user_doc else []
         
-        stats = list(watchlist_collection.aggregate(pipeline))
         formatted = {
             "watching": 0,
             "completed": 0,
+            "on_hold": 0,
             "paused": 0,
             "dropped": 0,
             "plan_to_watch": 0,
-            "total_anime": 0,
-            "total_episodes": 0,
-            "watched_episodes": 0
+            "watched_episodes": 0,
         }
         
-        for s in stats:
-            status = s["_id"]
-            if status is None:  # handle edge cases
+        seen_ids = set()
+        for entry in watchlist:
+            if not isinstance(entry, dict):
                 continue
-            if status in formatted:
-                formatted[status] = s["count"]
-                formatted["watched_episodes"] += s["watched_episodes"]
+            anime_id = entry.get("anime_id")
+            if anime_id:
+                seen_ids.add(anime_id)
+            status = entry.get("status")
+            if status and status in formatted:
+                formatted[status] += 1
+            formatted["watched_episodes"] += entry.get("watched_episodes", 0) or 0
         
-        formatted["total_anime"] = sum([
-            formatted["watching"], formatted["completed"],
-            formatted["paused"], formatted["dropped"], formatted["plan_to_watch"]
-        ])
+        total = len(seen_ids)
+        formatted["total_anime"] = total
+        formatted["total"] = total  # alias for frontend compatibility
         
         return formatted
     except Exception as e:
@@ -421,11 +416,12 @@ def get_watchlist_stats(user_id: int) -> Dict[str, Any]:
         return {
             "watching": 0,
             "completed": 0,
+            "on_hold": 0,
             "paused": 0,
             "dropped": 0,
             "plan_to_watch": 0,
             "total_anime": 0,
-            "total_episodes": 0,
+            "total": 0,
             "watched_episodes": 0
         }
 

@@ -414,6 +414,13 @@
                             if (total > 0) {
                                 progressBar.style.width = `${Math.min(100, (count / total * 100))}%`;
                             }
+
+                            // Update the button handlers so next click works without refreshing
+                            const updateBtns = item.querySelectorAll('.watchlist-item-progress button');
+                            if (updateBtns.length >= 2) {
+                                updateBtns[0].setAttribute('onclick', `updateEpisodes('${animeId}', ${count - 1})`);
+                                updateBtns[1].setAttribute('onclick', `updateEpisodes('${animeId}', ${count + 1})`);
+                            }
                         }
                     }
                     fetchStats();

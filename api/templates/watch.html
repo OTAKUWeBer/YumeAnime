@@ -954,7 +954,7 @@
 
         <!-- Main -->
         <div class="watch-main">
-            <div class="video-wrapper paused" id="video-wrapper">
+            <div class="video-wrapper paused" id="video-wrapper" style="position: relative;">
                 {% if source_type == 'embed' and embed_sources %}
                 <!-- Embed iframe player (default) -->
                 <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
@@ -1582,8 +1582,89 @@
     animeId: "{{ anime_id }}"
     };
 
-    function initWatchlistButtons() {
-    }
+    function initWatchlistButtons() { }
+
+    // ─── Auto Resume System (silent) ─────────────────────────────────────────
+    (function initAutoResume() {
+        const pathMatch = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
+        if (!pathMatch) return;
+
+        const animeId = pathMatch[1];
+        const epNum = pathMatch[2];
+        const storageKey = `yumeResume_${animeId}_ep${epNum}`;
+
+        // Load saved time
+        let savedTime = 0;
+        try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw) savedTime = parseFloat(raw) || 0;
+        } catch (e) { }
+
+        // ── HLS / native video player ──────────────────────────────────────────
+        const hlsVideo = document.getElementById('videoPlayer');
+        if (hlsVideo) {
+            // Save progress every 5 seconds while playing
+            const saveProgress = () => {
+                if (hlsVideo.currentTime > 5) {
+                    try { localStorage.setItem(storageKey, String(hlsVideo.currentTime)); } catch (e) { }
+                }
+            };
+            hlsVideo.addEventListener('timeupdate', () => {
+                if (Math.floor(hlsVideo.currentTime) % 5 === 0) saveProgress();
+            });
+            hlsVideo.addEventListener('pause', saveProgress);
+            window.addEventListener('beforeunload', saveProgress);
+
+            // Auto-seek silently when video metadata is ready
+            const doResume = () => {
+                if (savedTime > 10 && hlsVideo.duration > savedTime) {
+                    hlsVideo.currentTime = savedTime;
+                    console.log(`[AutoResume] Resumed HLS from ${savedTime}s`);
+                }
+            };
+            hlsVideo.addEventListener('loadedmetadata', doResume);
+            // Also hook into canplay in case metadata already loaded
+            hlsVideo.addEventListener('canplay', doResume, { once: true });
+        }
+
+        // ── Embed (iframe) player ──────────────────────────────────────────────
+        const embedFrame = document.getElementById('embedPlayer');
+        if (embedFrame && savedTime > 10) {
+            // Append #t= to embed src so the player starts at that time
+            const baseSrc = embedFrame.src.split('#')[0].split('?t=')[0];
+            embedFrame.src = baseSrc + '#t=' + Math.floor(savedTime);
+            console.log(`[AutoResume] Resumed embed from ${savedTime}s`);
+
+            // Listen for postMessage time updates to keep saving progress
+            window.addEventListener('message', (event) => {
+                if (!event.data) return;
+                let data = event.data;
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch (e) { return; }
+                }
+                const ct = data.currentTime || data.current_time ||
+                    (data.event === 'timeupdate' && data.data?.currentTime);
+                if (ct && ct > 5) {
+                    try { localStorage.setItem(storageKey, String(ct)); } catch (e) { }
+                }
+            });
+        } else if (embedFrame) {
+            // Still track embed time via postMessage even without a saved position
+            window.addEventListener('message', (event) => {
+                if (!event.data) return;
+                let data = event.data;
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch (e) { return; }
+                }
+                const ct = data.currentTime || data.current_time ||
+                    (data.event === 'timeupdate' && data.data?.currentTime);
+                if (ct && ct > 5) {
+                    try { localStorage.setItem(storageKey, String(ct)); } catch (e) { }
+                }
+            });
+        }
+    })();
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Custom Vanilla UI Driver
     function initVanillaPlayerUI() {
@@ -2028,8 +2109,7 @@
     // Current state tracked in JS
     window._watchState = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
-        episodeNumber: {{ episode_number or 1 }
-    },
+        episodeNumber: {{ episode_number or 1 }},
     language: '{{ lang }}',
         provider: '{{ selected_server or "" }}'
     };
