@@ -388,6 +388,18 @@ def watch(anime_id, ep_number):
         anime = anime_info["info"]
     else:
         anime = anime_info or {}
+        
+    # ── Fetch server progress if logged in ──
+    server_progress_dict = {}
+    is_logged_in = False
+    if "username" in session and "_id" in session:
+        is_logged_in = True
+        try:
+            wl_entry = get_watchlist_entry(session.get("_id"), anime_id_clean)
+            if wl_entry and "progress" in wl_entry:
+                server_progress_dict = wl_entry.get("progress", {})
+        except Exception as e:
+            current_app.logger.warning(f"Error fetching watch progress: {e}")
 
     # ── Fetch next episode schedule ──
     next_episode_schedule = None
@@ -494,6 +506,8 @@ def watch(anime_id, ep_number):
             source_type=video_data["source_type"],
             embed_sources=video_data["embed_sources"],
             hls_sources=video_data["hls_sources"],
+            server_progress=server_progress_dict,
+            is_logged_in=is_logged_in,
         )
     except Exception as e:
         print("watch error:", e)

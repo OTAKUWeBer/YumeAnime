@@ -141,6 +141,44 @@ def update_watchlist_status(user_id: int, anime_id: str, status: str) -> bool:
         logger.error(f"Error updating watchlist status: {e}")
         return False
 
+def save_watch_progress(user_id: int, anime_id: str, episode_number: int, watch_time: float, total_time: float, is_completed: bool) -> bool:
+    """Save explicit episode playback progress and update watched episodes if completed."""
+    try:
+        now = datetime.utcnow()
+        
+        # We need to construct an update document
+        update_doc = {
+            "watchlist.$.updated_at": now,
+            "watchlist.$.last_watched": now
+        }
+        
+        # Store detailed progress in a nested dictionary
+        progress_key = f"watchlist.$.progress.ep_{episode_number}"
+        update_doc[progress_key] = {
+            "watch_time": watch_time,
+            "total_time": total_time,
+            "is_completed": is_completed,
+            "updated_at": now
+        }
+        
+        # If completed, check if we need to increment watched_episodes
+        # We only increment if the newly completed episode number is higher than the current watched_episodes
+        if is_completed:
+            entry = get_watchlist_entry(user_id, anime_id)
+            if entry:
+                current_watched = entry.get("watched_episodes", 0)
+                if episode_number > current_watched:
+                    update_doc["watchlist.$.watched_episodes"] = episode_number
+
+        result = watchlist_collection.update_one(
+            {"_id": user_id, "watchlist.anime_id": anime_id},
+            {"$set": update_doc}
+        )
+        return result.modified_count > 0
+    except Exception as e:
+        logger.error(f"Error saving watch progress: {e}")
+        return False
+
 def update_watched_episodes(user_id: int, anime_id: str, watched_episodes: int) -> bool:
     """Update watched_episodes. Auto-complete if reached total."""
     try:
