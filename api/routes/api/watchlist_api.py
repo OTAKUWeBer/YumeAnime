@@ -9,7 +9,7 @@ import asyncio
 from ...models.watchlist import (
     add_to_watchlist, get_watchlist_entry, update_watchlist_status,
     update_watched_episodes, remove_from_watchlist, get_user_watchlist,
-    get_user_watchlist_paginated, get_watchlist_stats
+    get_user_watchlist_paginated, get_watchlist_stats, save_watch_progress
 )
 from ...utils.helpers import enrich_watchlist_item
 
@@ -105,6 +105,43 @@ def update_watchlist():
             return jsonify({'success': False, 'message': 'Failed to update.'}), 500
     except Exception as e:
         current_app.logger.error(f"Error updating watchlist: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@watchlist_api_bp.route('/progress', methods=['POST'])
+def save_progress():
+    """Save explicit episode playback progress and update watched episodes if completed"""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    anime_id = data.get('anime_id')
+    episode_number = data.get('episode_number')
+    
+    if not anime_id or episode_number is None:
+        return jsonify({'success': False, 'message': 'Missing parameters.'}), 400
+        
+    try:
+        user_id = session.get('_id')
+        watch_time = float(data.get('watch_time', 0))
+        total_time = float(data.get('total_time', 0))
+        is_completed = bool(data.get('is_completed', False))
+        
+        # Convert episode_number to int if safely possible for DB comparison
+        try:
+            episode_number = int(float(episode_number))
+        except (ValueError, TypeError):
+            # Fallback if episode number is weird string like '1.5' or 'OVA'
+            pass
+        
+        result = save_watch_progress(user_id, anime_id, episode_number, watch_time, total_time, is_completed)
+        
+        if result:
+            return jsonify({'success': True, 'message': 'Progress saved successfully!'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to save progress or not found in watchlist.'}), 500
+    except Exception as e:
+        current_app.logger.error(f"Error saving watch progress: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 

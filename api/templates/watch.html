@@ -1039,7 +1039,7 @@
                                     <button class="control-btn" id="nextEpBtn" title="Next Episode (n)" {% if not
                                         next_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif
                                         %}
-                                        onclick="{% if next_episode_url %}window.location.href='{{ next_episode_url }}'{% endif %}">
+                                        onclick="{% if next_episode_url %}window._forceEpisodeComplete = true; window.location.href='{{ next_episode_url }}'{% endif %}">
                                         <svg viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                                         </svg>
@@ -1152,7 +1152,8 @@
                         </svg>
                         Prev
                     </a>
-                    <a {% if next_episode_url %}href="{{ next_episode_url }}" {% endif %}
+                    <a {% if next_episode_url %}href="{{ next_episode_url }}"
+                        onclick="window._forceEpisodeComplete = true;" {% endif %}
                         class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
                         style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                         Next
@@ -1573,6 +1574,16 @@
             });
         });
     });
+
+    // Server Progress Configuration
+    window._watchState = {
+        isLoggedIn: {% if is_logged_in %}true{% else %} false{% endif %},
+    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } },
+    animeId: "{{ anime_id }}"
+    };
+
+    function initWatchlistButtons() {
+    }
 
     // Custom Vanilla UI Driver
     function initVanillaPlayerUI() {
@@ -2017,7 +2028,8 @@
     // Current state tracked in JS
     window._watchState = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
-        episodeNumber: {{ episode_number or 1 }},
+        episodeNumber: {{ episode_number or 1 }
+    },
     language: '{{ lang }}',
         provider: '{{ selected_server or "" }}'
     };

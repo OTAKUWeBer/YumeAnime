@@ -138,10 +138,13 @@ class WatchProgressManager {
     const key = this.getEpisodeKey(this.currentAnimeId, this.currentEpisodeId)
     const current = this.watchData[key] || {}
 
+    // Track total watch time (to handle local storage usage)
+    const tTime = totalTime || current.totalTime || 0;
+
     this.watchData[key] = {
       ...current,
       watchTime: Math.floor(watchTime),
-      totalTime: totalTime || current.totalTime || 0,
+      totalTime: tTime,
       completed: completed,
       lastWatched: Date.now(),
       episodeNumber: this.currentEpisodeNumber,
@@ -150,11 +153,55 @@ class WatchProgressManager {
     this.lastSavedTime = watchTime
     this.saveWatchData()
     this.updateUI()
+
+    // Auto-sync detailed progress to the server using the new endpoint
+    // We throttle this using a class-level timeout so we don't bombard the server every second
+    if (!this._apiSyncThrottled && window._watchState && window._watchState.isLoggedIn) {
+      this._apiSyncThrottled = true;
+
+      fetch("/api/watchlist/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          anime_id: this.currentAnimeId,
+          episode_number: this.currentEpisodeNumber,
+          watch_time: watchTime,
+          total_time: tTime,
+          is_completed: completed
+        }),
+      }).catch(err => console.error("[WatchProgress] API Sync Error:", err))
+        .finally(() => {
+          // Wait 10 seconds before syncing progress again (unless page closes)
+          setTimeout(() => { this._apiSyncThrottled = false; }, 10000);
+        });
+    }
   }
 
   initializeProgress() {
     this.updateAllEpisodesProgress()
-    const currentProgress = this.getCurrentProgress()
+
+    // Use server-provided progress if available and preferred over local
+    let currentProgress = this.getCurrentProgress()
+
+    if (window._watchState && window._watchState.serverProgress) {
+      const epProgress = window._watchState.serverProgress[`ep_${this.currentEpisodeNumber}`];
+      if (epProgress) {
+        console.log("[WatchProgress] Found server-side progress", epProgress);
+        // Use server progress if local is significantly older or doesn't exist
+        if (!currentProgress.lastWatched || (Date.now() - currentProgress.lastWatched > 1000 * 60 * 60 * 24)) {
+          currentProgress = {
+            watchTime: epProgress.watch_time || 0,
+            totalTime: epProgress.total_time || 0,
+            completed: epProgress.is_completed || false,
+          };
+
+          // Inject back into local state to keep UI consistent
+          const key = this.getEpisodeKey(this.currentAnimeId, this.currentEpisodeId)
+          this.watchData[key] = { ...this.watchData[key] || {}, ...currentProgress, lastWatched: Date.now() };
+          this.saveWatchData();
+        }
+      }
+    }
 
     // Show current episode progress in banner
     if (currentProgress.watchTime > 0) {
@@ -171,7 +218,15 @@ class WatchProgressManager {
 
       if (animeId && epId) {
         const key = this.getEpisodeKey(animeId, epId)
-        const progress = this.watchData[key]
+        let progress = this.watchData[key]
+
+        // Enhance UI locally based on server tracking if available
+        if (window._watchState && window._watchState.serverProgress) {
+          const serverP = window._watchState.serverProgress[`ep_${episodeNumber}`];
+          if (serverP && serverP.is_completed) {
+            progress = { ...progress || {}, watchTime: serverP.total_time || 1, totalTime: serverP.total_time || 1, completed: true };
+          }
+        }
 
         if (progress) {
           this.updateEpisodeCard(episodeNumber, progress)
@@ -217,12 +272,6 @@ class WatchProgressManager {
       const totalTimeFormatted = progress.totalTime ? `/${this.formatTime(Math.floor(progress.totalTime))}` : ""
       currentProgressElement.textContent = `${watchTimeFormatted}${totalTimeFormatted}`
     }
-  }
-
-  updateUI() {
-    const currentProgress = this.getCurrentProgress()
-    this.updateCurrentProgressDisplay(currentProgress)
-    this.updateEpisodeCard(this.currentEpisodeNumber, currentProgress)
   }
 
   formatTime(seconds) {
@@ -372,18 +421,23 @@ class WatchProgressManager {
     })
 
     this.video.addEventListener("ended", () => {
-      this.saveProgress(this.video.currentTime, this.video.duration, true)
-      this.handleVideoEnd()
+      const isComplete = true;
+
+      // Force an immediate API sync by clearing block
+      this._apiSyncThrottled = false;
+      this.saveProgress(this.video.currentTime, this.video.duration, isComplete);
+      this.handleVideoEnd();
     })
 
     this.video.addEventListener("pause", () => {
       if (this.video.currentTime > 0 && this.video.duration > 0) {
-        this.saveProgress(
-          this.video.currentTime,
-          this.video.duration,
-          this.video.currentTime / this.video.duration >= 0.9,
-        )
-        if (this.video.currentTime / this.video.duration >= 0.9) {
+        const isComplete = this.video.currentTime / this.video.duration >= 0.9;
+
+        // Force an immediate API sync when deliberately pausing
+        this._apiSyncThrottled = false;
+        this.saveProgress(this.video.currentTime, this.video.duration, isComplete);
+
+        if (isComplete) {
           this.syncWatchedEpisodesToWatchlist()
         }
       }
@@ -398,10 +452,36 @@ class WatchProgressManager {
 
     window.addEventListener("beforeunload", () => {
       if (this.video && this.video.currentTime > 0 && this.video.duration > 0) {
+        const isCompleted = window._forceEpisodeComplete || (this.video.currentTime / this.video.duration >= 0.9);
+
+        // Use sendBeacon for guaranteed delivery on page unload
+        if (window._watchState && window._watchState.isLoggedIn) {
+          const payload = JSON.stringify({
+            anime_id: this.currentAnimeId,
+            episode_number: this.currentEpisodeNumber,
+            watch_time: this.video.currentTime,
+            total_time: this.video.duration,
+            is_completed: isCompleted
+          });
+
+          const blob = new Blob([payload], { type: 'application/json' });
+          navigator.sendBeacon("/api/watchlist/progress", blob);
+
+          // Legacy update if completed
+          if (isCompleted) {
+            const updatePayload = JSON.stringify({
+              anime_id: this.currentAnimeId,
+              action: "episodes",
+              watched_episodes: this.currentEpisodeNumber
+            });
+            navigator.sendBeacon("/api/watchlist/update", new Blob([updatePayload], { type: 'application/json' }));
+          }
+        }
+
         this.saveProgress(
           this.video.currentTime,
           this.video.duration,
-          this.video.currentTime / this.video.duration >= 0.9,
+          isCompleted,
         )
       }
     })
@@ -446,26 +526,18 @@ class WatchProgressManager {
   }
 
   syncWatchedEpisodesToWatchlist() {
-    if (!this.currentAnimeId || !this.currentEpisodeNumber) {
-      console.log("[WatchProgress] Cannot sync - missing anime or episode info")
+    if (!this.currentAnimeId || !this.currentEpisodeNumber || !window._watchState?.isLoggedIn) {
+      console.log("[WatchProgress] Cannot sync - missing anime, episode info, or safely ignored (not logged in)")
       return
     }
 
+    // Since the API sync explicitly updates the watched episodes count on the server securely
+    // via `/api/watchlist/progress` directly when it receives "is_completed=true",
+    // counting from local storage arbitrarily is no longer actually required.
+    // However, to keep backward compatibility and purely for updating 'status':
+    console.log(`[WatchProgress] Auto-completing episode ${this.currentEpisodeNumber} directly.`);
+
     try {
-      const watchData = JSON.parse(localStorage.getItem("animeWatchData") || "{}")
-      let completedCount = 0
-
-      Object.keys(watchData).forEach((key) => {
-        if (key.startsWith(this.currentAnimeId + "_")) {
-          const progress = watchData[key]
-          if (progress.completed === true) {
-            completedCount++
-          }
-        }
-      })
-
-      console.log(`[WatchProgress] Total completed episodes for ${this.currentAnimeId}: ${completedCount}`)
-
       fetch("/api/watchlist/update", {
         method: "POST",
         headers: {
@@ -474,12 +546,12 @@ class WatchProgressManager {
         body: JSON.stringify({
           anime_id: this.currentAnimeId,
           action: "episodes",
-          watched_episodes: completedCount,
+          watched_episodes: this.currentEpisodeNumber, // Now just directly passing the episode number for max update
         }),
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log("[WatchProgress] Watchlist updated - total watched episodes:", completedCount)
+          console.log(`[WatchProgress] Legacy Watchlist updated to episode: ${this.currentEpisodeNumber}`)
         })
         .catch((error) => {
           console.error("[WatchProgress] Error syncing to watchlist:", error)
