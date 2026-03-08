@@ -55,10 +55,6 @@
                 console.log('%cThis is a browser feature intended for developers.', 'font-size: 16px;');
             };
 
-            const onDevToolsOpen = function () {
-                // Do not clear console
-            };
-
             // Override console methods when devtools detected
             const originalLog = console.log;
             const originalWarn = console.warn;
@@ -687,6 +683,56 @@
     <!-- Login Widget Script -->
     <script src="{{ url_for('static', filename='js/login_widget.js') }}"></script>
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+
+    <!-- Global Auto-Resume Link Updater -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Find the latest watched episode for ALL anime in localStorage
+                const latestWatched = {}; // animeId -> episodeNumber
+                const latestTimestamps = {}; // animeId -> timestamp
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('yumeResume_')) {
+                        const match = key.match(/^yumeResume_([^_]+)_ep(\d+)$/);
+                        if (match) {
+                            const animeId = match[1];
+                            const epNum = parseInt(match[2]);
+
+                            try {
+                                const data = JSON.parse(localStorage.getItem(key));
+                                const lastUpdated = data.lastUpdated || 0;
+
+                                if (!latestTimestamps[animeId] || lastUpdated > latestTimestamps[animeId]) {
+                                    latestTimestamps[animeId] = lastUpdated;
+                                    latestWatched[animeId] = epNum;
+                                }
+                            } catch (e) { }
+                        }
+                    }
+                }
+
+                // Update all links pointing to /watch/<id> or /watch/<id>/ep-1
+                const watchLinks = document.querySelectorAll('a[href^="/watch/"]');
+                watchLinks.forEach(link => {
+                    const href = link.getAttribute('href');
+                    const hrefMatch = href.match(/^\/watch\/([^\/]+)(\/ep-1)?$/);
+                    if (hrefMatch) {
+                        const animeId = hrefMatch[1];
+                        if (latestWatched[animeId] && latestWatched[animeId] > 1) {
+                            // Don't overwrite if it's the main watch-now-btn (info page has its own logic that handles text)
+                            if (link.id !== 'watch-now-btn') {
+                                link.setAttribute('href', `/watch/${animeId}/ep-${latestWatched[animeId]}`);
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Error auto-updating watch links:", e);
+            }
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

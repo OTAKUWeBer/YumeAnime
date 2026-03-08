@@ -78,24 +78,8 @@ class UnifiedScraper:
                     f"[UnifiedScraper] AnimeInfo Miruro failed for {anime_id}: {e}"
                 )
 
-        # Fallback: search Miruro using the slug
-        try:
-            search_result = await self.miruro.search(anime_id, 1)
-            if search_result and search_result.get("animes"):
-                first_match = search_result["animes"][0]
-                anilist_id = first_match.get("id") or first_match.get("anilistId")
-                if anilist_id:
-                    result = await self.miruro.get_anime_info(str(anilist_id))
-                    if result and result.get("title"):
-                        logger.debug(
-                            f"[UnifiedScraper] AnimeInfo (Miruro, search anilistId={anilist_id}): OK"
-                        )
-                        return result
-        except Exception as e:
-            logger.warning(
-                f"[UnifiedScraper] Search fallback failed for {anime_id}: {e}"
-            )
-
+        # Fallback: Miruro search API is dead (returns 500), so we disable the search fallback
+        # and just return empty if the ID wasn't numeric or if the info fetch failed.
         return {}
 
     # =========================================================================
@@ -117,28 +101,7 @@ class UnifiedScraper:
                     f"[UnifiedScraper] Episodes Miruro failed for {anime_id}: {e}"
                 )
 
-        # Fallback: search Miruro using the slug
-        try:
-            search_result = await self.miruro.search(anime_id, 1)
-            if search_result and search_result.get("animes"):
-                first_match = search_result["animes"][0]
-                anilist_id = first_match.get("id") or first_match.get("anilistId")
-                if anilist_id:
-                    anilist_id_str = str(anilist_id)
-                    try:
-                        result = await self.miruro.get_episodes(anilist_id_str)
-                        if result and result.get("episodes"):
-                            logger.debug(
-                                f"[UnifiedScraper] Episodes (Miruro, search fallback {anilist_id_str}): {len(result.get('episodes', []))} eps"
-                            )
-                            return result
-                    except Exception as e:
-                        logger.warning(
-                            f"[UnifiedScraper] Episodes Miruro failed for search fallback {anilist_id_str}: {e}"
-                        )
-        except Exception:
-            pass
-
+        # Fallback removed since miruro.search is dead.
         return {
             "anime_id": anime_id,
             "title": "",
@@ -160,23 +123,7 @@ class UnifiedScraper:
             except Exception:
                 pass
 
-        # Fallback: search Miruro using the slug
-        try:
-            search_result = await self.miruro.search(anime_id, 1)
-            if search_result and search_result.get("animes"):
-                first_match = search_result["animes"][0]
-                anilist_id = first_match.get("id") or first_match.get("anilistId")
-                if anilist_id:
-                    anilist_id_str = str(anilist_id)
-                    try:
-                        result = await self.miruro.episodes(anilist_id_str)
-                        if result and result.get("episodes"):
-                            return result
-                    except Exception:
-                        pass
-        except Exception as e:
-            print(f"[UnifiedScraper] Error in search fallback: {e}")
-
+        # Fallback removed since search API is dead.
         return {"episodes": [], "totalEpisodes": 0}
 
     async def episode_servers(self, anime_episode_id: str) -> Dict[str, Any]:

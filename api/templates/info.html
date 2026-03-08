@@ -68,6 +68,7 @@
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
@@ -384,12 +385,15 @@
 
                     <!-- Actions -->
                     <div class="anime-actions" style="margin-bottom: var(--space-xl);">
-                        <a href="/watch/{{ anime.id or current_season_id }}" class="btn btn-primary btn-lg"
-                            id="watch-now-btn">
+                        {% set next_watch_ep = (user_watched_episodes + 1) if (user_watched_episodes and
+                        user_watched_episodes > 0) else 1 %}
+                        <a href="/watch/{{ anime.id or current_season_id }}/ep-{{ next_watch_ep }}"
+                            class="btn btn-primary btn-lg" id="watch-now-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
-                            <span id="watch-now-text">Watch Now</span>
+                            <span id="watch-now-text">{% if next_watch_ep > 1 %}Continue Ep {{ next_watch_ep }}{% else
+                                %}Watch Now{% endif %}</span>
                         </a>
                         <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
                             data-anime-id="{{ anime.id or current_season_id }}"
@@ -410,24 +414,26 @@
 
                             if (watchBtn && animeId) {
                                 try {
-                                    const watchData = JSON.parse(localStorage.getItem('animeWatchData') || '{}');
-                                    let lastWatchedEp = null;
+                                    let lastWatchedEpNum = null;
                                     let maxTimestamp = 0;
 
-                                    Object.keys(watchData).forEach(key => {
-                                        if (key.startsWith(animeId + '_')) {
-                                            const data = watchData[key];
-                                            if (data.lastWatched > maxTimestamp) {
-                                                maxTimestamp = data.lastWatched;
-                                                lastWatchedEp = { key: key, ...data };
-                                            }
+                                    for (let i = 0; i < localStorage.length; i++) {
+                                        const key = localStorage.key(i);
+                                        if (key && key.startsWith(`yumeResume_${animeId}_ep`)) {
+                                            try {
+                                                const data = JSON.parse(localStorage.getItem(key));
+                                                const lastUpdated = data.lastUpdated || 0;
+                                                if (lastUpdated > maxTimestamp) {
+                                                    maxTimestamp = lastUpdated;
+                                                    lastWatchedEpNum = data.episodeNumber || parseInt(key.split('_ep')[1]);
+                                                }
+                                            } catch (e) { }
                                         }
-                                    });
+                                    }
 
-                                    if (lastWatchedEp && lastWatchedEp.episodeNumber) {
-                                        // Clean URL format: /watch/<anime_id>/ep-<N>
-                                        watchBtn.href = `/watch/${animeId}/ep-${lastWatchedEp.episodeNumber}`;
-                                        watchText.textContent = `Continue Ep ${lastWatchedEp.episodeNumber}`;
+                                    if (lastWatchedEpNum) {
+                                        watchBtn.href = `/watch/${animeId}/ep-${lastWatchedEpNum}`;
+                                        if (watchText) watchText.textContent = `Continue Ep ${lastWatchedEpNum}`;
                                     }
                                 } catch (e) { console.error("Error updating watch button:", e); }
                             }

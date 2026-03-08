@@ -2,7 +2,8 @@
 Anime information and episodes routes
 """
 import asyncio
-from flask import Blueprint, request, render_template, current_app
+from flask import Blueprint, request, render_template, current_app, session
+from api.models.watchlist import get_watchlist_entry
 
 anime_routes_bp = Blueprint('anime_routes', __name__)
 
@@ -89,6 +90,16 @@ async def anime_info(anime_id: str):
         "recommended": anime.get("recommendedAnimes", []),
     }
 
+    # Get user watchlist progress if logged in
+    user_watched_episodes = 0
+    if "username" in session and "_id" in session:
+        try:
+            wl_entry = get_watchlist_entry(session.get("_id"), anime_id)
+            if wl_entry:
+                user_watched_episodes = wl_entry.get("watched_episodes", 0)
+        except Exception as e:
+            current_app.logger.error(f"Error fetching watchlist for anime info: {e}")
+
     current_app.logger.debug("Rendering anime page for id=%s, anime keys=%s", anime.get("id"), list(anime.keys()))
     return render_template(
         "info.html",
@@ -96,6 +107,7 @@ async def anime_info(anime_id: str):
         suggestions=suggestions,
         next_episode_schedule=next_episode_schedule,
         current_path=current_path,
-        current_season_id=anime_id
+        current_season_id=anime_id,
+        user_watched_episodes=user_watched_episodes
     )
 
