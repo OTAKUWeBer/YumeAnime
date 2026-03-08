@@ -153,28 +153,6 @@ class WatchProgressManager {
     this.lastSavedTime = watchTime
     this.saveWatchData()
     this.updateUI()
-
-    // Auto-sync detailed progress to the server using the new endpoint
-    // We throttle this using a class-level timeout so we don't bombard the server every second
-    if (!this._apiSyncThrottled && window._watchState && window._watchState.isLoggedIn) {
-      this._apiSyncThrottled = true;
-
-      fetch("/api/watchlist/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          anime_id: this.currentAnimeId,
-          episode_number: this.currentEpisodeNumber,
-          watch_time: watchTime,
-          total_time: tTime,
-          is_completed: completed
-        }),
-      }).catch(err => console.error("[WatchProgress] API Sync Error:", err))
-        .finally(() => {
-          // Wait 10 seconds before syncing progress again (unless page closes)
-          setTimeout(() => { this._apiSyncThrottled = false; }, 10000);
-        });
-    }
   }
 
   initializeProgress() {
@@ -456,18 +434,6 @@ class WatchProgressManager {
 
         // Use sendBeacon for guaranteed delivery on page unload
         if (window._watchState && window._watchState.isLoggedIn) {
-          const payload = JSON.stringify({
-            anime_id: this.currentAnimeId,
-            episode_number: this.currentEpisodeNumber,
-            watch_time: this.video.currentTime,
-            total_time: this.video.duration,
-            is_completed: isCompleted
-          });
-
-          const blob = new Blob([payload], { type: 'application/json' });
-          navigator.sendBeacon("/api/watchlist/progress", blob);
-
-          // Legacy update if completed
           if (isCompleted) {
             const updatePayload = JSON.stringify({
               anime_id: this.currentAnimeId,

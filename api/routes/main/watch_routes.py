@@ -210,47 +210,28 @@ def _extract_ep_number_from_legacy(ep_param, anime_id):
 
 
 def _redirect_to_best_episode(anime_id):
-    """Redirect to the best episode to watch (first or continue-watching)."""
-    try:
-        anime_id_clean = anime_id.split("?", 1)[0]
-        all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean))
-        eps_list = all_episodes.get("episodes", []) if all_episodes else []
+    """
+    Redirects to the user's next unwatched episode based on DB history.
+    Does NOT fetch heavy API lists; blindly increments watch count.
+    """
+    anime_id_clean = anime_id.split("?", 1)[0]
+    target_ep = 1
 
-        if not eps_list:
-            return render_template(
-                "404.html", error_message="No episodes found for this anime."
-            ), 404
+    # Check user watchlist for progress if logged in
+    if "username" in session and "_id" in session:
+        try:
+            from api.models.watchlist import get_watchlist_entry
+            user_id = session.get("_id")
+            watchlist_entry = get_watchlist_entry(user_id, anime_id_clean)
 
-        # Default to first episode
-        target_ep = eps_list[0]
+            if watchlist_entry:
+                watched_count = watchlist_entry.get("watched_episodes", 0)
+                if watched_count > 0:
+                    target_ep = watched_count + 1
+        except Exception as e:
+            current_app.logger.error(f"Error fetching watchlist entry in watch route: {e}")
 
-        # Check user watchlist for progress if logged in
-        if "username" in session and "_id" in session:
-            try:
-                user_id = session.get("_id")
-                watchlist_entry = get_watchlist_entry(user_id, anime_id_clean)
-
-                if watchlist_entry:
-                    watched_count = watchlist_entry.get("watched_episodes", 0)
-                    if watched_count > 0:
-                        if watched_count < len(eps_list):
-                            target_ep = eps_list[watched_count]
-                        else:
-                            target_ep = eps_list[-1]
-            except Exception as e:
-                current_app.logger.error(
-                    f"Error fetching watchlist entry in watch route: {e}"
-                )
-
-        ep_number = target_ep.get("number", 1)
-        return redirect(_build_clean_url(anime_id_clean, ep_number))
-
-    except Exception as e:
-        current_app.logger.error(f"Error finding best episode: {e}")
-        return render_template(
-            "404.html", error_message="An error occurred while fetching episodes."
-        ), 404
-
+    return redirect(_build_clean_url(anime_id_clean, target_ep))
 
 # ──────────────────────────────────────────────────────────────
 #  MAIN CLEAN ROUTE: /watch/<anime_id>/ep-<number>
@@ -334,13 +315,23 @@ def watch(anime_id, ep_number):
     else:
         full_slug = episode_id
 
-    # ── Check dub availability ──
+    # ── Check dub availability locally since we already fetched episodes ──
+    dub_available = False
     try:
-        dub_available = asyncio.run(
-            current_app.ha_scraper.is_dub_available(anime_id_clean, episode_id)
-        )
-    except Exception:
-        dub_available = False
+        if isinstance(all_episodes, dict):
+            # Miruro unified returns total_dub_episodes and total_sub_episodes
+            dub_ep_count = all_episodes.get("total_dub_episodes") or all_episodes.get("totalDubEpisodes") or 0
+            if dub_ep_count > 0:
+                dub_available = True
+            elif all_episodes.get("episodes") and len(all_episodes["episodes"]) > 0:
+                # Direct check across all providers just in case
+                for pv_data in providers_map.values():
+                    if isinstance(pv_data, dict) and "episodes" in pv_data and isinstance(pv_data["episodes"], dict):
+                        if pv_data["episodes"].get("dub"):
+                            dub_available = True
+                            break
+    except Exception as e:
+        current_app.logger.warning(f"Error checking dub locally: {e}")
 
     # If dub requested but not available, fall back to sub
     if lang == "dub" and not dub_available:
@@ -389,33 +380,17 @@ def watch(anime_id, ep_number):
     else:
         anime = anime_info or {}
         
-    # ── Fetch server progress if logged in ──
+    # ── Fetch server progress if logged in (Disabled per user request, using local storage instead) ──
     server_progress_dict = {}
     is_logged_in = False
     if "username" in session and "_id" in session:
         is_logged_in = True
-        try:
-            wl_entry = get_watchlist_entry(session.get("_id"), anime_id_clean)
-            if wl_entry and "progress" in wl_entry:
-                server_progress_dict = wl_entry.get("progress", {})
-        except Exception as e:
-            current_app.logger.warning(f"Error fetching watch progress: {e}")
 
     # ── Fetch next episode schedule ──
-    next_episode_schedule = None
-    try:
-        get_schedule_method = getattr(
-            current_app.ha_scraper, "next_episode_schedule", None
-        )
-        next_episode_schedule = (
-            asyncio.run(get_schedule_method(anime_id_clean))
-            if get_schedule_method
-            else None
-        )
-    except Exception:
-        next_episode_schedule = None
+    # Miruro Native API includes this natively inside get_anime_info response
+    next_episode_schedule = anime.get("nextAiringEpisode")
 
-    # Fallback schedule from AniList
+    # Fallback schedule from AniList if not provided by Miruro
     needs_fallback = False
     if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
         needs_fallback = True

@@ -58,7 +58,8 @@ series.{% endblock %}
                                     <rect x="2" y="3" width="20" height="18" rx="2" ry="2" />
                                     <line x1="8" y1="21" x2="8" y2="3" />
                                     <line x1="16" y1="21" x2="16" y2="3" />
-                                </svg> {% if anime.releasedEpisodes is not none and anime.releasedEpisodes != anime.totalEpisodes
+                                </svg> {% if anime.releasedEpisodes is not none and anime.releasedEpisodes !=
+                                anime.totalEpisodes
                                 %}{{ anime.releasedEpisodes }}/{{ anime.totalEpisodes }}{% else %}{{ anime.totalEpisodes
                                 }}{% endif %} Episodes</span>{% endif %}
                             {% if anime.rating %}
