@@ -1412,14 +1412,8 @@
             });
         }
 
-        // Auto-scroll to current episode
-        const currentEp = episodeList?.querySelector('.current');
-        if (currentEp) {
-            setTimeout(() => {
-                // Use 'nearest' to avoid scrolling the whole page down on mobile
-                currentEp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 500);
-        }
+        // Auto-scroll to current episode (Removed as per user request for better UX on mobile)
+        // const currentEp = episodeList?.querySelector('.current');
 
         // HLS Player Logic
         const video = document.getElementById('videoPlayer');
