@@ -1576,9 +1576,9 @@
     });
 
     // Server Progress Configuration
-    window._watchState = {
+    window._watchProgressState = {
         isLoggedIn: {% if is_logged_in %}true{% else %} false{% endif %},
-    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } },
+        serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
     animeId: "{{ anime_id }}"
     };
 
@@ -1665,8 +1665,8 @@
                 stopEmbedTimer();
                 try { localStorage.setItem(storageKey, String(elapsedSecs)); } catch (e) { }
 
-                if (window._forceEpisodeComplete && window._watchState && window._watchState.isLoggedIn) {
-                    const epNumber = window._watchState.episodeNumber;
+                if (window._forceEpisodeComplete && window._watchProgressState && window._watchProgressState.isLoggedIn) {
+                    const epNumber = window._watchState && window._watchState.episodeNumber;
                     if (epNumber) {
                         navigator.sendBeacon('/api/watchlist/update',
                             new Blob([JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: epNumber })],
@@ -1684,10 +1684,10 @@
                 if (ended) {
                     stopEmbedTimer();
                     try { localStorage.removeItem(storageKey); } catch (e) { }
-                    if (window._watchState && window._watchState.isLoggedIn) {
+                    if (window._watchProgressState && window._watchProgressState.isLoggedIn) {
                         fetch('/api/watchlist/update', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: window._watchState.episodeNumber })
+                            body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: window._watchState && window._watchState.episodeNumber })
                         }).catch(() => { });
                     }
                 }
@@ -2146,8 +2146,19 @@
 
     function switchProvider(provider) {
         window._watchState.provider = provider;
+        // Save preference via ServerManager if available
+        if (window.serverManager) {
+            window.serverManager.savePreferredServer(provider);
+        } else {
+            try {
+                localStorage.setItem('yumePreferredServer', provider);
+                document.cookie = `preferred_server=${provider}; path=/; max-age=31536000`;
+            } catch (e) { }
+        }
         fetchAndLoadSources();
     }
+    // Expose globally so server-manager.js can call it
+    window.switchProvider = switchProvider;
 
     function switchLanguage(lang) {
         window._watchState.language = lang;
@@ -2207,6 +2218,32 @@
                     }
                 }
 
+                // ── Update the Stream Quality dropdown with new sources ──
+                const streamDD = document.getElementById('streamDropdown');
+                if (streamDD) {
+                    const embedSrcs = data.embed_sources || [];
+                    const hlsSrcs = data.hls_sources || [];
+
+                    // Clear and rebuild
+                    streamDD.innerHTML = '<option value="">Stream Quality</option>';
+
+                    embedSrcs.forEach((es, i) => {
+                        const opt = document.createElement('option');
+                        opt.value = 'embed|' + (es.url || '');
+                        opt.textContent = es.label || ('Embed ' + (i + 1));
+                        if (data.source_type === 'embed' && i === 0) opt.selected = true;
+                        streamDD.appendChild(opt);
+                    });
+
+                    hlsSrcs.forEach((hs, i) => {
+                        const opt = document.createElement('option');
+                        opt.value = 'hls|' + (hs.file || hs.url || '');
+                        opt.textContent = hs.quality || ('HLS ' + (i + 1));
+                        if (data.source_type === 'hls' && i === 0 && embedSrcs.length === 0) opt.selected = true;
+                        streamDD.appendChild(opt);
+                    });
+                }
+
                 // Load the new video source
                 const sourceType = data.source_type;
                 const videoLink = data.video_link;
@@ -2226,6 +2263,9 @@
                         frame.className = 'embed-player-frame';
                         frame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
                         frame.allowFullscreen = true;
+                        frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+                        frame.referrerPolicy = 'origin';
+                        frame.sandbox = 'allow-forms allow-scripts allow-same-origin allow-popups allow-presentation';
                         if (masterWrapper) masterWrapper.insertBefore(frame, masterWrapper.firstChild);
                     }
                     frame.src = embedSources[0].url;

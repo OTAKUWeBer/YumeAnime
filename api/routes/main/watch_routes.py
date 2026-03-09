@@ -571,8 +571,17 @@ def get_watch_sources():
     else:
         full_slug = episode_id
 
-    # Determine server
+    # Determine server (provider IS the server in Miruro's model)
     selected_server = provider_name
+
+    # Fetch available servers for this episode slug
+    available_servers = []
+    try:
+        servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
+        if servers_data:
+            available_servers = servers_data.get(lang, [])
+    except Exception:
+        pass
 
     # Fetch video data
     video_data = _fetch_video_data(full_slug, lang, selected_server, anilist_id)
@@ -581,7 +590,7 @@ def get_watch_sources():
     if selected_server:
         session["last_used_server"] = selected_server
 
-    # Build response
+    # Build response — include everything the frontend needs to update its UI
     response_data = {
         "video_link": video_data["video_link"],
         "subtitles": video_data["subtitle_tracks"],
@@ -594,6 +603,7 @@ def get_watch_sources():
         "available_qualities": video_data["available_qualities"],
         "provider": provider_name,
         "language": lang,
+        "available_servers": available_servers,
     }
 
     resp = make_response(jsonify(response_data))

@@ -6,10 +6,10 @@ class ServerManager {
 
   loadPreferredServer() {
     try {
-      return localStorage.getItem(this.storageKey) || 'hd-1';
+      return localStorage.getItem(this.storageKey) || 'kiwi';
     } catch (error) {
       console.error('Error loading preferred server:', error);
-      return 'hd-1';
+      return 'kiwi';
     }
   }
 
@@ -45,7 +45,7 @@ class ServerManager {
 
   selectBestServer(availableServers) {
     if (!availableServers || availableServers.length === 0) {
-      return 'hd-1';
+      return 'kiwi';
     }
 
     const serverNames = availableServers.map(s => s.serverName);
@@ -54,7 +54,7 @@ class ServerManager {
       return this.preferredServer;
     }
 
-    const preferredOrder = ['hd-1', 'hd-2', 'megacloud', 'vidstreaming', 'streamtape'];
+    const preferredOrder = ['kiwi', 'arc', 'zoro', 'bee', 'jet', 'wco'];
 
     for (const preferred of preferredOrder) {
       if (serverNames.includes(preferred)) {
@@ -65,29 +65,28 @@ class ServerManager {
     return serverNames[0];
   }
 
-  applyServerToURL(serverName) {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('server', serverName);
-    return currentUrl.toString();
-  }
-
   switchServer(serverName) {
     this.savePreferredServer(serverName);
-    window.location.reload();
+    // Use AJAX-based switching if available (watch page), otherwise reload
+    if (typeof window.switchProvider === 'function') {
+      window.switchProvider(serverName);
+    } else {
+      window.location.reload();
+    }
   }
 
   initializeServerButtons() {
-    const buttons = document.querySelectorAll('.server-btn');
-
-    buttons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        e.preventDefault();
-        const serverName = button.dataset.server;
-        if (serverName) {
-          this.switchServer(serverName);
+    // Provider dropdown on the watch page
+    const providerDropdown = document.getElementById('providerDropdown');
+    if (providerDropdown) {
+      // Set dropdown to match stored preference on load
+      for (const opt of providerDropdown.options) {
+        if (opt.value === this.preferredServer) {
+          opt.selected = true;
+          break;
         }
-      });
-    });
+      }
+    }
   }
 
   ensureCorrectServerOnLoad(currentServer, availableServers) {
@@ -112,7 +111,11 @@ function switchServer(serverName) {
     window.serverManager.switchServer(serverName);
   } else {
     localStorage.setItem('yumePreferredServer', serverName);
-    window.location.reload();
+    if (typeof window.switchProvider === 'function') {
+      window.switchProvider(serverName);
+    } else {
+      window.location.reload();
+    }
   }
 }
 
