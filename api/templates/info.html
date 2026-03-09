@@ -3,6 +3,9 @@
 {% block title %}{{ anime.name or anime.title or 'Anime' }} - YumeAnime{% endblock %}
 {% block meta_description %}Watch {{ anime.name or anime.title }} online. {{ (anime.description or anime.synopsis or
 '')[:150] }}{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{{ anime.poster or anime.image or anime.banner }}{% endblock %}
 {% block extra_css %}
 <style>
     /* Seasons Section Styles */

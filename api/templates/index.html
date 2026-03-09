@@ -3,6 +3,8 @@
 {% block title %}YumeAnime - Watch Anime Online{% endblock %}
 {% block meta_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime
 series.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
 
 {% block content %}
 <div class="container">

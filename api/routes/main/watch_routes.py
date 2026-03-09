@@ -380,6 +380,10 @@ def watch(anime_id, ep_number):
     else:
         anime = anime_info or {}
         
+    actual_title = anime.get("name") or anime.get("title")
+    if not actual_title:
+        actual_title = anime_id_clean.replace('-', ' ').title()
+        
     # ── Fetch server progress if logged in (Disabled per user request, using local storage instead) ──
     server_progress_dict = {}
     is_logged_in = False
@@ -470,6 +474,8 @@ def watch(anime_id, ep_number):
             prev_episode_number=prev_episode_number,
             next_episode_number=next_episode_number,
             eps_title=anime_id_clean,
+            anime_title=actual_title,
+            anime=anime,
             lang=lang,
             episodes=all_episodes,
             dub_available=dub_available,

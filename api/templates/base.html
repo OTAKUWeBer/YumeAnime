@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description"
         content="{% block meta_description %}Watch anime online for free in HD quality{% endblock %}">
+
+    <!-- Open Graph / Social Media Embeds -->
+    <meta property="og:title" content="{% block og_title %}YumeAnime - Watch Anime Online{% endblock %}">
+    <meta property="og:description"
+        content="{% block og_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}">
+    <meta property="og:image"
+        content="{% block og_image %}{{ url_for('static', filename='images/logo-icon.png', _external=True) }}{% endblock %}">
+    <meta name="twitter:card" content="summary_large_image">
+
     <title>{% block title %}YumeAnime{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">

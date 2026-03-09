@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Episode {{ Episode }} - {{ eps_title }} - YumeAnime{% endblock %}
-{% block meta_description %}Watch {{ eps_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
+{% block title %}{{ anime_title }}, Episode {{ Episode }} - YumeAnime{% endblock %}
+{% block meta_description %}Watch {{ anime_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{% if anime %}{{ anime.banner or anime.poster or anime.image }}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
@@ -984,7 +987,7 @@
                                     style="background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: bold;">EP
                                     {{ Episode }}</span>
                                 <span style="font-size: 1.1rem; font-weight: 500;">{{ episode_title if episode_title
-                                    else (eps_title | strip_anime_id | replace('-', ' ') | title if eps_title else
+                                    else (anime_title if anime_title else
                                     'Unknown') }}</span>
                             </div>
                         </div>
@@ -1169,8 +1172,8 @@
                     style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-surface); padding: 12px 15px; border-radius: var(--radius-md); margin-bottom: 15px;">
                     <!-- Episode Title -->
                     <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary); line-height: 1.4;">
-                        {{ Episode }}. {{ episode_title if episode_title else (eps_title | strip_anime_id | replace('-',
-                        ' ') | title if eps_title else 'Episode') }}
+                        {{ Episode }}. {{ episode_title if episode_title else (anime_title if anime_title else
+                        'Episode') }}
                     </h3>
 
                     <!-- Controls Row -->
@@ -1578,7 +1581,7 @@
     // Server Progress Configuration
     window._watchProgressState = {
         isLoggedIn: {% if is_logged_in %}true{% else %} false{% endif %},
-        serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
+    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } },
     animeId: "{{ anime_id }}"
     };
 
