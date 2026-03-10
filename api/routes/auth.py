@@ -216,6 +216,10 @@ def anilist_callback():
             if result:
                 session['anilist_authenticated'] = True
                 session['anilist_id'] = user_info['id']
+                # Update avatar in session from AniList
+                anilist_avatar = user_info.get('avatar', {}).get('large') or user_info.get('avatar', {}).get('medium')
+                if anilist_avatar:
+                    session['avatar'] = anilist_avatar
                 current_app.logger.info(f"AniList account {user_info['id']} successfully linked to user {current_username}")
                 flash('AniList account successfully connected! Your watchlist is syncing automatically.', 'success')
                 
@@ -248,6 +252,7 @@ def anilist_callback():
             session['_id'] = user_id
             session['anilist_authenticated'] = True
             session['anilist_id'] = user_info['id']
+            session['avatar'] = user_info.get('avatar', {}).get('large') or user_info.get('avatar', {}).get('medium')
             session.permanent = True
 
             current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")

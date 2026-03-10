@@ -194,7 +194,7 @@
             <div class="user-menu">
                 <!-- Mobile Search Toggle -->
                 <button class="mobile-search-toggle" id="mobile-search-toggle" aria-label="Search">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8" />
                         <path d="m21 21-4.35-4.35" />
                     </svg>
@@ -202,12 +202,31 @@
 
                 {% if session.get('username') %}
                 <div class="dropdown" id="user-dropdown">
-                    <button class="user-avatar" onclick="toggleDropdown('user-dropdown')">
-                        <img src="{{ session.get('avatar', '/static/images/default-avatar.png') }}" alt="Avatar"
-                            width="36" height="36" loading="eager" fetchpriority="high"
-                            onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&background=1a1a1a&color=fff'">
+                    <button
+                        class="user-avatar-btn {% if session.get('anilist_authenticated') %}anilist-connected{% endif %}"
+                        onclick="toggleDropdown('user-dropdown')" aria-label="User menu">
+                        <div class="avatar-ring">
+                            <img src="{{ session.get('avatar') or '' }}" alt="{{ session.get('username', 'User') }}"
+                                width="36" height="36" loading="eager" fetchpriority="high"
+                                onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                        </div>
                     </button>
                     <div class="dropdown-menu">
+                        <div class="dropdown-header">
+                            <div class="dropdown-avatar">
+                                <img src="{{ session.get('avatar') or '' }}" alt="{{ session.get('username', 'User') }}"
+                                    onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                            </div>
+                            <div class="dropdown-user-info">
+                                <span class="dropdown-username">{{ session.get('username') }}</span>
+                                {% if session.get('anilist_authenticated') %}
+                                <span class="dropdown-badge-anilist">AniList Connected</span>
+                                {% else %}
+                                <span class="dropdown-badge-local">Local Account</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
                         <a href="{{ url_for('main.catalog_routes.profile') }}" class="dropdown-item">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -226,7 +245,7 @@
                             Settings
                         </a>
                         <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item" onclick="handleLogout(event)">
+                        <a href="#" class="dropdown-item dropdown-item-danger" onclick="handleLogout(event)">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -238,7 +257,14 @@
                     </div>
                 </div>
                 {% else %}
-                <button class="btn btn-primary" onclick="openLoginModal()">Sign In</button>
+                <button class="btn btn-primary btn-signin" onclick="openLoginModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    Sign In
+                </button>
                 {% endif %}
 
                 <!-- Mobile Toggle -->

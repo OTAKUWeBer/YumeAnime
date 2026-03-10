@@ -11,8 +11,7 @@
         <!-- Account Section -->
         <div class="settings-section">
             <h2 class="settings-section-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="vertical-align: middle; margin-right: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                 </svg>
@@ -45,8 +44,7 @@
         <!-- AniList Integration -->
         <div class="settings-section">
             <h2 class="settings-section-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="vertical-align: middle; margin-right: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
@@ -54,61 +52,66 @@
             </h2>
 
             {% if user.anilist_authenticated %}
-            <div class="settings-row">
-                <div class="settings-label">
-                    <span class="settings-label-text">
-                        <span style="color: var(--success);">●</span> Connected
-                    </span>
-                    <span class="settings-label-desc">AniList ID: {{ user.anilist_id }}</span>
+            <div class="anilist-card" style="margin-bottom: var(--space-md);">
+                <div class="anilist-card-avatar">
+                    {% if user.avatar %}
+                    <img src="{{ user.avatar }}" alt="AniList avatar">
+                    {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ user.username }}&size=104&background=1a1a1a&color=fff&bold=true"
+                        alt="Avatar">
+                    {% endif %}
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary" id="sync-anilist-btn" onclick="syncAniList()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" id="sync-icon">
-                            <path d="M21 2v6h-6" />
-                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                            <path d="M3 22v-6h6" />
-                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                        </svg>
-                        <span id="sync-btn-text">Sync Watchlist</span>
-                        <svg id="sync-spinner" class="hidden" width="16" height="16" viewBox="0 0 24 24"
-                            style="animation: spin 1s linear infinite;">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"
-                                stroke-dasharray="31.4 31.4" stroke-linecap="round" />
-                        </svg>
-                    </button>
-                    <!-- Sync Progress Bar Container -->
-                    <!-- Sync Progress Bar Container -->
-                    <div id="sync-progress-container" class="sync-progress-container hidden">
-                        <div class="sync-info">
-                            <span class="sync-status-text">
-                                <span class="sync-status-dot"></span>
-                                <span id="sync-status-text">Syncing...</span>
-                            </span>
-                            <span id="sync-percent-text" class="sync-percent">0%</span>
-                        </div>
-                        <div class="sync-track">
-                            <div id="sync-progress-bar" class="sync-bar" style="width: 0%;"></div>
-                        </div>
+                <div class="anilist-card-info">
+                    <div class="anilist-card-title">
+                        <span style="color: var(--success);">●</span> Connected
                     </div>
-                    <button class="btn btn-secondary" id="disconnect-anilist" style="color: var(--error);">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-                            <line x1="12" y1="2" x2="12" y2="12" />
-                        </svg>
-                        Disconnect
-                    </button>
+                    <div class="anilist-card-sub">AniList ID: {{ user.anilist_id }}</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="sync-anilist-btn" onclick="syncAniList()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        id="sync-icon">
+                        <path d="M21 2v6h-6" />
+                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                        <path d="M3 22v-6h6" />
+                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                    </svg>
+                    <span id="sync-btn-text">Sync Watchlist</span>
+                    <svg id="sync-spinner" class="hidden" width="16" height="16" viewBox="0 0 24 24"
+                        style="animation: spin 1s linear infinite;">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"
+                            stroke-dasharray="31.4 31.4" stroke-linecap="round" />
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" id="disconnect-anilist" style="color: var(--error);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                        <line x1="12" y1="2" x2="12" y2="12" />
+                    </svg>
+                    Disconnect
+                </button>
+            </div>
+
+            <!-- Sync Progress Bar Container -->
+            <div id="sync-progress-container" class="sync-progress-container hidden">
+                <div class="sync-info">
+                    <span class="sync-status-text">
+                        <span class="sync-status-dot"></span>
+                        <span id="sync-status-text">Syncing...</span>
+                    </span>
+                    <span id="sync-percent-text" class="sync-percent">0%</span>
+                </div>
+                <div class="sync-track">
+                    <div id="sync-progress-bar" class="sync-bar" style="width: 0%;"></div>
                 </div>
             </div>
             {% else %}
-            <div class="settings-row">
-                <div class="settings-label">
-                    <span class="settings-label-text">
-                        <span style="color: var(--text-muted);">●</span> Not Connected
-                    </span>
-                    <span class="settings-label-desc">Sync your anime list with AniList</span>
-                </div>
+            <div class="anilist-connect-cta">
+                <div class="cta-icon">🔗</div>
+                <h3>Connect Your AniList</h3>
+                <p class="text-muted">Sync your anime list with AniList to track progress across platforms.</p>
                 <a href="{{ url_for('auth.connect_anilist_account') }}" class="btn btn-primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -123,8 +126,7 @@
         <!-- Playback Settings -->
         <div class="settings-section">
             <h2 class="settings-section-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="vertical-align: middle; margin-right: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
                 Playback
@@ -172,8 +174,7 @@
         <!-- Appearance -->
         <div class="settings-section">
             <h2 class="settings-section-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="vertical-align: middle; margin-right: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="5" />
                     <line x1="12" y1="1" x2="12" y2="3" />
                     <line x1="12" y1="21" x2="12" y2="23" />
@@ -197,10 +198,9 @@
         </div>
 
         <!-- Danger Zone -->
-        <div class="settings-section" style="border-color: var(--error);">
-            <h2 class="settings-section-title" style="color: var(--error);">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="vertical-align: middle; margin-right: 8px;">
+        <div class="settings-section danger-section">
+            <h2 class="settings-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path
                         d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                     <line x1="12" y1="9" x2="12" y2="13" />

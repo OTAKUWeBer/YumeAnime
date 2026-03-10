@@ -128,6 +128,25 @@ def create_app():
         from flask import jsonify
         return jsonify(success=False, message="Too many attempts. Please try again later."), 429
 
+    @app.before_request
+    def hydrate_legacy_sessions():
+        """Ensure older sessions have required avatar/anilist data for navbar rendering."""
+        from flask import session
+        
+        # Only check if user is logged in but missing the new session keys
+        if '_id' in session and 'anilist_authenticated' not in session:
+            try:
+                from api.models.user import get_user_by_id
+                user = get_user_by_id(session['_id'])
+                if user:
+                    session['anilist_authenticated'] = bool(user.get('anilist_id'))
+                    session['avatar'] = user.get('avatar')
+                    if user.get('anilist_id'):
+                        session['anilist_id'] = user.get('anilist_id')
+                    session.modified = True
+            except Exception as e:
+                app.logger.error(f"Error hydrating session for user {session.get('_id')}: {e}")
+
     return app
 
 
