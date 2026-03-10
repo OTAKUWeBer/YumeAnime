@@ -29,8 +29,19 @@ class MiruroScraper:
     def __init__(self, base_url: Optional[str] = None, default_headers: Optional[Dict[str, str]] = None):
         url = base_url.rstrip("/") if base_url else self.api_url.rstrip("/")
 
+        headers = default_headers.copy() if default_headers else {}
+        
+        # Inject API Key and Origin headers for Miruro Native API
+        api_key = os.getenv("API_KEY")
+        if api_key:
+            headers["x-api-key"] = api_key
+            
+        allowed_origins = os.getenv("ALLOWED_ORIGINS")
+        if allowed_origins:
+            headers["Origin"] = allowed_origins.split(",")[0]   
+
         # Initialize base client
-        self.client = MiruroBaseClient(url, default_headers)
+        self.client = MiruroBaseClient(url, headers)
 
         # Initialize services
         self.home_service = MiruroHomeService(self.client)
