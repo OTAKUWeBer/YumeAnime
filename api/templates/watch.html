@@ -941,6 +941,30 @@
             display: none;
         }
     }
+
+    /* Fullscreen mode — video-wrapper fills viewport */
+    .video-wrapper:fullscreen,
+    .video-wrapper:-webkit-full-screen {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        background: #000 !important;
+    }
+
+    .video-wrapper:fullscreen .embed-player-frame,
+    .video-wrapper:-webkit-full-screen .embed-player-frame {
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 0 !important;
+    }
+
+    .video-wrapper:fullscreen #videoContainer,
+    .video-wrapper:-webkit-full-screen #videoContainer {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: auto !important;
+    }
 </style>
 {% endblock %}
 
@@ -1486,6 +1510,127 @@
         }
     }
 
+    // ── Global Fullscreen & Orientation Helpers ──────────────────────────────────
+    // Defined at top-level so they work for BOTH HLS & embed player types.
+
+    function lockOrientation() {
+        try {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock("landscape").catch((err) => {
+                    console.log("[Player] Screen orientation lock failed:", err);
+                });
+            } else {
+                const lockFn = screen.lockOrientation || screen.mozLockOrientation || screen.msLockOrientation;
+                if (lockFn) lockFn.call(screen, "landscape");
+            }
+        } catch (e) {
+            console.log("[Player] Orientation lock not supported:", e);
+        }
+    }
+
+    function unlockOrientation() {
+        try {
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            } else {
+                const unlockFn = screen.unlockOrientation || screen.mozUnlockOrientation || screen.msUnlockOrientation;
+                if (unlockFn) unlockFn.call(screen);
+            }
+        } catch (e) {
+            console.log("[Player] Orientation unlock not supported:", e);
+        }
+    }
+
+    /**
+     * Request fullscreen on the target element with orientation lock.
+     * Falls back gracefully: masterWrapper → video.webkitEnterFullscreen (iOS).
+     */
+    window._requestPlayerFullscreen = function (targetEl, videoEl) {
+        try {
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                // Already fullscreen → exit
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            } else {
+                // Lock orientation first (must happen during user gesture)
+                lockOrientation();
+
+                if (targetEl && targetEl.requestFullscreen) {
+                    targetEl.requestFullscreen();
+                } else if (targetEl && targetEl.webkitRequestFullscreen) {
+                    targetEl.webkitRequestFullscreen();
+                } else if (videoEl && videoEl.webkitEnterFullscreen) {
+                    // iOS Safari native fullscreen on the video element itself
+                    if (videoEl.readyState === 0) {
+                        alert("Video is still loading. Please tap play first.");
+                        videoEl.play().catch(e => console.log(e));
+                    } else {
+                        videoEl.webkitEnterFullscreen();
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Fullscreen error:", err);
+        }
+    };
+
+    // Global fullscreen state listeners — handle orientation lock/unlock & layout
+    // These fire for ALL fullscreen changes (HLS player, embed iframes, etc.)
+    function handleFullscreenChange() {
+        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        const mw = document.getElementById('video-wrapper');
+        if (fsEl) {
+            lockOrientation();
+            if (mw) {
+                mw.style.width = "100%";
+                mw.style.height = "100%";
+                mw.style.maxHeight = "100dvh";
+            }
+        } else {
+            unlockOrientation();
+            if (mw) {
+                mw.style.width = "";
+                mw.style.height = "";
+                mw.style.maxHeight = "";
+            }
+        }
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange, true);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange, true);
+
+    // Handle orientation changes while in fullscreen (resize layout)
+    window.addEventListener("orientationchange", () => {
+        const mw = document.getElementById('video-wrapper');
+        if (mw && (document.fullscreenElement || document.webkitFullscreenElement)) {
+            mw.style.width = "100%";
+            mw.style.height = "100%";
+            mw.style.maxHeight = "100dvh";
+        }
+    });
+
+    // ── Embed-only fullscreen support ──────────────────────────────────────────
+    // If the page only has an embed player (no HLS video), initVanillaPlayerUI won't run,
+    // so we need a separate fullscreen handler for the embed iframe.
+    document.addEventListener('DOMContentLoaded', function () {
+        const videoPlayer = document.getElementById('videoPlayer');
+        // Only set up embed fullscreen if there's no HLS player (embed-only page)
+        if (!videoPlayer) {
+            const masterWrapper = document.getElementById('video-wrapper');
+            if (masterWrapper) {
+                // Double-tap on mobile to fullscreen the embed
+                let lastTap = 0;
+                masterWrapper.addEventListener('touchend', function (e) {
+                    const now = Date.now();
+                    if (now - lastTap < 300) {
+                        e.preventDefault();
+                        window._requestPlayerFullscreen(masterWrapper, null);
+                    }
+                    lastTap = now;
+                });
+            }
+        }
+    });
+
     // Source Switcher Logic
     document.addEventListener('DOMContentLoaded', function () {
         const sourceBtns = document.querySelectorAll('.source-switcher-btn');
@@ -1581,7 +1726,7 @@
     // Server Progress Configuration
     window._watchProgressState = {
         isLoggedIn: {% if is_logged_in %}true{% else %} false{% endif %},
-    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } },
+    serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
     animeId: "{{ anime_id }}"
     };
 
@@ -1892,122 +2037,38 @@
             muteBtn.innerHTML = video.muted || video.volume === 0 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
         });
 
-        // Helper functions for screen orientation management
-        function lockOrientation() {
-            const lockFn =
-                (screen.orientation && screen.orientation.lock) ||
-                screen.lockOrientation ||
-                screen.mozLockOrientation ||
-                screen.msLockOrientation;
-
-            if (lockFn) {
-                lockFn.call(screen.orientation || screen, "landscape").catch((err) => {
-                    console.log("[Player] Screen orientation lock failed:", err);
-                });
-            }
-
-            // Add orientationchange listener to handle viewport updates
-            const handleOrientationChange = () => {
-                console.log("[Player] Device rotated, updating fullscreen layout");
-                if (wrapper && document.fullscreenElement) {
-                    wrapper.style.width = "100%";
-                    wrapper.style.height = "100%";
-                    wrapper.style.maxHeight = "100dvh";
-                }
-            };
-
-            window.removeEventListener("orientationchange", handleOrientationChange);
-            window.addEventListener("orientationchange", handleOrientationChange);
-        }
-
-        function unlockOrientation() {
-            const unlockFn =
-                (screen.orientation && screen.orientation.unlock) ||
-                screen.unlockOrientation ||
-                screen.mozUnlockOrientation ||
-                screen.msUnlockOrientation;
-
-            if (unlockFn) {
-                try {
-                    unlockFn.call(screen.orientation || screen);
-                } catch (err) {
-                    console.log("[Player] Screen orientation unlock failed:", err);
-                }
-            }
-        }
-
-        // Fullscreen
+        // Fullscreen — use masterWrapper (video-wrapper) so custom controls + embeds are included
         fsBtn.addEventListener('click', () => {
-            try {
-                if (document.fullscreenElement || document.webkitFullscreenElement) {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                } else {
-                    // Lock orientation before requesting fullscreen (must happen during user gesture)
-                    lockOrientation();
-
-                    // Use wrapper for Android/Desktop so custom UI stays over video
-                    if (wrapper.requestFullscreen) wrapper.requestFullscreen();
-                    else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
-                    else if (video.webkitEnterFullscreen) {
-                        // iOS Safari native fullscreen on the video element itself
-                        if (video.readyState === 0) {
-                            alert("Video is still loading. Please tap play first to load the stream before entering fullscreen on iOS.");
-                            video.play().catch(e => console.log(e));
-                        } else {
-                            video.webkitEnterFullscreen();
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Fullscreen error:", err);
-            }
+            window._requestPlayerFullscreen(masterWrapper, video);
         });
         document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                wrapper.classList.add('vjs-fullscreen');
-                wrapper.style.width = "100%";
-                wrapper.style.height = "100%";
-                wrapper.style.maxHeight = "100dvh";
+            const fsEl = document.fullscreenElement;
+            if (fsEl) {
+                masterWrapper.classList.add('vjs-fullscreen');
+                masterWrapper.style.width = "100%";
+                masterWrapper.style.height = "100%";
+                masterWrapper.style.maxHeight = "100dvh";
             } else {
-                wrapper.classList.remove('vjs-fullscreen');
-                wrapper.style.width = "";
-                wrapper.style.height = "";
-                wrapper.style.maxHeight = "";
-                unlockOrientation();
+                masterWrapper.classList.remove('vjs-fullscreen');
+                masterWrapper.style.width = "";
+                masterWrapper.style.height = "";
+                masterWrapper.style.maxHeight = "";
             }
         });
         document.addEventListener('webkitfullscreenchange', () => {
-            if (document.webkitFullscreenElement) {
-                wrapper.classList.add('vjs-fullscreen');
-                wrapper.style.width = "100%";
-                wrapper.style.height = "100%";
-                wrapper.style.maxHeight = "100dvh";
+            const fsEl = document.webkitFullscreenElement;
+            if (fsEl) {
+                masterWrapper.classList.add('vjs-fullscreen');
+                masterWrapper.style.width = "100%";
+                masterWrapper.style.height = "100%";
+                masterWrapper.style.maxHeight = "100dvh";
             } else {
-                wrapper.classList.remove('vjs-fullscreen');
-                wrapper.style.width = "";
-                wrapper.style.height = "";
-                wrapper.style.maxHeight = "";
-                unlockOrientation();
+                masterWrapper.classList.remove('vjs-fullscreen');
+                masterWrapper.style.width = "";
+                masterWrapper.style.height = "";
+                masterWrapper.style.maxHeight = "";
             }
         });
-
-        // Global fullscreen listener for embedded iframes (ensures orientation lock on any fullscreen)
-        document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                lockOrientation();
-            } else {
-                unlockOrientation();
-            }
-        }, true);
-
-        document.addEventListener('webkitfullscreenchange', () => {
-            if (document.webkitFullscreenElement) {
-                lockOrientation();
-            } else {
-                unlockOrientation();
-            }
-        }, true);
 
         // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
@@ -2022,8 +2083,7 @@
             // Fullscreen (f)
             else if (e.key.toLowerCase() === 'f') {
                 e.preventDefault();
-                if (document.fullscreenElement) document.exitFullscreen();
-                else masterWrapper.requestFullscreen();
+                window._requestPlayerFullscreen(masterWrapper, video);
             }
             // Mute (m)
             else if (e.key.toLowerCase() === 'm') {
