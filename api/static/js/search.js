@@ -89,36 +89,42 @@ class SearchManager {
     initializeFormHandlers() {
         // Desktop form handler
         this.elements.desktop.form?.addEventListener('submit', (e) => {
+            e.preventDefault();
             const value = this.elements.desktop.input.value.trim();
             if (!value) {
-                e.preventDefault();
                 this.showSearchError('Please enter a search query.', 'desktop');
                 return false;
             }
             this.elements.desktop.suggestionBox.classList.add('hidden');
+            const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
+            window.location.href = `/search/${searchPath}`;
         });
 
         // Mobile form handler
         this.elements.mobile.form?.addEventListener('submit', (e) => {
+            e.preventDefault();
             const value = this.elements.mobile.input.value.trim();
             if (!value) {
-                e.preventDefault();
                 this.showSearchError('Please enter a search query.', 'mobile');
                 return false;
             }
             this.elements.mobile.suggestionBox?.classList.add('hidden');
+            const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
+            window.location.href = `/search/${searchPath}`;
         });
 
         // Dropdown form handler
         this.elements.dropdown.form?.addEventListener('submit', (e) => {
+            e.preventDefault();
             const value = this.elements.dropdown.input.value.trim();
             if (!value) {
-                e.preventDefault();
                 this.showSearchError('Please enter a search query.', 'dropdown');
                 return false;
             }
             this.elements.dropdown.suggestionBox?.classList.add('hidden');
             this.elements.dropdown.container?.classList.add('hidden');
+            const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
+            window.location.href = `/search/${searchPath}`;
         });
     }
 
@@ -506,7 +512,7 @@ class SearchManager {
                         ${(s.jname || s.japanese_title) ? `<p class="text-xs text-gray-400 truncate font-medium">${s.jname || s.japanese_title}</p>` : ''}
                         ${(s.moreInfo && s.moreInfo.length) ? `
                             <div class="suggestion-meta">
-                                ${s.moreInfo.slice(0, 2).map((info, idx) => `<span>${info}${idx < Math.min(s.moreInfo.length - 1, 1) ? ' • ' : ''}</span>`).join('')}
+                                <span>${s.moreInfo.join(' • ')}</span>
                             </div>
                         ` : ''}
                     </div>

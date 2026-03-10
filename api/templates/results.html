@@ -10,8 +10,8 @@
     <div class="search-results-header">
         <h1>Search Results</h1>
         <p class="search-query text-secondary">
-            {% if results %}
-            Found {{ results | length }} result{% if results | length != 1 %}s{% endif %} for "<strong>{{ query
+            {% if animes %}
+            Found {{ animes | length }} result{% if animes | length != 1 %}s{% endif %} for "<strong>{{ query
                 }}</strong>"
             {% else %}
             No results found for "<strong>{{ query }}</strong>"

@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 class MiruroScraper:
     """
     Unified async wrapper for the Miruro Native API
-
     """
 
     api_url = os.getenv("MIRURO_API_URL")

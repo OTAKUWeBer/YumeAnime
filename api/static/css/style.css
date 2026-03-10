@@ -851,7 +851,7 @@ h6 {
     /* Increased height for better visual impact */
     display: none;
     opacity: 0;
-    transition: opacity 0.6s ease-in-out;
+    transition: opacity 1.0s ease-in-out;
 }
 
 .spotlight-slide.active {
@@ -860,11 +860,11 @@ h6 {
 }
 
 .spotlight-slide.slide-right {
-  animation: slideInFromRight 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: slideInFromRight 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .spotlight-slide.slide-left {
-  animation: slideInFromLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: slideInFromLeft 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .spotlight-backdrop {

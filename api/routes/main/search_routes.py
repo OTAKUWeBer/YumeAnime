@@ -7,10 +7,15 @@ from flask import Blueprint, request, redirect, url_for, render_template, jsonif
 search_routes_bp = Blueprint('search_routes', __name__)
 
 
+@search_routes_bp.route('/search/<query>', methods=['GET'])
 @search_routes_bp.route('/search', methods=['GET'])
-def search():
+def search(query=None):
     """Handle search request and display results"""
-    search_query = request.args.get('q', '').strip()
+    if query:
+        search_query = query.replace('-', ' ').strip()
+    else:
+        search_query = request.args.get('q', '').strip()
+        
     if not search_query:
         return redirect(url_for('main.home_routes.home'))
     
@@ -48,9 +53,12 @@ def search():
 
 
 @search_routes_bp.route('/search/suggestions', methods=['GET'])
+@search_routes_bp.route('/suggestions', methods=['GET'])
 def search_suggestions_route():
-    """Return JSON suggestions for the query"""
-    query = request.args.get('q', '').strip()
+    """Return JSON suggestions for the query.
+    Accepts either ?q=... or ?query=... for compatibility.
+    """
+    query = request.args.get('q', '').strip() or request.args.get('query', '').strip()
     if not query:
         return jsonify({"suggestions": []})
 

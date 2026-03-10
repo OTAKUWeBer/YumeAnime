@@ -130,19 +130,31 @@ class MiruroSearchService:
         for s in filtered_suggestions:
             name = s.get("title") or s.get("title_romaji") or ""
             poster = s.get("poster") or ""
-            if not name or name == "Unknown" or not poster:
+            if not name or name == "Unknown":
                 continue
+            # Build moreInfo: format, episode count or status, then year
+            more_info = []
+            fmt = s.get("format")
+            if fmt:
+                more_info.append(fmt)
+            eps = s.get("episodes")
+            status = s.get("status") or ""
+            if eps:
+                more_info.append(f"Ep {eps}")
+            elif status == "NOT_YET_RELEASED":
+                more_info.append("Upcoming")
+            elif status == "RELEASING":
+                more_info.append("Airing")
+            year = s.get("year")
+            if year:
+                more_info.append(str(year))
             normalized.append({
                 "id": str(s.get("id", "")),
                 "anilistId": s.get("id"),
                 "name": name,
                 "jname": s.get("title_romaji") or "",
                 "poster": poster,
-                "moreInfo": [
-                    s.get("format") or "",
-                    f"Ep {s.get('episodes', '?')}" if s.get("episodes") else "",
-                    str(s.get("year") or ""),
-                ],
+                "moreInfo": more_info,
             })
 
         return {"suggestions": normalized}
