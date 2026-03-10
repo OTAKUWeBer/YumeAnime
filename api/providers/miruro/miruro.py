@@ -7,6 +7,10 @@ import logging
 from typing import Optional, Dict, Any, Union
 from dotenv import load_dotenv
 
+# Ensure we load the root .env file specifically, overriding existing vars
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.env"))
+load_dotenv(dotenv_path=env_path, override=True)
+
 from .base import MiruroBaseClient
 from .home import MiruroHomeService
 from .anime_info import MiruroAnimeInfoService
@@ -15,7 +19,6 @@ from .search import MiruroSearchService
 from .catalog import MiruroCatalogService
 from .sources import MiruroSourcesService
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +43,8 @@ class MiruroScraper:
         if allowed_origins:
             headers["Origin"] = allowed_origins.split(",")[0]   
 
+        logger.info(f"[MiruroScraper] Initialized with headers: {list(headers.keys())}")
+        
         # Initialize base client
         self.client = MiruroBaseClient(url, headers)
 
