@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block title %}YumeAnime - Watch Anime Online{% endblock %}
-{% block meta_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}
+{% block meta_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime
+series.{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
 
@@ -388,7 +389,7 @@
                     slide.classList.add('active', direction === 'next' ? 'slide-right' : 'slide-left');
                     setTimeout(() => {
                         slide.classList.remove('slide-left', 'slide-right');
-                    }, 600);
+                    }, 1000);
                 } else {
                     slide.classList.remove('active', 'slide-left', 'slide-right');
                 }
@@ -402,7 +403,7 @@
 
             setTimeout(() => {
                 isAnimating = false;
-            }, 600);
+            }, 1000);
         }
 
         function nextSlide() {
@@ -414,7 +415,7 @@
         }
 
         function startAutoplay() {
-            autoplayInterval = setInterval(nextSlide, 6000);
+            autoplayInterval = setInterval(nextSlide, 10000);
         }
 
         function stopAutoplay() {
