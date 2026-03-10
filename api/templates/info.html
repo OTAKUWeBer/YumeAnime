@@ -388,25 +388,31 @@
 
                     <!-- Actions -->
                     <div class="anime-actions" style="margin-bottom: var(--space-xl);">
-                        {% set next_watch_ep = (user_watched_episodes + 1) if (user_watched_episodes and
+                        {% set max_available_ep = anime.released_episodes if (anime.released_episodes is defined and
+                        anime.released_episodes and anime.released_episodes > 0) else (anime.total_sub_episodes or 0) %}
+                        {% set raw_next_ep = (user_watched_episodes + 1) if (user_watched_episodes and
                         user_watched_episodes > 0) else 1 %}
-                        <a href="/watch/{{ anime.id or current_season_id }}/ep-{{ next_watch_ep }}"
-                            class="btn btn-primary btn-lg" id="watch-now-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="5 3 19 12 5 21 5 3" />
-                            </svg>
-                            <span id="watch-now-text">{% if next_watch_ep > 1 %}Continue Ep {{ next_watch_ep }}{% else
-                                %}Watch Now{% endif %}</span>
-                        </a>
-                        <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
-                            data-anime-id="{{ anime.id or current_season_id }}"
-                            data-anime-title="{{ anime.name or anime.title }}">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                            </svg>
-                            <span id="watchlist-btn-text">Add to List</span>
-                        </button>
+                        {% set next_watch_ep = raw_next_ep if (max_available_ep == 0 or raw_next_ep <= max_available_ep)
+                            else max_available_ep %} {% set is_caught_up=(max_available_ep> 0 and raw_next_ep >
+                            max_available_ep) %}
+                            <a href="/watch/{{ anime.id or current_season_id }}/ep-{{ next_watch_ep }}"
+                                class="btn btn-primary btn-lg" id="watch-now-btn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                                <span id="watch-now-text">{% if is_caught_up %}Caught Up! Ep {{ next_watch_ep }}{% elif
+                                    next_watch_ep > 1 %}Continue Ep {{ next_watch_ep }}{% else %}Watch Now{% endif
+                                    %}</span>
+                            </a>
+                            <button class="btn btn-secondary btn-lg" id="add-to-watchlist"
+                                data-anime-id="{{ anime.id or current_season_id }}"
+                                data-anime-title="{{ anime.name or anime.title }}">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                </svg>
+                                <span id="watchlist-btn-text">Add to List</span>
+                            </button>
                     </div>
 
                     <script>
@@ -414,6 +420,7 @@
                             const watchBtn = document.getElementById('watch-now-btn');
                             const watchText = document.getElementById('watch-now-text');
                             const animeId = "{{ anime.id or current_season_id }}";
+                            const maxAvailableEp = parseInt("{{ max_available_ep }}") || 0;
 
                             if (watchBtn && animeId) {
                                 try {
@@ -435,8 +442,19 @@
                                     }
 
                                     if (lastWatchedEpNum) {
-                                        watchBtn.href = `/watch/${animeId}/ep-${lastWatchedEpNum}`;
-                                        if (watchText) watchText.textContent = `Continue Ep ${lastWatchedEpNum}`;
+                                        // Clamp to max available episodes so we don't link to unreleased episodes
+                                        let targetEp = lastWatchedEpNum;
+                                        let caughtUp = false;
+                                        if (maxAvailableEp > 0 && targetEp > maxAvailableEp) {
+                                            targetEp = maxAvailableEp;
+                                            caughtUp = true;
+                                        }
+                                        watchBtn.href = `/watch/${animeId}/ep-${targetEp}`;
+                                        if (watchText) {
+                                            watchText.textContent = caughtUp
+                                                ? `Caught Up! Ep ${targetEp}`
+                                                : `Continue Ep ${targetEp}`;
+                                        }
                                     }
                                 } catch (e) { console.error("Error updating watch button:", e); }
                             }

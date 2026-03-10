@@ -45,8 +45,21 @@ class MiruroCatalogService:
             "rating": item.get("averageScore") or None,
         }
 
+    async def _fallback_anilist_query(self, query: str, variables: dict) -> Dict[str, Any]:
+        """Execute a GraphQL query against AniList API as fallback"""
+        url = "https://graphql.anilist.co"
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json={"query": query, "variables": variables}) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+        except Exception as e:
+            logger.error(f"AniList fallback query failed: {e}")
+        return {}
+
     async def genre(self, name: str, page: int = 1) -> Dict[str, Any]:
-        """Get anime by genre via Miruro /filter endpoint"""
+        """Get anime by genre via Miruro /filter endpoint with AniList fallback"""
         params = {
             "genre": name.title(),
             "page": page,
@@ -54,7 +67,54 @@ class MiruroCatalogService:
             "sort": "SCORE_DESC",
         }
         resp = await self.client._get("filter", params=params)
+        
+        # AniList Fallback if Miruro fails
         if not resp:
+            logger.info(f"Miruro /filter failed for genre '{name}'. Using AniList fallback.")
+            query = '''
+            query ($genre: String, $page: Int, $perPage: Int) {
+              Page(page: $page, perPage: $perPage) {
+                pageInfo {
+                  total
+                  hasNextPage
+                  lastPage
+                }
+                media(type: ANIME, genre: $genre, sort: SCORE_DESC, isAdult: false) {
+                  id
+                  title { romaji english native }
+                  coverImage { extraLarge large }
+                  episodes
+                  nextAiringEpisode { episode }
+                  format
+                  duration
+                  averageScore
+                  genres
+                  isAdult
+                }
+              }
+            }
+            '''
+            variables = {"genre": name.title(), "page": page, "perPage": 24}
+            fallback_data = await self._fallback_anilist_query(query, variables)
+            
+            if fallback_data and "data" in fallback_data and "Page" in fallback_data["data"]:
+                page_data = fallback_data["data"]["Page"]
+                media_list = page_data.get("media", [])
+                page_info = page_data.get("pageInfo", {})
+                
+                filtered_results = [
+                    item for item in media_list 
+                    if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
+                ]
+                animes = [self._normalize_anime(item) for item in filtered_results]
+                
+                return {
+                    "animes": animes,
+                    "genreName": name.title(),
+                    "totalPages": page_info.get("lastPage", max(1, page)),
+                    "hasNextPage": page_info.get("hasNextPage", False),
+                    "currentPage": page,
+                }
             return {}
 
         results = resp.get("results", [])
@@ -97,6 +157,61 @@ class MiruroCatalogService:
 
         params = {"page": page, "per_page": 24, **extra_params}
         resp = await self.client._get(endpoint, params=params)
+        
+        # AniList Fallback if Miruro fails
+        if not resp and endpoint == "filter":
+            logger.info(f"Miruro /filter failed for category '{name}'. Using AniList fallback.")
+            
+            # Map params to GraphQL variables
+            graphql_format = extra_params.get("format")
+            graphql_status = extra_params.get("status")
+            query = '''
+            query ($page: Int, $perPage: Int, $format: MediaFormat, $status: MediaStatus) {
+              Page(page: $page, perPage: $perPage) {
+                pageInfo { total hasNextPage lastPage }
+                media(type: ANIME, format: $format, status: $status, sort: SCORE_DESC, isAdult: false) {
+                  id
+                  title { romaji english native }
+                  coverImage { extraLarge large }
+                  episodes
+                  nextAiringEpisode { episode }
+                  format
+                  duration
+                  averageScore
+                  genres
+                  isAdult
+                }
+              }
+            }
+            '''
+            variables = {"page": page, "perPage": 24}
+            if graphql_format:
+                variables["format"] = graphql_format
+            if graphql_status:
+                variables["status"] = graphql_status
+                
+            fallback_data = await self._fallback_anilist_query(query, variables)
+            
+            if fallback_data and "data" in fallback_data and "Page" in fallback_data["data"]:
+                page_data = fallback_data["data"]["Page"]
+                media_list = page_data.get("media", [])
+                page_info = page_data.get("pageInfo", {})
+                
+                filtered_results = [
+                    item for item in media_list 
+                    if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
+                ]
+                animes = [self._normalize_anime(item) for item in filtered_results]
+                
+                return {
+                    "animes": animes,
+                    "category": name.replace("-", " ").title(),
+                    "totalPages": page_info.get("lastPage", max(1, page)),
+                    "hasNextPage": page_info.get("hasNextPage", False),
+                    "currentPage": page,
+                }
+            return {}
+
         if not resp:
             return {}
 

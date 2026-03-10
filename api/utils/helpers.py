@@ -359,7 +359,7 @@ async def enrich_watchlist_item(item: dict) -> dict:
             'poster_url': poster_url,
             'episodes': episodes,
             'total_episodes': total_episodes,
-            'status': status
+            'anime_status': status  # anime's airing status, NOT the user's watchlist status
         }
         if rating:
             payload['rating'] = rating

@@ -212,10 +212,20 @@ def _extract_ep_number_from_legacy(ep_param, anime_id):
 def _redirect_to_best_episode(anime_id):
     """
     Redirects to the user's next unwatched episode based on DB history.
-    Does NOT fetch heavy API lists; blindly increments watch count.
+    Clamps to released episodes so we never redirect to an unreleased episode.
     """
     anime_id_clean = anime_id.split("?", 1)[0]
     target_ep = 1
+
+    # Fetch released episode count to clamp
+    max_released = 0
+    try:
+        anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(anime_id_clean))
+        if isinstance(anime_info, dict):
+            info = anime_info.get("info", anime_info) if "info" in anime_info else anime_info
+            max_released = info.get("released_episodes") or info.get("total_sub_episodes") or 0
+    except Exception as e:
+        current_app.logger.error(f"Error fetching anime info for episode clamp: {e}")
 
     # Check user watchlist for progress if logged in
     if "username" in session and "_id" in session:
@@ -228,6 +238,9 @@ def _redirect_to_best_episode(anime_id):
                 watched_count = watchlist_entry.get("watched_episodes", 0)
                 if watched_count > 0:
                     target_ep = watched_count + 1
+                    # Clamp to max released episodes
+                    if max_released > 0 and target_ep > max_released:
+                        target_ep = max_released
         except Exception as e:
             current_app.logger.error(f"Error fetching watchlist entry in watch route: {e}")
 

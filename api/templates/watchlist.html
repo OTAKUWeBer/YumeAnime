@@ -283,7 +283,7 @@
                         <div class="watchlist-item-info">
                             <div>
                                 <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
-                                ${getStatusBadge(item.status)}
+                                ${getStatusBadge(item.anime_status)}
                             </div>
                             <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
                                 <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
