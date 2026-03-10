@@ -20,7 +20,7 @@ def search():
         # Extract anime list
         animes = results.get("animes") or results.get("data") or []
 
-        mapped = {}
+        mapped = []
         for anime in animes:
             name = anime.get("name") or anime.get("title") or anime.get("id")
             if not name:
@@ -35,19 +35,12 @@ def search():
             if not poster and not sub and not dub:
                 continue
 
-            mapped[name] = {
-                "link": f"/anime/{anime.get('id')}",
-                "image_url": poster,
-                "episodes": {
-                    "sub": sub,
-                    "dub": dub,
-                }
-            }
+            mapped.append(anime)
 
         if not mapped:
-            return render_template('results.html', query=search_query, results={})
+            return render_template('results.html', query=search_query, animes=[])
         
-        return render_template('results.html', query=search_query, results=mapped)
+        return render_template('results.html', query=search_query, animes=mapped)
     
     except Exception as e:
         print("Search error:", e)

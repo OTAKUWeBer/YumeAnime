@@ -140,7 +140,7 @@ class MiruroSearchService:
                 "poster": poster,
                 "moreInfo": [
                     s.get("format") or "",
-                    s.get("status") or "",
+                    f"Ep {s.get('episodes', '?')}" if s.get("episodes") else "",
                     str(s.get("year") or ""),
                 ],
             })
