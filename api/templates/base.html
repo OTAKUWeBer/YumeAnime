@@ -35,94 +35,93 @@
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
-    <!-- Anti-Scraping Protection -->
     <script>
-        (function () {
-            // Clear console and detect DevTools
-            const devtools = { open: false, orientation: null };
-            const threshold = 160;
+        !function(){
+        var _q=['outerWidth','innerWidth','outerHeight','innerHeight','toString','color:transparent','video,iframe','controlslist','nodownload noremoteplayback','disablepictureinpicture','DOMContentLoaded','loading','F12','/','innerHTML','keydown','replace','documentElement','now','addEventListener'];
+        var _open=!1,_trapped=!1,_n=0,_tid=null;
 
-            // Detect DevTools via window size difference
-            const checkDevTools = function () {
-                const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-                const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        // Called every poll — returns true if devtools appears open
+        var _chkSize=function(){
+            if(window[_q[0]]<0x384)return!1;
+            return(window[_q[0]]-window[_q[1]])>0x12c||(window[_q[2]]-window[_q[3]])>0x12c;
+        };
+        var _chkDbg=function(){
+            var _t=performance[_q[18]]();
+            debugger;
+            return performance[_q[18]]()-_t>0x78;
+        };
 
-                if (widthThreshold || heightThreshold) {
-                    if (!devtools.open) {
-                        devtools.open = true;
-                        onDevToolsOpen();
-                    }
-                } else {
-                    devtools.open = false;
+        // Main handler — called on every poll tick
+        var _tick=function(){
+            var _detected=_chkSize()||_chkDbg();
+            if(_detected){
+                _open=!0;
+                if(!_trapped){
+                    // First detection: wipe page + enter debugger trap
+                    _trapped=!0;
+                    try{document[_q[14]]='';}catch(_e){}
+                    (function _trap(){
+                        debugger;
+                        // Only redirect if still open (re-check size each trap cycle)
+                        if(_open){
+                            window['location'][_q[16]](_q[13]);
+                        }
+                        _tid=setTimeout(_trap,0xC8);
+                    })();
                 }
-            };
-
-            const onDevToolsOpen = function () {
-                // Clear console repeatedly
-                console.clear();
-                console.log('%c⚠️ Stop!', 'color: red; font-size: 40px; font-weight: bold;');
-                console.log('%cThis is a browser feature intended for developers.', 'font-size: 16px;');
-            };
-
-            // Override console methods when devtools detected
-            const originalLog = console.log;
-            const originalWarn = console.warn;
-            const originalError = console.error;
-
-            // Clear console on various triggers
-            document.addEventListener('keydown', function (e) {
-                // Detect F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
-                if (e.key === 'F12' ||
-                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
-                    (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
-                    e.preventDefault();
-                    console.clear();
-                    return false;
-                }
-            });
-
-            // Disable right-click on video and iframe elements
-            document.addEventListener('contextmenu', function (e) {
-                const target = e.target;
-                if (target.tagName === 'VIDEO' ||
-                    target.tagName === 'IFRAME' ||
-                    target.closest('.video-player') ||
-                    target.closest('.player-container') ||
-                    target.closest('[class*="player"]')) {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-
-            // Protect video elements from inspection
-            const protectVideos = function () {
-                const videos = document.querySelectorAll('video, iframe');
-                videos.forEach(function (el) {
-                    el.setAttribute('controlslist', 'nodownload noremoteplayback');
-                    el.setAttribute('disablepictureinpicture', '');
-                    el.oncontextmenu = function () { return false; };
-                });
-            };
-
-            // Run on load and observe for new elements
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', protectVideos);
             } else {
-                protectVideos();
+                // Devtools closed — reset state so normal browsing resumes
+                _open=!1;
+                _trapped=!1;
+                if(_tid){clearTimeout(_tid);_tid=null;}
             }
+        };
 
-            // Observer for dynamically added videos
-            const observer = new MutationObserver(function (mutations) {
-                protectVideos();
+        // Proxy toString probe — fires on page load if console already open
+        var _p=new Proxy({},{get:function(_o,_k){
+            if(_k===_q[4]||_k===Symbol['toPrimitive']){
+                if(++_n>1){_open=!0;_tick();}
+                return function(){return'';};
+            }
+            return _o[_k];
+        }});
+        try{console['log']('%c',_q[5],_p);}catch(_e){}
+
+        // Run immediately on load to catch pre-opened devtools
+        _tick();
+
+        // Then poll every 500ms (0x1F4)
+        setInterval(_tick,0x1F4);
+
+        // Also re-check instantly when tab becomes visible
+        // (catches opening devtools in background then switching to tab)
+        document[_q[19]]('visibilitychange',function(){
+            if(!document['hidden'])_tick();
+        });
+
+        // Block keyboard shortcuts
+        document[_q[19]](_q[15],function(_e){
+            var _k=_e['key'];
+            if(_k===_q[12]){_e['preventDefault']();_e['stopPropagation']();return!1;}
+            var _ci=_e['ctrlKey'],_si=_e['shiftKey'];
+            if(_ci&&_si&&['i','I','j','J','c','C','k','K']['includes'](_k)){_e['preventDefault']();_e['stopPropagation']();return!1;}
+            if(_ci&&['u','U','s','S']['includes'](_k)){_e['preventDefault']();_e['stopPropagation']();return!1;}
+        },!0);
+
+        // Block right-click
+        document[_q[19]]('contextmenu',function(_e){_e['preventDefault']();return!1;},!0);
+
+        // Protect video/iframe
+        var _pv=function(){
+            document['querySelectorAll'](_q[6])['forEach'](function(_el){
+                _el['setAttribute'](_q[7],_q[8]);
+                _el['setAttribute'](_q[9],'');
+                _el['oncontextmenu']=function(){return!1;};
             });
-
-            observer.observe(document.body || document.documentElement, {
-                childList: true,
-                subtree: true
-            });
-
-            // Debugger trap disabled
-        })();
+        };
+        document['readyState']===_q[11]?document[_q[19]](_q[10],_pv):_pv();
+        new MutationObserver(_pv)['observe'](document[_q[17]],{'childList':!0,'subtree':!0});
+        }();
     </script>
 
     {% block extra_css %}{% endblock %}
@@ -315,7 +314,6 @@
 
     <!-- Mobile Navigation -->
     <div class="mobile-nav" id="mobile-nav">
-        <!-- Removed inline search input, using overlay instead for better UX -->
         <div class="mobile-nav-links">
             <a href="{{ url_for('main.home_routes.home') }}" class="mobile-nav-link">Home</a>
             <a href="/category/movie" class="mobile-nav-link">Movies</a>
@@ -462,10 +460,8 @@
                 <div style="text-align: center; margin-top: var(--space-md);">
                     <button type="button" id="anilistLoginBtn" class="btn btn-secondary w-full"
                         style="margin-top: var(--space-sm); display:flex; align-items:center; justify-content:center;">
-
                         <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" width="18" height="18"
                             style="margin-right:8px;" />
-
                         Continue with AniList
                     </button>
                 </div>
@@ -497,13 +493,10 @@
                     <button type="submit" class="btn btn-primary w-full" id="signup-btn">
                         <span id="signup-btn-text">Create Account</span>
                     </button>
-                    <!-- AniList Signup Button -->
                     <button type="button" id="anilistLoginBtn" class="btn btn-secondary w-full"
                         style="margin-top: var(--space-sm); display:flex; align-items:center; justify-content:center;">
-
                         <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" width="18" height="18"
                             style="margin-right:8px;" />
-
                         Continue with AniList
                     </button>
                 </form>
@@ -543,8 +536,6 @@
                 mobileNav.classList.toggle('open');
             });
         }
-
-
 
         // Auto-hide flash messages
         setTimeout(() => {
@@ -587,7 +578,6 @@
             const btnText = document.getElementById('login-btn-text');
             const errorDiv = document.getElementById('login-error');
 
-            // Get Turnstile token
             const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
             if (!turnstileToken) {
                 errorDiv.textContent = 'Please complete the security check.';
@@ -617,7 +607,6 @@
                 } else {
                     errorDiv.textContent = data.message || 'Login failed';
                     errorDiv.style.display = 'block';
-                    // Reset Turnstile widget
                     if (window.turnstile) {
                         const widget = form.querySelector('.cf-turnstile');
                         if (widget) turnstile.reset(widget);
@@ -639,7 +628,6 @@
             const btnText = document.getElementById('signup-btn-text');
             const errorDiv = document.getElementById('signup-error');
 
-            // Get Turnstile token
             const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
             if (!turnstileToken) {
                 errorDiv.textContent = 'Please complete the security check.';
@@ -670,7 +658,6 @@
                 } else {
                     errorDiv.textContent = data.message || 'Signup failed';
                     errorDiv.style.display = 'block';
-                    // Reset Turnstile widget
                     if (window.turnstile) {
                         const widget = form.querySelector('.cf-turnstile');
                         if (widget) turnstile.reset(widget);
@@ -707,7 +694,6 @@
                 }
             } catch (err) {
                 console.error('Logout error:', err);
-                // Even if there's an error, redirect to home
                 window.location.href = '/';
             }
         }
@@ -721,9 +707,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                // Find the latest watched episode for ALL anime in localStorage
-                const latestWatched = {}; // animeId -> episodeNumber
-                const latestTimestamps = {}; // animeId -> timestamp
+                const latestWatched = {};
+                const latestTimestamps = {};
 
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
@@ -746,7 +731,6 @@
                     }
                 }
 
-                // Update all links pointing to /watch/<id> or /watch/<id>/ep-1
                 const watchLinks = document.querySelectorAll('a[href^="/watch/"]');
                 watchLinks.forEach(link => {
                     const href = link.getAttribute('href');
@@ -754,7 +738,6 @@
                     if (hrefMatch) {
                         const animeId = hrefMatch[1];
                         if (latestWatched[animeId] && latestWatched[animeId] > 1) {
-                            // Don't overwrite if it's the main watch-now-btn (info page has its own logic that handles text)
                             if (link.id !== 'watch-now-btn') {
                                 link.setAttribute('href', `/watch/${animeId}/ep-${latestWatched[animeId]}`);
                             }
