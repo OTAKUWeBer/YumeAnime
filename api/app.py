@@ -25,6 +25,8 @@ _CHALLENGE_COOKIE  = '__utmz'       # cookie name
 _CHALLENGE_SECRET  = None             # set in create_app() from env/config
 _CHALLENGE_TTL     = 60 * 60 * 6     # cookie valid for 6 hours (seconds)
 _CHALLENGE_VER     = 'v3'             # bump this to instantly invalidate ALL existing cookies
+_POW_DIFFICULTY    = 2                # SHA256 prefix zeros for proof-of-work (~256 avg iters, ~50ms in browser)
+_PAGE_TOKEN_TTL    = 60 * 60          # signed page token valid 1 hour — required on all /api/ calls
 
 # Paths that skip the JS challenge entirely
 _CHALLENGE_SKIP_PREFIXES = (
@@ -61,6 +63,50 @@ def _verify_challenge_token(token: str, secret: str, ip: str, ua: str) -> bool:
         ua_key   = ua[:64]
         msg      = f"yume:{_CHALLENGE_VER}:{bucket}:{ip}:{ua_key}".encode()
         expected = hmac.new(secret.encode(), msg, hashlib.sha256).hexdigest()[:24]
+        return hmac.compare_digest(sig, expected)
+    except Exception:
+        return False
+
+
+def _verify_pow(challenge: str, solution: str, difficulty: int = None) -> bool:
+    """Verify FNV-1a(challenge + solution) starts with `difficulty` hex zeros.
+    Uses same FNV-1a as the browser JS — works on HTTP and HTTPS alike.
+    """
+    if difficulty is None:
+        difficulty = _POW_DIFFICULTY
+    try:
+        n   = int(solution)
+        s   = f"{challenge}{n}"
+        h   = 0x811c9dc5
+        for c in s.encode():
+            h ^= c
+            h  = (h * 0x01000193) & 0xFFFFFFFF
+        digest = format(h, '08x')
+        return digest.startswith('0' * difficulty)
+    except Exception:
+        return False
+
+
+def _make_page_token(secret: str, ip: str) -> str:
+    """Short-lived IP-bound token injected into every HTML page as a meta tag.
+    JS reads it and adds it as X-PT header on all /api/ fetch calls.
+    """
+    bucket = int(time.time()) // _PAGE_TOKEN_TTL
+    msg    = f"pt:{bucket}:{ip}".encode()
+    sig    = hmac.new(secret.encode(), msg, hashlib.sha256).hexdigest()[:20]
+    return f"{bucket}.{sig}"
+
+
+def _verify_page_token(token: str, secret: str, ip: str) -> bool:
+    """Return True if page token is valid for this IP and not expired."""
+    try:
+        bucket_str, sig = token.split('.', 1)
+        bucket     = int(bucket_str)
+        now_bucket = int(time.time()) // _PAGE_TOKEN_TTL
+        if abs(now_bucket - bucket) > 2:
+            return False
+        msg      = f"pt:{bucket}:{ip}".encode()
+        expected = hmac.new(secret.encode(), msg, hashlib.sha256).hexdigest()[:20]
         return hmac.compare_digest(sig, expected)
     except Exception:
         return False
@@ -154,14 +200,21 @@ def create_app():
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp,       url_prefix='/api')
 
+    @app.context_processor
+    def inject_page_token():
+        """Layer 4 — inject signed page token into every HTML template as a meta tag.
+        base.html reads it and adds X-PT header on all /api/ fetch calls.
+        """
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+        return dict(page_token=_make_page_token(_CHALLENGE_SECRET, client_ip))
+
     # ── JS Challenge endpoint ─────────────────────────────────────────────────
     @app.route('/_challenge')
     def js_challenge():
         """
-        Step 1: Serve challenge page with signed nonce baked into JS.
-        JS must POST the nonce back to /_verify — curl cannot do this without
-        running JS. The real cookie is set server-side as HttpOnly, meaning
-        it is COMPLETELY INVISIBLE in browser devtools and cannot be copied.
+        Layer 1 — JS execution gate (curl can't run JS).
+        Layer 2 — Proof-of-Work baked into challenge page (adds CPU cost for bots).
+        Cookie is set HttpOnly server-side — invisible in devtools.
         """
         next_url = request.args.get('next', '/')
         if not next_url.startswith('/') or next_url.startswith('//'):
@@ -171,19 +224,17 @@ def create_app():
         client_ua = request.headers.get('User-Agent', '')
         nonce = _make_challenge_token(_CHALLENGE_SECRET, client_ip, client_ua)
 
-        # Obfuscate nonce: XOR each char with a rotating key, then base64
-        import base64
+        # Obfuscate nonce: XOR + base64 split into 3 parts
+        import base64, secrets as _sec
         xor_key = [0x4e, 0x7a, 0x51, 0x6b, 0x38, 0x59, 0x32, 0x78]
-        nonce_bytes = nonce.encode()
-        xored = bytes([b ^ xor_key[i % len(xor_key)] for i, b in enumerate(nonce_bytes)])
-        enc_nonce = base64.b64encode(xored).decode()
-        # Split into 3 chunks so no single variable holds the full value
-        c = len(enc_nonce) // 3
-        p1, p2, p3 = enc_nonce[:c], enc_nonce[c:2*c], enc_nonce[2*c:]
-        # Also obfuscate next_url trivially
-        enc_next = base64.b64encode(next_url.encode()).decode()
-        # XOR key as JS array
-        xk = ','.join(str(k) for k in xor_key)
+        xored   = bytes([b ^ xor_key[i % len(xor_key)] for i, b in enumerate(nonce.encode())])
+        enc_n   = base64.b64encode(xored).decode()
+        c       = len(enc_n) // 3
+        p1, p2, p3 = enc_n[:c], enc_n[c:2*c], enc_n[2*c:]
+        enc_x   = base64.b64encode(next_url.encode()).decode()
+        xk      = ','.join(str(k) for k in xor_key)
+        # PoW: random challenge string — browser must find N where sha256(pw+N) starts with '00'
+        pow_ch  = _sec.token_hex(8)
 
         html = (
             "<!DOCTYPE html>\n<html>\n"
@@ -194,20 +245,23 @@ def create_app():
             "!function(){\n"
             f"  var _a={p1!r},_b={p2!r},_c={p3!r};\n"
             f"  var _k=[{xk}];\n"
-            f"  var _x={enc_next!r};\n"
-            "  var _atob=function(s){try{return atob(s);}catch(e){return '';}};\n"
-            "  var _xd=function(s){var b=_atob(s),o='';\n"
+            f"  var _x={enc_x!r};\n"
+            f"  var _pw={pow_ch!r};\n"
+            "  var _atob=function(s){{try{{return atob(s);}}catch(e){{return '';}}}};\n"
+            "  var _xd=function(s){{var b=_atob(s),o='';\n"
             "    for(var i=0;i<b.length;i++)o+=String.fromCharCode(b.charCodeAt(i)^_k[i%_k.length]);\n"
-            "    return o;};\n"
+            "    return o;}};\n"
             "  var _n=_xd(_a+_b+_c);\n"
             "  var _u=_atob(_x);\n"
+            "  var _h=function(s){var h=0x811c9dc5>>>0,i=0;for(;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');}\n"
+            "  var _sol=0;while(_sol<500000){if(_h(_pw+_sol).slice(0,2)==='00')break;_sol++;}\n"
             "  fetch('\x2f\x5f\x76\x65\x72\x69\x66\x79',{\n"
             "    method:'\x50\x4f\x53\x54',\n"
             "    credentials:'same-origin',\n"
             "    headers:{'\x43\x6f\x6e\x74\x65\x6e\x74\x2d\x54\x79\x70\x65':'application/json'},\n"
-            "    body:JSON.stringify({n:_n,x:_u})\n"
+            "    body:JSON.stringify({n:_n,x:_u,pw_c:_pw,pw_s:_sol})\n"
             "  }).then(function(r){return r.json();}).then(function(d){\n"
-            "    if(d.ok)window.location.replace(d.x||'/');\n"
+            "    if(d.ok)window.location.replace(d.x||'//');\n"
             "    else window.location.replace('/');\n"
             "  }).catch(function(){window.location.replace('/');});\n"
             "}();\n"
@@ -220,41 +274,59 @@ def create_app():
         return resp
 
     @app.route('/_verify', methods=['POST'])
+    @limiter.limit("10 per minute")   # Layer 5 — rate limit: stops brute-force PoW bypass
     def js_verify():
         """
-        Step 2: JS POSTs the nonce here. We verify it and set an HttpOnly
-        cookie — completely invisible in browser devtools Application tab.
-        curl cannot copy what it cannot see.
+        Layer 1 — verifies HMAC nonce (IP+UA bound, time-bucketed).
+        Layer 2 — verifies Proof-of-Work solution.
+        Sets HttpOnly cookie (Layer 3 — invisible in devtools).
+        Also issues a signed page token stored in a readable cookie for API auth.
         """
         from flask import jsonify
         try:
-            data      = request.get_json(silent=True) or {}
-            nonce     = data.get('n', '')
-            next_url  = data.get('x', '/')
+            data    = request.get_json(silent=True) or {}
+            nonce   = data.get('n', '')
+            next_url= data.get('x', '/')
+            pow_c   = data.get('pw_c', '')
+            pow_s   = data.get('pw_s', '')
             if not next_url.startswith('/') or next_url.startswith('//'):
                 next_url = '/'
 
             client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
             client_ua = request.headers.get('User-Agent', '')
 
+            # Layer 1: verify HMAC nonce
             if not _verify_challenge_token(nonce, _CHALLENGE_SECRET, client_ip, client_ua):
-                return jsonify(ok=False), 403
+                app.logger.warning(f"/_verify: invalid nonce from {client_ip}")
+                return jsonify(ok=False, e='nonce'), 403
 
-            # Issue fresh token and set it as HttpOnly — invisible to devtools
-            fresh_token = _make_challenge_token(_CHALLENGE_SECRET, client_ip, client_ua)
+            # Layer 2: verify Proof-of-Work
+            if not _verify_pow(pow_c, str(pow_s)):
+                app.logger.warning(f"/_verify: invalid PoW from {client_ip}")
+                return jsonify(ok=False, e='pow'), 403
+
+            # Layer 3: set HttpOnly challenge cookie — invisible in devtools
+            fresh_token  = _make_challenge_token(_CHALLENGE_SECRET, client_ip, client_ua)
+            # Layer 4: page token — readable by JS, used as X-PT header on /api/ calls
+            page_token   = _make_page_token(_CHALLENGE_SECRET, client_ip)
+            is_secure    = not (app.config.get("DEBUG") or app.debug)
+
             resp = make_response(jsonify(ok=True, x=next_url), 200)
             resp.set_cookie(
-                _CHALLENGE_COOKIE,
-                fresh_token,
-                max_age=_CHALLENGE_TTL * 2,  # cookie lives 2x the bucket window
-                httponly=True,               # invisible in devtools Application tab
-                secure=not (app.config.get("DEBUG") or app.debug),
-                samesite='Lax',
-                path='/',
+                _CHALLENGE_COOKIE, fresh_token,
+                max_age=_CHALLENGE_TTL * 2,
+                httponly=True, secure=is_secure, samesite='Lax', path='/',
+            )
+            resp.set_cookie(
+                '__pt', page_token,
+                max_age=_PAGE_TOKEN_TTL * 2,
+                httponly=False,   # JS must read this to send as header
+                secure=is_secure, samesite='Lax', path='/',
             )
             return resp
         except Exception as e:
             app.logger.error(f"/_verify error: {e}")
+            from flask import jsonify
             return jsonify(ok=False), 500
 
 
@@ -324,6 +396,22 @@ def create_app():
                 f"Blocked bot UA='{ua[:80]}' PATH={request.path} IP={request.remote_addr}"
             )
             abort(403)
+
+    @app.before_request
+    def check_api_page_token():
+        """Layer 4 — require valid X-PT header on /api/ calls (except auth).
+        Prevents direct API scraping without first loading a real page.
+        """
+        if not request.path.startswith('/api/'):
+            return
+        # Skip auth endpoints — login/signup don't need a page token
+        if request.path.startswith('/api/auth/'):
+            return
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+        token     = request.headers.get('X-PT', '') or request.cookies.get('__pt', '')
+        if not token or not _verify_page_token(token, _CHALLENGE_SECRET, client_ip):
+            from flask import jsonify
+            return jsonify(error='Forbidden', message='Missing page token'), 403
 
     @app.before_request
     def hydrate_legacy_sessions():
