@@ -23,7 +23,7 @@ from api.routes.api import api_bp
 # ── JS Challenge constants ────────────────────────────────────────────────────
 _CHALLENGE_COOKIE  = '__utmz'       # cookie name
 _CHALLENGE_SECRET  = None             # set in create_app() from env/config
-_CHALLENGE_TTL     = 60 * 30          # cookie valid for 30 minutes (seconds)
+_CHALLENGE_TTL     = 60 * 60 * 6     # cookie valid for 6 hours (seconds)
 _CHALLENGE_VER     = 'v3'             # bump this to instantly invalidate ALL existing cookies
 
 # Paths that skip the JS challenge entirely
@@ -56,7 +56,7 @@ def _verify_challenge_token(token: str, secret: str, ip: str, ua: str) -> bool:
             return False
         bucket     = int(bucket_str)
         now_bucket = int(time.time()) // _CHALLENGE_TTL
-        if abs(now_bucket - bucket) > 1:
+        if abs(now_bucket - bucket) > 2:  # accept up to 2 expired buckets (~36h grace)
             return False
         ua_key   = ua[:64]
         msg      = f"yume:{_CHALLENGE_VER}:{bucket}:{ip}:{ua_key}".encode()
@@ -246,8 +246,8 @@ def create_app():
             resp.set_cookie(
                 _CHALLENGE_COOKIE,
                 fresh_token,
-                max_age=_CHALLENGE_TTL * 2,
-                httponly=True,
+                max_age=_CHALLENGE_TTL * 2,  # cookie lives 2x the bucket window
+                httponly=True,               # invisible in devtools Application tab
                 secure=not (app.config.get("DEBUG") or app.debug),
                 samesite='Lax',
                 path='/',
