@@ -7,8 +7,6 @@ import logging
 import requests
 
 from ...models.user import get_user_by_id
-from ...utils.helpers import enrich_watchlist_item
-import asyncio
 
 watchlist_api_bp = Blueprint('watchlist_api', __name__)
 logger = logging.getLogger(__name__)
