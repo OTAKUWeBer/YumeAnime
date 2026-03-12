@@ -264,10 +264,13 @@
     @media (max-width: 768px) {
         .edit-modal {
             grid-template-columns: 1fr;
-            max-width: calc(100vw - 32px);
-            max-height: 85vh;
+            max-width: 100%;
+            width: 100%;
+            max-height: 90vh;
             overflow-y: auto;
-            margin: 16px;
+            margin: 0;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            border-bottom: none;
         }
     }
 
@@ -622,12 +625,23 @@
         }
 
         .edit-modal-overlay {
-            padding: 16px;
+            padding: 0;
             align-items: flex-end;
         }
 
         .edit-modal-content {
             padding: var(--space-lg);
+            padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+        }
+
+        .edit-modal-content::before {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: 0 auto var(--space-md) auto;
         }
 
         .edit-modal-title {
@@ -640,13 +654,15 @@
         }
 
         .edit-input {
-            padding: 12px;
+            padding: 14px;
             font-size: 1rem;
+            border-radius: var(--radius-md);
         }
 
         .edit-actions {
             flex-wrap: wrap;
             gap: var(--space-sm);
+            margin-top: var(--space-lg);
         }
 
         .edit-actions > div {
@@ -655,10 +671,16 @@
 
         .btn-save,
         .btn-cancel {
-            padding: 12px 16px;
-            font-size: 0.9rem;
+            padding: 14px 16px;
+            font-size: 0.95rem;
             flex: 1;
             text-align: center;
+            border-radius: var(--radius-md);
+        }
+
+        .btn-delete {
+            width: 48px;
+            height: 48px;
         }
     }
 
@@ -843,6 +865,9 @@
         <div class="edit-modal-content">
             <div class="edit-modal-header">
                 <h2 class="edit-modal-title" id="edit-modal-title">Anime Title</h2>
+                <a href="#" id="edit-modal-link" target="_blank" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                    View Anime Page &rarr;
+                </a>
             </div>
 
             <div class="edit-form-grid">
@@ -1040,17 +1065,15 @@
                     const itemData = encodeURIComponent(JSON.stringify(item));
 
                     return `
-                    <div class="list-row" data-id="${item.anime_id}" onclick="openEditModal(this)" data-item="${itemData}">
+                    <div class="list-row" data-id="${item.anime_id}" onclick="openEditModal(event, this)" data-item="${itemData}">
                         <div>
                             <div class="status-indicator ${statusClass}" title="${statusLabels[item.status] || item.status || 'Unknown'}"></div>
                         </div>
                         
                         <div style="display: flex; align-items: center; gap: 16px;">
-                            <a href="/anime/${item.anime_id}" onclick="event.stopPropagation()">
-                                <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/48x68?text=No+Image'}" alt="${item.anime_title}" class="row-cover" loading="lazy">
-                            </a>
+                            <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/48x68?text=No+Image'}" alt="${item.anime_title}" class="row-cover" loading="lazy">
                             <div>
-                                <a href="/anime/${item.anime_id}" class="row-title" style="text-decoration: none;" onclick="event.stopPropagation()">${item.anime_title}</a>
+                                <span class="row-title">${item.anime_title}</span>
                             </div>
                         </div>
                         
@@ -1168,7 +1191,9 @@
             'plan_to_watch': 'PLANNING'
         };
 
-        window.openEditModal = function (rowElement) {
+        window.openEditModal = function (e, rowElement) {
+            e.preventDefault();
+            e.stopPropagation();
             const itemStr = rowElement.getAttribute('data-item');
             if (!itemStr) return;
             const item = JSON.parse(decodeURIComponent(itemStr));
@@ -1177,6 +1202,7 @@
 
             document.getElementById('edit-modal-title').textContent = item.anime_title;
             document.getElementById('edit-modal-poster').src = item.poster_url || item.poster;
+            document.getElementById('edit-modal-link').href = '/anime/' + item.anime_id;
 
             // Map status
             let mappedStatus = localToAnilistStatus[item.status] || item.status || 'CURRENT';

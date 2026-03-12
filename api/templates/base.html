@@ -43,7 +43,7 @@
 
         // Called every poll — returns true if devtools appears open
         var _chkSize=function(){
-            if(window[_q[0]]<0x384)return!1;
+            // No minimum width guard — must work in mobile emulation too
             return(window[_q[0]]-window[_q[1]])>0x12c||(window[_q[2]]-window[_q[3]])>0x12c;
         };
         var _chkDbg=function(){
