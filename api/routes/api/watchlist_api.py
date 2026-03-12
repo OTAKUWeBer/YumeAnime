@@ -235,7 +235,7 @@ def watchlist_stats():
         al_status = lst.get('status')
         local = STATUS_MAP_TO_LOCAL.get(al_status)
         if local:
-            status_counts[local] = len(lst.get('entries', []))
+            status_counts[local] += len(lst.get('entries', []))
 
     return jsonify({
         'total_anime': stats.get('count', 0),
