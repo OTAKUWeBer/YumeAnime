@@ -41,29 +41,43 @@
         var _q=['outerWidth','innerWidth','outerHeight','innerHeight','toString','color:transparent','video,iframe','controlslist','nodownload noremoteplayback','disablepictureinpicture','DOMContentLoaded','loading','F12','/','innerHTML','keydown','replace','documentElement','now','addEventListener'];
         var _open=!1,_trapped=!1,_n=0,_tid=null;
 
-        // Called every poll — returns true if devtools appears open
+        // Size-based check — works when devtools is docked
         var _chkSize=function(){
-            // No minimum width guard — must work in mobile emulation too
-            return(window[_q[0]]-window[_q[1]])>0x12c||(window[_q[2]]-window[_q[3]])>0x12c;
+            var _dw=window[_q[0]]-window[_q[1]];
+            var _dh=window[_q[2]]-window[_q[3]];
+            // Use a reasonable threshold; skip if window is too small (real mobile)
+            if(window[_q[0]]<400&&window[_q[2]]<900)return!1;
+            return _dw>0x12c||_dh>0x12c;
         };
+
+        // Debugger timing check
         var _chkDbg=function(){
             var _t=performance[_q[18]]();
             debugger;
-            return performance[_q[18]]()-_t>0x78;
+            return performance[_q[18]]()-_t>0x64;
+        };
+
+        // Console-based check — works in any viewport/mobile emulation
+        var _consoleOpen=!1;
+        var _chkConsole=function(){
+            _consoleOpen=!1;
+            var _img=new Image();
+            Object.defineProperty(_img,'id',{get:function(){_consoleOpen=!0;}});
+            try{console['debug'](_img);}catch(_e){}
+            try{console['clear']();}catch(_e){}
+            return _consoleOpen;
         };
 
         // Main handler — called on every poll tick
         var _tick=function(){
-            var _detected=_chkSize()||_chkDbg();
+            var _detected=_chkSize()||_chkDbg()||_chkConsole();
             if(_detected){
                 _open=!0;
                 if(!_trapped){
-                    // First detection: wipe page + enter debugger trap
                     _trapped=!0;
                     try{document[_q[14]]='';}catch(_e){}
                     (function _trap(){
                         debugger;
-                        // Only redirect if still open (re-check size each trap cycle)
                         if(_open){
                             window['location'][_q[16]](_q[13]);
                         }
@@ -71,7 +85,6 @@
                     })();
                 }
             } else {
-                // Devtools closed — reset state so normal browsing resumes
                 _open=!1;
                 _trapped=!1;
                 if(_tid){clearTimeout(_tid);_tid=null;}
@@ -91,11 +104,10 @@
         // Run immediately on load to catch pre-opened devtools
         _tick();
 
-        // Then poll every 500ms (0x1F4)
+        // Then poll every 500ms
         setInterval(_tick,0x1F4);
 
         // Also re-check instantly when tab becomes visible
-        // (catches opening devtools in background then switching to tab)
         document[_q[19]]('visibilitychange',function(){
             if(!document['hidden'])_tick();
         });
