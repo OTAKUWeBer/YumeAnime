@@ -125,10 +125,10 @@ def anilist_callback():
             if current_user and current_user.get('anilist_id'):
                 if current_user.get('anilist_id') == user_info['id']:
                     flash('This AniList account is already linked to your account.', 'info')
-                    return redirect(url_for('main.settings'))
+                    return redirect(url_for('main.catalog_routes.settings'))
                 else:
                     flash('You already have a different AniList account connected. Please disconnect it first.', 'error')
-                    return redirect(url_for('main.settings'))
+                    return redirect(url_for('main.catalog_routes.settings'))
             
             # Check if this AniList account is linked to another user
             if existing_anilist_user:
@@ -136,7 +136,7 @@ def anilist_callback():
                     flash('This AniList account is already linked to your account.', 'info')
                 else:
                     flash('This AniList account is already linked to another user account.', 'error')
-                return redirect(url_for('main.settings'))
+                return redirect(url_for('main.catalog_routes.settings'))
             
             # Connect the AniList account
             current_app.logger.info(f"Connecting AniList account {user_info['id']} to user {current_user_id}")
@@ -154,7 +154,7 @@ def anilist_callback():
                 current_app.logger.error(f"Failed to connect AniList account to user {current_user_id}")
                 flash('Failed to connect AniList account. Please try again.', 'error')
 
-            return redirect(url_for('main.settings'))
+            return redirect(url_for('main.catalog_routes.settings'))
         
         else:
             # NORMAL LOGIN/SIGNUP MODE (user is not logged in)
@@ -244,7 +244,7 @@ def connect_anilist_account():
     user = get_user_by_id(user_id)
     if user and user.get('anilist_id'):
         flash('Your AniList account is already connected.', 'info')
-        return redirect(url_for('main.settings'))
+        return redirect(url_for('main.catalog_routes.settings'))
     
     # Generate a random state parameter for security
     state = secrets.token_urlsafe(32)

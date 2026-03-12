@@ -251,7 +251,7 @@ def watchlist_stats():
 
 SAVE_ENTRY_MUTATION = """
 mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int,
-          $score: Float, $repeat: Int, $notes: String,
+          $score: Int, $repeat: Int, $notes: String,
           $startedAt: FuzzyDateInput, $completedAt: FuzzyDateInput) {
   SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress,
                      scoreRaw: $score, repeat: $repeat, notes: $notes,

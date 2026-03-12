@@ -361,6 +361,7 @@ def connect_anilist_to_user(user_id: int, anilist_user_info: dict, access_token:
         
         if result.modified_count > 0:
             logger.info(f"Successfully connected AniList account {anilist_user_info['id']} to user {user_id}")
+            clear_user_cache_func(user_id)
             return True
         else:
             logger.error(f"Failed to update user {user_id} with AniList data")
