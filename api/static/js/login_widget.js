@@ -1,13 +1,9 @@
 // Ensure modals are appended to document.body so `position: fixed` truly covers viewport
 (function ensureModalsOnBody() {
   const loginModalWidget = document.getElementById('loginModalWidget');
-  const syncModalWidget = document.getElementById('syncModalWidget');
 
   if (loginModalWidget && loginModalWidget.parentElement !== document.body) {
     document.body.appendChild(loginModalWidget);
-  }
-  if (syncModalWidget && syncModalWidget.parentElement !== document.body) {
-    document.body.appendChild(syncModalWidget);
   }
 })();
 
@@ -16,9 +12,7 @@ class LoginWidget {
     // DOM refs will be initialized in initializeElements()
     this.loginBtnWidget = null;
     this.loginModalWidget = null;
-    this.syncModalWidget = null;
     this.closeLoginWidget = null;
-    this.closeSyncWidget = null;
     this.loginFormWidget = null;
     this.cancelLoginWidget = null;
 
@@ -39,18 +33,6 @@ class LoginWidget {
     this.anilistLoginBtn = null;
     this.anilistSignupBtn = null;
 
-    // Sync elements
-    this.startSyncWidget = null;
-    this.cancelSyncWidget = null;
-    this.syncResultWidget = null;
-    this.syncProgressWidget = null;
-    this.progressFill = null;
-    this.progressText = null;
-
-    // Sync progress tracking
-    this.syncProgressInterval = null;
-    this.syncInProgress = false;
-
     this.isLoggedIn = false;
     this.currentUser = null;
 
@@ -63,9 +45,7 @@ class LoginWidget {
     // login / modal
     this.loginBtnWidget = document.getElementById('loginBtnWidget');
     this.loginModalWidget = document.getElementById('loginModalWidget');
-    this.syncModalWidget = document.getElementById('syncModalWidget');
     this.closeLoginWidget = document.getElementById('closeLoginWidget');
-    this.closeSyncWidget = document.getElementById('closeSyncWidget');
     this.loginFormWidget = document.getElementById('loginFormWidget');
     this.cancelLoginWidget = document.getElementById('cancelLoginWidget');
 
@@ -79,13 +59,7 @@ class LoginWidget {
     this.anilistLoginBtn = document.getElementById('anilistLoginBtn');
     this.anilistSignupBtn = document.getElementById('anilistSignupBtn');
 
-    // Sync elements
-    this.startSyncWidget = document.getElementById('startSyncWidget');
-    this.cancelSyncWidget = document.getElementById('cancelSyncWidget');
-    this.syncResultWidget = document.getElementById('syncResultWidget');
-    this.syncProgressWidget = document.getElementById('syncProgressWidget');
-    this.progressFill = document.getElementById('progressFill');
-    this.progressText = document.getElementById('progressText');
+
 
     // profile container in navbar (empty in DOM, we inject button)
     this.profileBoxWidget = document.getElementById('profileBoxWidget');
@@ -101,17 +75,12 @@ class LoginWidget {
 
     // modal close / cancel
     this.closeLoginWidget?.addEventListener('click', () => this.hideLoginModal());
-    this.closeSyncWidget?.addEventListener('click', () => this.hideSyncModal());
     this.cancelLoginWidget?.addEventListener('click', () => this.hideLoginModal());
     this.cancelSignupWidget?.addEventListener('click', () => this.hideLoginModal());
-    this.cancelSyncWidget?.addEventListener('click', () => this.hideSyncModal());
 
     // form submits
     this.loginFormWidget?.addEventListener('submit', (e) => this.handleLogin(e));
     this.signupFormWidget?.addEventListener('submit', (e) => this.handleSignup(e));
-
-    // sync
-    this.startSyncWidget?.addEventListener('click', () => this.handleSyncAniList());
 
     // switch forms
     this.showSignupWidget?.addEventListener('click', () => this.switchToSignup());
@@ -126,18 +95,11 @@ class LoginWidget {
       if (e.target === this.loginModalWidget) this.hideLoginModal();
     });
 
-    this.syncModalWidget?.addEventListener('click', (e) => {
-      if (e.target === this.syncModalWidget) this.hideSyncModal();
-    });
-
     // Close on Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (this.loginModalWidget && !this.loginModalWidget.classList.contains('hidden')) {
           this.hideLoginModal();
-        }
-        if (this.syncModalWidget && !this.syncModalWidget.classList.contains('hidden')) {
-          this.hideSyncModal();
         }
       }
     });
@@ -236,24 +198,7 @@ class LoginWidget {
     this.switchToLogin();
   }
 
-  showSyncModal() {
-    if (!this.currentUser || !this.currentUser.anilist_authenticated) {
-      this.showMessage(null, 'Please connect your AniList account first.', 'error');
-      return;
-    }
-    this.syncModalWidget?.classList.remove('hidden');
-    this.syncModalWidget?.classList.add('visible');
-    this.syncResultWidget?.classList.add('hidden');
-    this.syncProgressWidget?.classList.add('hidden');
-  }
 
-  hideSyncModal() {
-    this.syncModalWidget?.classList.remove('visible');
-    this.syncModalWidget?.classList.add('hidden');
-    this.syncResultWidget?.classList.add('hidden');
-    this.syncProgressWidget?.classList.add('hidden');
-    this.stopSyncProgressPolling();
-  }
 
   switchToLogin() {
     this.loginFormWidget?.classList.remove('hidden');
@@ -403,103 +348,7 @@ class LoginWidget {
     }
   }
 
-  async handleSyncAniList() {
-    if (!this.currentUser || !this.currentUser.anilist_authenticated) {
-      this.showSyncResult('Please connect your AniList account first.', 'error');
-      return;
-    }
 
-    this.setButtonLoading('startSyncWidget', true);
-    this.syncProgressWidget?.classList.remove('hidden');
-    this.syncInProgress = true;
-
-    // Start progress polling
-    this.startSyncProgressPolling();
-
-    // Show initial progress
-    this.updateSyncProgress(0, 'Starting sync...');
-
-    try {
-      const response = await fetch('/api/sync-anilist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.updateSyncProgress(100, `Sync completed! Synced ${data.synced_count}/${data.total_count} entries`);
-        this.showSyncResult(
-          `Sync completed successfully! Added ${data.synced_count} new entries, skipped ${data.skipped_count} duplicates. ${data.failed_count > 0 ? `${data.failed_count} entries could not be matched.` : ''}`,
-          'success'
-        );
-
-        // Auto-close modal after 4 seconds
-        setTimeout(() => {
-          this.hideSyncModal();
-        }, 4000);
-      } else {
-        this.showSyncResult(data.message || 'Sync failed. Please try again.', 'error');
-      }
-    } catch (err) {
-      this.showSyncResult('Network error occurred. Please try again.', 'error');
-    } finally {
-      this.setButtonLoading('startSyncWidget', false);
-      this.syncInProgress = false;
-      this.stopSyncProgressPolling();
-    }
-  }
-
-
-
-  formatProgressMessage(progress) {
-    const processed = progress.processed || 0;
-    const total = progress.total || 0;
-    const synced = progress.synced || 0;
-    const skipped = progress.skipped || 0;
-    const failed = progress.failed || 0;
-    const eta = progress.estimated_remaining || 0;
-
-    if (total === 0) {
-      return 'Starting sync...';
-    }
-
-    let message = `Processing ${processed}/${total} entries`;
-    if (synced > 0 || skipped > 0 || failed > 0) {
-      message += ` (✓${synced} ⭯${skipped} ✗${failed})`;
-    }
-
-    if (eta > 0 && eta < 300) { // Only show ETA if less than 5 minutes
-      const etaText = eta > 60 ? `${Math.round(eta / 60)}m` : `${Math.round(eta)}s`;
-      message += ` • ETA: ${etaText}`;
-    }
-
-    return message;
-  }
-
-  updateSyncProgress(percentage, message) {
-    if (this.progressFill) {
-      this.progressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
-    }
-    if (this.progressText) {
-      this.progressText.textContent = message;
-    }
-  }
-
-  showSyncResult(message, type) {
-    if (!this.syncResultWidget) return;
-
-    const typeClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning';
-
-    this.syncResultWidget.innerHTML = `
-      <div class="sync-status ${typeClass}">
-        <p class="text-sm">${message}</p>
-      </div>
-    `;
-
-    this.syncResultWidget.classList.remove('hidden');
-  }
 
   async handleLogout() {
     try {
@@ -625,12 +474,6 @@ class LoginWidget {
     dd.innerHTML = `
           ${userInfoSection}
           <div class="py-2">
-            <a href="/profile" class="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors" role="menuitem">
-              <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-              Profile
-            </a>
             <a href="/watchlist" class="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors" role="menuitem">
               <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
@@ -664,15 +507,7 @@ class LoginWidget {
       this.handleLogout();
     });
 
-    // wire sync button if it exists
-    const syncBtn = document.getElementById('syncAnilistBtnDropdown');
-    if (syncBtn) {
-      syncBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.profileDropdown.classList.add('hidden');
-        this.showSyncModal();
-      });
-    }
+
   }
 
   // Position dropdown absolutely under the button

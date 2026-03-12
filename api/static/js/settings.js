@@ -18,7 +18,6 @@ class SettingsManager {
     this.loadUserSession()
     this.loadSettingsFromStorage()
     this.setupEventListeners()
-    this.pollSyncProgress() // Start polling for any active syncs
   }
 
   async loadUserSession() {
@@ -113,7 +112,6 @@ class SettingsManager {
   updateAniListStatus() {
     const statusContainer = document.getElementById("anilist-status")
     const connectBtn = document.getElementById("connect-anilist-btn")
-    const syncBtn = document.getElementById("sync-anilist-btn")
     const disconnectBtn = document.getElementById("disconnect-anilist")
 
     const isConnected = this.currentUser && this.currentUser.anilist_authenticated
@@ -123,11 +121,9 @@ class SettingsManager {
     if (!statusContainer) {
       if (isConnected) {
         if (connectBtn) connectBtn.classList.add("hidden")
-        if (syncBtn) syncBtn.classList.remove("hidden")
         if (disconnectBtn) disconnectBtn.classList.remove("hidden")
       } else {
         if (connectBtn) connectBtn.classList.remove("hidden")
-        if (syncBtn) syncBtn.classList.add("hidden")
         if (disconnectBtn) disconnectBtn.classList.add("hidden")
       }
       return
@@ -166,7 +162,6 @@ ${this.currentUser.anilist_id
                 </div>
 `
       connectBtn.classList.add("hidden")
-      syncBtn.classList.remove("hidden")
       disconnectBtn.classList.remove("hidden")
 
       // Show auto-sync info
@@ -191,7 +186,6 @@ ${this.currentUser.anilist_id
                 </div>
 `
       connectBtn.classList.remove("hidden")
-      syncBtn.classList.add("hidden")
       disconnectBtn.classList.add("hidden")
 
       // Hide auto-sync info
@@ -218,168 +212,7 @@ ${this.currentUser.anilist_id
     window.location.href = "/auth/anilist/connect"
   }
 
-  async syncAniList() {
-    if (!this.currentUser || !this.currentUser.anilist_authenticated) {
-      this.showNotification("Please connect your AniList account first.", "error")
-      return
-    }
 
-    this.setSyncButtonLoading(true)
-
-    try {
-      const response = await fetch("/api/anilist/sync-anilist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        this.showNotification("Sync started in background...", "info")
-        this.pollSyncProgress()
-      } else {
-        this.showNotification(data.message || "Sync failed. Please try again.", "error")
-        this.setSyncButtonLoading(false)
-      }
-    } catch (error) {
-      console.error("Sync error:", error)
-      this.showNotification("Network error occurred. Please try again.", "error")
-      this.setSyncButtonLoading(false)
-    }
-  }
-
-  async pollSyncProgress() {
-    const pollInterval = 1000 // 1 second
-    let isPolling = true
-
-    const poll = async () => {
-      if (!isPolling) return
-
-      try {
-        const response = await fetch("/api/anilist/sync-progress")
-        if (!response.ok) return
-
-        const progress = await response.json()
-
-        // Update UI
-        this.updateSyncUI(progress)
-
-        if (progress.status === "completed" || progress.status === "error" || progress.status === "idle") {
-          isPolling = false
-          this.setSyncButtonLoading(false)
-
-          if (progress.status === "completed") {
-            this.showNotification(progress.message || "Sync completed!", "success")
-            // Clear progress after a short delay
-            setTimeout(() => this.clearSyncProgress(), 5000)
-          } else if (progress.status === "error") {
-            this.showNotification(progress.message || "Sync failed", "error")
-          }
-        } else {
-          // Continue polling
-          setTimeout(poll, pollInterval)
-        }
-      } catch (error) {
-        console.error("Poll error:", error)
-        isPolling = false
-        this.setSyncButtonLoading(false)
-      }
-    }
-
-    poll()
-  }
-
-  updateSyncUI(progress) {
-    const container = document.getElementById("sync-progress-container")
-    const statusText = document.getElementById("sync-status-text")
-    const percentText = document.getElementById("sync-percent-text")
-    const progressBar = document.getElementById("sync-progress-bar")
-    const syncBtn = document.getElementById("sync-anilist-btn")
-
-    if (!container || !progress || progress.status === "idle") {
-      if (container) container.classList.add("hidden")
-      if (syncBtn) syncBtn.disabled = false
-      return
-    }
-
-    // Show container
-    container.classList.remove("hidden")
-    if (syncBtn) syncBtn.disabled = true
-
-    // Use the descriptive message from backend
-    if (statusText) {
-      if (progress.message) {
-        statusText.textContent = progress.message
-      } else if (progress.status === 'starting') {
-        statusText.textContent = 'Starting sync...'
-      } else if (progress.status === 'syncing') {
-        statusText.textContent = `Syncing... ${progress.processed}/${progress.total}`
-      } else if (progress.status === 'completed') {
-        statusText.textContent = 'Sync completed!'
-      } else {
-        statusText.textContent = 'Error'
-      }
-    }
-
-    if (percentText) percentText.textContent = `${Math.round(progress.percentage || 0)}%`
-    if (progressBar) progressBar.style.width = `${progress.percentage || 0}%`
-  }
-
-  async clearSyncProgress() {
-    try {
-      await fetch("/api/anilist/sync-progress/clear", { method: "POST" })
-      const container = document.getElementById("sync-progress-container")
-      if (container) container.classList.add("hidden")
-    } catch (e) {
-      console.error("Failed to clear progress", e)
-    }
-  }
-
-  async disconnectAniList() {
-    if (
-      !confirm("Are you sure you want to disconnect your AniList account? This will not remove your local watchlist.")
-    ) {
-      return
-    }
-
-    try {
-      const response = await fetch("/auth/anilist/unlink", {
-        method: "POST",
-        credentials: "same-origin",
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        this.currentUser.anilist_authenticated = false
-        this.updateAniListStatus()
-        this.showNotification("AniList account disconnected successfully.", "success")
-      } else {
-        this.showNotification(data.message || "Failed to disconnect AniList account.", "error")
-      }
-    } catch (error) {
-      console.error("Disconnect error:", error)
-      this.showNotification("Network error occurred. Please try again.", "error")
-    }
-  }
-
-  setSyncButtonLoading(loading) {
-    const button = document.getElementById("sync-anilist-btn")
-    const text = document.getElementById("sync-btn-text")
-    const spinner = document.getElementById("sync-spinner")
-
-    if (button && text && spinner) {
-      button.disabled = loading
-      if (loading) {
-        text.classList.add("hidden")
-        spinner.classList.remove("hidden")
-      } else {
-        text.classList.remove("hidden")
-        spinner.classList.add("hidden")
-      }
-    }
-  }
 
   // Password Change Modal Functions
   showPasswordModal() {
@@ -594,25 +427,7 @@ ${this.currentUser.anilist_id
   }
 }
 
-// Global functions for template compatibility
-function syncAniList() {
-  console.log("Global syncAniList called");
-  if (!window.settingsManager) {
-    console.warn("SettingsManager not initialized, attempting JIT initialization...");
-    try {
-      window.settingsManager = new SettingsManager();
-    } catch (e) {
-      console.error("JIT initialization failed:", e);
-    }
-  }
 
-  if (window.settingsManager) {
-    window.settingsManager.syncAniList()
-  } else {
-    console.error("SettingsManager still not initialized after JIT attempt");
-    alert("System error: Settings manager could not be loaded. Please refresh the page.");
-  }
-}
 
 function disconnectAniList() {
   if (window.settingsManager) {

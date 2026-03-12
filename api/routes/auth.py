@@ -3,9 +3,8 @@ from urllib.parse import urlencode
 import secrets
 import requests
 import logging
-import threading
 
-from ..utils.helpers import verify_turnstile, get_anilist_user_info, sync_anilist_watchlist_blocking, store_sync_progress
+from ..utils.helpers import verify_turnstile, get_anilist_user_info
 from ..core.caching import clear_user_cache
 from ..models.user import (
     get_user, user_exists, email_exists, create_user, get_user_by_id,
@@ -19,79 +18,8 @@ auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
 
-def _trigger_background_sync(app, user_id, access_token):
-    """Trigger an automatic AniList watchlist sync in the background."""
-    def background_sync(app, user_id, access_token):
-        with app.app_context():
-            try:
-                # Initialize progress
-                store_sync_progress(user_id, {
-                    'status': 'starting',
-                    'processed': 0,
-                    'total': 0,
-                    'synced': 0,
-                    'skipped': 0,
-                    'failed': 0,
-                    'percentage': 0,
-                    'message': 'Auto-syncing AniList watchlist...'
-                })
-                
-                def progress_callback(progress):
-                    try:
-                        store_sync_progress(user_id, {
-                            'status': 'syncing',
-                            'processed': progress.processed,
-                            'total': progress.total,
-                            'synced': progress.synced,
-                            'skipped': progress.skipped,
-                            'failed': progress.failed,
-                            'percentage': progress.percentage,
-                            'message': getattr(progress, 'message', f'Auto-syncing... {progress.processed}/{progress.total}')
-                        })
-                    except Exception as e:
-                        logger.warning(f"Auto-sync progress callback error: {e}")
-                
-                result = sync_anilist_watchlist_blocking(user_id, access_token, progress_callback)
-                
-                if 'error' in result:
-                    store_sync_progress(user_id, {
-                        'status': 'error',
-                        'message': f'Auto-sync failed: {result["error"]}',
-                        'error': result['error']
-                    })
-                    return
-                
-                synced_count = result.get('synced_count', 0)
-                total_count = result.get('total_count', 0)
-                
-                store_sync_progress(user_id, {
-                    'status': 'completed',
-                    'processed': total_count,
-                    'total': total_count,
-                    'synced': synced_count,
-                    'skipped': result.get('skipped_count', 0),
-                    'failed': result.get('failed_count', 0),
-                    'percentage': 100,
-                    'message': f'\u2713 Auto-sync completed! {synced_count} anime synced',
-                    'result': {
-                        'success': True,
-                        'synced_count': synced_count
-                    }
-                })
-                logger.info(f"Auto-sync completed for user {user_id}: {synced_count} anime synced")
-                
-            except Exception as e:
-                logger.error(f"Background auto-sync error for user {user_id}: {e}")
-                store_sync_progress(user_id, {
-                    'status': 'error',
-                    'message': f'Auto-sync error: {str(e)}',
-                    'error': str(e)
-                })
-    
-    thread = threading.Thread(target=background_sync, args=(app, user_id, access_token))
-    thread.daemon = True
-    thread.start()
-    logger.info(f"Auto-sync triggered in background for user {user_id}")
+
+
 
 @auth_bp.route('/anilist/link')
 def link_anilist_account():
@@ -221,10 +149,7 @@ def anilist_callback():
                 if anilist_avatar:
                     session['avatar'] = anilist_avatar
                 current_app.logger.info(f"AniList account {user_info['id']} successfully linked to user {current_username}")
-                flash('AniList account successfully connected! Your watchlist is syncing automatically.', 'success')
-                
-                # Auto-sync watchlist after connecting
-                _trigger_background_sync(current_app._get_current_object(), current_user_id, access_token)
+                flash('AniList account successfully connected!', 'success')
             else:
                 current_app.logger.error(f"Failed to connect AniList account to user {current_user_id}")
                 flash('Failed to connect AniList account. Please try again.', 'error')
@@ -256,10 +181,7 @@ def anilist_callback():
             session.permanent = True
 
             current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")
-            flash(f'Welcome, {username}! Your watchlist is syncing automatically.', 'success')
-            
-            # Auto-sync watchlist after login
-            _trigger_background_sync(current_app._get_current_object(), user_id, access_token)
+            flash(f'Welcome, {username}!', 'success')
 
             return redirect(url_for('main.home_routes.home'))
         
