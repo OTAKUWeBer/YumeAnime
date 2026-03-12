@@ -1,258 +1,542 @@
 """
-Watchlist API endpoints
-Handles watchlist CRUD operations and statistics
+Watchlist API endpoints — powered entirely by AniList GraphQL.
+No local database storage; every read/write hits AniList directly.
 """
 from flask import Blueprint, request, session, jsonify, current_app
 import logging
-import asyncio
+import requests
 
-from ...models.watchlist import (
-    add_to_watchlist, get_watchlist_entry, update_watchlist_status,
-    update_watched_episodes, remove_from_watchlist, get_user_watchlist,
-    get_user_watchlist_paginated, get_watchlist_stats, save_watch_progress
-)
+from ...models.user import get_user_by_id
 from ...utils.helpers import enrich_watchlist_item
+import asyncio
 
 watchlist_api_bp = Blueprint('watchlist_api', __name__)
 logger = logging.getLogger(__name__)
 
+ANILIST_GRAPHQL = "https://graphql.anilist.co"
+
+# ── helpers ──────────────────────────────────────────────────────
+
+STATUS_MAP_TO_LOCAL = {
+    'CURRENT': 'watching',
+    'COMPLETED': 'completed',
+    'PAUSED': 'paused',
+    'DROPPED': 'dropped',
+    'PLANNING': 'plan_to_watch',
+    'REPEATING': 'watching',
+}
+
+STATUS_MAP_TO_ANILIST = {v: k for k, v in STATUS_MAP_TO_LOCAL.items()}
+STATUS_MAP_TO_ANILIST['plan_to_watch'] = 'PLANNING'
+STATUS_MAP_TO_ANILIST['on_hold'] = 'PAUSED'
+
+
+def _get_access_token():
+    """Return the user's AniList access_token or None."""
+    user_id = session.get('_id')
+    if not user_id:
+        return None
+    user = get_user_by_id(user_id)
+    if not user:
+        return None
+    return user.get('anilist_access_token')
+
+
+def _anilist_request(access_token, query, variables=None):
+    """Fire a GraphQL request against AniList and return the parsed JSON."""
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    }
+    try:
+        resp = requests.post(
+            ANILIST_GRAPHQL,
+            json={'query': query, 'variables': variables or {}},
+            headers=headers,
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            logger.error(f"AniList API error {resp.status_code}: {resp.text[:300]}")
+            return None
+        data = resp.json()
+        if 'errors' in data:
+            logger.error(f"AniList GraphQL errors: {data['errors']}")
+            return None
+        return data
+    except Exception as e:
+        logger.error(f"AniList request failed: {e}")
+        return None
+
+
+def _fetch_viewer_id(access_token):
+    """Get the authenticated viewer's AniList user ID."""
+    data = _anilist_request(access_token, "query { Viewer { id } }")
+    if not data:
+        return None
+    return data.get('data', {}).get('Viewer', {}).get('id')
+
+
+# ── READ endpoints ──────────────────────────────────────────────
+
+WATCHLIST_QUERY = """
+query ($userId: Int, $type: MediaType) {
+  MediaListCollection(userId: $userId, type: $type) {
+    lists {
+      name
+      entries {
+        id
+        mediaId
+        status
+        progress
+        score(format: POINT_10_DECIMAL)
+        repeat
+        notes
+        startedAt { year month day }
+        completedAt { year month day }
+        media {
+          id
+          title { userPreferred english romaji }
+          episodes
+          coverImage { large medium }
+          bannerImage
+          format
+          status
+        }
+      }
+    }
+  }
+}
+"""
+
 
 @watchlist_api_bp.route('/paginated', methods=['GET'])
-async def watchlist_paginated():
-    """Get paginated watchlist data"""
+def watchlist_paginated():
+    """Fetch watchlist directly from AniList, apply local pagination/filter."""
     if 'username' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
 
-    try:
-        user_id = session.get('_id')
-        page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 20))
-        status_filter = request.args.get('status', '').strip()
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'data': [], 'pagination': {}, 'error': 'AniList not connected'}), 200
 
-        # Sanitize inputs
-        page = max(1, page)
-        limit = max(1, min(50, limit))
+    page = max(1, int(request.args.get('page', 1)))
+    limit = max(1, min(50, int(request.args.get('limit', 20))))
+    status_filter = request.args.get('status', '').strip()
 
-        result = get_user_watchlist_paginated(
-            user_id=user_id,
-            page=page,
-            page_size=limit,
-            status=status_filter if status_filter else None
-        )
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return jsonify({'data': [], 'pagination': {}, 'error': 'Could not verify AniList identity'}), 200
 
-        if not isinstance(result, dict):
-            result = {'data': [], 'pagination': {}}
+    data = _anilist_request(access_token, WATCHLIST_QUERY, {'userId': viewer_id, 'type': 'ANIME'})
+    if not data:
+        return jsonify({'data': [], 'pagination': {}, 'error': 'Failed to fetch from AniList'}), 200
 
-        # Enrich items concurrently
-        items_to_enrich = []
-        for item in result.get('data', []):
-            try:
-                if item.get('_id') is not None:
-                    item['_id'] = str(item['_id'])
-            except Exception:
-                pass
-            items_to_enrich.append(enrich_watchlist_item(item))
+    # Flatten all lists into one array
+    all_entries = []
+    collection = data.get('data', {}).get('MediaListCollection', {})
+    for lst in collection.get('lists', []):
+        for entry in lst.get('entries', []):
+            media = entry.get('media') or {}
+            title_obj = media.get('title', {})
+            cover = media.get('coverImage', {})
+            local_status = STATUS_MAP_TO_LOCAL.get(entry.get('status'), 'watching')
 
-        enriched_items = await asyncio.gather(*items_to_enrich, return_exceptions=True)
-        result['data'] = enriched_items
+            item = {
+                'anime_id': str(media.get('id', '')),
+                'anilist_entry_id': entry.get('id'),
+                'anime_title': title_obj.get('userPreferred') or title_obj.get('english') or title_obj.get('romaji') or 'Unknown',
+                'status': local_status,
+                'watched_episodes': entry.get('progress', 0),
+                'total_episodes': media.get('episodes') or 0,
+                'score': entry.get('score', 0),
+                'repeat': entry.get('repeat', 0),
+                'notes': entry.get('notes', ''),
+                'poster_url': cover.get('large') or cover.get('medium') or '',
+                'banner_image': media.get('bannerImage', ''),
+                'startedAt': entry.get('startedAt'),
+                'completedAt': entry.get('completedAt'),
+                'media_format': media.get('format', ''),
+                'media_status': media.get('status', ''),
+            }
+            all_entries.append(item)
 
-        # Handle exceptions from enrichment
-        for i, item in enumerate(result['data']):
-            if isinstance(item, Exception):
-                logger.error(f"Failed to enrich item at index {i}: {item}")
-                result['data'][i] = {}
+    # Apply status filter
+    if status_filter:
+        all_entries = [e for e in all_entries if e['status'] == status_filter]
 
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error in watchlist_paginated: {e}")
-        return jsonify({'data': [], 'pagination': {}, 'error': str(e)}), 500
+    # Sort by title
+    all_entries.sort(key=lambda x: (x.get('anime_title') or '').lower())
+
+    total_count = len(all_entries)
+    total_pages = max(1, (total_count + limit - 1) // limit)
+    start = (page - 1) * limit
+    paginated = all_entries[start:start + limit]
+
+    return jsonify({
+        'data': paginated,
+        'pagination': {
+            'current_page': page,
+            'page_size': limit,
+            'total_pages': total_pages,
+            'total_count': total_count,
+            'has_next': page < total_pages,
+            'has_prev': page > 1,
+        }
+    })
 
 
-@watchlist_api_bp.route('/update', methods=['POST'])
-def update_watchlist():
-    """Update watchlist entry"""
+@watchlist_api_bp.route('/stats', methods=['GET'])
+def watchlist_stats():
+    """Return stats from AniList Viewer query."""
     if 'username' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
-    anime_id = data.get('anime_id')
-    action = data.get('action')  # 'status' or 'episodes'
-    
-    current_app.logger.info(f"Update request - anime_id: {anime_id}, action: {action}, data: {data}")
-    
-    if not anime_id or not action:
-        return jsonify({'success': False, 'message': 'Missing parameters.'}), 400
-    
-    try:
-        user_id = session.get('_id')
-        
-        if action == 'status':
-            status = data.get('status')
-            current_app.logger.info(f"Updating status to: {status}")
-            result = update_watchlist_status(user_id, anime_id, status)
-        elif action == 'episodes':
-            watched_episodes = data.get('watched_episodes', 0)
-            current_app.logger.info(f"Updating episodes: watched={watched_episodes}")
-            result = update_watched_episodes(user_id, anime_id, watched_episodes)
-        else:
-            return jsonify({'success': False, 'message': 'Invalid action.'}), 400
-        
-        current_app.logger.info(f"Update result: {result}")
-        
-        if result:
-            return jsonify({'success': True, 'message': 'Updated successfully!'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to update.'}), 500
-    except Exception as e:
-        current_app.logger.error(f"Error updating watchlist: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({}), 200
+
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return jsonify({}), 200
+
+    # Fetch both stats and list counts
+    query = """
+    query ($userId: Int) {
+      User(id: $userId) {
+        statistics {
+          anime {
+            count
+            meanScore
+            minutesWatched
+            episodesWatched
+          }
+        }
+      }
+      MediaListCollection(userId: $userId, type: ANIME) {
+        lists {
+          name
+          status
+          entries { id }
+        }
+      }
+    }
+    """
+    data = _anilist_request(access_token, query, {'userId': viewer_id})
+    if not data:
+        return jsonify({}), 200
+
+    stats = data.get('data', {}).get('User', {}).get('statistics', {}).get('anime', {})
+    lists = data.get('data', {}).get('MediaListCollection', {}).get('lists', [])
+
+    status_counts = {
+        'watching': 0, 'completed': 0, 'paused': 0,
+        'dropped': 0, 'plan_to_watch': 0,
+    }
+    for lst in lists:
+        al_status = lst.get('status')
+        local = STATUS_MAP_TO_LOCAL.get(al_status)
+        if local:
+            status_counts[local] = len(lst.get('entries', []))
+
+    return jsonify({
+        'total_anime': stats.get('count', 0),
+        'total': stats.get('count', 0),
+        'minutes_watched': stats.get('minutesWatched', 0),
+        'episodes_watched': stats.get('episodesWatched', 0),
+        'mean_score': stats.get('meanScore', 0),
+        **status_counts,
+    })
 
 
-@watchlist_api_bp.route('/progress', methods=['POST'])
-def save_progress():
-    """Save explicit episode playback progress and update watched episodes if completed"""
-    if 'username' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
-    anime_id = data.get('anime_id')
-    episode_number = data.get('episode_number')
-    
-    if not anime_id or episode_number is None:
-        return jsonify({'success': False, 'message': 'Missing parameters.'}), 400
-        
-    try:
-        user_id = session.get('_id')
-        watch_time = float(data.get('watch_time', 0))
-        total_time = float(data.get('total_time', 0))
-        is_completed = bool(data.get('is_completed', False))
-        
-        # Convert episode_number to int if safely possible for DB comparison
-        try:
-            episode_number = int(float(episode_number))
-        except (ValueError, TypeError):
-            # Fallback if episode number is weird string like '1.5' or 'OVA'
-            pass
-        
-        result = save_watch_progress(user_id, anime_id, episode_number, watch_time, total_time, is_completed)
-        
-        if result:
-            return jsonify({'success': True, 'message': 'Progress saved successfully!'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to save progress or not found in watchlist.'}), 500
-    except Exception as e:
-        current_app.logger.error(f"Error saving watch progress: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+# ── WRITE endpoints (mutate AniList) ────────────────────────────
 
+SAVE_ENTRY_MUTATION = """
+mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int,
+          $score: Float, $repeat: Int, $notes: String,
+          $startedAt: FuzzyDateInput, $completedAt: FuzzyDateInput) {
+  SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress,
+                     scoreRaw: $score, repeat: $repeat, notes: $notes,
+                     startedAt: $startedAt, completedAt: $completedAt) {
+    id
+    status
+    progress
+    score(format: POINT_10_DECIMAL)
+  }
+}
+"""
 
-@watchlist_api_bp.route('/remove', methods=['POST'])
-def remove_from_watchlist_route():
-    """Remove from watchlist"""
-    if 'username' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
-    anime_id = data.get('anime_id')
-    
-    if not anime_id:
-        return jsonify({'success': False, 'message': 'Missing anime ID.'}), 400
-    
-    try:
-        user_id = session.get('_id')
-        result = remove_from_watchlist(user_id, anime_id)
-        
-        if result:
-            return jsonify({'success': True, 'message': 'Removed from watchlist!'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to remove.'}), 500
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@watchlist_api_bp.route('/get', methods=['GET'])
-def get_watchlist_route():
-    """Get user watchlist"""
-    if 'username' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    try:
-        user_id = session.get('_id')
-        status_filter = request.args.get('status')
-        watchlist = get_user_watchlist(user_id, status_filter)
-        
-        for item in watchlist:
-            item['_id'] = str(item['_id'])
-        
-        return jsonify({'watchlist': watchlist})
-    except Exception:
-        return jsonify({'watchlist': []}), 500
+DELETE_ENTRY_MUTATION = """
+mutation ($id: Int) {
+  DeleteMediaListEntry(id: $id) {
+    deleted
+  }
+}
+"""
 
 
 @watchlist_api_bp.route('/add', methods=['POST'])
 def add_to_watchlist_route():
-    """Add to watchlist"""
+    """Add an anime to AniList watchlist."""
     if 'username' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
-    anime_id = data.get('anime_id')
-    anime_title = data.get('anime_title')
-    status = data.get('status', 'watching')
-    
-    if not anime_id or not anime_title:
-        return jsonify({'success': False, 'message': 'Missing anime information.'}), 400
-    
-    try:
-        user_id = session.get('_id')
-        watched_episodes = data.get('watched_episodes', 0)
-        result = add_to_watchlist(user_id, anime_id, anime_title, status, watched_episodes)
-        
-        if result:
-            return jsonify({'success': True, 'message': f'Added to {status} list!'})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to add to watchlist.'}), 500
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'success': False, 'message': 'AniList not connected'}), 400
+
+    body = request.get_json()
+    anime_id = body.get('anime_id')
+    status = body.get('status', 'watching')
+
+    if not anime_id:
+        return jsonify({'success': False, 'message': 'Missing anime ID'}), 400
+
+    al_status = STATUS_MAP_TO_ANILIST.get(status, 'CURRENT')
+
+    variables = {
+        'mediaId': int(anime_id),
+        'status': al_status,
+        'progress': int(body.get('watched_episodes', 0)),
+    }
+
+    data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
+    if data and data.get('data', {}).get('SaveMediaListEntry'):
+        return jsonify({'success': True, 'message': f'Added to {status} list on AniList!'})
+    return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
+
+
+@watchlist_api_bp.route('/update', methods=['POST'])
+def update_watchlist():
+    """Update status or episodes on AniList."""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'success': False, 'message': 'AniList not connected'}), 400
+
+    body = request.get_json()
+    anime_id = body.get('anime_id')
+    action = body.get('action')
+
+    if not anime_id or not action:
+        return jsonify({'success': False, 'message': 'Missing parameters'}), 400
+
+    variables = {'mediaId': int(anime_id)}
+
+    if action == 'status':
+        status = body.get('status', 'watching')
+        variables['status'] = STATUS_MAP_TO_ANILIST.get(status, 'CURRENT')
+    elif action == 'episodes':
+        variables['progress'] = int(body.get('watched_episodes', 0))
+    else:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+
+    data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
+    if data and data.get('data', {}).get('SaveMediaListEntry'):
+        return jsonify({'success': True, 'message': 'Updated on AniList!'})
+    return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
+
+
+@watchlist_api_bp.route('/advanced_update', methods=['POST'])
+def advanced_update():
+    """Full edit modal save → mutates AniList with all fields."""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'success': False, 'message': 'AniList not connected'}), 400
+
+    body = request.get_json()
+    anime_id = body.get('anime_id')
+    if not anime_id:
+        return jsonify({'success': False, 'message': 'Missing anime ID'}), 400
+
+    # Build variables
+    variables = {'mediaId': int(anime_id)}
+
+    if body.get('status'):
+        # Accept both AniList-native and local status strings
+        raw = body['status']
+        variables['status'] = raw if raw in ('CURRENT', 'COMPLETED', 'PAUSED', 'DROPPED', 'PLANNING', 'REPEATING') \
+            else STATUS_MAP_TO_ANILIST.get(raw, 'CURRENT')
+
+    if 'progress' in body:
+        variables['progress'] = int(body['progress'])
+    if 'score' in body and body['score']:
+        # AniList scoreRaw expects an int 0-100 (POINT_100 format)
+        # Our UI uses 0-10 decimal, so multiply by 10
+        variables['score'] = int(float(body['score']) * 10)
+    if 'repeat' in body:
+        variables['repeat'] = int(body['repeat'])
+    if 'notes' in body:
+        variables['notes'] = body['notes']
+
+    # Dates
+    def _clean_date(d):
+        if not d or not isinstance(d, dict):
+            return None
+        if not d.get('year') and not d.get('month') and not d.get('day'):
+            return None
+        return {k: v for k, v in d.items() if v is not None}
+
+    started = _clean_date(body.get('startedAt'))
+    completed = _clean_date(body.get('completedAt'))
+    if started:
+        variables['startedAt'] = started
+    if completed:
+        variables['completedAt'] = completed
+
+    data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
+    if data and data.get('data', {}).get('SaveMediaListEntry'):
+        return jsonify({'success': True, 'message': 'Saved to AniList!'})
+    return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
+
+
+@watchlist_api_bp.route('/remove', methods=['POST'])
+def remove_from_watchlist_route():
+    """Delete entry from AniList. Requires the anilist entry id."""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'success': False, 'message': 'AniList not connected'}), 400
+
+    body = request.get_json()
+    anime_id = body.get('anime_id')  # This is the AniList media ID
+    if not anime_id:
+        return jsonify({'success': False, 'message': 'Missing anime ID'}), 400
+
+    # First we need to find the list entry ID for this media
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return jsonify({'success': False, 'message': 'Could not verify AniList identity'}), 500
+
+    find_query = """
+    query ($userId: Int, $mediaId: Int) {
+      MediaList(userId: $userId, mediaId: $mediaId) {
+        id
+      }
+    }
+    """
+    find_data = _anilist_request(access_token, find_query, {'userId': viewer_id, 'mediaId': int(anime_id)})
+    if not find_data:
+        return jsonify({'success': False, 'message': 'Could not find entry on AniList'}), 404
+
+    entry_id = find_data.get('data', {}).get('MediaList', {}).get('id')
+    if not entry_id:
+        return jsonify({'success': False, 'message': 'Entry not found on AniList'}), 404
+
+    del_data = _anilist_request(access_token, DELETE_ENTRY_MUTATION, {'id': entry_id})
+    if del_data and del_data.get('data', {}).get('DeleteMediaListEntry', {}).get('deleted'):
+        return jsonify({'success': True, 'message': 'Removed from AniList!'})
+    return jsonify({'success': False, 'message': 'Failed to delete from AniList'}), 500
 
 
 @watchlist_api_bp.route('/status', methods=['GET'])
 def get_watchlist_status():
-    """Get watchlist status for an anime"""
+    """Check if an anime is in the user's AniList list."""
     if 'username' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    anime_id = request.args.get('anime_id')
-    if not anime_id:
         return jsonify({'in_watchlist': False}), 200
-    
-    try:
-        user_id = session.get('_id')
-        entry = get_watchlist_entry(user_id, anime_id)
-        
-        if entry:
-            return jsonify({
-                'in_watchlist': True,
-                'status': entry['status'],
-                'watched_episodes': entry.get('watched_episodes', 0),
-                'total_episodes': entry.get('total_episodes', 0)
-            })
-        else:
-            return jsonify({'in_watchlist': False})
-    except Exception:
-        return jsonify({'in_watchlist': False}), 500
+
+    access_token = _get_access_token()
+    anime_id = request.args.get('anime_id')
+    if not access_token or not anime_id:
+        return jsonify({'in_watchlist': False}), 200
+
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return jsonify({'in_watchlist': False}), 200
+
+    query = """
+    query ($userId: Int, $mediaId: Int) {
+      MediaList(userId: $userId, mediaId: $mediaId) {
+        id status progress
+        media { episodes }
+      }
+    }
+    """
+    data = _anilist_request(access_token, query, {'userId': viewer_id, 'mediaId': int(anime_id)})
+    if not data:
+        return jsonify({'in_watchlist': False}), 200
+
+    entry = data.get('data', {}).get('MediaList')
+    if entry:
+        return jsonify({
+            'in_watchlist': True,
+            'status': STATUS_MAP_TO_LOCAL.get(entry.get('status'), 'watching'),
+            'watched_episodes': entry.get('progress', 0),
+            'total_episodes': (entry.get('media') or {}).get('episodes', 0),
+        })
+    return jsonify({'in_watchlist': False})
 
 
-@watchlist_api_bp.route('/stats', methods=['GET'])
-def get_watchlist_stats_route():
-    """Get watchlist statistics"""
+@watchlist_api_bp.route('/progress', methods=['POST'])
+def save_progress():
+    """Save episode progress → updates AniList progress."""
     if 'username' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
-    
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'success': False, 'message': 'AniList not connected'}), 400
+
+    body = request.get_json()
+    anime_id = body.get('anime_id')
+    episode_number = body.get('episode_number')
+    is_completed = bool(body.get('is_completed', False))
+
+    if not anime_id or episode_number is None:
+        return jsonify({'success': False, 'message': 'Missing parameters'}), 400
+
     try:
-        user_id = session.get('_id')
-        stats = get_watchlist_stats(user_id)
-        return jsonify(stats or {})
-        
-    except Exception as e:
-        current_app.logger.error(f"Error getting watchlist stats: {e}")
-        return jsonify({}), 500
+        ep = int(float(episode_number))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'Invalid episode number'}), 400
+
+    if is_completed:
+        variables = {'mediaId': int(anime_id), 'progress': ep}
+        data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
+        if data and data.get('data', {}).get('SaveMediaListEntry'):
+            return jsonify({'success': True, 'message': 'Progress saved to AniList!'})
+        return jsonify({'success': False, 'message': 'AniList update failed'}), 500
+
+    # If not completed, just acknowledge — we don't need to push partial progress to AniList
+    return jsonify({'success': True, 'message': 'Progress noted'})
+
+
+@watchlist_api_bp.route('/get', methods=['GET'])
+def get_watchlist_route():
+    """Get full watchlist from AniList (non-paginated, for compatibility)."""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'watchlist': []}), 200
+
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return jsonify({'watchlist': []}), 200
+
+    data = _anilist_request(access_token, WATCHLIST_QUERY, {'userId': viewer_id, 'type': 'ANIME'})
+    if not data:
+        return jsonify({'watchlist': []}), 200
+
+    entries = []
+    collection = data.get('data', {}).get('MediaListCollection', {})
+    for lst in collection.get('lists', []):
+        for entry in lst.get('entries', []):
+            media = entry.get('media') or {}
+            title_obj = media.get('title', {})
+            entries.append({
+                'anime_id': str(media.get('id', '')),
+                'anime_title': title_obj.get('userPreferred') or title_obj.get('english') or title_obj.get('romaji') or 'Unknown',
+                'status': STATUS_MAP_TO_LOCAL.get(entry.get('status'), 'watching'),
+                'watched_episodes': entry.get('progress', 0),
+            })
+
+    return jsonify({'watchlist': entries})

@@ -1,10 +1,511 @@
 {% extends "base.html" %}
 
-{% block title %}My Watchlist - YumeAnime{% endblock %}
-{% block meta_description %}Manage your anime watchlist{% endblock %}
+{% block title %}Profile & Watchlist - {{ username }} - YumeAnime{% endblock %}
+{% block meta_description %}Manage your anime watchlist and view your profile{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Profile Header */
+    .profile-hero {
+        position: relative;
+        width: 100%;
+        height: 250px;
+        background: linear-gradient(135deg, rgba(20, 20, 25, 0.8), rgba(10, 10, 12, 0.95));
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--space-xl);
+        overflow: hidden;
+        display: flex;
+        align-items: flex-end;
+        padding: var(--space-xl);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .profile-hero-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQ0mbzCEJzIA.jpg') center/cover;
+        opacity: 0.3;
+        z-index: 0;
+        filter: blur(2px) brightness(0.6);
+    }
+
+    .profile-hero-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: var(--space-lg);
+        width: 100%;
+    }
+
+    .hero-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid var(--bg-card);
+        object-fit: cover;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .hero-info {
+        display: flex;
+        flex-direction: column;
+        color: white;
+    }
+
+    .hero-username {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1.2;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+
+    .hero-email {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        margin-top: 4px;
+    }
+
+    /* Layout Grid */
+    .watchlist-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: var(--space-xl);
+        align-items: start;
+    }
+
+    @media (max-width: 992px) {
+        .watchlist-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Left Sidebar */
+    .watchlist-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-lg);
+        position: sticky;
+        top: 80px;
+    }
+
+    /* Stats Box */
+    .sidebar-stats {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--space-lg);
+        display: flex;
+        justify-content: space-between;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .sidebar-stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .sidebar-stat-value {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .sidebar-stat-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+
+    /* Search & Filter Nav */
+    .sidebar-nav-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+
+    .sidebar-search {
+        width: 100%;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 14px 16px;
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar-search:focus {
+        border-color: rgba(141, 193, 73, 0.5);
+        /* Accent tint */
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(141, 193, 73, 0.2);
+    }
+
+    .sidebar-filters {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    .filter-btn:last-child {
+        border-bottom: none;
+    }
+
+    .filter-btn:hover {
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text-primary);
+    }
+
+    .filter-btn.active {
+        background: rgba(141, 193, 73, 0.08);
+        color: #8dc149;
+        border-left-color: #8dc149;
+    }
+
+    .filter-icon {
+        width: 20px;
+        text-align: center;
+        font-size: 1.1rem;
+        opacity: 0.8;
+    }
+
+    /* List View Content */
+    .watchlist-main {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* List Header */
+    .list-header {
+        display: grid;
+        grid-template-columns: 32px minmax(200px, 1fr) 80px 100px;
+        align-items: center;
+        padding: 0 16px 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: var(--space-sm);
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+    }
+
+    /* Edit Modal Overlay */
+    .edit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .edit-modal-overlay.active {
+        display: flex;
+    }
+
+    .edit-modal {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        width: 100%;
+        max-width: 700px;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1fr 250px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (max-width: 768px) {
+        .edit-modal {
+            grid-template-columns: 1fr;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    }
+
+    .edit-modal-content {
+        padding: var(--space-xl);
+    }
+
+    .edit-modal-poster {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    @media (max-width: 768px) {
+        .edit-modal-poster {
+            display: none;
+        }
+    }
+
+    .edit-modal-header {
+        margin-bottom: var(--space-lg);
+    }
+
+    .edit-modal-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .edit-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+    }
+
+    .edit-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .edit-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .edit-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        font-weight: 700;
+    }
+
+    .edit-input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .edit-input:focus {
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .edit-input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 0.6;
+        cursor: pointer;
+    }
+
+    .edit-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: var(--space-xl);
+        padding-top: var(--space-md);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-delete {
+        background: transparent;
+        border: 1px solid rgba(231, 76, 60, 0.3);
+        color: #e74c3c;
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-delete:hover {
+        background: rgba(231, 76, 60, 0.1);
+        border-color: #e74c3c;
+    }
+
+    .btn-save {
+        background: var(--primary);
+        /* Assuming --primary is a purple-ish or theme color */
+        border: none;
+        color: white;
+        padding: 10px 24px;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        cursor: pointer;
+        transition: filter 0.2s;
+    }
+
+    /* Optional purple override if theme primary isn't purple */
+    .btn-save.purple {
+        background: #8b5cf6;
+    }
+
+    .btn-save:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        padding: 10px 24px;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Clickable Row */
+    .list-row {
+        display: grid;
+        grid-template-columns: 32px minmax(200px, 1fr) 80px 100px;
+        align-items: center;
+        padding: 10px 16px;
+        border-radius: var(--radius-md);
+        transition: background 0.2s ease, transform 0.2s ease;
+        position: relative;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        cursor: pointer;
+        /* make row look clickable */
+    }
+
+    /* Small hack to make selects inside clickable row not trigger the row click immediately */
+    .status-edit-select {
+        position: relative;
+        z-index: 2;
+    }
+
+
+    .list-row:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Status Dot */
+    .status-indicator {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin: 0 auto;
+    }
+
+    .status-dot-watching {
+        background: #3498db;
+        box-shadow: 0 0 8px rgba(52, 152, 219, 0.8);
+    }
+
+    .status-dot-completed {
+        background: #8dc149;
+        box-shadow: 0 0 8px rgba(141, 193, 73, 0.8);
+    }
+
+    .status-dot-on_hold {
+        background: #f1c40f;
+        box-shadow: 0 0 8px rgba(241, 196, 15, 0.8);
+    }
+
+    .status-dot-dropped {
+        background: #e74c3c;
+        box-shadow: 0 0 8px rgba(231, 76, 60, 0.8);
+    }
+
+    .status-dot-plan_to_watch {
+        background: #95a5a6;
+    }
+
+    .status-dot-other {
+        background: #555;
+    }
+
+    /* Cover / Title Cell */
+    .row-cover {
+        width: 42px;
+        height: 60px;
+        border-radius: 6px;
+        object-fit: cover;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        flex-shrink: 0;
+    }
+
+    .row-title {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: color 0.2s ease;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 2px;
+    }
+
+    .row-title:hover {
+        color: var(--primary);
+    }
+
+    /* Score Cell */
+    .row-score {
+        font-weight: 700;
+        color: var(--text-primary);
+        text-align: center;
+        font-size: 0.95rem;
+    }
+
+    /* Progress Cell */
+    .row-progress {
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+
     .watchlist-loading {
         text-align: center;
         padding: var(--space-3xl);
@@ -18,120 +519,253 @@
         border-radius: var(--radius-lg);
     }
 
-    .status-badge {
-        display: inline-block;
-        padding: 2px 6px;
+    /* Edit Status Dropdown */
+    .status-edit-select {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        padding: 0;
         border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: bold;
-        margin-left: 8px;
-        vertical-align: middle;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        outline: none;
+        cursor: pointer;
+        width: fit-content;
+        transition: color 0.2s;
+        text-transform: capitalize;
     }
 
-    .status-completed {
-        background-color: rgba(76, 175, 80, 0.15);
-        color: #81c784;
-        border: 1px solid rgba(76, 175, 80, 0.3);
+    .list-row:hover .status-edit-select {
+        color: var(--text-secondary);
     }
 
-    .status-ongoing {
-        background-color: rgba(33, 150, 243, 0.15);
-        color: #64b5f6;
-        border: 1px solid rgba(33, 150, 243, 0.3);
+    .status-edit-select option {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
     }
 
-    .status-other {
-        background-color: rgba(158, 158, 158, 0.15);
-        color: #e0e0e0;
-        border: 1px solid rgba(158, 158, 158, 0.3);
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        .list-header {
+            display: none;
+        }
+
+        .list-row {
+            grid-template-columns: 12px 1fr auto;
+            gap: 12px;
+        }
+
+        .row-score {
+            display: none;
+            /* Hide score on small screens to save space */
+        }
+
+        .row-progress {
+            justify-content: flex-end;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: var(--space-sm);">
-        <h1 style="margin: 0;">My Watchlist</h1>
-        {% if session.get('anilist_authenticated') %}
-        <div style="display: flex; align-items: center; gap: var(--space-sm);">
-            <button class="btn btn-primary" id="sync-watchlist-btn" onclick="syncFromAniList()"
-                style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 8px 16px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    id="wl-sync-icon">
-                    <path d="M21 2v6h-6" />
-                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                    <path d="M3 22v-6h6" />
-                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                </svg>
-                <span id="wl-sync-btn-text">Sync from AniList</span>
-                <svg id="wl-sync-spinner" class="hidden" width="16" height="16" viewBox="0 0 24 24"
-                    style="animation: spin 1s linear infinite;">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"
-                        stroke-dasharray="31.4 31.4" stroke-linecap="round" />
-                </svg>
-            </button>
-        </div>
-        {% endif %}
-    </div>
+<div class="container" style="max-width: 1300px;">
 
-    <!-- Sync Progress Bar -->
-    <div id="wl-sync-progress-container" class="hidden"
-        style="margin-bottom: var(--space-lg); padding: 12px 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span id="wl-sync-status-text" style="font-size: 0.85rem; color: var(--text-secondary);">Syncing...</span>
-            <span id="wl-sync-percent-text"
-                style="font-size: 0.85rem; font-weight: 600; color: var(--primary);">0%</span>
-        </div>
-        <div style="width: 100%; height: 4px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden;">
-            <div id="wl-sync-progress-bar"
-                style="width: 0%; height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s ease;">
+    <!-- Profile Hero -->
+    <div class="profile-hero">
+        <div class="profile-hero-bg"></div>
+        <div class="profile-hero-content">
+            {% if user.avatar %}
+            <img src="{{ user.avatar }}" alt="{{ username }}" class="hero-avatar">
+            {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ username }}&size=200&background=1a1a1a&color=fff&bold=true"
+                alt="{{ username }}" class="hero-avatar">
+            {% endif %}
+
+            <div class="hero-info">
+                <h1 class="hero-username">{{ username }}</h1>
+                <div class="hero-email">{{ user.email or 'No email set' }}</div>
             </div>
         </div>
-    </div>
 
-    <!-- Stats -->
-    <div class="watchlist-stats" id="watchlist-stats">
-        <div class="stat-card">
-            <div class="stat-card-value" id="stat-watching">-</div>
-            <div class="stat-card-label">Watching</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-value" id="stat-completed">-</div>
-            <div class="stat-card-label">Completed</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-value" id="stat-plan">-</div>
-            <div class="stat-card-label">Plan to Watch</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-value" id="stat-total">-</div>
-            <div class="stat-card-label">Total</div>
+        <!-- Action Buttons -->
+        <div style="position: absolute; bottom: 24px; right: 24px; z-index: 2; display: flex; gap: 12px;">
+            <a href="{{ url_for('main.catalog_routes.settings') }}" class="btn btn-secondary"
+                style="background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border-color: rgba(255,255,255,0.1);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+            </a>
+
+
         </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="watchlist-tabs" id="watchlist-tabs">
-        <button class="watchlist-tab active" data-status="">All</button>
-        <button class="watchlist-tab" data-status="watching">Watching</button>
-        <button class="watchlist-tab" data-status="completed">Completed</button>
-        <button class="watchlist-tab" data-status="on_hold">On Hold</button>
-        <button class="watchlist-tab" data-status="dropped">Dropped</button>
-        <button class="watchlist-tab" data-status="plan_to_watch">Plan to Watch</button>
+    <!-- Main Layout -->
+    <div class="watchlist-layout">
+
+        <!-- Left Sidebar -->
+        <aside class="watchlist-sidebar">
+            <!-- Stats Box -->
+            <div class="sidebar-stats">
+                <div class="sidebar-stat-item">
+                    <span class="sidebar-stat-value" id="stat-total">-</span>
+                    <span class="sidebar-stat-label">Total Anime</span>
+                </div>
+                <div class="sidebar-stat-item">
+                    <span class="sidebar-stat-value" id="stat-days">{{ (user.anilist_stats.minutes_watched / 1440) |
+                        round(1) if user.anilist_stats and user.anilist_stats.minutes_watched else '0.0' }}</span>
+                    <span class="sidebar-stat-label">Days</span>
+                </div>
+                <div class="sidebar-stat-item">
+                    <span class="sidebar-stat-value" id="stat-watching">-</span>
+                    <span class="sidebar-stat-label">Watching</span>
+                </div>
+            </div>
+
+            <div class="sidebar-nav-container">
+                <input type="text" class="sidebar-search" id="local-search-input" placeholder="Search my list...">
+
+                <div class="sidebar-filters" id="watchlist-tabs">
+                    <button class="filter-btn active" data-status="">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                            </svg>
+                        </span> All
+                    </button>
+                    <button class="filter-btn" data-status="watching">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                        </span> Watching
+                    </button>
+                    <button class="filter-btn" data-status="plan_to_watch">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </span> Planning
+                    </button>
+                    <button class="filter-btn" data-status="completed">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </span> Completed
+                    </button>
+                    <button class="filter-btn" data-status="dropped">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </span> Dropped
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Watchlist View -->
+        <section class="watchlist-main">
+            <!-- Headers -->
+            <div class="list-header">
+                <div></div>
+                <div style="padding-left: 20px;">POSTER &amp; TITLE</div>
+                <div style="text-align: center;">SCORE</div>
+                <div style="text-align: center;">PROGRESS</div>
+            </div>
+
+            <!-- Content Area -->
+            <div id="watchlist-content">
+                <div class="watchlist-loading">
+                    <div class="loading-spinner" style="margin: 0 auto;"></div>
+                    <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
+                </div>
+            </div>
+        </section>
+
     </div>
-
-    <!-- Watchlist Content -->
-    <div id="watchlist-content">
-        <div class="watchlist-loading">
-            <div class="loading-spinner" style="margin: 0 auto;"></div>
-            <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
-        </div>
-    </div>
-
-
 </div>
+
+<!-- Edit Watchlist Modal -->
+<div class="edit-modal-overlay" id="edit-modal-overlay">
+    <div class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h2 class="edit-modal-title" id="edit-modal-title">Anime Title</h2>
+            </div>
+
+            <div class="edit-form-grid">
+                <div class="edit-form-group">
+                    <label class="edit-label">Status</label>
+                    <select class="edit-input" id="edit-status">
+                        <option value="CURRENT">Watching</option>
+                        <option value="PLANNING">Plan to Watch</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="DROPPED">Dropped</option>
+                        <option value="PAUSED">Paused</option>
+                    </select>
+                </div>
+
+                <div class="edit-form-group">
+                    <label class="edit-label" id="edit-episode-label">Episode Progress</label>
+                    <input type="number" class="edit-input" id="edit-progress" min="0">
+                </div>
+
+                <div class="edit-form-group">
+                    <label class="edit-label">Score (0-10 Decimal)</label>
+                    <input type="number" class="edit-input" id="edit-score" min="0" max="10" step="0.1">
+                </div>
+
+                <div class="edit-form-group">
+                    <label class="edit-label">Start Date</label>
+                    <input type="date" class="edit-input" id="edit-start-date">
+                </div>
+
+                <div class="edit-form-group">
+                    <label class="edit-label">End Date</label>
+                    <input type="date" class="edit-input" id="edit-end-date">
+                </div>
+
+                <div class="edit-form-group">
+                    <label class="edit-label">Total Rewatches</label>
+                    <input type="number" class="edit-input" id="edit-rewatches" min="0">
+                </div>
+
+                <div class="edit-form-group full-width">
+                    <label class="edit-label">Notes</label>
+                    <textarea class="edit-input" id="edit-notes" rows="3"
+                        placeholder="Add your notes here..."></textarea>
+                </div>
+            </div>
+
+            <div class="edit-actions">
+                <button class="btn-delete" id="edit-delete-btn" aria-label="Delete Entry" onclick="deleteEntry()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                </button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-save purple" onclick="saveEntry()">Save Changes</button>
+                    <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <img src="" alt="Anime Cover" class="edit-modal-poster" id="edit-modal-poster">
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -139,15 +773,18 @@
     document.addEventListener('DOMContentLoaded', () => {
         const watchlistContent = document.getElementById('watchlist-content');
         const watchlistTabs = document.getElementById('watchlist-tabs');
+        const searchInput = document.getElementById('local-search-input');
+
         // Sentinel for infinite scroll
         let sentinel = null;
 
         let currentStatus = '';
+        let searchQuery = '';
         let currentPage = 1;
         let isLoading = false;
         let hasMore = true;
 
-        // Status labels
+        // Status labels mapping
         const statusLabels = {
             'watching': 'Watching',
             'completed': 'Completed',
@@ -163,9 +800,10 @@
                 const stats = await response.json();
 
                 if (document.getElementById('stat-watching')) document.getElementById('stat-watching').textContent = stats.watching || 0;
-                if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = stats.completed || 0;
-                if (document.getElementById('stat-plan')) document.getElementById('stat-plan').textContent = stats.plan_to_watch || 0;
-                if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total || 0;
+                if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total || stats.total_anime || 0;
+                if (document.getElementById('stat-days') && stats.minutes_watched) {
+                    document.getElementById('stat-days').textContent = (stats.minutes_watched / 1440).toFixed(1);
+                }
             } catch (e) {
                 console.error('Stats error:', e);
             }
@@ -173,18 +811,14 @@
 
         // Create and append loading sentinel
         function createSentinel() {
-            // Remove existing sentinel if any
             if (sentinel) sentinel.remove();
 
             const sentinelDiv = document.createElement('div');
             sentinelDiv.id = 'watchlist-sentinel';
             sentinelDiv.className = 'watchlist-loading';
-            // IMPORTANT: Sentinel must be in the DOM for IntersectionObserver to work.
-            // We use opacity to hide/show the spinner, but the element remains present.
             sentinelDiv.style.opacity = '0';
-            sentinelDiv.style.minHeight = '1px'; // Ensure it takes up space
+            sentinelDiv.style.minHeight = '1px';
             sentinelDiv.style.transition = 'opacity 0.2s';
-            sentinelDiv.innerText = 'Loading more...'; // Simple text or innerHTML
             sentinelDiv.innerHTML = `
                 <div class="loading-spinner" style="margin: 0 auto;"></div>
                 <p class="text-muted" style="margin-top: var(--space-md);">Loading more...</p>
@@ -195,31 +829,11 @@
             return sentinelDiv;
         }
 
-
-        // Helper to generate status badge
-        function getStatusBadge(status) {
-            if (!status || status === 'Unknown') return '';
-            const s = status.toLowerCase();
-            let text = status;
-            let cls = 'status-other';
-
-            if (s.includes('ongoing') || s.includes('currently')) {
-                text = 'Ongoing';
-                cls = 'status-ongoing';
-            } else if (s.includes('completed') || s.includes('finished')) {
-                text = 'Completed';
-                cls = 'status-completed';
-            }
-
-            return `<span class="status-badge ${cls}">${text}</span>`;
-        }
-
         // Fetch watchlist
         async function fetchWatchlist(status = '', page = 1, append = false) {
             if (isLoading) return;
             isLoading = true;
 
-            // If not appending (new filter or fresh load), show initial loading state
             if (!append) {
                 if (watchlistContent) {
                     watchlistContent.innerHTML = `
@@ -229,20 +843,17 @@
                         </div>
                     `;
                 }
-                // Reset state
                 currentPage = 1;
                 hasMore = true;
-                // Re-create sentinel
                 if (!sentinel) sentinel = createSentinel();
                 sentinel.style.display = 'block';
                 sentinel.style.opacity = '0';
             } else {
-                // Show sentinel spinner
                 if (sentinel) sentinel.style.opacity = '1';
             }
 
             try {
-                const params = new URLSearchParams({ page, limit: 20 });
+                const params = new URLSearchParams({ page, limit: 30 });
                 if (status) params.append('status', status);
 
                 const response = await fetch(`/api/watchlist/paginated?${params}`);
@@ -252,70 +863,79 @@
                     throw new Error(data.error);
                 }
 
-                const items = data.data || [];
+                let items = data.data || [];
                 const pagination = data.pagination || {};
 
-                // Check if we have more pages
-                hasMore = pagination.has_next && page < pagination.total_pages;
+                // Basic local search filtering
+                if (searchQuery) {
+                    items = items.filter(i => {
+                        const t = i.anime_title ? i.anime_title.toLowerCase() : '';
+                        return t.includes(searchQuery.toLowerCase());
+                    });
+                }
+
+                hasMore = pagination.has_next && page < pagination.total_pages && !searchQuery;
 
                 if (items.length === 0 && !append) {
                     if (watchlistContent) {
                         watchlistContent.innerHTML = `
                             <div class="watchlist-empty">
                                 <div style="font-size: 4rem; margin-bottom: var(--space-md);">📚</div>
-                                <h3>Your watchlist is empty</h3>
+                                <h3>No anime found</h3>
                                 <p class="text-muted" style="margin-bottom: var(--space-lg);">
-                                    Start adding anime to your watchlist to track your progress!
+                                    ${searchQuery ? 'No results match your search.' : 'Start adding anime to track your progress!'}
                                 </p>
                                 <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
                             </div>
                         `;
                     }
-                    if (sentinel) sentinel.style.display = 'none'; // No items, hide sentinel
+                    if (sentinel) sentinel.style.display = 'none';
                     return;
                 }
 
-                const itemsHTML = items.map(item => `
-                    <div class="watchlist-item" data-id="${item.anime_id}">
-                        <a href="/anime/${item.anime_id}" class="watchlist-item-poster">
-                            <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/80x112?text=No+Image'}" alt="${item.anime_title}" loading="lazy">
-                        </a>
-                        <div class="watchlist-item-info">
-                            <div>
-                                <a href="/anime/${item.anime_id}" class="watchlist-item-title">${item.anime_title}</a>
-                                ${getStatusBadge(item.anime_status)}
-                            </div>
-                            <div class="text-sm text-muted" style="margin-top: var(--space-xs);">
-                                <select class="server-select" style="font-size: 0.8rem; padding: 4px 8px;" onchange="updateStatus('${item.anime_id}', this.value)">
+                const itemsHTML = items.map(item => {
+                    const statusClass = 'status-dot-' + (item.status || 'other');
+
+                    // We encode item data as JSON string in data attribute to populate the modal later easily
+                    const itemData = encodeURIComponent(JSON.stringify(item));
+
+                    return `
+                    <div class="list-row" data-id="${item.anime_id}" onclick="openEditModal(this)" data-item="${itemData}">
+                        <div>
+                            <div class="status-indicator ${statusClass}" title="${statusLabels[item.status] || item.status || 'Unknown'}"></div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <a href="/anime/${item.anime_id}" onclick="event.stopPropagation()">
+                                <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/48x68?text=No+Image'}" alt="${item.anime_title}" class="row-cover" loading="lazy">
+                            </a>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <a href="/anime/${item.anime_id}" class="row-title" style="text-decoration: none;" onclick="event.stopPropagation()">${item.anime_title}</a>
+                                <select class="status-edit-select" onchange="event.stopPropagation(); updateStatus('${item.anime_id}', this.value)" onclick="event.stopPropagation()">
                                     ${Object.entries(statusLabels).map(([val, label]) =>
-                    `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
-                ).join('')}
+                        `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
+                    ).join('')}
                                 </select>
                             </div>
-                            <div class="watchlist-item-progress">
-                                <span class="text-sm">${item.watched_episodes || 0}/${item.total_episodes || '?'}</span>
-                                <div class="progress-bar">
-                                    <div class="progress-bar-fill" style="width: ${item.total_episodes ? (item.watched_episodes / item.total_episodes * 100) : 0}%"></div>
-                                </div>
-                                <div style="display: flex; gap: 4px;">
-                                    <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) - 1})">-</button>
-                                    <button class="btn btn-sm btn-ghost" onclick="updateEpisodes('${item.anime_id}', ${(item.watched_episodes || 0) + 1})">+</button>
-                                </div>
-                            </div>
                         </div>
-                        <button class="btn btn-icon btn-ghost" onclick="removeFromWatchlist('${item.anime_id}')" title="Remove">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            </svg>
-                        </button>
+                        
+                        <div class="row-score">
+                            ${item.score && item.score > 0 ? item.score : '-'}
+                        </div>
+                        
+                        <div class="row-progress">
+                            <span class="ep-text">${item.watched_episodes || 0} / ${item.total_episodes || '?'}</span>
+                        </div>
                     </div>
-                `).join('');
+                `}).join('');
 
                 if (watchlistContent) {
                     if (!append) {
                         watchlistContent.innerHTML = itemsHTML;
                     } else {
+                        // remove loading state if needed
+                        const loader = watchlistContent.querySelector('.watchlist-loading');
+                        if (loader) loader.remove();
                         watchlistContent.insertAdjacentHTML('beforeend', itemsHTML);
                     }
                 }
@@ -334,35 +954,33 @@
             } finally {
                 isLoading = false;
                 if (!hasMore && sentinel) {
-                    sentinel.style.display = 'none'; // Absolutely no more items
+                    sentinel.style.display = 'none';
                 } else if (sentinel) {
-                    sentinel.style.opacity = '0'; // Keep element for intersection, but hide spinner
+                    sentinel.style.opacity = '0';
                 }
             }
         }
 
-        // Initialize Intersection Observer
+        // Intersection Observer
         function initInfiniteScroll() {
             if (!sentinel) sentinel = createSentinel();
 
             const observer = new IntersectionObserver((entries) => {
-                // Must be intersecting, have more pages, and not currently loading
-                if (entries[0].isIntersecting && hasMore && !isLoading) {
-                    // Show spinner immediately for feedback
+                if (entries[0].isIntersecting && hasMore && !isLoading && !searchQuery) {
                     sentinel.style.opacity = '1';
                     currentPage++;
                     fetchWatchlist(currentStatus, currentPage, true);
                 }
             }, {
                 root: null,
-                rootMargin: '100px', // Pre-fetch before reaching exact bottom
+                rootMargin: '100px',
                 threshold: 0.1
             });
 
             if (sentinel) observer.observe(sentinel);
         }
 
-        // Global function wrappers for inline event handlers
+        // Global functions
         window.updateStatus = async function (animeId, status) {
             try {
                 const response = await fetch('/api/watchlist/update', {
@@ -374,12 +992,26 @@
                 if (!data.success) {
                     alert(data.message || 'Failed to update status');
                 } else {
-                    if (currentStatus && currentStatus !== status) {
-                        const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
+                    if (currentStatus && currentStatus !== status && currentStatus !== '') {
+                        const item = document.querySelector(`.list-row[data-id="${animeId}"]`);
                         if (item) {
-                            item.style.transition = 'opacity 0.3s, height 0.3s';
+                            item.style.transform = 'scale(0.95)';
                             item.style.opacity = '0';
-                            setTimeout(() => item.remove(), 300);
+                            setTimeout(() => {
+                                item.remove();
+                                if (document.querySelectorAll('.list-row').length === 0) {
+                                    fetchWatchlist(currentStatus, 1, false);
+                                }
+                            }, 200);
+                        }
+                    } else {
+                        // Just update the dot color
+                        const item = document.querySelector(`.list-row[data-id="${animeId}"]`);
+                        if (item) {
+                            const indicator = item.querySelector('.status-indicator');
+                            if (indicator) {
+                                indicator.className = 'status-indicator status-dot-' + status;
+                            }
                         }
                     }
                     fetchStats();
@@ -389,86 +1021,160 @@
             }
         };
 
-        window.updateEpisodes = async function (animeId, count) {
-            if (count < 0) count = 0;
+        // Modal Handlers
+        let activeEditItemId = null;
+
+        // Convert old DB statuses to AniList's standard
+        const localToAnilistStatus = {
+            'watching': 'CURRENT',
+            'completed': 'COMPLETED',
+            'on_hold': 'PAUSED',
+            'dropped': 'DROPPED',
+            'plan_to_watch': 'PLANNING'
+        };
+
+        window.openEditModal = function (rowElement) {
+            const itemStr = rowElement.getAttribute('data-item');
+            if (!itemStr) return;
+            const item = JSON.parse(decodeURIComponent(itemStr));
+
+            activeEditItemId = item.anime_id;
+
+            document.getElementById('edit-modal-title').textContent = item.anime_title;
+            document.getElementById('edit-modal-poster').src = item.poster_url || item.poster;
+
+            // Map status
+            let mappedStatus = localToAnilistStatus[item.status] || item.status || 'CURRENT';
+            // It might already be AniList formatted if backend uses AniList proxy
+            if (!['CURRENT', 'COMPLETED', 'PAUSED', 'DROPPED', 'PLANNING'].includes(mappedStatus)) {
+                mappedStatus = 'CURRENT';
+            }
+            document.getElementById('edit-status').value = mappedStatus;
+
+            const totalEps = item.total_episodes || '?';
+            document.getElementById('edit-episode-label').textContent = `Episode Progress (${totalEps} EPS)`;
+            document.getElementById('edit-progress').value = item.watched_episodes || 0;
+            document.getElementById('edit-score').value = item.score || '';
+            document.getElementById('edit-rewatches').value = item.repeat || 0;
+            document.getElementById('edit-notes').value = item.notes || '';
+
+            // Format dates (YYYY-MM-DD expected for <input type="date">)
+            const formatDateForInput = (dateObj) => {
+                if (!dateObj || (!dateObj.year && !dateObj.month && !dateObj.day)) return '';
+                const y = dateObj.year || new Date().getFullYear();
+                const m = String(dateObj.month || 1).padStart(2, '0');
+                const d = String(dateObj.day || 1).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            document.getElementById('edit-start-date').value = formatDateForInput(item.startedAt);
+            document.getElementById('edit-end-date').value = formatDateForInput(item.completedAt);
+
+            document.getElementById('edit-modal-overlay').classList.add('active');
+        };
+
+        window.closeEditModal = function () {
+            document.getElementById('edit-modal-overlay').classList.remove('active');
+            activeEditItemId = null;
+        };
+
+        window.saveEntry = async function () {
+            if (!activeEditItemId) return;
+
+            // Parse dates back to AniList format
+            const parseDateInput = (val) => {
+                if (!val) return { year: null, month: null, day: null };
+                const dt = new Date(val);
+                if (isNaN(dt.getTime())) return { year: null, month: null, day: null };
+                // Using UTC parts to avoid timezone shift on local boundary selection
+                return {
+                    year: dt.getUTCFullYear(),
+                    month: dt.getUTCMonth() + 1,
+                    day: dt.getUTCDate()
+                };
+            };
+
+            const payload = {
+                anime_id: activeEditItemId,
+                status: document.getElementById('edit-status').value,
+                progress: parseInt(document.getElementById('edit-progress').value) || 0,
+                score: parseFloat(document.getElementById('edit-score').value) || 0,
+                repeat: parseInt(document.getElementById('edit-rewatches').value) || 0,
+                notes: document.getElementById('edit-notes').value,
+                startedAt: parseDateInput(document.getElementById('edit-start-date').value),
+                completedAt: parseDateInput(document.getElementById('edit-end-date').value)
+            };
+
+            const btn = document.querySelector('.btn-save');
+            const originalText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
             try {
-                const response = await fetch('/api/watchlist/update', {
+                const response = await fetch('/api/watchlist/advanced_update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: count })
+                    body: JSON.stringify(payload)
                 });
                 const data = await response.json();
+
                 if (data.success) {
-                    // Update local DOM
-                    const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
-                    if (item) {
-                        const progressText = item.querySelector('.watchlist-item-progress span');
-                        const progressBar = item.querySelector('.progress-bar-fill');
-
-                        if (progressText) {
-                            const parts = progressText.textContent.split('/');
-                            const totalStr = parts[1];
-                            const total = totalStr === '?' ? 0 : parseInt(totalStr);
-
-                            progressText.textContent = `${count}/${totalStr}`;
-                            if (total > 0) {
-                                progressBar.style.width = `${Math.min(100, (count / total * 100))}%`;
-                            }
-
-                            // Update the button handlers so next click works without refreshing
-                            const updateBtns = item.querySelectorAll('.watchlist-item-progress button');
-                            if (updateBtns.length >= 2) {
-                                updateBtns[0].setAttribute('onclick', `updateEpisodes('${animeId}', ${count - 1})`);
-                                updateBtns[1].setAttribute('onclick', `updateEpisodes('${animeId}', ${count + 1})`);
-                            }
-                        }
-                    }
-                    fetchStats();
+                    closeEditModal();
+                    // Hard reload current list so it pulls fresh from AniList API proxy
+                    fetchWatchlist(currentStatus, 1, false);
                 } else {
-                    alert(data.message || 'Failed to update');
+                    alert('Error saving: ' + (data.message || 'Unknown error'));
                 }
             } catch (e) {
-                console.error('Update error:', e);
+                alert('Connection error');
+                console.error(e);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         };
 
-        window.removeFromWatchlist = async function (animeId) {
-            if (!confirm('Remove this anime from your watchlist?')) return;
+        window.deleteEntry = async function () {
+            if (!activeEditItemId) return;
+            if (!confirm("Are you sure you want to completely remove this from your watchlist?")) return;
+
+            const btn = document.getElementById('edit-delete-btn');
+            btn.disabled = true;
+            btn.innerHTML = '...';
 
             try {
                 const response = await fetch('/api/watchlist/remove', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ anime_id: animeId })
+                    body: JSON.stringify({ anime_id: activeEditItemId })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    // Remove element locally
-                    const item = document.querySelector(`.watchlist-item[data-id="${animeId}"]`);
-                    if (item) {
-                        item.style.transition = 'opacity 0.3s, height 0.3s';
-                        item.style.opacity = '0';
-                        setTimeout(() => item.remove(), 300);
-                    }
-
-                    fetchStats();
+                    closeEditModal();
+                    fetchWatchlist(currentStatus, 1, false);
                 } else {
-                    alert(data.message || 'Failed to remove');
+                    alert('Error deleting: ' + (data.message || 'Unknown error'));
                 }
             } catch (e) {
-                console.error('Remove error:', e);
+                alert('Connection error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>`;
             }
         };
 
-        // Tab click handlers
+        // Tab handlers
         if (watchlistTabs) {
-            watchlistTabs.querySelectorAll('.watchlist-tab').forEach(tab => {
+            watchlistTabs.querySelectorAll('.filter-btn').forEach(tab => {
                 tab.addEventListener('click', function () {
-                    watchlistTabs.querySelector('.active').classList.remove('active');
+                    const active = watchlistTabs.querySelector('.active');
+                    if (active) active.classList.remove('active');
                     this.classList.add('active');
                     currentStatus = this.dataset.status;
 
-                    // Reset for new filter
                     currentPage = 1;
                     hasMore = true;
                     isLoading = false;
@@ -477,143 +1183,26 @@
             });
         }
 
-        // Initial load
+        // Local search handler
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                searchQuery = this.value;
+                debounceTimer = setTimeout(() => {
+                    currentPage = 1;
+                    fetchWatchlist(currentStatus, 1, false);
+                }, 300);
+            });
+        }
+
+        // Initialize
         fetchStats();
         fetchWatchlist();
         initInfiniteScroll();
 
-        // Check if there's an ongoing auto-sync when page loads
-        checkOngoingSync();
-
-        async function checkOngoingSync() {
-            try {
-                const resp = await fetch('/api/anilist/sync-progress');
-                const data = await resp.json();
-                if (data.status === 'syncing' || data.status === 'starting') {
-                    showSyncProgress();
-                    pollSyncProgress();
-                }
-            } catch (e) { /* ignore */ }
-        }
     });
 
-    // === Manual Sync from AniList ===
-    let syncPolling = false;
 
-    async function syncFromAniList() {
-        const btn = document.getElementById('sync-watchlist-btn');
-        if (!btn || btn.disabled) return;
-
-        btn.disabled = true;
-        const btnText = document.getElementById('wl-sync-btn-text');
-        const icon = document.getElementById('wl-sync-icon');
-        const spinner = document.getElementById('wl-sync-spinner');
-
-        if (btnText) btnText.textContent = 'Syncing...';
-        if (icon) icon.classList.add('hidden');
-        if (spinner) spinner.classList.remove('hidden');
-
-        showSyncProgress();
-
-        try {
-            const response = await fetch('/api/anilist/sync-anilist', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-
-            if (data.error) {
-                hideSyncProgress();
-                resetSyncButton('Sync Failed');
-                setTimeout(() => resetSyncButton('Sync from AniList'), 3000);
-                return;
-            }
-
-            pollSyncProgress();
-
-        } catch (e) {
-            console.error('Sync error:', e);
-            hideSyncProgress();
-            resetSyncButton('Sync Failed');
-            setTimeout(() => resetSyncButton('Sync from AniList'), 3000);
-        }
-    }
-
-    function showSyncProgress() {
-        const container = document.getElementById('wl-sync-progress-container');
-        if (container) container.classList.remove('hidden');
-    }
-
-    function hideSyncProgress() {
-        const container = document.getElementById('wl-sync-progress-container');
-        if (container) container.classList.add('hidden');
-    }
-
-    function updateSyncProgressUI(data) {
-        const statusText = document.getElementById('wl-sync-status-text');
-        const percentText = document.getElementById('wl-sync-percent-text');
-        const progressBar = document.getElementById('wl-sync-progress-bar');
-
-        if (statusText) statusText.textContent = data.message || 'Syncing...';
-        if (percentText) percentText.textContent = `${Math.round(data.percentage || 0)}%`;
-        if (progressBar) progressBar.style.width = `${data.percentage || 0}%`;
-    }
-
-    function resetSyncButton(text = 'Sync from AniList') {
-        const btn = document.getElementById('sync-watchlist-btn');
-        const btnText = document.getElementById('wl-sync-btn-text');
-        const icon = document.getElementById('wl-sync-icon');
-        const spinner = document.getElementById('wl-sync-spinner');
-
-        if (btn) btn.disabled = false;
-        if (btnText) btnText.textContent = text;
-        if (icon) icon.classList.remove('hidden');
-        if (spinner) spinner.classList.add('hidden');
-    }
-
-    function pollSyncProgress() {
-        if (syncPolling) return;
-        syncPolling = true;
-
-        const poll = async () => {
-            try {
-                const resp = await fetch('/api/anilist/sync-progress');
-                const data = await resp.json();
-
-                updateSyncProgressUI(data);
-
-                if (data.status === 'completed') {
-                    syncPolling = false;
-                    setTimeout(() => {
-                        hideSyncProgress();
-                        resetSyncButton('Sync from AniList');
-                        // Refresh the watchlist
-                        location.reload();
-                    }, 2000);
-                    return;
-                }
-
-                if (data.status === 'error') {
-                    syncPolling = false;
-                    updateSyncProgressUI({ message: data.message || 'Sync error', percentage: 0 });
-                    setTimeout(() => {
-                        hideSyncProgress();
-                        resetSyncButton('Sync from AniList');
-                    }, 3000);
-                    return;
-                }
-
-                // Continue polling
-                setTimeout(poll, 1500);
-
-            } catch (e) {
-                syncPolling = false;
-                hideSyncProgress();
-                resetSyncButton('Sync from AniList');
-            }
-        };
-
-        poll();
-    }
 </script>
 {% endblock %}

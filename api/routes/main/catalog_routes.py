@@ -126,50 +126,11 @@ def category(category_name):
 
 @catalog_routes_bp.route('/profile', methods=['GET'])
 def profile():
-    """Display user profile page"""
-    username = session.get('username')
-    user_id = session.get('_id')
-    
-    if not username or not user_id:
+    """Redirect to new combined watchlist/profile page"""
+    if 'username' not in session:
         flash('Please log in to view your profile.', 'warning')
         return redirect('/home')
-    
-    try:
-        user = get_user_by_id(user_id)
-        if not user:
-            session.clear()
-            flash('User session expired. Please log in again.', 'error')
-            return redirect('/home')
-        
-        # Prepare user data for template
-        created = user.get('created_at')
-        user_data = {
-            'email': user.get('email', ''),
-            'joined_date': created.strftime('%B %d, %Y') if created else 'Unknown',
-            'avatar': user.get('avatar'),
-            'anilist_authenticated': bool(user.get('anilist_id')),
-            'anilist_id': user.get('anilist_id'),
-            'anilist_stats': user.get('anilist_stats', {})
-        }
-        
-        return render_template('profile.html', 
-                             user=user_data, 
-                             username=username, 
-                             user_id=str(user_id))
-        
-    except Exception as e:
-        current_app.logger.error(f"Error loading profile for user {username}: {e}")
-        user_data = {
-            'email': 'Error loading data',
-            'joined_date': 'Error loading data',
-            'avatar': None,
-            'anilist_authenticated': False
-        }
-        return render_template('profile.html',
-                               user=user_data,
-                               username=username,
-                               user_id=str(user_id),
-                               error="Error loading profile data")
+    return redirect(url_for('watchlist.watchlist'))
 
 
 @catalog_routes_bp.route('/settings', methods=['GET'])
