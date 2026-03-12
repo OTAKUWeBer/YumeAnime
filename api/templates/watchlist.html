@@ -8,6 +8,7 @@
     /* Profile Header */
     .profile-hero {
         position: relative;
+        z-index: 2;
         width: 100%;
         height: 250px;
         background: linear-gradient(135deg, rgba(20, 20, 25, 0.8), rgba(10, 10, 12, 0.95));
@@ -79,12 +80,6 @@
         align-items: start;
     }
 
-    @media (max-width: 992px) {
-        .watchlist-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-
     /* Left Sidebar */
     .watchlist-sidebar {
         display: flex;
@@ -92,6 +87,19 @@
         gap: var(--space-lg);
         position: sticky;
         top: 80px;
+        z-index: 2;
+    }
+
+    @media (max-width: 992px) {
+        .watchlist-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .watchlist-sidebar {
+            position: relative;
+            top: auto;
+            z-index: auto;
+        }
     }
 
     /* Stats Box */
@@ -256,9 +264,10 @@
     @media (max-width: 768px) {
         .edit-modal {
             grid-template-columns: 1fr;
-            max-width: 400px;
-            max-height: 90vh;
+            max-width: calc(100vw - 32px);
+            max-height: 85vh;
             overflow-y: auto;
+            margin: 16px;
         }
     }
 
@@ -408,10 +417,8 @@
         padding: 10px 16px;
         border-radius: var(--radius-md);
         transition: background 0.2s ease, transform 0.2s ease;
-        position: relative;
         border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         cursor: pointer;
-        /* make row look clickable */
     }
 
     /* Small hack to make selects inside clickable row not trigger the row click immediately */
@@ -545,22 +552,155 @@
 
     /* Mobile adjustments */
     @media (max-width: 768px) {
+        .profile-hero {
+            height: 180px;
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .hero-avatar {
+            width: 72px;
+            height: 72px;
+        }
+
+        .hero-username {
+            font-size: 1.5rem;
+        }
+
+        .hero-email {
+            font-size: 0.8rem;
+        }
+
+        .profile-hero-content {
+            gap: var(--space-md);
+        }
+
+        .profile-hero > div[style] {
+            bottom: 12px !important;
+            right: 12px !important;
+        }
+
+        .sidebar-stats {
+            padding: var(--space-md);
+        }
+
+        .sidebar-stat-value {
+            font-size: 1.1rem;
+        }
+
+        .filter-btn {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+        }
+
         .list-header {
             display: none;
         }
 
         .list-row {
             grid-template-columns: 12px 1fr auto;
-            gap: 12px;
+            gap: 10px;
+            padding: 10px 12px;
         }
 
         .row-score {
             display: none;
-            /* Hide score on small screens to save space */
         }
 
         .row-progress {
             justify-content: flex-end;
+            font-size: 0.8rem;
+        }
+
+        .row-cover {
+            width: 36px;
+            height: 52px;
+        }
+
+        .row-title {
+            font-size: 0.85rem;
+        }
+
+        .edit-modal-overlay {
+            padding: 16px;
+            align-items: flex-end;
+        }
+
+        .edit-modal-content {
+            padding: var(--space-lg);
+        }
+
+        .edit-modal-title {
+            font-size: 1.2rem;
+        }
+
+        .edit-form-grid {
+            grid-template-columns: 1fr;
+            gap: var(--space-sm);
+        }
+
+        .edit-input {
+            padding: 12px;
+            font-size: 1rem;
+        }
+
+        .edit-actions {
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+        }
+
+        .edit-actions > div {
+            flex: 1;
+        }
+
+        .btn-save,
+        .btn-cancel {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            flex: 1;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .profile-hero {
+            height: 150px;
+            padding: var(--space-sm) var(--space-md);
+        }
+
+        .hero-avatar {
+            width: 56px;
+            height: 56px;
+        }
+
+        .hero-username {
+            font-size: 1.2rem;
+        }
+
+        .sidebar-stats {
+            gap: var(--space-sm);
+        }
+
+        .list-row {
+            gap: 8px;
+            padding: 8px 10px;
+        }
+
+        .row-cover {
+            width: 32px;
+            height: 46px;
+        }
+
+        .row-title {
+            font-size: 0.8rem;
+        }
+
+        .row-progress {
+            font-size: 0.75rem;
+        }
+
+        .edit-modal-overlay {
+            padding: 8px;
         }
     }
 </style>
@@ -1255,6 +1395,16 @@
                     currentPage = 1;
                     fetchWatchlist(currentStatus, 1, false);
                 }, 300);
+            });
+        }
+
+        // Close modal when clicking overlay (outside modal) — critical for mobile touch
+        const editOverlay = document.getElementById('edit-modal-overlay');
+        if (editOverlay) {
+            editOverlay.addEventListener('click', function(e) {
+                if (e.target === editOverlay) {
+                    closeEditModal();
+                }
             });
         }
 
