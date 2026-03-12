@@ -25,6 +25,7 @@ def watchlist():
             'avatar': user.get('avatar'),
             'anilist_authenticated': bool(user.get('anilist_id')),
             'anilist_id': user.get('anilist_id'),
+            'banner_image': user.get('banner_image'),
             'anilist_stats': user.get('anilist_stats', {})
         }
         

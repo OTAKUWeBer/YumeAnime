@@ -26,7 +26,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: url('https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQ0mbzCEJzIA.jpg') center/cover;
+        background: url('{{ user.banner_image if user.banner_image else "https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQ0mbzCEJzIA.jpg" }}') center/cover;
         opacity: 0.3;
         z-index: 0;
         filter: blur(2px) brightness(0.6);
@@ -1115,8 +1115,75 @@
 
                 if (data.success) {
                     closeEditModal();
-                    // Hard reload current list so it pulls fresh from AniList API proxy
-                    fetchWatchlist(currentStatus, 1, false);
+
+                    const row = document.querySelector(`.list-row[data-id="${activeEditItemId}"]`);
+                    if (row) {
+                        try {
+                            const itemDataStr = row.getAttribute('data-item');
+                            const itemDataObj = itemDataStr ? JSON.parse(decodeURIComponent(itemDataStr)) : {};
+
+                            // Map AniList status back to local status for the UI
+                            const anilistToLocalStatus = {
+                                'CURRENT': 'watching',
+                                'COMPLETED': 'completed',
+                                'PAUSED': 'on_hold',
+                                'DROPPED': 'dropped',
+                                'PLANNING': 'plan_to_watch',
+                                'REPEATING': 'watching'
+                            };
+
+                            const newLocalStatus = anilistToLocalStatus[payload.status] || payload.status.toLowerCase();
+
+                            // Check if row should be removed due to active filter tab
+                            if (currentStatus && currentStatus !== newLocalStatus && currentStatus !== '') {
+                                row.style.transform = 'scale(0.95)';
+                                row.style.opacity = '0';
+                                setTimeout(() => {
+                                    row.remove();
+                                    if (document.querySelectorAll('.list-row').length === 0) {
+                                        fetchWatchlist(currentStatus, 1, false);
+                                    }
+                                    fetchStats();
+                                }, 200);
+                                return;
+                            }
+
+                            // Update stored item data
+                            itemDataObj.status = newLocalStatus;
+                            itemDataObj.watched_episodes = payload.progress;
+                            itemDataObj.score = payload.score;
+                            itemDataObj.repeat = payload.repeat;
+                            itemDataObj.notes = payload.notes;
+                            itemDataObj.startedAt = payload.startedAt;
+                            itemDataObj.completedAt = payload.completedAt;
+
+                            row.setAttribute('data-item', encodeURIComponent(JSON.stringify(itemDataObj)));
+
+                            // Update DOM visually
+                            const indicator = row.querySelector('.status-indicator');
+                            if (indicator) {
+                                indicator.className = 'status-indicator status-dot-' + newLocalStatus;
+                                indicator.title = statusLabels[newLocalStatus] || newLocalStatus;
+                            }
+
+                            const scoreEl = row.querySelector('.row-score');
+                            if (scoreEl) {
+                                scoreEl.textContent = payload.score && payload.score > 0 ? payload.score : '-';
+                            }
+
+                            const progressSpan = row.querySelector('.row-progress .ep-text');
+                            if (progressSpan) {
+                                progressSpan.textContent = `${payload.progress} / ${itemDataObj.total_episodes || '?'}`;
+                            }
+                        } catch (e) {
+                            console.error("Error updating row visually:", e);
+                            fetchWatchlist(currentStatus, 1, false); // fallback
+                        }
+                    } else {
+                        fetchWatchlist(currentStatus, 1, false); // fallback
+                    }
+
+                    fetchStats();
                 } else {
                     alert('Error saving: ' + (data.message || 'Unknown error'));
                 }
