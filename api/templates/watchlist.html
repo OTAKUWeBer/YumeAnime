@@ -909,13 +909,8 @@
                             <a href="/anime/${item.anime_id}" onclick="event.stopPropagation()">
                                 <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/48x68?text=No+Image'}" alt="${item.anime_title}" class="row-cover" loading="lazy">
                             </a>
-                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <div>
                                 <a href="/anime/${item.anime_id}" class="row-title" style="text-decoration: none;" onclick="event.stopPropagation()">${item.anime_title}</a>
-                                <select class="status-edit-select" onchange="event.stopPropagation(); updateStatus('${item.anime_id}', this.value)" onclick="event.stopPropagation()">
-                                    ${Object.entries(statusLabels).map(([val, label]) =>
-                        `<option value="${val}" ${item.status === val ? 'selected' : ''}>${label}</option>`
-                    ).join('')}
-                                </select>
                             </div>
                         </div>
                         
