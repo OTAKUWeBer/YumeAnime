@@ -361,7 +361,25 @@ def update_watchlist():
         status = body.get('status', 'watching')
         variables['status'] = STATUS_MAP_TO_ANILIST.get(status, 'CURRENT')
     elif action == 'episodes':
-        variables['progress'] = int(body.get('watched_episodes', 0))
+        new_progress = int(body.get('watched_episodes', 0))
+
+        # Guard: only increase progress, never decrease (prevents rewatch regression)
+        viewer_id = _fetch_viewer_id(access_token)
+        if viewer_id:
+            check_query = """
+            query ($userId: Int, $mediaId: Int) {
+              MediaList(userId: $userId, mediaId: $mediaId) {
+                progress
+              }
+            }
+            """
+            current = _anilist_request(access_token, check_query, {'userId': viewer_id, 'mediaId': int(anime_id)})
+            if current:
+                current_progress = (current.get('data', {}).get('MediaList') or {}).get('progress', 0) or 0
+                if new_progress <= current_progress:
+                    return jsonify({'success': True, 'message': 'Progress already up to date'})
+
+        variables['progress'] = new_progress
     else:
         return jsonify({'success': False, 'message': 'Invalid action'}), 400
 
