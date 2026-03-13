@@ -13,6 +13,14 @@ logger = logging.getLogger(__name__)
 
 ANILIST_GRAPHQL = "https://graphql.anilist.co"
 
+# ── viewer ID cache ─────────────────────────────────────────────
+# Viewer ID never changes for a given access token, so we cache it
+# to avoid a redundant API call on every request.
+import time as _time
+
+_viewer_id_cache = {}          # {access_token_hash: (viewer_id, expires_at)}
+_VIEWER_CACHE_TTL = 6 * 3600   # 6 hours
+
 # ── helpers ──────────────────────────────────────────────────────
 
 STATUS_MAP_TO_LOCAL = {
@@ -67,12 +75,38 @@ def _anilist_request(access_token, query, variables=None):
         return None
 
 
+def _token_hash(access_token):
+    """Short hash of the token for cache key (avoids storing raw tokens)."""
+    import hashlib
+    return hashlib.sha256(access_token.encode()).hexdigest()[:16]
+
+
 def _fetch_viewer_id(access_token):
-    """Get the authenticated viewer's AniList user ID."""
+    """Get the authenticated viewer's AniList user ID (cached)."""
+    now = _time.time()
+    th = _token_hash(access_token)
+
+    # Check cache
+    cached = _viewer_id_cache.get(th)
+    if cached and cached[1] > now:
+        return cached[0]
+
+    # Fetch from AniList
     data = _anilist_request(access_token, "query { Viewer { id } }")
     if not data:
         return None
-    return data.get('data', {}).get('Viewer', {}).get('id')
+    viewer_id = data.get('data', {}).get('Viewer', {}).get('id')
+
+    if viewer_id:
+        _viewer_id_cache[th] = (viewer_id, now + _VIEWER_CACHE_TTL)
+
+        # Lazy cleanup: remove expired entries if cache is growing
+        if len(_viewer_id_cache) > 100:
+            expired = [k for k, v in _viewer_id_cache.items() if v[1] <= now]
+            for k in expired:
+                del _viewer_id_cache[k]
+
+    return viewer_id
 
 
 # ── READ endpoints ──────────────────────────────────────────────
