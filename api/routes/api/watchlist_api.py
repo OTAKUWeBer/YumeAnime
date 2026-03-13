@@ -109,6 +109,36 @@ def _fetch_viewer_id(access_token):
     return viewer_id
 
 
+def get_anilist_watchlist_entry(anilist_id):
+    """Utility to quickly fetch the progress of a single anime from AniList."""
+    if not anilist_id or 'username' not in session:
+        return None
+    try:
+        anilist_id = int(anilist_id)
+    except (ValueError, TypeError):
+        return None
+
+    access_token = _get_access_token()
+    if not access_token:
+        return None
+
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return None
+
+    query = """
+    query ($userId: Int, $mediaId: Int) {
+      MediaList(userId: $userId, mediaId: $mediaId) {
+        progress
+      }
+    }
+    """
+    data = _anilist_request(access_token, query, {'userId': viewer_id, 'mediaId': anilist_id})
+    if data and 'data' in data and data['data'].get('MediaList'):
+        return data['data']['MediaList']
+    return None
+
+
 # ── READ endpoints ──────────────────────────────────────────────
 
 WATCHLIST_QUERY = """

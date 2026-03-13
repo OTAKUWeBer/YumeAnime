@@ -94,9 +94,15 @@ async def anime_info(anime_id: str):
     user_watched_episodes = 0
     if "username" in session and "_id" in session:
         try:
-            wl_entry = get_watchlist_entry(session.get("_id"), anime_id)
-            if wl_entry:
-                user_watched_episodes = wl_entry.get("watched_episodes", 0)
+            from api.routes.api.watchlist_api import get_anilist_watchlist_entry
+            anilist_id = anime.get("anilistId") or anime.get("alID")
+            al_entry = get_anilist_watchlist_entry(anilist_id)
+            if al_entry:
+                user_watched_episodes = al_entry.get("progress", 0)
+            else:
+                wl_entry = get_watchlist_entry(session.get("_id"), anime_id)
+                if wl_entry:
+                    user_watched_episodes = wl_entry.get("watched_episodes", 0)
         except Exception as e:
             current_app.logger.error(f"Error fetching watchlist for anime info: {e}")
 
