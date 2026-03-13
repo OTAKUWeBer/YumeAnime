@@ -432,15 +432,44 @@ class WatchProgressManager {
       if (this.video && this.video.currentTime > 0 && this.video.duration > 0) {
         const isCompleted = window._forceEpisodeComplete || (this.video.currentTime / this.video.duration >= 0.9);
 
+        // Save resume point to localStorage for the auto-resume link system
+        if (this.currentAnimeId && this.currentEpisodeNumber) {
+          try {
+            const resumeKey = `yumeResume_${this.currentAnimeId}_ep${this.currentEpisodeNumber}`;
+            localStorage.setItem(resumeKey, JSON.stringify({
+              watchTime: Math.floor(this.video.currentTime),
+              totalTime: Math.floor(this.video.duration),
+              lastUpdated: Date.now()
+            }));
+          } catch (e) { /* quota exceeded, ignore */ }
+        }
+
         // Use sendBeacon for guaranteed delivery on page unload
-        if (window._watchState && window._watchState.isLoggedIn) {
-          if (isCompleted) {
+        if (window._watchState && window._watchState.isLoggedIn && isCompleted) {
+          // Only sync if this episode is higher than what we last synced
+          const lastSyncedKey = `yumeLastSynced_${this.currentAnimeId}`;
+          const lastSynced = parseInt(localStorage.getItem(lastSyncedKey) || '0');
+
+          if (this.currentEpisodeNumber > lastSynced) {
             const updatePayload = JSON.stringify({
               anime_id: this.currentAnimeId,
               action: "episodes",
               watched_episodes: this.currentEpisodeNumber
             });
-            navigator.sendBeacon("/api/watchlist/update", new Blob([updatePayload], { type: 'application/json' }));
+
+            // Get page token for the X-PT header
+            let pt = '';
+            const metaEl = document.querySelector('meta[name="pt"]');
+            if (metaEl) pt = metaEl.getAttribute('content') || '';
+            if (!pt) { const m = document.cookie.match(/(^|;)\s*__pt=([^;]+)/); if (m) pt = decodeURIComponent(m[2]); }
+
+            const headers = { type: 'application/json' };
+            const blob = new Blob([updatePayload], headers);
+
+            // sendBeacon doesn't support custom headers, but cookies are sent automatically
+            // The X-PT check in the backend also accepts the __pt cookie as fallback
+            navigator.sendBeacon("/api/watchlist/update", blob);
+            localStorage.setItem(lastSyncedKey, String(this.currentEpisodeNumber));
           }
         }
 
@@ -493,15 +522,20 @@ class WatchProgressManager {
 
   syncWatchedEpisodesToWatchlist() {
     if (!this.currentAnimeId || !this.currentEpisodeNumber || !window._watchState?.isLoggedIn) {
-      console.log("[WatchProgress] Cannot sync - missing anime, episode info, or safely ignored (not logged in)")
+      console.log("[WatchProgress] Cannot sync - missing anime, episode info, or not logged in")
       return
     }
 
-    // Since the API sync explicitly updates the watched episodes count on the server securely
-    // via `/api/watchlist/progress` directly when it receives "is_completed=true",
-    // counting from local storage arbitrarily is no longer actually required.
-    // However, to keep backward compatibility and purely for updating 'status':
-    console.log(`[WatchProgress] Auto-completing episode ${this.currentEpisodeNumber} directly.`);
+    // Only sync if this episode is higher than what we last synced (prevents rewatch regression)
+    const lastSyncedKey = `yumeLastSynced_${this.currentAnimeId}`;
+    const lastSynced = parseInt(localStorage.getItem(lastSyncedKey) || '0');
+
+    if (this.currentEpisodeNumber <= lastSynced) {
+      console.log(`[WatchProgress] Skipping sync - ep ${this.currentEpisodeNumber} <= last synced ${lastSynced}`);
+      return;
+    }
+
+    console.log(`[WatchProgress] Syncing episode ${this.currentEpisodeNumber} to watchlist`);
 
     try {
       fetch("/api/watchlist/update", {
@@ -512,12 +546,15 @@ class WatchProgressManager {
         body: JSON.stringify({
           anime_id: this.currentAnimeId,
           action: "episodes",
-          watched_episodes: this.currentEpisodeNumber, // Now just directly passing the episode number for max update
+          watched_episodes: this.currentEpisodeNumber,
         }),
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log(`[WatchProgress] Legacy Watchlist updated to episode: ${this.currentEpisodeNumber}`)
+          if (data.success) {
+            localStorage.setItem(lastSyncedKey, String(this.currentEpisodeNumber));
+            console.log(`[WatchProgress] Watchlist synced to episode: ${this.currentEpisodeNumber}`);
+          }
         })
         .catch((error) => {
           console.error("[WatchProgress] Error syncing to watchlist:", error)

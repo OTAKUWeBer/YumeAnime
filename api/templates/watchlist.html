@@ -865,9 +865,16 @@
         <div class="edit-modal-content">
             <div class="edit-modal-header">
                 <h2 class="edit-modal-title" id="edit-modal-title">Anime Title</h2>
-                <a href="#" id="edit-modal-link" target="_blank" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
-                    View Anime Page &rarr;
-                </a>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+                    <a href="#" id="edit-modal-link" style="font-size: 0.8rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        Anime Page
+                    </a>
+                    <a href="#" id="edit-modal-watch" style="font-size: 0.8rem; color: #8dc149; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 600; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Continue Watching
+                    </a>
+                </div>
             </div>
 
             <div class="edit-form-grid">
@@ -884,7 +891,11 @@
 
                 <div class="edit-form-group">
                     <label class="edit-label" id="edit-episode-label">Episode Progress</label>
-                    <input type="number" class="edit-input" id="edit-progress" min="0">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button type="button" onclick="adjustEditProgress(-1)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 36px; height: 36px; border-radius: var(--radius-md); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(141,193,73,0.15)'; this.style.borderColor='rgba(141,193,73,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'">−</button>
+                        <input type="number" class="edit-input" id="edit-progress" min="0" style="text-align: center; flex: 1;">
+                        <button type="button" onclick="adjustEditProgress(1)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 36px; height: 36px; border-radius: var(--radius-md); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(141,193,73,0.15)'; this.style.borderColor='rgba(141,193,73,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'">+</button>
+                    </div>
                 </div>
 
                 <div class="edit-form-group">
@@ -922,8 +933,8 @@
                     </svg>
                 </button>
                 <div style="display: flex; gap: 12px;">
-                    <button class="btn-save purple" onclick="saveEntry()">Save Changes</button>
                     <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+                    <button class="btn-save purple" onclick="saveEntry()">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -1225,6 +1236,14 @@
             document.getElementById('edit-modal-poster').src = item.poster_url || item.poster;
             document.getElementById('edit-modal-link').href = '/anime/' + item.anime_id;
 
+            // Set up the Watch button — continue from next unwatched episode
+            const watchedEps = item.watched_episodes || 0;
+            const nextEp = watchedEps + 1;
+            const watchLink = document.getElementById('edit-modal-watch');
+            watchLink.href = '/watch/' + item.anime_id + '/ep-' + nextEp;
+            watchLink.textContent = '';
+            watchLink.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg> ${watchedEps > 0 ? 'Continue Ep ' + nextEp : 'Start Watching'}`;
+
             // Map status
             let mappedStatus = localToAnilistStatus[item.status] || item.status || 'CURRENT';
             // It might already be AniList formatted if backend uses AniList proxy
@@ -1484,6 +1503,36 @@
                 }
             });
         }
+
+        // ESC key closes edit modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('edit-modal-overlay');
+                if (overlay && overlay.classList.contains('active')) {
+                    closeEditModal();
+                }
+            }
+        });
+
+        // +/- buttons for episode progress in the edit modal
+        window.adjustEditProgress = function(delta) {
+            const input = document.getElementById('edit-progress');
+            const current = parseInt(input.value) || 0;
+            const max = parseInt(input.max);
+            let newVal = current + delta;
+            if (newVal < 0) newVal = 0;
+            if (!isNaN(max) && max > 0 && newVal > max) newVal = max;
+            input.value = newVal;
+
+            // Auto-set status to COMPLETED when reaching max episodes
+            if (!isNaN(max) && max > 0 && newVal === max) {
+                document.getElementById('edit-status').value = 'COMPLETED';
+            }
+            // Auto-set status to CURRENT if decrementing from completed
+            if (!isNaN(max) && max > 0 && newVal < max && document.getElementById('edit-status').value === 'COMPLETED') {
+                document.getElementById('edit-status').value = 'CURRENT';
+            }
+        };
 
         // Initialize
         fetchStats();
