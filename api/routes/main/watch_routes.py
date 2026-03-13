@@ -219,28 +219,36 @@ def _redirect_to_best_episode(anime_id):
 
     # Fetch released episode count to clamp
     max_released = 0
+    anilist_id = None
     try:
         anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(anime_id_clean))
         if isinstance(anime_info, dict):
             info = anime_info.get("info", anime_info) if "info" in anime_info else anime_info
             max_released = info.get("released_episodes") or info.get("total_sub_episodes") or 0
+            anilist_id = info.get("anilistId") or info.get("alID")
     except Exception as e:
         current_app.logger.error(f"Error fetching anime info for episode clamp: {e}")
 
     # Check user watchlist for progress if logged in
     if "username" in session and "_id" in session:
+        watched_count = 0
         try:
-            from api.models.watchlist import get_watchlist_entry
-            user_id = session.get("_id")
-            watchlist_entry = get_watchlist_entry(user_id, anime_id_clean)
+            from api.routes.api.watchlist_api import get_anilist_watchlist_entry
+            al_entry = get_anilist_watchlist_entry(anilist_id)
+            if al_entry:
+                watched_count = al_entry.get("progress", 0)
+            else:
+                from api.models.watchlist import get_watchlist_entry
+                user_id = session.get("_id")
+                watchlist_entry = get_watchlist_entry(user_id, anime_id_clean)
+                if watchlist_entry:
+                    watched_count = watchlist_entry.get("watched_episodes", 0)
 
-            if watchlist_entry:
-                watched_count = watchlist_entry.get("watched_episodes", 0)
-                if watched_count > 0:
-                    target_ep = watched_count + 1
-                    # Clamp to max released episodes
-                    if max_released > 0 and target_ep > max_released:
-                        target_ep = max_released
+            if watched_count > 0:
+                target_ep = watched_count + 1
+                # Clamp to max released episodes
+                if max_released > 0 and target_ep > max_released:
+                    target_ep = max_released
         except Exception as e:
             current_app.logger.error(f"Error fetching watchlist entry in watch route: {e}")
 

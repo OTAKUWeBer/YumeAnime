@@ -442,18 +442,23 @@
                                     }
 
                                     if (lastWatchedEpNum) {
-                                        // Clamp to max available episodes so we don't link to unreleased episodes
-                                        let targetEp = lastWatchedEpNum;
-                                        let caughtUp = false;
-                                        if (maxAvailableEp > 0 && targetEp > maxAvailableEp) {
-                                            targetEp = maxAvailableEp;
-                                            caughtUp = true;
-                                        }
-                                        watchBtn.href = `/watch/${animeId}/ep-${targetEp}`;
-                                        if (watchText) {
-                                            watchText.textContent = caughtUp
-                                                ? `Caught Up! Ep ${targetEp}`
-                                                : `Continue Ep ${targetEp}`;
+                                        const anilistNextEp = parseInt("{{ next_watch_ep }}") || 1;
+
+                                        // Only override if local storage suggests an episode >= the one AniList says is next
+                                        if (lastWatchedEpNum >= anilistNextEp) {
+                                            // Clamp to max available episodes so we don't link to unreleased episodes
+                                            let targetEp = lastWatchedEpNum;
+                                            let caughtUp = false;
+                                            if (maxAvailableEp > 0 && targetEp > maxAvailableEp) {
+                                                targetEp = maxAvailableEp;
+                                                caughtUp = true;
+                                            }
+                                            watchBtn.href = `/watch/${animeId}/ep-${targetEp}`;
+                                            if (watchText) {
+                                                watchText.textContent = caughtUp
+                                                    ? `Caught Up! Ep ${targetEp}`
+                                                    : `Continue Ep ${targetEp}`;
+                                            }
                                         }
                                     }
                                 } catch (e) { console.error("Error updating watch button:", e); }
