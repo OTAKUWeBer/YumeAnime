@@ -130,6 +130,7 @@ query ($userId: Int, $type: MediaType) {
           id
           title { userPreferred english romaji }
           episodes
+          nextAiringEpisode { episode }
           coverImage { large medium }
           bannerImage
           format
@@ -181,6 +182,7 @@ def watchlist_paginated():
                 'status': local_status,
                 'watched_episodes': entry.get('progress', 0),
                 'total_episodes': media.get('episodes') or 0,
+                'next_airing_episode': (media.get('nextAiringEpisode') or {}).get('episode'),
                 'score': entry.get('score', 0),
                 'repeat': entry.get('repeat', 0),
                 'notes': entry.get('notes', ''),
