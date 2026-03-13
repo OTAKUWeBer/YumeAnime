@@ -427,7 +427,7 @@ class WatchlistManager {
                        value="${watchedEps || 0}"
                        inputmode="numeric"
                        pattern="[0-9]*"
-                       oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, ''); var mx = parseInt(this.max); if(!isNaN(mx) && parseInt(this.value) > mx) this.value = mx;"
                        class="w-full text-center text-2xl font-bold p-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none transition-all">
                 <div class="text-xs text-gray-500 mt-1">of ${totalEps || "?"}</div>
               </div>
@@ -494,15 +494,14 @@ class WatchlistManager {
 
   async saveStatusChanges(animeId) {
     const input = document.getElementById("modal-episodes")
-    const newEpisodes = Number.parseInt(input.value) || 0
+    let newEpisodes = Number.parseInt(input.value) || 0
     const maxEpisodes = Number.parseInt(input.max) || 999
     const newStatus = this.currentModalStatus
 
-    // Validate episode count doesn't exceed maximum
+    // Clamp episode count to maximum
     if (newEpisodes > maxEpisodes) {
-      alert(`Episode count cannot exceed ${maxEpisodes}`)
+      newEpisodes = maxEpisodes
       input.value = maxEpisodes
-      return
     }
 
     try {
