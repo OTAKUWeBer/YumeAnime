@@ -37,105 +37,95 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
     <script>
-        !function () {
-            var _q = ['outerWidth', 'innerWidth', 'outerHeight', 'innerHeight', 'toString', 'color:transparent', 'video,iframe', 'controlslist', 'nodownload noremoteplayback', 'disablepictureinpicture', 'DOMContentLoaded', 'loading', 'F12', '/', 'innerHTML', 'keydown', 'replace', 'documentElement', 'now', 'addEventListener'];
-            var _open = !1, _trapped = !1, _n = 0, _tid = null;
+        !function(){
+        var _q=['outerWidth','innerWidth','outerHeight','innerHeight','toString','color:transparent','video,iframe','controlslist','nodownload noremoteplayback','disablepictureinpicture','DOMContentLoaded','loading','F12','/','innerHTML','keydown','replace','documentElement','now','addEventListener'];
+        var _open=!1,_trapped=!1,_n=0,_tid=null;
 
-            // Size-based check — works when devtools is docked
-            var _chkSize = function () {
-                var _dw = window[_q[0]] - window[_q[1]];
-                var _dh = window[_q[2]] - window[_q[3]];
-                // Use a reasonable threshold; skip if window is too small (real mobile)
-                if (window[_q[0]] < 400 && window[_q[2]] < 900) return !1;
-                return _dw > 0x12c || _dh > 0x12c;
-            };
+        // Called every poll — returns true if devtools appears open
+        var _chkSize=function(){
+            // No minimum width guard — must work in mobile emulation too
+            return(window[_q[0]]-window[_q[1]])>0x12c||(window[_q[2]]-window[_q[3]])>0x12c;
+        };
+        var _chkDbg=function(){
+            var _t=performance[_q[18]]();
+            debugger;
+            return performance[_q[18]]()-_t>0x78;
+        };
 
-            // Debugger timing check
-            var _chkDbg = function () {
-                var _t = performance[_q[18]]();
-                debugger;
-                return performance[_q[18]]() - _t > 0x64;
-            };
-
-            // Console-based check — works in any viewport/mobile emulation
-            var _consoleOpen = !1;
-            var _chkConsole = function () {
-                _consoleOpen = !1;
-                var _img = new Image();
-                Object.defineProperty(_img, 'id', { get: function () { _consoleOpen = !0; } });
-                try { console['debug'](_img); } catch (_e) { }
-                try { console['clear'](); } catch (_e) { }
-                return _consoleOpen;
-            };
-
-            // Main handler — called on every poll tick
-            var _tick = function () {
-                var _detected = _chkSize() || _chkDbg() || _chkConsole();
-                if (_detected) {
-                    _open = !0;
-                    if (!_trapped) {
-                        _trapped = !0;
-                        try { document[_q[14]] = ''; } catch (_e) { }
-                        (function _trap() {
-                            debugger;
-                            if (_open) {
-                                window['location'][_q[16]](_q[13]);
-                            }
-                            _tid = setTimeout(_trap, 0xC8);
-                        })();
-                    }
-                } else {
-                    _open = !1;
-                    _trapped = !1;
-                    if (_tid) { clearTimeout(_tid); _tid = null; }
+        // Main handler — called on every poll tick
+        var _tick=function(){
+            var _detected=_chkSize()||_chkDbg();
+            if(_detected){
+                _open=!0;
+                if(!_trapped){
+                    _trapped=!0;
+                    // Wipe page content immediately
+                    try{document[_q[14]]='';}catch(_e){}
+                    try{document['body'][_q[14]]='';}catch(_e){}
+                    // Push a dead state so back button can't restore content
+                    try{history['pushState'](null,'','about:blank');}catch(_e){}
+                    // Try closing the tab — works if opened via script or on mobile
+                    try{window['close']();}catch(_e){}
+                    // Fallback loop: keep trying to close + nuke location
+                    (function _trap(){
+                        debugger;
+                        try{window['close']();}catch(_e){}
+                        try{window['location'][_q[16]]('about:blank');}catch(_e){}
+                        _tid=setTimeout(_trap,0x32);
+                    })();
                 }
-            };
+            } else {
+                // Devtools closed — reset state so normal browsing resumes
+                _open=!1;
+                _trapped=!1;
+                if(_tid){clearTimeout(_tid);_tid=null;}
+            }
+        };
 
-            // Proxy toString probe — fires on page load if console already open
-            var _p = new Proxy({}, {
-                get: function (_o, _k) {
-                    if (_k === _q[4] || _k === Symbol['toPrimitive']) {
-                        if (++_n > 1) { _open = !0; _tick(); }
-                        return function () { return ''; };
-                    }
-                    return _o[_k];
-                }
+        // Proxy toString probe — fires on page load if console already open
+        var _p=new Proxy({},{get:function(_o,_k){
+            if(_k===_q[4]||_k===Symbol['toPrimitive']){
+                if(++_n>1){_open=!0;_tick();}
+                return function(){return'';};
+            }
+            return _o[_k];
+        }});
+        try{console['log']('%c',_q[5],_p);}catch(_e){}
+
+        // Run immediately on load to catch pre-opened devtools
+        _tick();
+
+        // Then poll every 500ms (0x1F4)
+        setInterval(_tick,0x1F4);
+
+        // Also re-check instantly when tab becomes visible
+        // (catches opening devtools in background then switching to tab)
+        document[_q[19]]('visibilitychange',function(){
+            if(!document['hidden'])_tick();
+        });
+
+        // Block keyboard shortcuts
+        document[_q[19]](_q[15],function(_e){
+            var _k=_e['key'];
+            if(_k===_q[12]){_e['preventDefault']();_e['stopPropagation']();return!1;}
+            var _ci=_e['ctrlKey'],_si=_e['shiftKey'];
+            if(_ci&&_si&&['i','I','j','J','c','C','k','K']['includes'](_k)){_e['preventDefault']();_e['stopPropagation']();return!1;}
+            if(_ci&&['u','U','s','S']['includes'](_k)){_e['preventDefault']();_e['stopPropagation']();return!1;}
+        },!0);
+
+        // Block right-click
+        document[_q[19]]('contextmenu',function(_e){_e['preventDefault']();return!1;},!0);
+
+        // Protect video/iframe
+        var _pv=function(){
+            document['querySelectorAll'](_q[6])['forEach'](function(_el){
+                _el['setAttribute'](_q[7],_q[8]);
+                _el['setAttribute'](_q[9],'');
+                _el['oncontextmenu']=function(){return!1;};
             });
-            try { console['log']('%c', _q[5], _p); } catch (_e) { }
-
-            // Run immediately on load to catch pre-opened devtools
-            _tick();
-
-            // Then poll every 500ms
-            setInterval(_tick, 0x1F4);
-
-            // Also re-check instantly when tab becomes visible
-            document[_q[19]]('visibilitychange', function () {
-                if (!document['hidden']) _tick();
-            });
-
-            // Block keyboard shortcuts
-            document[_q[19]](_q[15], function (_e) {
-                var _k = _e['key'];
-                if (_k === _q[12]) { _e['preventDefault'](); _e['stopPropagation'](); return !1; }
-                var _ci = _e['ctrlKey'], _si = _e['shiftKey'];
-                if (_ci && _si && ['i', 'I', 'j', 'J', 'c', 'C', 'k', 'K']['includes'](_k)) { _e['preventDefault'](); _e['stopPropagation'](); return !1; }
-                if (_ci && ['u', 'U', 's', 'S']['includes'](_k)) { _e['preventDefault'](); _e['stopPropagation'](); return !1; }
-            }, !0);
-
-            // Block right-click
-            document[_q[19]]('contextmenu', function (_e) { _e['preventDefault'](); return !1; }, !0);
-
-            // Protect video/iframe
-            var _pv = function () {
-                document['querySelectorAll'](_q[6])['forEach'](function (_el) {
-                    _el['setAttribute'](_q[7], _q[8]);
-                    _el['setAttribute'](_q[9], '');
-                    _el['oncontextmenu'] = function () { return !1; };
-                });
-            };
-            document['readyState'] === _q[11] ? document[_q[19]](_q[10], _pv) : _pv();
-            new MutationObserver(_pv)['observe'](document[_q[17]], { 'childList': !0, 'subtree': !0 });
+        };
+        document['readyState']===_q[11]?document[_q[19]](_q[10],_pv):_pv();
+        new MutationObserver(_pv)['observe'](document[_q[17]],{'childList':!0,'subtree':!0});
         }();
     </script>
 
@@ -718,8 +708,7 @@
     <script src="{{ url_for('static', filename='js/login_widget.js') }}"></script>
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>
 
-    <!-- Global Auto-Resume Link Updater (For Guests Only) -->
-    {% if not session.get('username') %}
+    <!-- Global Auto-Resume Link Updater -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             try {
@@ -765,24 +754,21 @@
             }
         });
     </script>
-    {% endif %}
 
     <script>
-        (function () {
-            var orig = window.fetch;
-            window.fetch = function (url, opts) {
-                var u = typeof url === 'string' ? url : (url && url.url) || '';
-                if (u.indexOf('/api/') === 0) {
-                    // Read page token fresh on each call — meta tag first, then cookie fallback
-                    var pt = '';
-                    var el = document.querySelector('meta[name="pt"]');
-                    if (el) pt = el.getAttribute('content') || '';
-                    if (!pt) { var m = document.cookie.match(/(^|;)\s*__pt=([^;]+)/); if (m) pt = decodeURIComponent(m[2]); }
-                    if (pt) { opts = opts || {}; opts.headers = Object.assign({}, opts.headers || {}, { 'X-PT': pt }); }
-                }
-                return orig.call(this, url, opts);
-            };
-        })();
+    (function(){
+      var pt='';
+      var el=document.querySelector('meta[name="pt"]');
+      if(el)pt=el.getAttribute('content')||'';
+      if(!pt){var m=document.cookie.match(/(^|;)\s*__pt=([^;]+)/);if(m)pt=decodeURIComponent(m[2]);}
+      if(!pt)return;
+      var orig=window.fetch;
+      window.fetch=function(url,opts){
+        var u=typeof url==='string'?url:(url&&url.url)||'';
+        if(u.indexOf('/api/')===0){opts=opts||{};opts.headers=Object.assign({},opts.headers||{},{'X-PT':pt});}
+        return orig.call(this,url,opts);
+      };
+    })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>
