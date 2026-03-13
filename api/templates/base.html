@@ -765,15 +765,17 @@
 
     <script>
     (function(){
-      var pt='';
-      var el=document.querySelector('meta[name="pt"]');
-      if(el)pt=el.getAttribute('content')||'';
-      if(!pt){var m=document.cookie.match(/(^|;)\s*__pt=([^;]+)/);if(m)pt=decodeURIComponent(m[2]);}
-      if(!pt)return;
       var orig=window.fetch;
       window.fetch=function(url,opts){
         var u=typeof url==='string'?url:(url&&url.url)||'';
-        if(u.indexOf('/api/')===0){opts=opts||{};opts.headers=Object.assign({},opts.headers||{},{'X-PT':pt});}
+        if(u.indexOf('/api/')===0){
+          // Read page token fresh on each call — meta tag first, then cookie fallback
+          var pt='';
+          var el=document.querySelector('meta[name="pt"]');
+          if(el)pt=el.getAttribute('content')||'';
+          if(!pt){var m=document.cookie.match(/(^|;)\s*__pt=([^;]+)/);if(m)pt=decodeURIComponent(m[2]);}
+          if(pt){opts=opts||{};opts.headers=Object.assign({},opts.headers||{},{'X-PT':pt});}
+        }
         return orig.call(this,url,opts);
       };
     })();

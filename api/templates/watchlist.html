@@ -995,7 +995,13 @@
         }
 
         // Fetch watchlist
-        async function fetchWatchlist(status = '', page = 1, append = false) {
+        // Helper to get a fresh page token from the cookie
+        function getFreshPageToken() {
+            const m = document.cookie.match(/(^|;)\s*__pt=([^;]+)/);
+            return m ? decodeURIComponent(m[2]) : '';
+        }
+
+        async function fetchWatchlist(status = '', page = 1, append = false, _retry = false) {
             if (isLoading) return;
             isLoading = true;
 
@@ -1022,6 +1028,21 @@
                 if (status) params.append('status', status);
 
                 const response = await fetch(`/api/watchlist/paginated?${params}`);
+
+                // Handle 403 — page token missing/stale. Retry once with fresh token.
+                if (response.status === 403 && !_retry) {
+                    isLoading = false;
+                    const freshPt = getFreshPageToken();
+                    if (freshPt) {
+                        // Update the global fetch wrapper's token
+                        const metaEl = document.querySelector('meta[name="pt"]');
+                        if (metaEl) metaEl.setAttribute('content', freshPt);
+                    }
+                    // Small delay then retry once
+                    await new Promise(r => setTimeout(r, 500));
+                    return fetchWatchlist(status, page, append, true);
+                }
+
                 const data = await response.json();
 
                 if (data.error) {
@@ -1212,9 +1233,23 @@
             }
             document.getElementById('edit-status').value = mappedStatus;
 
-            const totalEps = item.total_episodes || '?';
-            document.getElementById('edit-episode-label').textContent = `Episode Progress (${totalEps} EPS)`;
-            document.getElementById('edit-progress').value = item.watched_episodes || 0;
+            const totalEps = item.total_episodes || 0;
+            const totalEpsDisplay = totalEps > 0 ? totalEps : '?';
+            document.getElementById('edit-episode-label').textContent = `Episode Progress (${totalEpsDisplay} EPS)`;
+
+            // Set max attribute on progress input to limit episode count
+            const progressInput = document.getElementById('edit-progress');
+            progressInput.value = item.watched_episodes || 0;
+            if (totalEps > 0) {
+                progressInput.max = totalEps;
+                // Clamp current value if it exceeds max
+                if (parseInt(progressInput.value) > totalEps) {
+                    progressInput.value = totalEps;
+                }
+            } else {
+                progressInput.removeAttribute('max');
+            }
+
             document.getElementById('edit-score').value = item.score || '';
             document.getElementById('edit-rewatches').value = item.repeat || 0;
             document.getElementById('edit-notes').value = item.notes || '';
@@ -1255,10 +1290,20 @@
                 };
             };
 
+            const progressInput = document.getElementById('edit-progress');
+            let progressValue = parseInt(progressInput.value) || 0;
+            const maxEps = parseInt(progressInput.max);
+
+            // Clamp progress to total episodes if known
+            if (!isNaN(maxEps) && maxEps > 0 && progressValue > maxEps) {
+                progressValue = maxEps;
+                progressInput.value = maxEps;
+            }
+
             const payload = {
                 anime_id: activeEditItemId,
                 status: document.getElementById('edit-status').value,
-                progress: parseInt(document.getElementById('edit-progress').value) || 0,
+                progress: progressValue,
                 score: parseFloat(document.getElementById('edit-score').value) || 0,
                 repeat: parseInt(document.getElementById('edit-rewatches').value) || 0,
                 notes: document.getElementById('edit-notes').value,
@@ -1351,10 +1396,16 @@
 
                     fetchStats();
                 } else {
-                    alert('Error saving: ' + (data.message || 'Unknown error'));
+                    // Don't show confusing 'Missing page token' to user
+                    const errMsg = data.message || 'Unknown error';
+                    if (errMsg.toLowerCase().includes('page token') || errMsg.toLowerCase().includes('forbidden')) {
+                        alert('Session expired. Please refresh the page and try again.');
+                    } else {
+                        alert('Error saving: ' + errMsg);
+                    }
                 }
             } catch (e) {
-                alert('Connection error');
+                alert('Connection error. Please refresh the page and try again.');
                 console.error(e);
             } finally {
                 btn.textContent = originalText;
