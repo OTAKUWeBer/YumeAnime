@@ -195,18 +195,25 @@ def watchlist_paginated():
     if not data:
         return jsonify({'data': [], 'pagination': {}, 'error': 'Failed to fetch from AniList'}), 200
 
-    # Flatten all lists into one array
+    # Flatten all lists into one array, deduplicating by media ID
+    # (AniList custom lists can cause the same anime to appear in multiple lists)
     all_entries = []
+    seen_media_ids = set()
     collection = data.get('data', {}).get('MediaListCollection', {})
     for lst in collection.get('lists', []):
         for entry in lst.get('entries', []):
             media = entry.get('media') or {}
+            media_id = media.get('id')
+            if media_id in seen_media_ids:
+                continue
+            seen_media_ids.add(media_id)
+
             title_obj = media.get('title', {})
             cover = media.get('coverImage', {})
             local_status = STATUS_MAP_TO_LOCAL.get(entry.get('status'), 'watching')
 
             item = {
-                'anime_id': str(media.get('id', '')),
+                'anime_id': str(media_id or ''),
                 'anilist_entry_id': entry.get('id'),
                 'anime_title': title_obj.get('userPreferred') or title_obj.get('english') or title_obj.get('romaji') or 'Unknown',
                 'status': local_status,
@@ -609,13 +616,19 @@ def get_watchlist_route():
         return jsonify({'watchlist': []}), 200
 
     entries = []
+    seen_media_ids = set()
     collection = data.get('data', {}).get('MediaListCollection', {})
     for lst in collection.get('lists', []):
         for entry in lst.get('entries', []):
             media = entry.get('media') or {}
+            media_id = media.get('id')
+            if media_id in seen_media_ids:
+                continue
+            seen_media_ids.add(media_id)
+
             title_obj = media.get('title', {})
             entries.append({
-                'anime_id': str(media.get('id', '')),
+                'anime_id': str(media_id or ''),
                 'anime_title': title_obj.get('userPreferred') or title_obj.get('english') or title_obj.get('romaji') or 'Unknown',
                 'status': STATUS_MAP_TO_LOCAL.get(entry.get('status'), 'watching'),
                 'watched_episodes': entry.get('progress', 0),

@@ -1113,6 +1113,19 @@
                 const itemsHTML = items.map(item => {
                     const statusClass = 'status-dot-' + (item.status || 'other');
 
+                    // Media status hint (Airing, Finished, etc.)
+                    const mediaHints = {
+                        'RELEASING': { label: 'Airing', color: '#2ecc71', bg: 'rgba(46,204,113,0.12)' },
+                        'FINISHED': { label: 'Finished', color: '#3498db', bg: 'rgba(52,152,219,0.12)' },
+                        'NOT_YET_RELEASED': { label: 'Upcoming', color: '#f1c40f', bg: 'rgba(241,196,15,0.12)' },
+                        'CANCELLED': { label: 'Cancelled', color: '#e74c3c', bg: 'rgba(231,76,60,0.12)' },
+                        'HIATUS': { label: 'Hiatus', color: '#e67e22', bg: 'rgba(230,126,34,0.12)' },
+                    };
+                    const hint = mediaHints[item.media_status] || null;
+                    const hintHTML = hint
+                        ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.6rem;color:${hint.color};background:${hint.bg};padding:1px 6px;border-radius:3px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;line-height:1.4;vertical-align:middle;margin-left:6px;"><span style="width:4px;height:4px;border-radius:50%;background:${hint.color};display:inline-block;flex-shrink:0;"></span>${hint.label}</span>`
+                        : '';
+
                     // We encode item data as JSON string in data attribute to populate the modal later easily
                     const itemData = encodeURIComponent(JSON.stringify(item));
 
@@ -1122,10 +1135,10 @@
                             <div class="status-indicator ${statusClass}" title="${statusLabels[item.status] || item.status || 'Unknown'}"></div>
                         </div>
                         
-                        <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="display: flex; align-items: center; gap: 16px; min-width: 0;">
                             <img src="${item.poster_url || item.poster || 'https://via.placeholder.com/48x68?text=No+Image'}" alt="${item.anime_title}" class="row-cover" loading="lazy">
-                            <div>
-                                <span class="row-title">${item.anime_title}</span>
+                            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;min-width:0;">
+                                <span class="row-title" style="flex-shrink:1;">${item.anime_title}</span>${hintHTML}
                             </div>
                         </div>
                         

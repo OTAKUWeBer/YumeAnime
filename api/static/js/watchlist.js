@@ -187,6 +187,7 @@ class WatchlistManager {
     const totalEpisodes = item.total_episodes || "?"
     const watchedEpisodes = item.watched_episodes || 0
     const progressPercentage = totalEpisodes !== "?" ? Math.round((watchedEpisodes / totalEpisodes) * 100) : 0
+    const mediaHint = this.getMediaStatusHint(item.media_status)
 
     return `
         <div class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300" data-anime-id="${item.anime_id}" data-status="${item.status}">
@@ -234,17 +235,24 @@ class WatchlistManager {
             </div>
             
             <div class="p-3">
-                <div class="flex items-start justify-between gap-2 mb-3">
+                <div class="flex items-start justify-between gap-2 mb-2">
                     <a href="/anime/${item.anime_id}" class="hover:text-purple-400 transition-colors flex-1">
                         <h3 class="font-semibold line-clamp-2 text-sm leading-tight">${item.anime_title}</h3>
                     </a>
-                    <button onclick="watchlistManager.openStatusModal('${item.anime_id}', '${item.anime_title.replace(/'/g, "\\'")}', '${item.status}', ${watchedEpisodes}, ${item.total_episodes}, '${item.poster_url || ""}')" 
+                    <button onclick="watchlistManager.openStatusModal('${item.anime_id}', '${item.anime_title.replace(/'/g, "\\\\'")}', '${item.status}', ${watchedEpisodes}, ${item.total_episodes}, '${item.poster_url || ""}')" 
                             class="flex-shrink-0 w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all hover:scale-105 flex items-center justify-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                         </svg>
                     </button>
                 </div>
+
+                ${mediaHint ? `
+                <div class="flex items-center gap-1.5 mb-2">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full ${mediaHint.dotClass}"></span>
+                    <span class="text-xs font-medium ${mediaHint.textClass}">${mediaHint.label}</span>
+                </div>
+                ` : ''}
                 
                 <div class="mb-2">
                     <div class="flex items-baseline justify-between mb-2">
@@ -269,6 +277,18 @@ class WatchlistManager {
             </div>
         </div>
         `
+  }
+
+  getMediaStatusHint(mediaStatus) {
+    if (!mediaStatus) return null
+    const hints = {
+      'RELEASING':        { label: 'Airing',    dotClass: 'bg-green-400',  textClass: 'text-green-400' },
+      'FINISHED':         { label: 'Finished',  dotClass: 'bg-blue-400',   textClass: 'text-blue-400' },
+      'NOT_YET_RELEASED': { label: 'Upcoming',  dotClass: 'bg-yellow-400', textClass: 'text-yellow-400' },
+      'CANCELLED':        { label: 'Cancelled', dotClass: 'bg-red-400',    textClass: 'text-red-400' },
+      'HIATUS':           { label: 'Hiatus',    dotClass: 'bg-orange-400', textClass: 'text-orange-400' },
+    }
+    return hints[mediaStatus] || null
   }
 
   filterWatchlist(status) {
