@@ -58,7 +58,7 @@
         // Method 4: regex toString
         var _r=/x/,_rh=false;_r.toString=function(){_rh=true;return'/x/';};
         function _rd(){_rh=false;console.log(_r);console.clear();return _rh;}
-        function _chk(){if(_dd()){_kill();return;}if(_p.c()){_kill();return;}if(_sd()){_kill();return;}if(_rd()){_kill();return;}}
+        function _chk(){if(/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent))return;if(_dd()){_kill();return;}if(_p.c()){_kill();return;}if(_sd()){_kill();return;}if(_rd()){_kill();return;}}
         setTimeout(function(){_chk();setInterval(_chk,700);},700);
         window.addEventListener('resize',_chk);
         // Keyboard shortcut kill
