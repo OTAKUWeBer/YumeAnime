@@ -777,6 +777,7 @@ h6 {
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin-bottom: var(--space-xs);
@@ -866,34 +867,50 @@ h6 {
 .spotlight-section {
     margin-bottom: var(--space-3xl);
     margin-top: var(--space-lg);
+    position: relative;
 }
 
 .spotlight-carousel {
     position: relative;
     border-radius: var(--radius-xl);
-    overflow: hidden;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0;
+    margin: 0;
+    padding: 0;
 }
 
+.spotlight-carousel.dragging {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+    cursor: grabbing;
+}
+
+.spotlight-carousel.dragging .spotlight-slide {
+    pointer-events: none;
+}
+
+.spotlight-carousel:not(.dragging) {
+    cursor: grab;
+}
+
+.spotlight-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+/* Base spotlight slide styling */
 .spotlight-slide {
     position: relative;
     height: 500px;
     /* Increased height for better visual impact */
-    display: none;
-    opacity: 0;
-    transition: opacity 1.0s ease-in-out;
-}
-
-.spotlight-slide.active {
-    display: block;
-    opacity: 1;
-}
-
-.spotlight-slide.slide-right {
-    animation: slideInFromRight 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.spotlight-slide.slide-left {
-    animation: slideInFromLeft 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    flex: 0 0 100%;
+    width: 100%;
+    scroll-snap-align: start;
+    box-sizing: border-box;
 }
 
 .spotlight-backdrop {
@@ -970,6 +987,7 @@ h6 {
     /* Truncation to prevent layout breaking */
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -980,6 +998,7 @@ h6 {
     .spotlight-title {
         font-size: 1.5rem;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
     }
 }
 
@@ -990,6 +1009,7 @@ h6 {
     margin-bottom: var(--space-lg);
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
@@ -1185,6 +1205,8 @@ h6 {
 
     .spotlight-title {
         font-size: 1.5rem;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
     }
 
     .spotlight-description {
