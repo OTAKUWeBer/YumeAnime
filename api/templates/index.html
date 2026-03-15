@@ -427,10 +427,15 @@ series.{% endblock %}
         let scrollLeft;
         let dragged = false;
 
+        // Prevent native HTML drag on images and links so our JS drag works
+        carousel.querySelectorAll('a, img').forEach(el => {
+            el.addEventListener('dragstart', e => e.preventDefault());
+        });
+
         carousel.addEventListener('mousedown', (e) => {
             isDown = true;
             dragged = false;
-            carousel.classList.add('dragging');
+            // We do NOT add the 'dragging' class here yet, to allow clicks to register
             startX = e.pageX - carousel.offsetLeft;
             scrollLeft = carousel.scrollLeft;
             stopAutoplay();
@@ -450,11 +455,19 @@ series.{% endblock %}
 
         carousel.addEventListener('mousemove', (e) => {
             if (!isDown) return;
-            e.preventDefault();
-            dragged = true;
+            
             const x = e.pageX - carousel.offsetLeft;
-            const walk = (x - startX) * 1.5; // Drag speed multiplier
-            carousel.scrollLeft = scrollLeft - walk;
+            // Only consider it a drag if moved more than 5 pixels
+            if (Math.abs(x - startX) > 5) {
+                dragged = true;
+                carousel.classList.add('dragging');
+            }
+            
+            if (dragged) {
+                e.preventDefault();
+                const walk = (x - startX) * 1.5; // Drag speed multiplier
+                carousel.scrollLeft = scrollLeft - walk;
+            }
         });
 
         // Touch swipe support (Native scrolling handles the drag, we just need to restart autoplay)
