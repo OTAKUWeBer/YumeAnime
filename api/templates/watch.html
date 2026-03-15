@@ -1409,7 +1409,353 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
+
+<!-- ========================================== -->
+<!-- ANIME INFO SECTION -->
+<!-- ========================================== -->
+{% if anime %}
+<style>
+    .anime-details-section {
+        margin-top: 30px;
+        background: var(--bg-surface);
+        border-radius: var(--radius-lg);
+        padding: 25px;
+        color: var(--text-primary);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .anime-details-grid {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 25px;
+    }
+    
+    @media (max-width: 768px) {
+        .anime-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .anime-poster {
+        width: 100%;
+        border-radius: var(--radius-md);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        background: var(--bg-elevated);
+        object-fit: cover;
+        aspect-ratio: 2/3;
+    }
+    
+    .anime-title-block {
+        margin-bottom: 15px;
+    }
+    
+    .anime-title-main {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0 0 5px 0;
+        line-height: 1.2;
+    }
+    
+    .anime-title-sub {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+    
+    .anime-synopsis {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        margin-bottom: 25px;
+    }
+    
+    .anime-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        background: var(--bg-primary);
+        padding: 15px;
+        border-radius: var(--radius-md);
+    }
+    
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .meta-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    
+    .meta-value {
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    
+    .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 25px;
+    }
+    
+    .tag-pill {
+        background: rgba(var(--accent-rgb, 128, 90, 213), 0.15);
+        color: var(--accent);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .section-heading {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+        padding-bottom: 5px;
+        border-bottom: 2px solid var(--accent);
+        display: inline-block;
+    }
+
+    /* Relations */
+    .relations-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .relation-card {
+        position: relative;
+        display: block;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        aspect-ratio: 2/3;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .relation-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .relation-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+    .relation-card:hover img {
+        transform: scale(1.05);
+    }
+    .relation-type {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 3px 6px;
+        border-radius: 4px;
+        z-index: 5;
+    }
+    .relation-title-wrap {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 40px 10px 10px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+        color: white;
+        text-align: center;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+    .relation-title {
+        font-size: 0.85rem;
+        line-height: 1.3;
+        font-weight: 600;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    /* Characters Horizontal Scroll */
+    .character-scroll {
+        display: flex;
+        overflow-x: auto;
+        gap: 15px;
+        padding-bottom: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent) var(--bg-elevated);
+    }
+    .character-scroll::-webkit-scrollbar {
+        height: 6px;
+    }
+    .character-scroll::-webkit-scrollbar-thumb {
+        background: var(--accent);
+        border-radius: 6px;
+    }
+    .character-scroll::-webkit-scrollbar-track {
+        background: var(--bg-elevated);
+        border-radius: 6px;
+    }
+    .character-card {
+        min-width: 100px;
+        max-width: 100px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .character-img {
+        width: 100px;
+        height: 140px;
+        object-fit: cover;
+        border-radius: var(--radius-sm);
+        background: var(--bg-elevated);
+    }
+    .character-name {
+        font-size: 0.8rem;
+        text-align: center;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .character-role {
+        font-size: 0.7rem;
+        text-align: center;
+        color: var(--text-muted);
+    }
+</style>
+
+<div class="container" style="max-width: 1400px; padding: 0 15px;">
+    <div class="anime-details-section">
+        <div class="anime-details-grid">
+            
+            <!-- Left Column: Poster & Quick Meta -->
+            <div class="anime-side">
+                <img src="{{ anime.get('coverImage') or anime.get('poster') }}" alt="Poster" class="anime-poster">
+                
+                <div class="anime-meta-grid" style="margin-top: 15px; padding: 12px; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="meta-item">
+                        <span class="meta-label">Score</span>
+                        <span class="meta-value" style="color: #fbbf24; font-weight: bold;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align: text-top;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            {{ anime.stats.rating if anime.stats and anime.stats.rating else 'N/A' }}
+                        </span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Format</span>
+                        <span class="meta-value">{{ anime.stats.type if anime.stats and anime.stats.type else 'TV' }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Status</span>
+                        <span class="meta-value">{{ anime.status | default('Unknown') | replace('_', ' ') | title }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Duration</span>
+                        <span class="meta-value">{{ anime.stats.duration if anime.stats and anime.stats.duration else 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Details -->
+            <div class="anime-main" style="min-width: 0;">
+                <div class="anime-title-block">
+                    <h1 class="anime-title-main">{{ anime.name or anime.title }}</h1>
+                    {% if anime.jname or anime.japanese_title %}
+                    <p class="anime-title-sub">
+                        {{ anime.jname or anime.japanese_title }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="tag-list">
+                    {% for genre in anime.get('genres', []) %}
+                    <span class="tag-pill">{{ genre }}</span>
+                    {% endfor %}
+                    {% if anime.get('studios') and anime.get('studios')|length > 0 %}
+                    <span class="tag-pill" style="background: rgba(255,255,255,0.1); color: var(--text-secondary);">
+                        Studio: {{ anime.get('studios')[0] }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Synopsis with basic clean up -->
+                <div class="anime-synopsis">
+                    {{ (anime.get('description') or anime.get('synopsis') or 'No description available for this anime.') | striptags }}
+                </div>
+
+                <!-- Relations Section -->
+                {% set all_seasons = [] %}
+                {% set seen_season_ids = [] %}
+
+                {% for p in anime.prequels %}
+                    {% if (p.id|string) not in seen_season_ids %}
+                        {% set _ = all_seasons.append(p) %}
+                        {% set _ = seen_season_ids.append(p.id|string) %}
+                    {% endif %}
+                {% endfor %}
+
+                {% for s in anime.sequels %}
+                    {% if (s.id|string) not in seen_season_ids %}
+                        {% set _ = all_seasons.append(s) %}
+                        {% set _ = seen_season_ids.append(s.id|string) %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if all_seasons|length > 0 %}
+                <div class="section-heading">Relations</div>
+                <div class="relations-grid">
+                    {% for rel in all_seasons %}
+                    <a href="/anime/{{ rel.id }}" class="relation-card" title="{{ rel.name or rel.title }}">
+                        <span class="relation-type">{{ (rel.relation or "Related") | upper }}</span>
+                        <img src="{{ rel.image or rel.poster or 'https://via.placeholder.com/200x300?text=No+Image' }}" alt="{{ rel.name or rel.title }}" loading="lazy">
+                        <div class="relation-title-wrap">
+                            <span class="relation-title">{{ rel.name or rel.title }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Characters Section -->
+                {% set characters = anime.characters %}
+                {% if characters and characters|length > 0 %}
+                <div class="section-heading">Characters</div>
+                <div class="character-scroll">
+                    {% for char_data in characters %}
+                        {% if loop.index <= 20 %} {# Limit to first 20 characters mostly #}
+                        <div class="character-card">
+                            <img src="{{ char_data.character.poster or char_data.character.image }}" alt="{{ char_data.character.name }}" class="character-img" loading="lazy">
+                            <span class="character-name" title="{{ char_data.character.name }}">{{ char_data.character.name }}</span>
+                            <span class="character-role">{{ char_data.character.cast or 'Main' }}</span>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
