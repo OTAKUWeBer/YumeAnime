@@ -1701,6 +1701,13 @@
                     embedFrame.className = 'embed-player-frame';
                     embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
                     embedFrame.allowFullscreen = true;
+                    
+                    // Basic iframe error detection (may not catch cross-origin HTTP errors, but catches generic frame errors)
+                    embedFrame.onerror = function() {
+                        console.warn('[Fallback] Embed iframe onerror triggered');
+                        tryFallback('embed');
+                    };
+                    
                     masterWrapper.insertBefore(embedFrame, masterWrapper.firstChild);
                 }
                 embedFrame.src = url;
