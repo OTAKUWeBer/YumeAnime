@@ -111,20 +111,20 @@ series.{% endblock %}
                 </div>
             </div>
             {% endfor %}
+        </div>
 
-            <!-- Carousel Navigation -->
-            <div class="spotlight-nav">
-                <button class="spotlight-nav-btn" id="spotlight-prev" aria-label="Previous">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6" />
-                    </svg>
-                </button>
-                <button class="spotlight-nav-btn" id="spotlight-next" aria-label="Next">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                </button>
-            </div>
+        <!-- Carousel Navigation -->
+        <div class="spotlight-nav">
+            <button class="spotlight-nav-btn" id="spotlight-prev" aria-label="Previous">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6" />
+                </svg>
+            </button>
+            <button class="spotlight-nav-btn" id="spotlight-next" aria-label="Next">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+            </button>
         </div>
     </section>
     {% endif %}
@@ -363,155 +363,127 @@ series.{% endblock %}
 
 {% block extra_js %}
 <script>
-    // Spotlight Carousel with improved animations and mobile support
+    // Spotlight Carousel using native scroll snap
     const carousel = document.getElementById('spotlight-carousel');
     if (carousel) {
         const slides = carousel.querySelectorAll('.spotlight-slide');
-        const dots = carousel.querySelectorAll('.spotlight-dot');
         const prevBtn = document.getElementById('spotlight-prev');
         const nextBtn = document.getElementById('spotlight-next');
-        let currentIndex = 0;
         let autoplayInterval;
-        let isAnimating = false;
-        let touchStartX = 0;
-        let touchEndX = 0;
 
-        function showSlide(index, direction = 'next') {
-            if (isAnimating) return;
-            if (index < 0) index = slides.length - 1;
-            if (index >= slides.length) index = 0;
-
-            isAnimating = true;
-
+        function getIndex() {
+            let closestIndex = 0;
+            let minDiff = Infinity;
             slides.forEach((slide, i) => {
-                if (i === index) {
-                    slide.classList.remove('slide-left', 'slide-right');
-                    slide.classList.add('active', direction === 'next' ? 'slide-right' : 'slide-left');
-                    setTimeout(() => {
-                        slide.classList.remove('slide-left', 'slide-right');
-                    }, 1000);
-                } else {
-                    slide.classList.remove('active', 'slide-left', 'slide-right');
+                const diff = Math.abs(carousel.scrollLeft - slide.offsetLeft);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = i;
                 }
             });
+            return closestIndex;
+        }
 
-            dots.forEach((dot, i) => {
-                dot.classList.toggle('active', i === index);
+        function showSlide(index) {
+            if (index < 0) index = slides.length - 1;
+            if (index >= slides.length) index = 0;
+            const slide = slides[index];
+            carousel.scrollTo({
+                left: slide.offsetLeft,
+                behavior: 'smooth'
             });
-
-            currentIndex = index;
-
-            setTimeout(() => {
-                isAnimating = false;
-            }, 1000);
-        }
-
-        function nextSlide() {
-            showSlide(currentIndex + 1, 'next');
-        }
-
-        function prevSlide() {
-            showSlide(currentIndex - 1, 'prev');
         }
 
         function startAutoplay() {
-            autoplayInterval = setInterval(nextSlide, 10000);
+            stopAutoplay();
+            autoplayInterval = setInterval(() => {
+                showSlide(getIndex() + 1);
+            }, 6000); // 6 seconds per slide
         }
 
         function stopAutoplay() {
             clearInterval(autoplayInterval);
         }
 
-        // Event listeners - Navigation buttons
         if (nextBtn) {
             nextBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                stopAutoplay();
-                nextSlide();
-                startAutoplay();
+                e.preventDefault();
+                showSlide(getIndex() + 1);
+                startAutoplay(); // Restart the timer
             });
         }
+        
         if (prevBtn) {
             prevBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                stopAutoplay();
-                prevSlide();
-                startAutoplay();
+                e.preventDefault();
+                showSlide(getIndex() - 1);
+                startAutoplay(); // Restart the timer
             });
         }
 
-        // Dot navigation
-        dots.forEach(dot => {
-            dot.addEventListener('click', () => {
-                stopAutoplay();
-                const newIndex = parseInt(dot.dataset.index);
-                const direction = newIndex > currentIndex ? 'next' : 'prev';
-                showSlide(newIndex, direction);
-                startAutoplay();
-            });
-        });
-
-        // Touch/Swipe support for mobile
-        carousel.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            stopAutoplay();
-        }, false);
-
-        carousel.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            const swipeThreshold = 50;
-            const diff = touchStartX - touchEndX;
-
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    nextSlide();
-                } else {
-                    prevSlide();
-                }
-            }
-            startAutoplay();
-        }, false);
-
-        // Mouse swipe/drag support for desktop
-        let mouseStartX = 0;
-        let isMouseDown = false;
+        // Mouse Drag to Scroll
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let dragged = false;
 
         carousel.addEventListener('mousedown', (e) => {
-            mouseStartX = e.clientX;
-            isMouseDown = true;
+            isDown = true;
+            dragged = false;
+            carousel.classList.add('dragging');
+            startX = e.pageX - carousel.offsetLeft;
+            scrollLeft = carousel.scrollLeft;
             stopAutoplay();
         });
 
-        carousel.addEventListener('mouseup', (e) => {
-            if (!isMouseDown) return;
-            isMouseDown = false;
-            const mouseEndX = e.clientX;
-            const swipeThreshold = 50;
-            const diff = mouseStartX - mouseEndX;
+        const stopDragging = () => {
+            if (!isDown) return;
+            isDown = false;
+            carousel.classList.remove('dragging');
+            if (dragged) showSlide(getIndex());
+            startAutoplay();
+        };
 
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    nextSlide();
+        // Window level events are safer for mouseup and mouseleave out of bounds
+        window.addEventListener('mouseup', stopDragging);
+        carousel.addEventListener('mouseleave', stopDragging);
+
+        carousel.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            dragged = true;
+            const x = e.pageX - carousel.offsetLeft;
+            const walk = (x - startX) * 1.5; // Drag speed multiplier
+            carousel.scrollLeft = scrollLeft - walk;
+        });
+
+        // Touch swipe support (Native scrolling handles the drag, we just need to restart autoplay)
+        carousel.addEventListener('touchstart', stopAutoplay, {passive: true});
+        carousel.addEventListener('touchend', () => { setTimeout(startAutoplay, 2000); }, {passive: true});
+        
+        // Pause ONLY momentarily on scroll wheel
+        let scrollTimeout;
+        carousel.addEventListener('wheel', () => {
+             stopAutoplay();
+             clearTimeout(scrollTimeout);
+             scrollTimeout = setTimeout(startAutoplay, 2000);
+        }, {passive: true});
+
+        // Use IntersectionObserver to apply the 'active' class for the Ken Burns effect
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
                 } else {
-                    prevSlide();
+                    entry.target.classList.remove('active');
                 }
-            }
-            startAutoplay();
-        });
+            });
+        }, { root: carousel, threshold: 0.5 });
+        
+        slides.forEach(slide => observer.observe(slide));
 
-        carousel.addEventListener('mouseleave', () => {
-            isMouseDown = false;
-            startAutoplay();
-        });
-
-        // Start autoplay
+        // Start autoplay initially
         startAutoplay();
-
-        // Pause on hover
-        carousel.addEventListener('mouseenter', stopAutoplay);
-        carousel.addEventListener('mouseleave', () => {
-            if (!isMouseDown) startAutoplay();
-        });
     }
 </script>
 {% endblock %}
