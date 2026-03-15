@@ -833,59 +833,121 @@
         border-radius: var(--radius-lg);
     }
 
-    /* Source Switcher Bar */
-    .source-switcher-bar {
-        margin-top: 10px;
+    /* Stream Selector — Premium Pill UI */
+    .stream-selector {
         display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        background: var(--bg-surface);
-        padding: 5px 10px;
-        border-radius: var(--radius-md);
-        gap: 10px;
+        gap: 16px;
+        align-items: stretch;
         flex-wrap: wrap;
+        flex: 1;
+        min-width: 0;
     }
 
-    .source-switcher-label {
-        font-size: 0.85rem;
+    .stream-selector-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .stream-selector-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
         color: var(--text-muted);
-        font-weight: 500;
-        white-space: nowrap;
+        padding-left: 2px;
     }
 
-    .source-switcher-options {
+    .stream-selector-pills {
         display: flex;
-        border-radius: var(--radius-sm);
-        overflow: hidden;
-        border: 1px solid var(--border-color);
+        gap: 6px;
         flex-wrap: wrap;
     }
 
-    .source-switcher-btn {
-        border: none;
+    .stream-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border-color);
         background: var(--bg-elevated);
         color: var(--text-primary);
-        padding: 6px 14px;
         font-size: 0.8rem;
-        font-weight: bold;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         white-space: nowrap;
         text-decoration: none;
+        user-select: none;
     }
 
-    .source-switcher-btn:hover {
+    .stream-pill:hover {
         background: var(--bg-surface-hover);
-        color: var(--text-primary);
+        border-color: var(--text-muted);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
-    .source-switcher-btn.active {
-        background: var(--accent) !important;
-        color: var(--bg-primary) !important;
+    .stream-pill.active {
+        background: var(--accent);
+        color: var(--bg-primary);
+        border-color: var(--accent);
+        box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.35);
     }
 
-    .source-switcher-btn+.source-switcher-btn {
-        border-left: 1px solid var(--border-color);
+    .stream-pill.active:hover {
+        background: var(--accent);
+        border-color: var(--accent);
+        filter: brightness(1.1);
+    }
+
+    .stream-pill .pill-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 1px 6px;
+        border-radius: 999px;
+        line-height: 1.4;
+    }
+
+    .stream-pill .pill-badge.badge-hls {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+    }
+
+    .stream-pill.active .pill-badge.badge-hls {
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .stream-pill .pill-badge.badge-embed {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    .stream-pill.active .pill-badge.badge-embed {
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    @media (max-width: 480px) {
+        .stream-selector {
+            gap: 10px;
+        }
+        .stream-pill {
+            padding: 5px 10px;
+            font-size: 0.75rem;
+        }
+        .stream-pill .pill-badge {
+            font-size: 0.6rem;
+            padding: 1px 5px;
+        }
     }
 
     /* Responsive */
@@ -1120,51 +1182,7 @@
                 {% endif %}
             </div>
 
-            <!-- Provider (Server) Switcher - Hidden in favor of integrated control -->
-            {% if episodes and episodes.providers_map %}
-            <div class="source-switcher-bar" id="providerSwitcher" style="display: none;">
-                <span class="source-switcher-label">Server:</span>
-                <div class="source-switcher-options">
-                    {% for p_name, p_data in episodes.providers_map.items() %}
-                    {% set is_active = (p_name == selected_server) or (p_name == episodes.default_provider and not
-                    selected_server) %}
-                    <button class="source-switcher-btn {% if is_active %}active{% endif %}" data-provider="{{ p_name }}"
-                        onclick="switchProvider('{{ p_name }}')">
-                        {{ p_name | title }}
-                    </button>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
 
-            <!-- Stream Quality / Source Switcher - Hidden in favor of integrated control -->
-            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
-            <div class="source-switcher-bar" id="sourceSwitcher" style="display: none;">
-                <span class="source-switcher-label">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="vertical-align: middle; margin-right: 4px;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polygon points="10 8 16 12 10 16 10 8"></polygon>
-                    </svg>
-                    Stream:
-                </span>
-                <div class="source-switcher-options" id="sourceOptions">
-                    {% for es in embed_sources %}
-                    <button class="source-switcher-btn {% if source_type == 'embed' and loop.first %}active{% endif %}"
-                        data-source-type="embed" data-source-url="{{ es.url }}" data-source-label="{{ es.label }}">
-                        {{ es.label or ('Embed ' ~ loop.index) }}
-                    </button>
-                    {% endfor %}
-                    {% for hs in hls_sources %}
-                    <button class="source-switcher-btn {% if source_type == 'hls' and loop.first %}active{% endif %}"
-                        data-source-type="hls" data-source-url="{{ hs.file or hs.url }}"
-                        data-source-label="{{ hs.label }}">
-                        {{ hs.quality or ('HLS ' ~ loop.index) }}
-                    </button>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
 
             <!-- Episode Controls & Info Section -->
             <div id="watch-navigation" style="margin-top: 15px;">
@@ -1202,40 +1220,44 @@
 
                     <!-- Controls Row -->
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <!-- Stream Quality Dropdown -->
-                        {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0)
-                        %}
-                        <select id="streamDropdown"
-                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; flex: 1; min-width: 140px;">
-                            <option value="">Stream Quality</option>
-                            {% for es in embed_sources %}
-                            <option value="embed|{{ es.url }}" {% if source_type=='embed' and loop.first %}selected{%
-                                endif %}>
-                                {{ es.label or ('Embed ' ~ loop.index) }}
-                            </option>
-                            {% endfor %}
-                            {% for hs in hls_sources %}
-                            <option value="hls|{{ hs.file or hs.url }}" {% if source_type=='hls' and loop.first
-                                %}selected{% endif %}>
-                                {{ hs.quality or ('HLS ' ~ loop.index) }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        {% endif %}
+                        <!-- Stream & Server Selector (Pill Buttons) -->
+                        <div class="stream-selector" id="streamSelector">
+                            {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
+                            <div class="stream-selector-group" id="providerGroup">
+                                <span class="stream-selector-label">Server</span>
+                                <div class="stream-selector-pills" id="providerPills">
+                                    {% for p_name, p_data in episodes.providers_map.items() %}
+                                    {% set is_active = (p_name == selected_server) or (p_name == episodes.default_provider and not selected_server) %}
+                                    <button class="stream-pill {% if is_active %}active{% endif %}" data-provider="{{ p_name }}">
+                                        {{ p_name | title }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
 
-                        <!-- Provider (Server) Switcher -->
-                        {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
-                        <select id="providerDropdown"
-                            style="background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; flex: 1; min-width: 140px;">
-                            {% for p_name, p_data in episodes.providers_map.items() %}
-                            {% set is_active = (p_name == selected_server) or (p_name == episodes.default_provider and
-                            not selected_server) %}
-                            <option value="{{ p_name }}" {% if is_active %}selected{% endif %}>
-                                {{ p_name | title }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        {% endif %}
+                            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
+                            <div class="stream-selector-group" id="sourceGroup">
+                                <span class="stream-selector-label">Stream</span>
+                                <div class="stream-selector-pills" id="sourcePills">
+                                    {% if hls_sources and hls_sources|length > 0 %}
+                                    <button class="stream-pill {% if source_type == 'hls' %}active{% endif %}"
+                                        data-source-type="hls" data-source-url="{{ hls_sources[0].file or hls_sources[0].url }}">
+                                        Miku
+                                        <span class="pill-badge badge-hls">HLS</span>
+                                    </button>
+                                    {% endif %}
+                                    {% if embed_sources and embed_sources|length > 0 %}
+                                    <button class="stream-pill {% if source_type == 'embed' %}active{% endif %}"
+                                        data-source-type="embed" data-source-url="{{ embed_sources[0].url }}">
+                                        Zen
+                                        <span class="pill-badge badge-embed">Embed</span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
 
                         <!-- Language Selection (AJAX, no page reload) -->
                         <div
@@ -1463,6 +1485,9 @@
                             hls.startLoad();
                         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
                             hls.recoverMediaError();
+                        } else {
+                            console.warn('[Fallback] HLS fatal error on initial load, triggering fallback');
+                            tryFallback('hls');
                         }
                     }
                 });
@@ -1631,95 +1656,107 @@
         }
     });
 
-    // Source Switcher Logic
+    // Stream Pill Click Logic (delegated)
     document.addEventListener('DOMContentLoaded', function () {
-        const sourceBtns = document.querySelectorAll('.source-switcher-btn');
+        const selector = document.getElementById('streamSelector');
+        if (!selector) return;
+
         const videoContainer = document.getElementById('videoContainer');
         const masterWrapper = document.getElementById('video-wrapper');
 
-        sourceBtns.forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                const type = btn.dataset.sourceType;
-                const url = btn.dataset.sourceUrl;
+        selector.addEventListener('click', function (e) {
+            const pill = e.target.closest('.stream-pill');
+            if (!pill) return;
 
-                if (!type) return; // Allow normal navigation for provider links
+            // ── Provider pill ──
+            if (pill.dataset.provider) {
+                const providerPills = document.querySelectorAll('#providerPills .stream-pill');
+                providerPills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                switchProvider(pill.dataset.provider);
+                return;
+            }
 
-                e.preventDefault();
+            // ── Source pill (HLS / Embed) ──
+            const type = pill.dataset.sourceType;
+            const url = pill.dataset.sourceUrl;
+            if (!type || !url || !masterWrapper) return;
 
-                if (!url || !masterWrapper) return;
+            e.preventDefault();
 
-                // --- CRITICAL: tear down ALL old players before switching ---
-                cleanupCurrentPlayer();
+            // --- CRITICAL: tear down ALL old players before switching ---
+            cleanupCurrentPlayer();
 
-                sourceBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+            const sourcePills = document.querySelectorAll('#sourcePills .stream-pill');
+            sourcePills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
 
-                if (type === 'embed') {
-                    if (videoContainer) videoContainer.style.display = 'none';
+            if (type === 'embed') {
+                if (videoContainer) videoContainer.style.display = 'none';
 
-                    let embedFrame = masterWrapper.querySelector('#embedPlayer');
-                    if (!embedFrame) {
-                        embedFrame = document.createElement('iframe');
-                        embedFrame.id = 'embedPlayer';
-                        embedFrame.className = 'embed-player-frame';
-                        embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
-                        embedFrame.allowFullscreen = true;
-                        masterWrapper.insertBefore(embedFrame, masterWrapper.firstChild);
-                    }
-                    embedFrame.src = url;
-                    embedFrame.style.display = 'block';
-
-                } else if (type === 'hls') {
-                    let embedFrame = masterWrapper.querySelector('#embedPlayer');
-                    if (embedFrame) {
-                        embedFrame.style.display = 'none';
-                    }
-
-                    if (videoContainer) videoContainer.style.display = 'block';
-
-                    let newVideo = document.getElementById('videoPlayer');
-                    if (!newVideo) {
-                        newVideo = document.createElement('video');
-                        newVideo.id = 'videoPlayer';
-                        newVideo.className = 'raw-video-player';
-                        newVideo.setAttribute('playsinline', '');
-                        newVideo.setAttribute('webkit-playsinline', 'true');
-                        newVideo.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;';
-                        if (videoContainer) videoContainer.insertBefore(newVideo, videoContainer.firstChild || null);
-                    }
-
-                    newVideo.setAttribute('data-video-url', url);
-                    newVideo.innerHTML = '<source src="' + url + '" type="application/x-mpegURL">';
-                    newVideo.style.display = '';
-
-                    let ui = document.getElementById('customPlayerUI');
-                    if (ui) ui.style.display = '';
-
-                    if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
-                        window.hls = new Hls({ debug: false, enableWorker: true });
-                        window.hls.on(Hls.Events.ERROR, (e, data) => {
-                            console.error('[HLS Error]', data.type, data.details);
-                            if (data.fatal) {
-                                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                                    window.hls.startLoad();
-                                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                                    window.hls.recoverMediaError();
-                                }
-                            }
-                        });
-
-                        window.hls.loadSource(url);
-                        window.hls.attachMedia(newVideo);
-                        newVideo.play().catch(e => console.log("Play rejected:", e));
-                    } else if (newVideo.canPlayType('application/vnd.apple.mpegurl')) {
-                        newVideo.src = url;
-                        newVideo.play().catch(e => console.log("Play rejected:", e));
-                    } else {
-                        newVideo.src = url;
-                        newVideo.play().catch(e => console.log("Play rejected:", e));
-                    }
+                let embedFrame = masterWrapper.querySelector('#embedPlayer');
+                if (!embedFrame) {
+                    embedFrame = document.createElement('iframe');
+                    embedFrame.id = 'embedPlayer';
+                    embedFrame.className = 'embed-player-frame';
+                    embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
+                    embedFrame.allowFullscreen = true;
+                    masterWrapper.insertBefore(embedFrame, masterWrapper.firstChild);
                 }
-            });
+                embedFrame.src = url;
+                embedFrame.style.display = 'block';
+
+            } else if (type === 'hls') {
+                let embedFrame = masterWrapper.querySelector('#embedPlayer');
+                if (embedFrame) embedFrame.style.display = 'none';
+
+                if (videoContainer) videoContainer.style.display = 'block';
+
+                let newVideo = document.getElementById('videoPlayer');
+                if (!newVideo) {
+                    newVideo = document.createElement('video');
+                    newVideo.id = 'videoPlayer';
+                    newVideo.className = 'raw-video-player';
+                    newVideo.setAttribute('playsinline', '');
+                    newVideo.setAttribute('webkit-playsinline', 'true');
+                    newVideo.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;';
+                    if (videoContainer) videoContainer.insertBefore(newVideo, videoContainer.firstChild || null);
+                }
+
+                newVideo.setAttribute('data-video-url', url);
+                newVideo.innerHTML = '<source src="' + url + '" type="application/x-mpegURL">';
+                newVideo.style.display = '';
+
+                let ui = document.getElementById('customPlayerUI');
+                if (ui) ui.style.display = '';
+
+                if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
+                    window.hls = new Hls({ debug: false, enableWorker: true });
+                    window.hls.on(Hls.Events.ERROR, (e, data) => {
+                        console.error('[HLS Error]', data.type, data.details);
+                        if (data.fatal) {
+                            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                                window.hls.startLoad();
+                            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                                window.hls.recoverMediaError();
+                            } else {
+                                console.warn('[Fallback] HLS fatal in pill switch, triggering fallback');
+                                tryFallback('hls');
+                            }
+                        }
+                    });
+
+                    window.hls.loadSource(url);
+                    window.hls.attachMedia(newVideo);
+                    newVideo.play().catch(e => console.log("Play rejected:", e));
+                } else if (newVideo.canPlayType('application/vnd.apple.mpegurl')) {
+                    newVideo.src = url;
+                    newVideo.play().catch(e => console.log("Play rejected:", e));
+                } else {
+                    newVideo.src = url;
+                    newVideo.play().catch(e => console.log("Play rejected:", e));
+                }
+            }
         });
     });
 
@@ -2133,68 +2170,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(initVanillaPlayerUI, 100);
 
-        // Provider dropdown functionality (AJAX — no page reload)
-        const providerDropdown = document.getElementById('providerDropdown');
-        if (providerDropdown) {
-            providerDropdown.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    switchProvider(e.target.value);
-                }
-            });
-        }
-
-        // Stream dropdown functionality
-        const streamDropdown = document.getElementById('streamDropdown');
-        if (streamDropdown) {
-            streamDropdown.addEventListener('change', (e) => {
-                if (!e.target.value) return;
-
-                const [sourceType, sourceUrl] = e.target.value.split('|');
-
-                // --- CRITICAL: tear down ALL old players before switching ---
-                cleanupCurrentPlayer();
-
-                const videoContainer = document.getElementById('videoContainer');
-                const embedPlayer = document.getElementById('embedPlayer');
-                const videoPlayer = document.getElementById('videoPlayer');
-
-                if (sourceType === 'embed') {
-                    if (videoContainer) videoContainer.style.display = 'none';
-                    if (embedPlayer) {
-                        embedPlayer.src = sourceUrl;
-                        embedPlayer.style.display = 'block';
-                    }
-                } else if (sourceType === 'hls' && videoPlayer && videoContainer) {
-                    if (embedPlayer) embedPlayer.style.display = 'none';
-                    videoContainer.style.display = 'block';
-
-                    if (Hls.isSupported() && (sourceUrl.includes('.m3u8') || sourceUrl.includes('/proxy/'))) {
-                        window.hls = new Hls({ debug: false, enableWorker: true });
-                        window.hls.on(Hls.Events.ERROR, (_e, data) => {
-                            console.error('[HLS Error]', data.type, data.details);
-                            if (data.fatal) {
-                                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                                    window.hls.startLoad();
-                                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                                    window.hls.recoverMediaError();
-                                }
-                            }
-                        });
-                        window.hls.loadSource(sourceUrl);
-                        window.hls.attachMedia(videoPlayer);
-                        videoPlayer.play().catch(err => console.log("Play rejected:", err));
-                    } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                        videoPlayer.src = sourceUrl;
-                        videoPlayer.play().catch(err => console.log("Play rejected:", err));
-                    } else {
-                        videoPlayer.src = sourceUrl;
-                        videoPlayer.load();
-                    }
-                }
-
-                e.target.classList.add('active');
-            });
-        }
+        // Provider / Stream pill event handling is done via delegated click in #streamSelector above.
+        // No dropdown listeners needed.
     });
 
     // ── AJAX Source Switching (server / language) — no page reload ──
@@ -2204,8 +2181,59 @@
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
         episodeNumber: {{ episode_number or 1 }},
     language: '{{ lang }}',
-        provider: '{{ selected_server or "" }}'
+        provider: '{{ selected_server or "" }}',
+        providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %},{% endif %}{% endfor %}{% endif %}],
+        failedProviders: new Set(),
+        hlsRetries: 0,
+        embedRetries: 0,
+        _fallbackActive: false
     };
+
+    // ── Auto-Fallback System ────────────────────────────────────────────────
+    // HLS fail → try Embed → Embed fail → try next provider → repeat
+    function tryFallback(failedType) {
+        const state = window._watchState;
+        if (state._fallbackActive) return; // prevent re-entry
+        state._fallbackActive = true;
+
+        console.log('[Fallback] Triggered from:', failedType, '| Provider:', state.provider);
+
+        // 1) If HLS failed, try the Embed pill on the same provider
+        if (failedType === 'hls') {
+            const embedPill = document.querySelector('#sourcePills .stream-pill[data-source-type="embed"]');
+            if (embedPill && !embedPill.classList.contains('active')) {
+                console.log('[Fallback] HLS failed → switching to Embed');
+                state._fallbackActive = false;
+                embedPill.click();
+                return;
+            }
+        }
+
+        // 2) Both types failed on this provider → try next provider
+        state.failedProviders.add(state.provider);
+        const nextProvider = state.providers.find(p => !state.failedProviders.has(p));
+
+        if (nextProvider) {
+            console.log('[Fallback] Switching to provider:', nextProvider);
+            state._fallbackActive = false;
+            state.hlsRetries = 0;
+            state.embedRetries = 0;
+
+            // Update provider pill UI
+            const providerPills = document.querySelectorAll('#providerPills .stream-pill');
+            providerPills.forEach(p => {
+                p.classList.toggle('active', p.dataset.provider === nextProvider);
+            });
+
+            switchProvider(nextProvider);
+        } else {
+            console.warn('[Fallback] All providers exhausted, no more fallbacks available');
+            state._fallbackActive = false;
+            // Reset failed set so user can manually retry
+            state.failedProviders.clear();
+        }
+    }
+    window.tryFallback = tryFallback;
 
     function switchProvider(provider) {
         window._watchState.provider = provider;
@@ -2253,6 +2281,8 @@
             .then(data => {
                 if (data.error) {
                     console.error('[AJAX] Source error:', data.error);
+                    // Source error → fallback to next provider
+                    tryFallback('provider');
                     return;
                 }
 
@@ -2270,40 +2300,46 @@
                     btnDub.style.color = state.language === 'dub' ? 'var(--bg-primary)' : 'var(--text-primary)';
                 }
 
-                // Update provider dropdown selection
-                const providerDD = document.getElementById('providerDropdown');
-                if (providerDD && data.provider) {
-                    for (let opt of providerDD.options) {
-                        if (opt.value === data.provider) {
-                            opt.selected = true;
-                            break;
-                        }
-                    }
-                }
 
-                // ── Update the Stream Quality dropdown with new sources ──
-                const streamDD = document.getElementById('streamDropdown');
-                if (streamDD) {
+                // ── Update the Stream pill buttons with new sources ──
+                const sourcePillsEl = document.getElementById('sourcePills');
+                if (sourcePillsEl) {
                     const embedSrcs = data.embed_sources || [];
                     const hlsSrcs = data.hls_sources || [];
 
-                    // Clear and rebuild
-                    streamDD.innerHTML = '<option value="">Stream Quality</option>';
+                    // Clear and rebuild — only best (first) source per type
+                    sourcePillsEl.innerHTML = '';
 
-                    embedSrcs.forEach((es, i) => {
-                        const opt = document.createElement('option');
-                        opt.value = 'embed|' + (es.url || '');
-                        opt.textContent = es.label || ('Embed ' + (i + 1));
-                        if (data.source_type === 'embed' && i === 0) opt.selected = true;
-                        streamDD.appendChild(opt);
-                    });
+                    if (hlsSrcs.length > 0) {
+                        const hs = hlsSrcs[0];
+                        const btn = document.createElement('button');
+                        btn.className = 'stream-pill' + (data.source_type === 'hls' ? ' active' : '');
+                        btn.dataset.sourceType = 'hls';
+                        btn.dataset.sourceUrl = hs.file || hs.url || '';
+                        btn.innerHTML = 'Miku <span class="pill-badge badge-hls">HLS</span>';
+                        sourcePillsEl.appendChild(btn);
+                    }
 
-                    hlsSrcs.forEach((hs, i) => {
-                        const opt = document.createElement('option');
-                        opt.value = 'hls|' + (hs.file || hs.url || '');
-                        opt.textContent = hs.quality || ('HLS ' + (i + 1));
-                        if (data.source_type === 'hls' && i === 0 && embedSrcs.length === 0) opt.selected = true;
-                        streamDD.appendChild(opt);
+                    if (embedSrcs.length > 0) {
+                        const es = embedSrcs[0];
+                        const btn = document.createElement('button');
+                        btn.className = 'stream-pill' + (data.source_type === 'embed' ? ' active' : '');
+                        btn.dataset.sourceType = 'embed';
+                        btn.dataset.sourceUrl = es.url || '';
+                        btn.innerHTML = 'Zen <span class="pill-badge badge-embed">Embed</span>';
+                        sourcePillsEl.appendChild(btn);
+                    }
+
+                    // Show/hide the source group
+                    const sourceGroup = document.getElementById('sourceGroup');
+                    if (sourceGroup) sourceGroup.style.display = (hlsSrcs.length + embedSrcs.length > 0) ? '' : 'none';
+                }
+
+                // ── Update provider pills active state ──
+                const providerPillsEl = document.getElementById('providerPills');
+                if (providerPillsEl && data.provider) {
+                    providerPillsEl.querySelectorAll('.stream-pill').forEach(p => {
+                        p.classList.toggle('active', p.dataset.provider === data.provider);
                     });
                 }
 
@@ -2400,6 +2436,8 @@
             })
             .catch(err => {
                 console.error('[AJAX] Fetch error:', err);
+                // Network error → fallback to next provider
+                tryFallback('provider');
             });
     }
 </script>
