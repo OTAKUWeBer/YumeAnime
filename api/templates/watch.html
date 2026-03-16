@@ -1188,8 +1188,9 @@
             <div id="watch-navigation" style="margin-top: 15px;">
                 <!-- Small Navigation Buttons -->
                 <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                    <a {% if prev_episode_url %}href="{{ prev_episode_url }}" {% endif %}
+                    <a href="{% if prev_episode_url %}{{ prev_episode_url }}{% else %}javascript:void(0){% endif %}"
                         class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
+                        {% if not prev_episode_url %}onclick="return false;" aria-disabled="true"{% endif %}
                         style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
@@ -1197,9 +1198,9 @@
                         </svg>
                         Prev
                     </a>
-                    <a {% if next_episode_url %}href="{{ next_episode_url }}"
-                        onclick="window._forceEpisodeComplete = true;" {% endif %}
+                    <a href="{% if next_episode_url %}{{ next_episode_url }}{% else %}javascript:void(0){% endif %}"
                         class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
+                        {% if next_episode_url %}onclick="window._forceEpisodeComplete = true;"{% else %}onclick="return false;" aria-disabled="true"{% endif %}
                         style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                         Next
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2156,6 +2157,69 @@
             hlsVideo.addEventListener('loadedmetadata', doHLSResume);
             hlsVideo.addEventListener('canplay', doHLSResume, { once: true });
         }
+
+        // ── Auto-mark episode watched in watchlist at 80% progress ────────────
+        // Works for both HLS video and embed (wall-clock timer).
+        // This runs once per episode page load — `markedWatched` prevents double-fire.
+        (function initWatchlistAutoMark() {
+            const state = window._watchProgressState;
+            if (!state || !state.isLoggedIn) return;
+
+            const animeIdForMark = (window._watchState && window._watchState.animeId)
+                || (window.location.pathname.match(/\/watch\/([^\/]+)\//) || [])[1];
+            const epNumForMark = (window._watchState && window._watchState.episodeNumber)
+                || parseInt((window.location.pathname.match(/\/ep-(\d+)/) || [])[1], 10);
+
+            if (!animeIdForMark || !epNumForMark) return;
+
+            let markedWatched = false;
+
+            function markWatched() {
+                if (markedWatched) return;
+                markedWatched = true;
+                fetch('/api/watchlist/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        anime_id: animeIdForMark,
+                        action: 'episodes',
+                        watched_episodes: epNumForMark
+                    })
+                }).then(r => {
+                    if (r.ok) console.log('[Watchlist] Episode', epNumForMark, 'marked as watched');
+                }).catch(() => {});
+            }
+
+            // HLS / native video: mark at 80% completion
+            const hlsVid = document.getElementById('videoPlayer');
+            if (hlsVid) {
+                hlsVid.addEventListener('timeupdate', function onProgress() {
+                    if (!markedWatched && hlsVid.duration > 0 &&
+                        (hlsVid.currentTime / hlsVid.duration) >= 0.80) {
+                        markWatched();
+                        hlsVid.removeEventListener('timeupdate', onProgress);
+                    }
+                });
+                hlsVid.addEventListener('ended', markWatched);
+            }
+
+            // Embed (iframe): wall-clock based — mark after 18 minutes
+            // (covers ~80% of a typical 24-min episode).
+            // This is already tracked by elapsedSecs in the outer IIFE;
+            // we hook in by polling the shared elapsed counter.
+            const embedFrame = document.getElementById('embedPlayer');
+            if (embedFrame && !hlsVid) {
+                // 18 minutes = 1080 seconds is a reasonable "mostly watched" threshold
+                const EMBED_MARK_AFTER_SECS = 1080;
+                const embedMarkTimer = setInterval(() => {
+                    // elapsedSecs is defined in the outer IIFE scope
+                    if (typeof elapsedSecs !== 'undefined' && elapsedSecs >= EMBED_MARK_AFTER_SECS) {
+                        clearInterval(embedMarkTimer);
+                        markWatched();
+                    }
+                }, 10000); // check every 10 seconds
+            }
+        })();
 
         // ── Embed (iframe) player ──────────────────────────────────────────────
         const embedFrame = document.getElementById('embedPlayer');
