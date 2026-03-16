@@ -37,12 +37,26 @@ def _get_preferred_provider():
     return request.cookies.get("preferred_server") or session.get("last_used_server", None)
 
 
+def _parse_ep_number(num):
+    """
+    Safely parse an episode number to float for robust comparison.
+    Handles int, float, "1", "1.0", "1.5", etc.
+    """
+    try:
+        return float(str(num).strip())
+    except (ValueError, TypeError, AttributeError):
+        return -1.0
+
+
 def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
     """
     Given episodes data and a target episode number, resolve the full internal
     episode ID and provider info.
 
-    Returns dict with: episode_item, episode_id, provider_name, or None.
+    Returns dict with: episode_item, episode_id, provider_name, eps_list (sorted), or None.
+
+    FIX: Episodes are always sorted ascending by number so that prev/next
+    computation is correct regardless of how the scraper returns them.
     """
     eps_list = episodes_data.get("episodes", []) if episodes_data else []
     providers_map = episodes_data.get("providers_map", {}) if episodes_data else {}
@@ -51,11 +65,24 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
     if not eps_list:
         return None
 
-    # Find the episode item by number
+    # ── CRITICAL FIX: always sort episodes ascending by number ──────────────
+    # Scrapers may return episodes newest-first (descending). If we don't sort,
+    # eps_list[idx-1] gives the NEXT episode (higher number), not the previous.
+    try:
+        sorted_eps = sorted(
+            eps_list,
+            key=lambda e: _parse_ep_number(e.get("number", 0))
+        )
+    except Exception:
+        sorted_eps = list(eps_list)
+
+    # ── Compare episode numbers as floats to handle "1" vs "1.0" mismatches ─
+    ep_num_float = _parse_ep_number(ep_number)
+
     target_item = None
     target_idx = None
-    for i, ep in enumerate(eps_list):
-        if str(ep.get("number", "")) == str(ep_number):
+    for i, ep in enumerate(sorted_eps):
+        if _parse_ep_number(ep.get("number")) == ep_num_float:
             target_item = ep
             target_idx = i
             break
@@ -75,7 +102,7 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
         "episode_idx": target_idx,
         "episode_id": target_item.get("episodeId", ""),
         "provider_name": provider_name,
-        "eps_list": eps_list,
+        "eps_list": sorted_eps,   # ← always the sorted list
     }
 
 
@@ -88,8 +115,9 @@ def _find_episode_id_for_provider(providers_map, provider_name, ep_number, categ
     episodes_data = provider_data.get("episodes", {})
     cat_episodes = episodes_data.get(category, [])
 
+    ep_num_float = _parse_ep_number(ep_number)
     for ep in cat_episodes:
-        if str(ep.get("number", "")) == str(ep_number):
+        if _parse_ep_number(ep.get("number")) == ep_num_float:
             return ep.get("id", "")
 
     return None
@@ -297,18 +325,18 @@ def watch(anime_id, ep_number):
     except Exception:
         all_episodes = None
 
-    eps_list = all_episodes.get("episodes", []) if all_episodes else []
     providers_map = all_episodes.get("providers_map", {}) if all_episodes else {}
     default_provider = all_episodes.get("default_provider", "kiwi") if all_episodes else "kiwi"
 
-    if not eps_list:
-        return render_template(
-            "404.html", error_message="No episodes found for this anime."
-        ), 404
-
-    # ── Resolve episode ──
+    # ── Resolve episode (returns sorted eps_list) ──
     resolved = _resolve_episode(all_episodes, ep_number, preferred_provider)
     if not resolved:
+        # eps_list empty also hits here
+        raw_eps = (all_episodes or {}).get("episodes", [])
+        if not raw_eps:
+            return render_template(
+                "404.html", error_message="No episodes found for this anime."
+            ), 404
         return render_template(
             "404.html", error_message=f"Episode {ep_number} not found."
         ), 404
@@ -318,6 +346,9 @@ def watch(anime_id, ep_number):
     episode_id = resolved["episode_id"]
     provider_name = resolved["provider_name"]
 
+    # ── IMPORTANT: use the sorted list for prev/next computation ────────────
+    eps_list = resolved["eps_list"]
+
     # Find the episode ID for the chosen provider specifically
     provider_ep_id = _find_episode_id_for_provider(
         providers_map, provider_name, ep_number, lang
@@ -326,26 +357,22 @@ def watch(anime_id, ep_number):
         episode_id = provider_ep_id
 
     # If provider episode ID format is watch/..., use it directly
-    # Otherwise construct the full slug
     if episode_id.startswith("watch/"):
-        # Replace category in the ID to match the currently selected language
         parts = episode_id.split("/")
         if len(parts) >= 5:
-            parts[3] = lang  # Set category to sub/dub
+            parts[3] = lang
         full_slug = "/".join(parts)
     else:
         full_slug = episode_id
 
-    # ── Check dub availability locally since we already fetched episodes ──
+    # ── Check dub availability ──
     dub_available = False
     try:
         if isinstance(all_episodes, dict):
-            # Miruro unified returns total_dub_episodes and total_sub_episodes
             dub_ep_count = all_episodes.get("total_dub_episodes") or all_episodes.get("totalDubEpisodes") or 0
             if dub_ep_count > 0:
                 dub_available = True
             elif all_episodes.get("episodes") and len(all_episodes["episodes"]) > 0:
-                # Direct check across all providers just in case
                 for pv_data in providers_map.values():
                     if isinstance(pv_data, dict) and "episodes" in pv_data and isinstance(pv_data["episodes"], dict):
                         if pv_data["episodes"].get("dub"):
@@ -400,22 +427,20 @@ def watch(anime_id, ep_number):
         anime = anime_info["info"]
     else:
         anime = anime_info or {}
-        
+
     actual_title = anime.get("name") or anime.get("title")
     if not actual_title:
         actual_title = anime_id_clean.replace('-', ' ').title()
-        
-    # ── Fetch server progress if logged in (Disabled per user request, using local storage instead) ──
+
+    # ── Fetch server progress if logged in ──
     server_progress_dict = {}
     is_logged_in = False
     if "username" in session and "_id" in session:
         is_logged_in = True
 
     # ── Fetch next episode schedule ──
-    # Miruro Native API includes this natively inside get_anime_info response
     next_episode_schedule = anime.get("nextAiringEpisode")
 
-    # Fallback schedule from AniList if not provided by Miruro
     needs_fallback = False
     if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
         needs_fallback = True
@@ -459,7 +484,8 @@ def watch(anime_id, ep_number):
                     f"Failed to fetch fallback schedule from AniList in watch: {e}"
                 )
 
-    # ── Build prev/next episode info ──
+    # ── Build prev/next episode info ──────────────────────────────────────────
+    # eps_list is already sorted ascending here so index math is always correct.
     episode_number = current_item.get("number")
     episode_title = current_item.get("title")
     Episode = str(episode_number) if episode_number else "Special"
@@ -575,7 +601,7 @@ def get_watch_sources():
     if provider_name not in providers_map:
         provider_name = default_provider
 
-    # Find episode ID for this provider
+    # Find episode ID for this provider (uses float comparison now)
     episode_id = _find_episode_id_for_provider(
         providers_map, provider_name, ep_number, lang
     )
@@ -598,10 +624,10 @@ def get_watch_sources():
     else:
         full_slug = episode_id
 
-    # Determine server (provider IS the server in Miruro's model)
+    # Determine server
     selected_server = provider_name
 
-    # Fetch available servers for this episode slug
+    # Fetch available servers
     available_servers = []
     try:
         servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
@@ -617,7 +643,6 @@ def get_watch_sources():
     if selected_server:
         session["last_used_server"] = selected_server
 
-    # Build response — include everything the frontend needs to update its UI
     response_data = {
         "video_link": video_data["video_link"],
         "subtitles": video_data["subtitle_tracks"],
@@ -634,7 +659,6 @@ def get_watch_sources():
     }
 
     resp = make_response(jsonify(response_data))
-    # Save preferences in cookies too
     resp.set_cookie("preferred_language", lang, max_age=365*24*60*60, samesite="Lax")
     resp.set_cookie("preferred_server", provider_name, max_age=365*24*60*60, samesite="Lax")
 
