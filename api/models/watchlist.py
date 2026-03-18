@@ -422,7 +422,7 @@ def get_watchlist_stats(user_id: int) -> Dict[str, Any]:
             "plan_to_watch": 0,
             "total_anime": 0,
             "total": 0,
-            "watched_episodes": 0
+            "watched_episodes": 0,
         }
 
 def get_watchlist_summary(user_id: int) -> Dict[str, Any]:
