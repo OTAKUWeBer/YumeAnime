@@ -635,3 +635,56 @@ def get_watchlist_route():
             })
 
     return jsonify({'watchlist': entries})
+
+
+@watchlist_api_bp.route('/entry', methods=['GET'])
+def get_watchlist_entry():
+    """Fetch full entry details for a specific anime from AniList."""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    access_token = _get_access_token()
+    if not access_token:
+        return jsonify({'error': 'AniList not connected'}), 400
+
+    anime_id = request.args.get('anime_id')
+    if not anime_id:
+        return jsonify({'error': 'Missing anime ID'}), 400
+
+    viewer_id = _fetch_viewer_id(access_token)
+    if not viewer_id:
+        return jsonify({'error': 'Could not verify AniList identity'}), 400
+
+    query = """
+    query ($userId: Int, $mediaId: Int) {
+      MediaList(userId: $userId, mediaId: $mediaId) {
+        id
+        status
+        progress
+        score(format: POINT_10_DECIMAL)
+        repeat
+        notes
+        startedAt { year month day }
+        completedAt { year month day }
+      }
+    }
+    """
+    data = _anilist_request(access_token, query, {'userId': viewer_id, 'mediaId': int(anime_id)})
+    if not data:
+        return jsonify({'error': 'Not found or API error'}), 404
+
+    entry = data.get('data', {}).get('MediaList')
+    if not entry:
+        return jsonify({'error': 'Entry not found'}), 404
+
+    return jsonify({
+        'entry': {
+            'status': STATUS_MAP_TO_LOCAL.get(entry.get('status'), entry.get('status', 'CURRENT')),
+            'watched_episodes': entry.get('progress', 0),
+            'score': entry.get('score', 0),
+            'repeat': entry.get('repeat', 0),
+            'notes': entry.get('notes', ''),
+            'startedAt': entry.get('startedAt'),
+            'completedAt': entry.get('completedAt')
+        }
+    })
