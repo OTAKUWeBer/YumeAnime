@@ -1860,6 +1860,12 @@
         });
     })();
 
+    // ── URL is the single source of truth for episode number ──────────────────
+    // Extract IMMEDIATELY so _watchState, prev/next buttons, and sidebar
+    // all use the correct value even when the backend passes a wrong episode_number.
+    var _urlEpMatch = window.location.pathname.match(/\/ep-(\d+(?:\.\d+)?)/i);
+    var _urlEpNum = _urlEpMatch ? parseFloat(_urlEpMatch[1]) : null;
+
     // --- CRITICAL AUDIO CODEC FIX ---
     if (window.MediaSource && MediaSource.prototype?.addSourceBuffer) {
         try {
@@ -2684,8 +2690,117 @@
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(initVanillaPlayerUI, 100);
 
-        // Provider / Stream pill event handling is done via delegated click in #streamSelector above.
-        // No dropdown listeners needed.
+        // ── Validate & repair Prev/Next nav URLs using URL-derived episode number ──
+        // Fixes the case where the backend sends wrong prev_episode_url (e.g. same
+        // as current URL, or pointing to ep-N instead of ep-(N-1)).
+        (function repairEpisodeNavButtons() {
+            const epNum = _urlEpNum;
+            if (!epNum) return;
+
+            const animeId = window._watchState.animeId;
+            if (!animeId) return;
+
+            const currentPath = window.location.pathname;
+
+            // ── Helper: rebuild a clean /watch/<id>/ep-<n> URL ──
+            function buildEpUrl(n) {
+                return '/watch/' + animeId + '/ep-' + n;
+            }
+
+            // ── Fix all Prev links ──
+            // A "prev" link is broken if it points to the current URL or to an
+            // episode number >= current episode.
+            document.querySelectorAll('a').forEach(function (a) {
+                if (!a.href) return;
+                var m = a.href.match(/\/ep-(\d+(?:\.\d+)?)/);
+                if (!m) return;
+                var linkEp = parseFloat(m[1]);
+                var isPrevLink = (
+                    a.textContent.trim().startsWith('Prev') ||
+                    a.closest('#watch-navigation') && linkEp < epNum
+                );
+                var isNextLink = (
+                    a.textContent.trim().startsWith('Next') ||
+                    a.closest('#watch-navigation') && linkEp > epNum
+                );
+
+                // Detect broken prev: points to current page or wrong episode
+                if (a.textContent.trim().startsWith('Prev') ||
+                    (a.closest('#watch-navigation') && a.textContent.trim().includes('Prev'))) {
+                    var expectedPrev = epNum - 1;
+                    if (expectedPrev >= 1 && (linkEp >= epNum || a.href.includes(currentPath.split('?')[0]))) {
+                        console.warn('[NavFix] Prev button was pointing to ep-' + linkEp + ', corrected to ep-' + expectedPrev);
+                        a.href = buildEpUrl(expectedPrev);
+                        a.classList.remove('btn-ghost');
+                        a.classList.add('btn-primary');
+                        a.removeAttribute('aria-disabled');
+                        a.style.opacity = '';
+                        a.style.cursor = '';
+                        a.onclick = null;
+                    }
+                }
+
+                // Detect broken next: points to current page or wrong episode
+                if (a.textContent.trim().startsWith('Next') ||
+                    (a.closest('#watch-navigation') && a.textContent.trim().includes('Next'))) {
+                    if (linkEp <= epNum || a.href.includes(currentPath.split('?')[0])) {
+                        var expectedNext = epNum + 1;
+                        console.warn('[NavFix] Next button was pointing to ep-' + linkEp + ', corrected to ep-' + expectedNext);
+                        a.href = buildEpUrl(expectedNext);
+                        a.classList.remove('btn-ghost');
+                        a.classList.add('btn-primary');
+                        a.removeAttribute('aria-disabled');
+                        a.style.opacity = '';
+                        a.style.cursor = '';
+                        // Clear the "force complete" onclick, re-set it cleanly
+                        a.onclick = function () { window._forceEpisodeComplete = true; };
+                    }
+                }
+            });
+
+            // ── Fix the in-player Prev/Next buttons too ──
+            var prevEpBtn = document.getElementById('prevEpBtn');
+            var nextEpBtn = document.getElementById('nextEpBtn');
+
+            if (prevEpBtn) {
+                var prevExpected = epNum - 1;
+                if (prevExpected >= 1) {
+                    prevEpBtn.disabled = false;
+                    prevEpBtn.style.opacity = '';
+                    prevEpBtn.style.cursor = '';
+                    prevEpBtn.onclick = function () {
+                        window.location.href = buildEpUrl(prevExpected);
+                    };
+                }
+            }
+
+            if (nextEpBtn) {
+                var nextExpected = epNum + 1;
+                // Only enable if the sidebar has an episode with that number
+                var nextExists = !!document.querySelector(
+                    '.episode-sidebar-item[data-number="' + nextExpected + '"]'
+                );
+                if (nextExists) {
+                    nextEpBtn.disabled = false;
+                    nextEpBtn.style.opacity = '';
+                    nextEpBtn.style.cursor = '';
+                    nextEpBtn.onclick = function () {
+                        window._forceEpisodeComplete = true;
+                        window.location.href = buildEpUrl(nextExpected);
+                    };
+                }
+            }
+
+            // ── Fix sidebar current highlight ──
+            var list = document.getElementById('episodeList');
+            if (list) {
+                list.querySelectorAll('.episode-sidebar-item').forEach(function (item) {
+                    item.classList.toggle('current', parseFloat(item.dataset.number) === epNum);
+                });
+                var current = list.querySelector('.episode-sidebar-item.current');
+                if (current) current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        })();
     });
 
     // ── AJAX Source Switching (server / language) — no page reload ──
@@ -2693,7 +2808,7 @@
     // Current state tracked in JS
     window._watchState = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
-        episodeNumber: {{ episode_number or 1 }},
+        episodeNumber: _urlEpNum || {{ episode_number or 1 }},
     language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
             providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %} '{{ p }}'{% if not loop.last %}, {% endif %} {% endfor %} {% endif %}],

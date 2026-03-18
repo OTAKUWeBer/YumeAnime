@@ -53,10 +53,10 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
     Given episodes data and a target episode number, resolve the full internal
     episode ID and provider info.
 
-    Returns dict with: episode_item, episode_id, provider_name, eps_list (sorted), or None.
-
-    FIX: Episodes are always sorted ascending by number so that prev/next
-    computation is correct regardless of how the scraper returns them.
+    FIX 1: Always sort ascending.
+    FIX 2: If exact float match fails, fall back to positional lookup
+            (handles scrapers that use 0-based numbering, e.g. Miruro ep
+            number=1 actually means display episode 2).
     """
     eps_list = episodes_data.get("episodes", []) if episodes_data else []
     providers_map = episodes_data.get("providers_map", {}) if episodes_data else {}
@@ -65,9 +65,6 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
     if not eps_list:
         return None
 
-    # ── CRITICAL FIX: always sort episodes ascending by number ──────────────
-    # Scrapers may return episodes newest-first (descending). If we don't sort,
-    # eps_list[idx-1] gives the NEXT episode (higher number), not the previous.
     try:
         sorted_eps = sorted(
             eps_list,
@@ -76,9 +73,9 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
     except Exception:
         sorted_eps = list(eps_list)
 
-    # ── Compare episode numbers as floats to handle "1" vs "1.0" mismatches ─
     ep_num_float = _parse_ep_number(ep_number)
 
+    # ── Pass 1: exact float match ──────────────────────────────────────────
     target_item = None
     target_idx = None
     for i, ep in enumerate(sorted_eps):
@@ -87,13 +84,26 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
             target_idx = i
             break
 
+    # ── Pass 2: positional fallback for 0-based scrapers ──────────────────
+    # If Miruro numbers episodes 0, 1, 2, 3… but the URL uses 1, 2, 3, 4…
+    # then ep_number=2 won't find number=2 (which is ep 3).
+    # Instead use ep_number as a 1-based position: index = ep_number - 1.
+    if target_item is None:
+        positional_idx = int(ep_num_float) - 1
+        if 0 <= positional_idx < len(sorted_eps):
+            target_item = sorted_eps[positional_idx]
+            target_idx = positional_idx
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[Watch] Exact ep match failed for {ep_number}, "
+                f"using positional fallback → idx {positional_idx}, "
+                f"ep.number={target_item.get('number')}"
+            )
+
     if target_item is None:
         return None
 
-    # Try to find the episode ID from the preferred provider
     provider_name = preferred_provider or default_provider
-
-    # If the preferred provider doesn't exist, fall back to default
     if provider_name not in providers_map:
         provider_name = default_provider
 
@@ -102,7 +112,7 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
         "episode_idx": target_idx,
         "episode_id": target_item.get("episodeId", ""),
         "provider_name": provider_name,
-        "eps_list": sorted_eps,   # ← always the sorted list
+        "eps_list": sorted_eps,
     }
 
 
@@ -315,13 +325,12 @@ def watch(anime_id, ep_number):
         current_app.logger.error(f"[Watch] Error getting anime info: {e}")
 
     # ── Fetch episodes list ──
+    # Prefer anime_id_clean (what's in the URL) so episode URLs stay consistent.
+    # Only use anilist_id if anime_id_clean is NOT numeric (i.e. it's a real slug),
+    # because Miruro only accepts numeric AniList IDs.
     try:
-        if anilist_id:
-            all_episodes = asyncio.run(
-                current_app.ha_scraper.episodes(str(anilist_id))
-            )
-        else:
-            all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean))
+        fetch_id = anime_id_clean if anime_id_clean.isdigit() else (str(anilist_id) if anilist_id else anime_id_clean)
+        all_episodes = asyncio.run(current_app.ha_scraper.episodes(fetch_id))
     except Exception:
         all_episodes = None
 
@@ -485,23 +494,51 @@ def watch(anime_id, ep_number):
                 )
 
     # ── Build prev/next episode info ──────────────────────────────────────────
-    # eps_list is already sorted ascending here so index math is always correct.
-    episode_number = current_item.get("number")
+    # CRITICAL: episode_number/Episode MUST reflect the URL ep_number,
+    # not current_item.get("number"), because Miruro's internal numbering
+    # can differ from the 1-based display numbering used in URLs.
+    # The URL is the single source of truth for what the user is watching.
     episode_title = current_item.get("title")
-    Episode = str(episode_number) if episode_number else "Special"
+    episode_number = ep_number          # ← always use URL value
+    Episode = str(ep_number)            # ← always use URL value
 
     prev_episode_url = next_episode_url = None
     prev_episode_number = next_episode_number = None
 
     if current_idx > 0:
         prev_ep = eps_list[current_idx - 1]
-        prev_episode_number = prev_ep.get("number")
-        prev_episode_url = _build_clean_url(anime_id_clean, prev_episode_number)
+        raw_prev_num = prev_ep.get("number")
+        # Derive prev display number: if scraper uses 0-based, compute from URL position
+        if _parse_ep_number(raw_prev_num) < _parse_ep_number(ep_number):
+            # Scraper number is already less — use it directly
+            prev_episode_number = raw_prev_num
+        else:
+            # Scraper number is >= current (0-based mismatch) — derive from URL
+            prev_episode_number = ep_number - 1
+            current_app.logger.warning(
+                f"[Watch] prev ep raw number {raw_prev_num} >= current {ep_number}, "
+                f"using derived prev={prev_episode_number}"
+            )
+        # Final guard: never link to same or higher episode
+        if prev_episode_number is not None and _parse_ep_number(prev_episode_number) < _parse_ep_number(ep_number):
+            prev_episode_url = _build_clean_url(anime_id_clean, prev_episode_number)
 
     if current_idx < len(eps_list) - 1:
         next_ep = eps_list[current_idx + 1]
-        next_episode_number = next_ep.get("number")
-        next_episode_url = _build_clean_url(anime_id_clean, next_episode_number)
+        raw_next_num = next_ep.get("number")
+        if _parse_ep_number(raw_next_num) > _parse_ep_number(ep_number):
+            next_episode_number = raw_next_num
+        else:
+            next_episode_number = ep_number + 1
+            current_app.logger.warning(
+                f"[Watch] next ep raw number {raw_next_num} <= current {ep_number}, "
+                f"using derived next={next_episode_number}"
+            )
+        # Final guard: only link to ep with higher number and that actually exists in list
+        max_ep_num = _parse_ep_number(eps_list[-1].get("number", 0))
+        if (_parse_ep_number(next_episode_number) > _parse_ep_number(ep_number)
+                and _parse_ep_number(next_episode_number) <= max_ep_num + 1):
+            next_episode_url = _build_clean_url(anime_id_clean, next_episode_number)
 
     # ── Render ──
     try:
