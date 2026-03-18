@@ -940,10 +940,12 @@
         .stream-selector {
             gap: 10px;
         }
+
         .stream-pill {
             padding: 5px 10px;
             font-size: 0.75rem;
         }
+
         .stream-pill .pill-badge {
             font-size: 0.6rem;
             padding: 1px 5px;
@@ -1189,8 +1191,8 @@
                 <!-- Small Navigation Buttons -->
                 <div style="display: flex; gap: 8px; margin-bottom: 15px;">
                     <a href="{% if prev_episode_url %}{{ prev_episode_url }}{% else %}javascript:void(0){% endif %}"
-                        class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
-                        {% if not prev_episode_url %}onclick="return false;" aria-disabled="true"{% endif %}
+                        class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
+                        not prev_episode_url %}onclick="return false;" aria-disabled="true" {% endif %}
                         style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
@@ -1199,8 +1201,9 @@
                         Prev
                     </a>
                     <a href="{% if next_episode_url %}{{ next_episode_url }}{% else %}javascript:void(0){% endif %}"
-                        class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}"
-                        {% if next_episode_url %}onclick="window._forceEpisodeComplete = true;"{% else %}onclick="return false;" aria-disabled="true"{% endif %}
+                        class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
+                        next_episode_url %}onclick="window._forceEpisodeComplete = true;" {% else
+                        %}onclick="return false;" aria-disabled="true" {% endif %}
                         style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                         Next
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1228,8 +1231,10 @@
                                 <span class="stream-selector-label">Server</span>
                                 <div class="stream-selector-pills" id="providerPills">
                                     {% for p_name, p_data in episodes.providers_map.items() %}
-                                    {% set is_active = (p_name == selected_server) or (p_name == episodes.default_provider and not selected_server) %}
-                                    <button class="stream-pill {% if is_active %}active{% endif %}" data-provider="{{ p_name }}">
+                                    {% set is_active = (p_name == selected_server) or (p_name ==
+                                    episodes.default_provider and not selected_server) %}
+                                    <button class="stream-pill {% if is_active %}active{% endif %}"
+                                        data-provider="{{ p_name }}">
                                         {{ p_name | title }}
                                     </button>
                                     {% endfor %}
@@ -1237,13 +1242,15 @@
                             </div>
                             {% endif %}
 
-                            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length > 0) %}
+                            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length >
+                            0) %}
                             <div class="stream-selector-group" id="sourceGroup">
                                 <span class="stream-selector-label">Stream</span>
                                 <div class="stream-selector-pills" id="sourcePills">
                                     {% if hls_sources and hls_sources|length > 0 %}
                                     <button class="stream-pill {% if source_type == 'hls' %}active{% endif %}"
-                                        data-source-type="hls" data-source-url="{{ hls_sources[0].file or hls_sources[0].url }}">
+                                        data-source-type="hls"
+                                        data-source-url="{{ hls_sources[0].file or hls_sources[0].url }}">
                                         Miku
                                         <span class="pill-badge badge-hls">HLS</span>
                                     </button>
@@ -1393,7 +1400,7 @@
                 <div class="episode-sidebar-list" id="episodeList" data-view="grid">
                     {% if episodes and episodes.episodes %}
                     {% for ep in episodes.episodes %}
-                    {% set is_current = (ep.number|string == episode_number|string) %}
+                    {% set is_current = (ep.number|string == episode_number|string) or (ep.number|int == Episode|int) %}
                     <a href="/watch/{{ anime_id or eps_title.split('?')[0] }}/ep-{{ ep.number }}"
                         class="episode-sidebar-item {% if is_current %}current{% endif %}"
                         data-number="{{ ep.number }}">
@@ -1410,7 +1417,7 @@
             </div>
         </div>
     </div>
-    </div>
+</div>
 </div>
 
 <!-- ========================================== -->
@@ -1426,52 +1433,52 @@
         color: var(--text-primary);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
-    
+
     .anime-details-grid {
         display: grid;
         grid-template-columns: 200px 1fr;
         gap: 25px;
     }
-    
+
     @media (max-width: 768px) {
         .anime-details-grid {
             grid-template-columns: 1fr;
         }
     }
-    
+
     .anime-poster {
         width: 100%;
         border-radius: var(--radius-md);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         background: var(--bg-elevated);
         object-fit: cover;
         aspect-ratio: 2/3;
     }
-    
+
     .anime-title-block {
         margin-bottom: 15px;
     }
-    
+
     .anime-title-main {
         font-size: 1.8rem;
         font-weight: 800;
         margin: 0 0 5px 0;
         line-height: 1.2;
     }
-    
+
     .anime-title-sub {
         font-size: 1rem;
         color: var(--text-secondary);
         margin: 0;
     }
-    
+
     .anime-synopsis {
         font-size: 1rem;
         line-height: 1.6;
         color: var(--text-secondary);
         margin-bottom: 25px;
     }
-    
+
     .anime-meta-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1481,12 +1488,12 @@
         padding: 15px;
         border-radius: var(--radius-md);
     }
-    
+
     .meta-item {
         display: flex;
         flex-direction: column;
     }
-    
+
     .meta-label {
         font-size: 0.75rem;
         text-transform: uppercase;
@@ -1494,19 +1501,19 @@
         color: var(--text-muted);
         margin-bottom: 2px;
     }
-    
+
     .meta-value {
         font-size: 0.95rem;
         font-weight: 600;
     }
-    
+
     .tag-list {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 25px;
     }
-    
+
     .tag-pill {
         background: rgba(var(--accent-rgb, 128, 90, 213), 0.15);
         color: var(--accent);
@@ -1515,7 +1522,7 @@
         font-size: 0.8rem;
         font-weight: 600;
     }
-    
+
     .section-heading {
         font-size: 1.2rem;
         font-weight: 700;
@@ -1532,6 +1539,7 @@
         gap: 15px;
         margin-bottom: 30px;
     }
+
     .relation-card {
         position: relative;
         display: block;
@@ -1539,28 +1547,32 @@
         overflow: hidden;
         aspect-ratio: 2/3;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
+
     .relation-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
     }
+
     .relation-card img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         transition: transform 0.4s ease;
     }
+
     .relation-card:hover img {
         transform: scale(1.05);
     }
+
     .relation-type {
         position: absolute;
         top: 6px;
         right: 6px;
-        background: rgba(0,0,0,0.7);
+        background: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(4px);
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         color: white;
         font-size: 0.65rem;
         font-weight: 700;
@@ -1568,6 +1580,7 @@
         border-radius: 4px;
         z-index: 5;
     }
+
     .relation-title-wrap {
         position: absolute;
         bottom: 0;
@@ -1581,6 +1594,7 @@
         align-items: flex-end;
         justify-content: center;
     }
+
     .relation-title {
         font-size: 0.85rem;
         line-height: 1.3;
@@ -1589,9 +1603,9 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
     }
-    
+
     /* Characters Horizontal Scroll */
     .character-scroll {
         display: flex;
@@ -1601,17 +1615,21 @@
         scrollbar-width: thin;
         scrollbar-color: var(--accent) var(--bg-elevated);
     }
+
     .character-scroll::-webkit-scrollbar {
         height: 6px;
     }
+
     .character-scroll::-webkit-scrollbar-thumb {
         background: var(--accent);
         border-radius: 6px;
     }
+
     .character-scroll::-webkit-scrollbar-track {
         background: var(--bg-elevated);
         border-radius: 6px;
     }
+
     .character-card {
         min-width: 100px;
         max-width: 100px;
@@ -1619,6 +1637,7 @@
         flex-direction: column;
         gap: 5px;
     }
+
     .character-img {
         width: 100px;
         height: 140px;
@@ -1626,6 +1645,7 @@
         border-radius: var(--radius-sm);
         background: var(--bg-elevated);
     }
+
     .character-name {
         font-size: 0.8rem;
         text-align: center;
@@ -1635,6 +1655,7 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
+
     .character-role {
         font-size: 0.7rem;
         text-align: center;
@@ -1645,30 +1666,39 @@
 <div class="container" style="max-width: 1400px; padding: 0 15px;">
     <div class="anime-details-section">
         <div class="anime-details-grid">
-            
+
             <!-- Left Column: Poster & Quick Meta -->
             <div class="anime-side">
                 <img src="{{ anime.get('coverImage') or anime.get('poster') }}" alt="Poster" class="anime-poster">
-                
-                <div class="anime-meta-grid" style="margin-top: 15px; padding: 12px; grid-template-columns: 1fr 1fr; gap: 10px;">
+
+                <div class="anime-meta-grid"
+                    style="margin-top: 15px; padding: 12px; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="meta-item">
                         <span class="meta-label">Score</span>
                         <span class="meta-value" style="color: #fbbf24; font-weight: bold;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align: text-top;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"
+                                style="vertical-align: text-top;">
+                                <polygon
+                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                                </polygon>
+                            </svg>
                             {{ anime.stats.rating if anime.stats and anime.stats.rating else 'N/A' }}
                         </span>
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">Format</span>
-                        <span class="meta-value">{{ anime.stats.type if anime.stats and anime.stats.type else 'TV' }}</span>
+                        <span class="meta-value">{{ anime.stats.type if anime.stats and anime.stats.type else 'TV'
+                            }}</span>
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">Status</span>
-                        <span class="meta-value">{{ anime.status | default('Unknown') | replace('_', ' ') | title }}</span>
+                        <span class="meta-value">{{ anime.status | default('Unknown') | replace('_', ' ') | title
+                            }}</span>
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">Duration</span>
-                        <span class="meta-value">{{ anime.stats.duration if anime.stats and anime.stats.duration else 'N/A' }}</span>
+                        <span class="meta-value">{{ anime.stats.duration if anime.stats and anime.stats.duration else
+                            'N/A' }}</span>
                     </div>
                 </div>
             </div>
@@ -1697,7 +1727,8 @@
 
                 <!-- Synopsis with basic clean up -->
                 <div class="anime-synopsis">
-                    {{ (anime.get('description') or anime.get('synopsis') or 'No description available for this anime.') | striptags }}
+                    {{ (anime.get('description') or anime.get('synopsis') or 'No description available for this anime.')
+                    | striptags }}
                 </div>
 
                 <!-- Relations Section -->
@@ -1705,17 +1736,17 @@
                 {% set seen_season_ids = [] %}
 
                 {% for p in anime.prequels %}
-                    {% if (p.id|string) not in seen_season_ids %}
-                        {% set _ = all_seasons.append(p) %}
-                        {% set _ = seen_season_ids.append(p.id|string) %}
-                    {% endif %}
+                {% if (p.id|string) not in seen_season_ids %}
+                {% set _ = all_seasons.append(p) %}
+                {% set _ = seen_season_ids.append(p.id|string) %}
+                {% endif %}
                 {% endfor %}
 
                 {% for s in anime.sequels %}
-                    {% if (s.id|string) not in seen_season_ids %}
-                        {% set _ = all_seasons.append(s) %}
-                        {% set _ = seen_season_ids.append(s.id|string) %}
-                    {% endif %}
+                {% if (s.id|string) not in seen_season_ids %}
+                {% set _ = all_seasons.append(s) %}
+                {% set _ = seen_season_ids.append(s.id|string) %}
+                {% endif %}
                 {% endfor %}
 
                 {% if all_seasons|length > 0 %}
@@ -1724,7 +1755,8 @@
                     {% for rel in all_seasons %}
                     <a href="/anime/{{ rel.id }}" class="relation-card" title="{{ rel.name or rel.title }}">
                         <span class="relation-type">{{ (rel.relation or "Related") | upper }}</span>
-                        <img src="{{ rel.image or rel.poster or 'https://via.placeholder.com/200x300?text=No+Image' }}" alt="{{ rel.name or rel.title }}" loading="lazy">
+                        <img src="{{ rel.image or rel.poster or 'https://via.placeholder.com/200x300?text=No+Image' }}"
+                            alt="{{ rel.name or rel.title }}" loading="lazy">
                         <div class="relation-title-wrap">
                             <span class="relation-title">{{ rel.name or rel.title }}</span>
                         </div>
@@ -1739,21 +1771,22 @@
                 <div class="section-heading">Characters</div>
                 <div class="character-scroll">
                     {% for char_data in characters %}
-                        {% if loop.index <= 20 %} {# Limit to first 20 characters mostly #}
-                        <div class="character-card">
-                            <img src="{{ char_data.character.poster or char_data.character.image }}" alt="{{ char_data.character.name }}" class="character-img" loading="lazy">
-                            <span class="character-name" title="{{ char_data.character.name }}">{{ char_data.character.name }}</span>
-                            <span class="character-role">{{ char_data.character.cast or 'Main' }}</span>
-                        </div>
-                        {% endif %}
-                    {% endfor %}
+                    {% if loop.index <= 20 %} {# Limit to first 20 characters mostly #} <div class="character-card">
+                        <img src="{{ char_data.character.poster or char_data.character.image }}"
+                            alt="{{ char_data.character.name }}" class="character-img" loading="lazy">
+                        <span class="character-name" title="{{ char_data.character.name }}">{{ char_data.character.name
+                            }}</span>
+                        <span class="character-role">{{ char_data.character.cast or 'Main' }}</span>
                 </div>
                 {% endif %}
-                
+                {% endfor %}
             </div>
-            
+            {% endif %}
+
         </div>
+
     </div>
+</div>
 </div>
 {% endif %}
 
@@ -1763,6 +1796,70 @@
 <!-- Simple Clean Player Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
+    // ── URL-based episode number correction (fixes stale state bugs) ──────────
+    (function fixEpisodeNumberFromURL() {
+        const match = window.location.pathname.match(/\/ep-(\d+(?:\.\d+)?)/i);
+        if (!match) return;
+        const urlEpNum = parseFloat(match[1]);
+
+        // Patch _watchState once it's defined (runs after inline init below)
+        window._pendingEpNumFix = urlEpNum;
+
+        // Fix sidebar: remove any wrong 'current' marks, set correct one
+        document.addEventListener('DOMContentLoaded', function () {
+            const epNum = window._pendingEpNumFix;
+            if (epNum == null) return;
+
+            // Sync _watchState
+            if (window._watchState) {
+                window._watchState.episodeNumber = epNum;
+            }
+
+            const list = document.getElementById('episodeList');
+            if (!list) return;
+
+            let foundCurrent = false;
+            list.querySelectorAll('.episode-sidebar-item').forEach(item => {
+                const itemNum = parseFloat(item.dataset.number);
+                const shouldBeCurrent = itemNum === epNum;
+
+                item.classList.toggle('current', shouldBeCurrent);
+                if (shouldBeCurrent) foundCurrent = true;
+            });
+
+            // Auto-scroll to current episode in sidebar
+            if (foundCurrent) {
+                const currentEl = list.querySelector('.episode-sidebar-item.current');
+                if (currentEl) {
+                    setTimeout(() => {
+                        currentEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }, 300);
+                }
+            }
+
+            // Validate prev/next nav buttons against URL-derived episode number
+            // If they point to the wrong episode, log a warning (helps debug backend issues)
+            const prevBtn = document.querySelector('a[href*="/ep-"]#watch-navigation a:first-child, #watch-navigation a:first-child');
+            const nextBtn = document.querySelector('#watch-navigation a:nth-child(2)');
+
+            [prevBtn, nextBtn].forEach(btn => {
+                if (!btn) return;
+                const btnMatch = btn.href && btn.href.match(/\/ep-(\d+)/);
+                if (btnMatch) {
+                    const btnEp = parseFloat(btnMatch[1]);
+                    // Prev should be less than current, next should be greater
+                    const isPrev = btn.textContent.trim().startsWith('Prev');
+                    if (isPrev && btnEp >= epNum) {
+                        console.warn('[EpNav] Prev button points to ep', btnEp, 'but current is', epNum, '— likely a backend numbering mismatch');
+                    }
+                    if (!isPrev && btnEp <= epNum) {
+                        console.warn('[EpNav] Next button points to ep', btnEp, 'but current is', epNum, '— likely a backend numbering mismatch');
+                    }
+                }
+            });
+        });
+    })();
+
     // --- CRITICAL AUDIO CODEC FIX ---
     if (window.MediaSource && MediaSource.prototype?.addSourceBuffer) {
         try {
@@ -2048,13 +2145,13 @@
                     embedFrame.className = 'embed-player-frame';
                     embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
                     embedFrame.allowFullscreen = true;
-                    
+
                     // Basic iframe error detection (may not catch cross-origin HTTP errors, but catches generic frame errors)
-                    embedFrame.onerror = function() {
+                    embedFrame.onerror = function () {
                         console.warn('[Fallback] Embed iframe onerror triggered');
                         tryFallback('embed');
                     };
-                    
+
                     masterWrapper.insertBefore(embedFrame, masterWrapper.firstChild);
                 }
                 embedFrame.src = url;
@@ -2117,7 +2214,7 @@
     // Server Progress Configuration
     window._watchProgressState = {
         isLoggedIn: {% if is_logged_in %}true{% else %} false{% endif %},
-    serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
+    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } },
     animeId: "{{ anime_id }}"
     };
 
@@ -2187,7 +2284,7 @@
                     })
                 }).then(r => {
                     if (r.ok) console.log('[Watchlist] Episode', epNumForMark, 'marked as watched');
-                }).catch(() => {});
+                }).catch(() => { });
             }
 
             // HLS / native video: mark at 80% completion
@@ -2599,11 +2696,11 @@
         episodeNumber: {{ episode_number or 1 }},
     language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
-        providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %},{% endif %}{% endfor %}{% endif %}],
-        failedProviders: new Set(),
+            providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %} '{{ p }}'{% if not loop.last %}, {% endif %} {% endfor %} {% endif %}],
+    failedProviders: new Set(),
         hlsRetries: 0,
-        embedRetries: 0,
-        _fallbackActive: false
+            embedRetries: 0,
+                _fallbackActive: false
     };
 
     // ── Auto-Fallback System ────────────────────────────────────────────────
@@ -2696,6 +2793,10 @@
         })
             .then(res => res.json())
             .then(data => {
+                // ── Always re-sync episode number from URL (prevents stale state) ──
+                const urlMatch = window.location.pathname.match(/\/ep-(\d+(?:\.\d+)?)/i);
+                if (urlMatch) window._watchState.episodeNumber = parseFloat(urlMatch[1]);
+
                 if (data.error) {
                     console.error('[AJAX] Source error:', data.error);
                     // Source error → fallback to next provider
@@ -2859,6 +2960,3 @@
     }
 </script>
 {% endblock %}
-
-
-// TODO: Add a "Mark as Watched" button that appears after 80% of the video is watched, allowing users to manually mark the episode as watched if auto-detection fails. + Maybe also a "Report Playback Issue" button that opens a feedback form with the current provider/source pre-filled, so users can easily report issues which can help improve the fallback system. + UI improvements: Show a small toast notification when auto-fallback occurs, e.g. "HLS source failed, switching to Embed..." so users are aware of what's happening.
