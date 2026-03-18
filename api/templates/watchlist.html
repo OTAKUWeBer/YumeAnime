@@ -230,26 +230,27 @@
         letter-spacing: 1.5px;
     }
 
-    /* Edit Modal Overlay */
-    .edit-modal-overlay {
+    /* ===== Watchlist Edit Modal ===== */
+    .wl-modal-overlay {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.95);
+        background: rgba(0, 0, 0, 0.92);
         backdrop-filter: blur(8px);
         display: none;
         align-items: center;
         justify-content: center;
         z-index: 9999;
+        padding: 16px;
     }
 
-    .edit-modal-overlay.active {
+    .wl-modal-overlay.active {
         display: flex;
     }
 
-    .edit-modal {
+    .wl-modal {
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-xl);
@@ -257,107 +258,136 @@
         max-width: 700px;
         overflow: hidden;
         display: grid;
-        grid-template-columns: 1fr 250px;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+        grid-template-columns: 1fr 220px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+        animation: wlSlideUp 0.25s ease;
     }
 
-    @media (max-width: 768px) {
-        .edit-modal {
-            grid-template-columns: 1fr;
-            max-width: 100%;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            margin: 0;
-            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-            border-bottom: none;
+    @keyframes wlSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 
-    .edit-modal-content {
+    .wl-modal-body {
         padding: var(--space-xl);
     }
 
-    .edit-modal-poster {
+    .wl-modal-poster {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        display: block;
     }
 
-    @media (max-width: 768px) {
-        .edit-modal-poster {
-            display: none;
-        }
+    .wl-modal-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin: 0 0 4px;
+        color: var(--text-primary);
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
-    .edit-modal-header {
+    .wl-modal-subtitle {
+        font-size: 0.8rem;
+        color: var(--text-muted);
         margin-bottom: var(--space-lg);
     }
 
-    .edit-modal-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        margin: 0;
-        color: var(--text-primary);
-    }
-
-    .edit-form-grid {
+    .wl-form-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-md);
         margin-bottom: var(--space-lg);
     }
 
-    .edit-form-group {
+    .wl-form-group {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 5px;
     }
 
-    .edit-form-group.full-width {
+    .wl-form-group.full {
         grid-column: 1 / -1;
     }
 
-    .edit-label {
-        font-size: 0.7rem;
+    .wl-label {
+        font-size: 0.68rem;
         text-transform: uppercase;
         letter-spacing: 1px;
         color: var(--text-muted);
         font-weight: 700;
     }
 
-    .edit-input {
+    .wl-input {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: var(--text-primary);
         padding: 10px 12px;
         border-radius: var(--radius-md);
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         outline: none;
-        transition: all 0.2s;
+        transition: border-color 0.2s, background 0.2s;
+        width: 100%;
     }
 
-    .edit-input:focus {
-        border-color: var(--primary);
+    .wl-input:focus {
+        border-color: var(--primary-color, #a855f7);
         background: rgba(255, 255, 255, 0.08);
     }
 
-    .edit-input[type="date"]::-webkit-calendar-picker-indicator {
+    .wl-input[type="date"]::-webkit-calendar-picker-indicator {
         filter: invert(1);
-        opacity: 0.6;
+        opacity: 0.5;
         cursor: pointer;
     }
 
-    .edit-actions {
+    .wl-progress-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .wl-step-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+    .wl-step-btn:hover {
+        background: rgba(168, 85, 247, 0.15);
+        border-color: rgba(168, 85, 247, 0.4);
+    }
+
+    .wl-actions {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: var(--space-xl);
         padding-top: var(--space-md);
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    .btn-delete {
+    .wl-btn-delete {
         background: transparent;
         border: 1px solid rgba(231, 76, 60, 0.3);
         color: #e74c3c;
@@ -371,44 +401,46 @@
         transition: all 0.2s;
     }
 
-    .btn-delete:hover {
-        background: rgba(231, 76, 60, 0.1);
+    .wl-btn-delete:hover {
+        background: rgba(231, 76, 60, 0.12);
         border-color: #e74c3c;
     }
 
-    .btn-save {
-        background: var(--primary);
-        /* Assuming --primary is a purple-ish or theme color */
+    .wl-btn-save {
+        background: var(--primary-color, #a855f7);
         border: none;
         color: white;
         padding: 10px 24px;
         border-radius: var(--radius-md);
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 0.9rem;
         cursor: pointer;
         transition: filter 0.2s;
     }
 
-    /* Optional purple override if theme primary isn't purple */
-    .btn-save.purple {
-        background: #8b5cf6;
+    .wl-btn-save:hover {
+        filter: brightness(1.15);
     }
 
-    .btn-save:hover {
-        filter: brightness(1.1);
+    .wl-btn-save:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        filter: none;
     }
 
-    .btn-cancel {
+    .wl-btn-cancel {
         background: transparent;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        color: var(--text-primary);
-        padding: 10px 24px;
+        color: var(--text-secondary);
+        padding: 10px 20px;
         border-radius: var(--radius-md);
         font-weight: 600;
+        font-size: 0.9rem;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: background 0.2s;
     }
 
-    .btn-cancel:hover {
+    .wl-btn-cancel:hover {
         background: rgba(255, 255, 255, 0.05);
     }
 
@@ -624,63 +656,46 @@
             font-size: 0.85rem;
         }
 
-        .edit-modal-overlay {
+        .wl-modal {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+            margin: auto 0 0 0;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            border-bottom: none;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .wl-modal-poster {
+            display: none;
+        }
+
+        .wl-modal-overlay {
             padding: 0;
             align-items: flex-end;
         }
 
-        .edit-modal-content {
-            padding: var(--space-lg);
-            padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
-        }
-
-        .edit-modal-content::before {
-            content: '';
-            display: block;
-            width: 40px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            margin: 0 auto var(--space-md) auto;
-        }
-
-        .edit-modal-title {
-            font-size: 1.2rem;
-        }
-
-        .edit-form-grid {
+        .wl-form-grid {
             grid-template-columns: 1fr;
-            gap: var(--space-sm);
         }
 
-        .edit-input {
-            padding: 14px;
-            font-size: 1rem;
-            border-radius: var(--radius-md);
+        .wl-modal-body {
+            padding: var(--space-lg);
         }
 
-        .edit-actions {
+        .wl-btn-save,
+        .wl-btn-cancel {
+            padding: 13px 16px;
+            flex: 1;
+        }
+
+        .wl-actions {
             flex-wrap: wrap;
-            gap: var(--space-sm);
-            margin-top: var(--space-lg);
+            gap: 10px;
         }
 
-        .edit-actions>div {
+        .wl-actions>div {
             flex: 1;
-        }
-
-        .btn-save,
-        .btn-cancel {
-            padding: 14px 16px;
-            font-size: 0.95rem;
-            flex: 1;
-            text-align: center;
-            border-radius: var(--radius-md);
-        }
-
-        .btn-delete {
-            width: 48px;
-            height: 48px;
         }
     }
 
@@ -721,7 +736,7 @@
             font-size: 0.75rem;
         }
 
-        .edit-modal-overlay {
+        .wl-modal-overlay {
             padding: 8px;
         }
     }
@@ -859,15 +874,17 @@
     </div>
 </div>
 
-<!-- Edit Watchlist Modal -->
-<div class="edit-modal-overlay" id="edit-modal-overlay">
-    <div class="edit-modal">
-        <div class="edit-modal-content">
-            <div class="edit-modal-header">
-                <h2 class="edit-modal-title" id="edit-modal-title">Anime Title</h2>
-                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+<!-- ===== Watchlist Editor Modal ===== -->
+<div class="wl-modal-overlay" id="edit-modal-overlay"> <!-- Keep ID to match watchlist JS -->
+    <div class="wl-modal">
+        <div class="wl-modal-body">
+
+            <div class="edit-modal-header" style="margin-bottom: var(--space-lg);">
+                <h2 class="wl-modal-title" id="edit-modal-title" style="margin-bottom: 4px;">Anime Title</h2>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;"
+                    class="wl-modal-subtitle">
                     <a href="#" id="edit-modal-link"
-                        style="font-size: 0.8rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; text-decoration: none; transition: color 0.2s;"
+                        style="color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; text-decoration: none; transition: color 0.2s;"
                         onmouseover="this.style.color='var(--text-primary)'"
                         onmouseout="this.style.color='var(--text-muted)'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -880,7 +897,7 @@
                         Anime Page
                     </a>
                     <a href="#" id="edit-modal-watch"
-                        style="font-size: 0.8rem; color: #8dc149; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 600; transition: opacity 0.2s;"
+                        style="color: #8dc149; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 600; transition: opacity 0.2s;"
                         onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                             <polygon points="5 3 19 12 5 21 5 3" />
@@ -890,75 +907,76 @@
                 </div>
             </div>
 
-            <div class="edit-form-grid">
-                <div class="edit-form-group">
-                    <label class="edit-label">Status</label>
-                    <select class="edit-input" id="edit-status">
+            <div class="wl-form-grid">
+                <!-- Status -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Status</label>
+                    <select class="wl-input" id="edit-status">
                         <option value="CURRENT">Watching</option>
                         <option value="PLANNING">Plan to Watch</option>
                         <option value="COMPLETED">Completed</option>
                         <option value="DROPPED">Dropped</option>
-                        <option value="PAUSED">Paused</option>
+                        <option value="PAUSED">On Hold</option>
                     </select>
                 </div>
 
-                <div class="edit-form-group">
-                    <label class="edit-label" id="edit-episode-label">Episode Progress</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button type="button" onclick="adjustEditProgress(-1)"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 36px; height: 36px; border-radius: var(--radius-md); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
-                            onmouseover="this.style.background='rgba(141,193,73,0.15)'; this.style.borderColor='rgba(141,193,73,0.3)'"
-                            onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'">−</button>
-                        <input type="number" class="edit-input" id="edit-progress" min="0"
-                            style="text-align: center; flex: 1;">
-                        <button type="button" onclick="adjustEditProgress(1)"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); width: 36px; height: 36px; border-radius: var(--radius-md); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
-                            onmouseover="this.style.background='rgba(141,193,73,0.15)'; this.style.borderColor='rgba(141,193,73,0.3)'"
-                            onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'">+</button>
+                <!-- Score -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Score (0–10)</label>
+                    <input type="number" class="wl-input" id="edit-score" min="0" max="10" step="1" placeholder="—">
+                </div>
+
+                <!-- Episode Progress -->
+                <div class="wl-form-group full">
+                    <label class="wl-label" id="edit-episode-label">Episode Progress</label>
+                    <div class="wl-progress-row">
+                        <button type="button" class="wl-step-btn" onclick="adjustEditProgress(-1)">−</button>
+                        <input type="number" class="wl-input" id="edit-progress" min="0" style="text-align:center;">
+                        <button type="button" class="wl-step-btn" onclick="adjustEditProgress(1)">+</button>
                     </div>
                 </div>
 
-                <div class="edit-form-group">
-                    <label class="edit-label">Score (0-10)</label>
-                    <input type="number" class="edit-input" id="edit-score" min="0" max="10" step="1">
+                <!-- Start Date -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Start Date</label>
+                    <input type="date" class="wl-input" id="edit-start-date">
                 </div>
 
-                <div class="edit-form-group">
-                    <label class="edit-label">Start Date</label>
-                    <input type="date" class="edit-input" id="edit-start-date">
+                <!-- End Date -->
+                <div class="wl-form-group">
+                    <label class="wl-label">End Date</label>
+                    <input type="date" class="wl-input" id="edit-end-date">
                 </div>
 
-                <div class="edit-form-group">
-                    <label class="edit-label">End Date</label>
-                    <input type="date" class="edit-input" id="edit-end-date">
+                <!-- Rewatches -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Total Rewatches</label>
+                    <input type="number" class="wl-input" id="edit-rewatches" min="0" placeholder="0">
                 </div>
 
-                <div class="edit-form-group">
-                    <label class="edit-label">Total Rewatches</label>
-                    <input type="number" class="edit-input" id="edit-rewatches" min="0">
-                </div>
-
-                <div class="edit-form-group full-width">
-                    <label class="edit-label">Notes</label>
-                    <textarea class="edit-input" id="edit-notes" rows="3"
-                        placeholder="Add your notes here..."></textarea>
+                <!-- Notes -->
+                <div class="wl-form-group full">
+                    <label class="wl-label">Notes</label>
+                    <textarea class="wl-input" id="edit-notes" rows="3" placeholder="Add your notes here..."></textarea>
                 </div>
             </div>
 
-            <div class="edit-actions">
-                <button class="btn-delete" id="edit-delete-btn" aria-label="Delete Entry" onclick="deleteEntry()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <div class="wl-actions">
+                <button class="wl-btn-delete" id="edit-delete-btn" aria-label="Delete Entry" onclick="deleteEntry()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
                 </button>
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
-                    <button class="btn-save purple" onclick="saveEntry()">Save Changes</button>
+                <div style="display:flex; gap:10px; margin-left:auto;">
+                    <button class="wl-btn-cancel" onclick="closeEditModal()">Cancel</button>
+                    <!-- Make sure btn-save class is retained so JS matches btn.textContent="Saving..." properly -->
+                    <button class="wl-btn-save btn-save" onclick="saveEntry()">Save Changes</button>
                 </div>
             </div>
+
         </div>
-        <img src="" alt="Anime Cover" class="edit-modal-poster" id="edit-modal-poster">
+        <img src="" alt="Anime Cover" class="wl-modal-poster" id="edit-modal-poster">
     </div>
 </div>
 
