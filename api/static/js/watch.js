@@ -941,22 +941,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return '/watch/' + animeId + '/ep-' + n;
             }
 
-            // ── Fix all Prev links ──
-            // A "prev" link is broken if it points to the current URL or to an
-            // episode number >= current episode.
+            // ── Fix all Prev/Next links ──
+            // A link is broken if it points to the current URL or to an
+            // episode number >= current episode (for prev) or <= current (for next).
             document.querySelectorAll('a').forEach(function (a) {
+                // Skip episode sidebar items completely; their URLs are correct from template
+                if (a.classList.contains('episode-sidebar-item')) return;
+                
                 if (!a.href) return;
                 var m = a.href.match(/\/ep-(\d+(?:\.\d+)?)/);
                 if (!m) return;
                 var linkEp = parseFloat(m[1]);
-                var isPrevLink = (
-                    a.textContent.trim().startsWith('Prev') ||
-                    a.closest('#watch-navigation') && linkEp < epNum
-                );
-                var isNextLink = (
-                    a.textContent.trim().startsWith('Next') ||
-                    a.closest('#watch-navigation') && linkEp > epNum
-                );
 
                 // Detect broken prev: points to current page or wrong episode
                 if (a.textContent.trim().startsWith('Prev') ||
