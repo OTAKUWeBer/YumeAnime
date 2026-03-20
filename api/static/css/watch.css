@@ -1343,126 +1343,42 @@
     }
 
 /* ============================================================
-   WATCH PAGE — MOBILE CONTROLS PATCH
+   WATCH PAGE — CONTROLS LAYOUT PATCH
+   Desktop: compact inline row  |  Mobile: stacked full-width
    ============================================================ */
 
-/* ── Episode info bar: always column on mobile ─────────────── */
-#watch-navigation > div:nth-child(2) {
-    gap: 10px !important;
-}
-
-/* The row that holds stream-selector + lang + report */
-#watch-navigation .stream-selector + div,
-#watch-navigation [style*="margin-left: auto"] {
-    margin-left: 0 !important;
-}
-
-/* ── Stream Selector: full redesign for mobile ─────────────── */
-.stream-selector {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: none;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.stream-selector-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-
-.stream-selector-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--text-muted);
-    white-space: nowrap;
-    min-width: 42px;
-}
-
-.stream-selector-pills {
-    display: flex;
-    gap: 4px;
-    flex: 1;
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    background: rgba(0,0,0,0.2);
-    padding: 3px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255,255,255,0.04);
-}
-.stream-selector-pills::-webkit-scrollbar { display: none; }
-
-.stream-pill {
-    flex: 0 0 auto;
-    padding: 5px 11px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    border-radius: calc(var(--radius-sm));
-    white-space: nowrap;
-}
-
-.stream-pill .pill-badge {
-    font-size: 0.6rem;
-    padding: 1px 4px;
-}
-
-/* ── Bottom action row: lang + report ───────────────────────── */
+/* ── Desktop: actions row sits right, auto-width ────────────── */
 .watch-actions-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
-/* ── Language toggle: compact ───────────────────────────────── */
-.lang-toggle {
-    display: flex;
-    background: rgba(0, 0, 0, 0.25);
-    padding: 3px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.lang-btn {
-    padding: 5px 13px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    border-radius: calc(var(--radius-sm) - 1px);
-}
-
-/* ── Report button: icon only on very small screens ─────────── */
-.premium-action-btn {
-    padding: 7px 12px;
-    font-size: 0.78rem;
-    gap: 5px;
-    white-space: nowrap;
-}
-
-/* ── Mobile breakpoint: full overrides ─────────────────────── */
+/* ── Mobile ≤ 600px: full stack layout ──────────────────────── */
 @media (max-width: 600px) {
 
-    /* Episode info bar becomes a clean stacked card */
+    /* Controls row becomes a column so selector + actions stack */
     #watch-navigation > div:nth-child(2) {
         padding: 10px 12px !important;
         gap: 10px !important;
         border-radius: var(--radius-md) !important;
     }
 
-    /* Stream selector: tighter */
+    /* Stream selector: full-width stacked rows */
     .stream-selector {
+        flex-direction: column;
+        gap: 6px;
         padding: 8px 10px;
-        gap: 7px;
+        width: 100%;
+        box-sizing: border-box;
+        box-shadow: none;
+    }
+
+    .stream-selector-group {
+        width: 100%;
+        gap: 8px;
     }
 
     .stream-selector-label {
@@ -1470,14 +1386,37 @@
         min-width: 38px;
     }
 
+    .stream-selector-pills {
+        flex: 1;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .stream-selector-pills::-webkit-scrollbar { display: none; }
+
     .stream-pill {
+        flex: 0 0 auto;
         padding: 4px 10px;
         font-size: 0.76rem;
+        white-space: nowrap;
     }
 
-    /* Actions row aligns to edges */
+    .stream-pill .pill-badge {
+        font-size: 0.58rem;
+        padding: 1px 4px;
+    }
+
+    /* Actions row: full width, space-between */
     .watch-actions-row {
+        margin-left: 0;
+        width: 100%;
         justify-content: space-between;
+    }
+
+    .lang-toggle {
+        padding: 3px;
+        border-radius: var(--radius-sm);
     }
 
     .lang-btn {
@@ -1489,32 +1428,22 @@
         padding: 6px 10px;
         font-size: 0.75rem;
     }
-
-    /* On very small screens, hide Report label text, keep icon */
-    @media (max-width: 360px) {
-        .premium-action-btn .report-label {
-            display: none;
-        }
-        .premium-action-btn {
-            padding: 6px 9px;
-        }
-    }
 }
 
-/* ── Tiny phones ────────────────────────────────────────────── */
+/* ── Small phones ≤ 380px ───────────────────────────────────── */
 @media (max-width: 380px) {
     .stream-selector {
-        padding: 7px 9px;
-        gap: 6px;
+        padding: 6px 8px;
+        gap: 5px;
     }
 
     .stream-pill {
-        padding: 4px 8px;
+        padding: 3px 8px;
         font-size: 0.72rem;
     }
 
     .stream-pill .pill-badge {
-        display: none; /* hide HLS/Embed badge on very small screens */
+        display: none;
     }
 
     .lang-btn {
@@ -1529,5 +1458,15 @@
     .premium-action-btn svg {
         width: 13px;
         height: 13px;
+    }
+}
+
+/* ── Tiny phones ≤ 360px: icon-only report ──────────────────── */
+@media (max-width: 360px) {
+    .premium-action-btn .report-label {
+        display: none;
+    }
+    .premium-action-btn {
+        padding: 5px 8px;
     }
 }
