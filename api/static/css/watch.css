@@ -931,26 +931,38 @@
             gap: 12px;
             flex-direction: column;
             align-items: stretch;
+            width: 100%;
         }
 
         .stream-selector-group {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 6px;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
         }
 
         .stream-selector-pills {
-            justify-content: center;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            flex: 1;
+            /* Hide scrollbar for a cleaner look */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        .stream-selector-pills::-webkit-scrollbar {
+            display: none;
         }
 
         .stream-selector-label {
-            text-align: center;
+            text-align: left;
             font-size: 0.7rem;
+            min-width: max-content;
         }
 
         .stream-pill {
-            flex: 1;
-            padding: 6px 8px;
+            flex: 0 0 auto;
+            padding: 6px 12px;
             font-size: 0.8rem;
         }
     }
