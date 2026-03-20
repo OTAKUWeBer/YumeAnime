@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hrefMatch) {
                 const animeId = hrefMatch[1];
                 if (latestWatched[animeId] && latestWatched[animeId] > 1) {
-                    if (link.id !== 'watch-now-btn' && !link.classList.contains('episode-sidebar-item')) {
+                    if (link.id !== 'watch-now-btn' && !link.classList.contains('episode-sidebar-item') && !link.closest('.watch-main')) {
                         link.setAttribute('href', `/watch/${animeId}/ep-${latestWatched[animeId]}`);
                     }
                 }
