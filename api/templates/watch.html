@@ -210,8 +210,8 @@
                     </h3>
 
                     <!-- Controls Row -->
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <!-- Stream & Server Selector (Pill Buttons) -->
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 5px;">
+                        <!-- Stream & Server Selector (Premium Segmented Controls) -->
                         <div class="stream-selector" id="streamSelector">
                             {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
                             <div class="stream-selector-group" id="providerGroup">
@@ -254,28 +254,29 @@
                             {% endif %}
                         </div>
 
-                        <!-- Language Selection (AJAX, no page reload) -->
-                        <div
-                            style="display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);">
-                            <button id="btnSub" class="btn btn-sm" onclick="switchLanguage('sub')"
-                                style="border-radius:0;border:none;background-color:{% if lang == 'sub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'sub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;cursor:pointer;">SUB</button>
-                            {% if dub_available %}
-                            <button id="btnDub" class="btn btn-sm" onclick="switchLanguage('dub')"
-                                style="border-radius:0;border:none;background-color:{% if lang == 'dub' %}var(--accent) !important{% else %}var(--bg-elevated) !important{% endif %};color:{% if lang == 'dub' %}var(--bg-primary) !important{% else %}var(--text-primary) !important{% endif %};font-weight:bold;min-width:50px;padding:6px 10px;font-size:0.85rem;cursor:pointer;">DUB</button>
-                            {% else %}
-                            <span class="btn btn-sm btn-ghost"
-                                style="border-radius:0;border:none;background-color:var(--bg-elevated) !important;opacity:0.5;cursor:not-allowed;color:var(--text-primary) !important;min-width:50px;padding:6px 10px;font-size:0.85rem;">DUB</span>
-                            {% endif %}
+                        <!-- Right Actions: Language & Report -->
+                        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap;">
+                            <!-- Language Selection -->
+                            <div class="lang-toggle">
+                                <button id="btnSub" class="lang-btn {% if lang == 'sub' %}active{% endif %}" 
+                                    onclick="switchLanguage('sub')">SUB</button>
+                                {% if dub_available %}
+                                <button id="btnDub" class="lang-btn {% if lang == 'dub' %}active{% endif %}" 
+                                    onclick="switchLanguage('dub')">DUB</button>
+                                {% else %}
+                                <button class="lang-btn" disabled title="Dub not available">DUB</button>
+                                {% endif %}
+                            </div>
+    
+                            <!-- Report Issue Button -->
+                            <button id="openReportBtn" class="premium-action-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>
+                                </svg>
+                                Report
+                            </button>
                         </div>
-
-                        <!-- Report Issue Button -->
-                        <button id="openReportBtn" class="btn btn-sm btn-ghost" style="border-radius:var(--radius-sm); border:1px solid var(--border-color); color:var(--text-secondary); font-size: 0.85rem; padding: 6px 10px; cursor: pointer; margin-left: 10px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;">
-                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>
-                            </svg>
-                            Report Issue
-                        </button>
-                                            </div>
+                    </div>
                 </div>
 
                 <!-- Next Episode Air Time (if available) -->
