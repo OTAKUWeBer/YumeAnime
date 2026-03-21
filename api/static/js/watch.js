@@ -651,6 +651,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const currTimeDisp = document.getElementById('currentTimeDisplay');
         const durDisp = document.getElementById('durationDisplay');
 
+        // New UI Elements
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const settingsContainer = document.getElementById('settingsContainer');
+        const speedOptions = document.getElementById('speedOptions');
+        const qualityOptions = document.getElementById('qualityOptions');
+        const pipBtn = document.getElementById('pipBtn');
+        const dtLeft = document.getElementById('dtLeft');
+        const dtRight = document.getElementById('dtRight');
+        const dtIndLeft = document.getElementById('dtIndLeft');
+        const dtIndRight = document.getElementById('dtIndRight');
+        const playerLoader = document.getElementById('playerLoader');
+
         if (!video || !wrapper || !playBtn) return;
 
         const masterWrapper = document.getElementById('video-wrapper');
@@ -765,6 +778,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (masterWrapper) masterWrapper.classList.remove('user-inactive');
         });
 
+        video.addEventListener('playing', () => {
+            if (playerLoader) playerLoader.style.display = 'none';
+        });
+        video.addEventListener('waiting', () => {
+            if (playerLoader) playerLoader.style.display = 'block';
+        });
+        video.addEventListener('canplay', () => {
+            if (playerLoader) playerLoader.style.display = 'none';
+        });
+
         // Time & Progress
         const formatTime = (s) => {
             if (isNaN(s)) return '00:00';
@@ -859,6 +882,134 @@ document.addEventListener('DOMContentLoaded', () => {
                 masterWrapper.style.height = "";
                 masterWrapper.style.maxHeight = "";
             }
+        });
+
+        // ==========================================
+        // NEW PREMIUM UI FEATURES
+        // ==========================================
+        
+        // 1. Double-Tap to Seek (Mobile bounds)
+        if (dtLeft && dtRight) {
+            let lastTapLeft = 0;
+            let lastTapRight = 0;
+
+            dtLeft.addEventListener('pointerup', (e) => {
+                e.preventDefault();
+                if (e.pointerType === 'mouse') return; // Only process touch to avoid desktop conflicts
+                const now = Date.now();
+                if (now - lastTapLeft < 300) {
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    dtIndLeft.classList.remove('fade-out');
+                    dtIndLeft.classList.add('active');
+                    clearTimeout(dtLeft.animTimeout);
+                    dtLeft.animTimeout = setTimeout(() => {
+                        dtIndLeft.classList.add('fade-out');
+                        dtIndLeft.classList.remove('active');
+                    }, 400);
+                }
+                lastTapLeft = now;
+            });
+
+            dtRight.addEventListener('pointerup', (e) => {
+                e.preventDefault();
+                if (e.pointerType === 'mouse') return;
+                const now = Date.now();
+                if (now - lastTapRight < 300) {
+                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                    dtIndRight.classList.remove('fade-out');
+                    dtIndRight.classList.add('active');
+                    clearTimeout(dtRight.animTimeout);
+                    dtRight.animTimeout = setTimeout(() => {
+                        dtIndRight.classList.add('fade-out');
+                        dtIndRight.classList.remove('active');
+                    }, 400);
+                }
+                lastTapRight = now;
+            });
+        }
+
+        // 2. Picture-in-Picture
+        if (document.pictureInPictureEnabled && pipBtn) {
+            pipBtn.style.display = '';
+            pipBtn.addEventListener('click', async () => {
+                try {
+                    if (document.pictureInPictureElement) {
+                        await document.exitPictureInPicture();
+                    } else {
+                        await video.requestPictureInPicture();
+                    }
+                } catch (err) {
+                    console.error('PIP Error:', err);
+                }
+            });
+        }
+
+        // 3. Settings Menu (Speed & Quality)
+        if (settingsBtn && settingsMenu) {
+            settingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const wasActive = settingsContainer.classList.contains('active');
+                if (wasActive) {
+                    settingsContainer.classList.remove('active');
+                    setTimeout(() => settingsMenu.style.display = 'none', 200);
+                } else {
+                    settingsMenu.style.display = 'block';
+                    setTimeout(() => settingsContainer.classList.add('active'), 10);
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (settingsContainer.classList.contains('active') && !settingsContainer.contains(e.target)) {
+                    settingsContainer.classList.remove('active');
+                    setTimeout(() => settingsMenu.style.display = 'none', 200);
+                }
+            });
+
+            // Speed
+            if (speedOptions) {
+                speedOptions.querySelectorAll('.settings-opt-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        speedOptions.querySelectorAll('.settings-opt-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        video.playbackRate = parseFloat(btn.dataset.speed);
+                    });
+                });
+            }
+
+            // Quality (HLS only)
+            if (qualityOptions) {
+                qualityOptions.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const btn = e.target.closest('.player-menu-item');
+                    if (!btn) return;
+                    
+                    qualityOptions.querySelectorAll('.player-menu-item').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const level = parseInt(btn.dataset.quality);
+                    if (window.hls) {
+                        window.hls.currentLevel = level;
+                    }
+                });
+            }
+        }
+
+        function populateQualities() {
+            if (!qualityOptions || !window.hls || !window.hls.levels || window.hls.levels.length === 0) return;
+            if (qualityOptions.children.length > 2) return;
+
+            let html = '<div class="player-menu-item active" data-quality="-1">Auto</div>';
+            const levels = [...window.hls.levels].reverse();
+            levels.forEach(level => {
+                const origIndex = window.hls.levels.indexOf(level);
+                html += `<div class="player-menu-item" data-quality="${origIndex}">${level.height}p</div>`;
+            });
+            qualityOptions.innerHTML = html;
+        }
+
+        video.addEventListener('canplay', () => {
+            populateQualities();
         });
 
         // Keyboard Shortcuts
