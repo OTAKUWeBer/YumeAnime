@@ -123,3 +123,6 @@ This project is open-source and available under the [MIT License](LICENSE).
 <div align="center">
   <p>Made with ❤️ for the Anime Community</p>
 </div>
+
+
+# I might make it closed source soon... 
