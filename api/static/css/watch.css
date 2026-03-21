@@ -478,7 +478,7 @@
         left: 0;
         width: 100%;
         padding: 0 20px 20px;
-        z-index: 10;
+        z-index: 20;
         pointer-events: auto;
         display: flex;
         flex-direction: column;
@@ -1468,5 +1468,79 @@
     }
     .premium-action-btn {
         padding: 5px 8px;
+    }
+}
+
+/* ── Double Tap Seek Zones (Mobile) ──────────────────── */
+.dt-zone {
+    position: absolute;
+    top: 0;
+    bottom: 80px; /* Leave space for controls bar */
+    width: 40%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.dt-zone-left {
+    left: 0;
+}
+
+.dt-zone-right {
+    right: 0;
+}
+
+.dt-indicator {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    color: white;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: none;
+    pointer-events: none;
+}
+
+.dt-indicator span {
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-top: -5px;
+}
+
+.dt-indicator.active {
+    opacity: 1;
+    transform: scale(1.1);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dt-indicator.fade-out {
+    opacity: 0;
+    transform: scale(1);
+    transition: opacity 0.5s ease 0.3s, transform 0.5s ease 0.3s;
+}
+
+/* ── Settings Menu Overrides for Mobile ──────────────────── */
+@media (max-width: 768px) {
+    .player-menu {
+        position: fixed;
+        bottom: 80px;
+        right: 15px;
+        left: auto;
+        min-width: 200px;
+        max-width: 250px;
+        transform: translateY(100vh);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+    
+    .menu-btn-container.active .player-menu {
+        transform: translateY(0);
     }
 }
