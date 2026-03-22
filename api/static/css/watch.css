@@ -586,36 +586,64 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        position: relative;
     }
 
     .volume-slider-container {
         width: 0;
+        opacity: 0;
         overflow: hidden;
-        transition: width 0.3s ease;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         align-items: center;
+        transform: translateX(-10px);
+        padding-left: 2px;
     }
 
-    .volume-container:hover .volume-slider-container {
+    .volume-container:hover .volume-slider-container,
+    .controls-main:focus-within .volume-container .volume-slider-container {
         width: 80px;
+        opacity: 1;
+        transform: translateX(0);
     }
 
     .volume-slider {
         width: 80px;
-        height: 4px;
+        height: 6px;
         -webkit-appearance: none;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 2px;
+        appearance: none;
+        background: linear-gradient(to right, var(--accent) var(--vol-prog, 100%), rgba(255, 255, 255, 0.2) var(--vol-prog, 100%));
+        border-radius: 4px;
         outline: none;
         cursor: pointer;
     }
 
     .volume-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
-        width: 12px;
-        height: 12px;
+        appearance: none;
+        width: 14px;
+        height: 14px;
         background: white;
         border-radius: 50%;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        cursor: pointer;
+        transition: transform 0.1s ease;
+    }
+
+    .volume-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: white;
+        border: none;
+        border-radius: 50%;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        cursor: pointer;
+        transition: transform 0.1s ease;
+    }
+
+    .volume-slider::-webkit-slider-thumb:hover,
+    .volume-slider::-moz-range-thumb:hover {
+        transform: scale(1.2);
     }
 
     .time-display {
