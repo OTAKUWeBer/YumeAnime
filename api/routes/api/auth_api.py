@@ -244,13 +244,10 @@ def forgot_password():
     if not email:
         return jsonify({'success': False, 'message': 'Email is required.'}), 400
 
-    # Always return success-like message to prevent email enumeration
-    generic_ok = {'success': True, 'message': 'If that email is registered, a reset code has been sent.'}
-
+    # Check if user exists, return explicit error if not found (per user request)
     user = get_user_by_email(email)
     if not user:
-        # Don't reveal whether the email exists
-        return jsonify(generic_ok), 200
+        return jsonify({'success': False, 'message': 'No account found with that email address.'}), 404
 
     # Generate 6-digit numeric code
     code = f"{random.randint(0, 999999):06d}"
@@ -260,16 +257,15 @@ def forgot_password():
     stored = store_reset_code(email, hashed_code, expires_at)
     if not stored:
         logger.error(f"Failed to store reset code for {email}")
-        return jsonify(generic_ok), 200
+        return jsonify({'success': False, 'message': 'Internal database error. Please try again.'}), 500
 
     sent = send_reset_code_email(email, code)
     if not sent:
         logger.error(f"Failed to send reset email to {email}")
-        # Still return generic OK
-        return jsonify(generic_ok), 200
+        return jsonify({'success': False, 'message': 'Failed to send email. Please try again later.'}), 500
 
     logger.info(f"Reset code sent to {email}")
-    return jsonify(generic_ok), 200
+    return jsonify({'success': True, 'message': 'Reset code sent successfully!'}), 200
 
 
 @auth_api_bp.route('/verify-reset-code', methods=['POST'])

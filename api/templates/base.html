@@ -508,9 +508,10 @@
             <div id="forgot-password-view" style="display: none;">
                 <div style="text-align: center; margin-bottom: var(--space-lg);">
                     <div class="fp-icon">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                         </svg>
                     </div>
                     <h2 style="margin-bottom: 4px;">Forgot Password?</h2>
@@ -541,28 +542,37 @@
             <div id="verify-code-view" style="display: none;">
                 <div style="text-align: center; margin-bottom: var(--space-lg);">
                     <div class="fp-icon fp-icon-verify">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                            <polyline points="22,6 12,13 2,6"/>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
                         </svg>
                     </div>
                     <h2 style="margin-bottom: 4px;">Check Your Email</h2>
-                    <p class="text-muted text-sm">Enter the 6-digit code sent to <strong id="verify-email-display"></strong></p>
+                    <p class="text-muted text-sm">Enter the 6-digit code sent to <strong
+                            id="verify-email-display"></strong></p>
                 </div>
                 <form id="verify-code-form" onsubmit="handleVerifyCode(event)">
                     <div class="otp-container" id="otp-container">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="0" autocomplete="one-time-code">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="1">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="2">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="0" autocomplete="one-time-code">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="1">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="2">
                         <div class="otp-separator">–</div>
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="3">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="4">
-                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="5">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="3">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="4">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="5">
                     </div>
                     <div class="otp-timer" id="otp-timer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
                         </svg>
                         Code expires in <span id="otp-countdown">5:00</span>
                     </div>
@@ -587,8 +597,9 @@
             <div id="reset-password-view" style="display: none;">
                 <div style="text-align: center; margin-bottom: var(--space-lg);">
                     <div class="fp-icon fp-icon-success">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
                     </div>
                     <h2 style="margin-bottom: 4px;">Set New Password</h2>
