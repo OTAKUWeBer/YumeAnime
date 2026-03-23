@@ -445,7 +445,11 @@
                         <span id="login-btn-text">Sign In</span>
                     </button>
                 </form>
-                <div style="text-align: center; margin-top: var(--space-lg);">
+                <div style="text-align: center; margin-top: var(--space-sm);">
+                    <button class="btn btn-ghost forgot-link" onclick="showForgotPasswordView()"
+                        style="padding: 0; font-size: 13px; color: var(--text-muted);">Forgot Password?</button>
+                </div>
+                <div style="text-align: center; margin-top: var(--space-md);">
                     <span class="text-muted">Don't have an account?</span>
                     <button class="btn btn-ghost" onclick="showSignupView()" style="padding: 0; margin-left: 4px;">Sign
                         Up</button>
@@ -498,6 +502,117 @@
                     <button class="btn btn-ghost" onclick="showLoginView()" style="padding: 0; margin-left: 4px;">Sign
                         In</button>
                 </div>
+            </div>
+
+            <!-- Forgot Password View -->
+            <div id="forgot-password-view" style="display: none;">
+                <div style="text-align: center; margin-bottom: var(--space-lg);">
+                    <div class="fp-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </div>
+                    <h2 style="margin-bottom: 4px;">Forgot Password?</h2>
+                    <p class="text-muted text-sm">Enter your email and we'll send you a 6-digit reset code.</p>
+                </div>
+                <form id="forgot-password-form" onsubmit="handleForgotPassword(event)">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" name="email" required placeholder="your@email.com"
+                            id="fp-email-input">
+                    </div>
+                    <div id="forgot-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <div id="forgot-success" class="text-success text-sm"
+                        style="display: none; margin-bottom: var(--space-md); color: #00b894;"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="forgot-btn">
+                        <span id="forgot-btn-text">Send Reset Code</span>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-lg);">
+                    <button class="btn btn-ghost" onclick="showLoginView()" style="padding: 0;">
+                        ← Back to Sign In
+                    </button>
+                </div>
+            </div>
+
+            <!-- OTP Verification View -->
+            <div id="verify-code-view" style="display: none;">
+                <div style="text-align: center; margin-bottom: var(--space-lg);">
+                    <div class="fp-icon fp-icon-verify">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                    </div>
+                    <h2 style="margin-bottom: 4px;">Check Your Email</h2>
+                    <p class="text-muted text-sm">Enter the 6-digit code sent to <strong id="verify-email-display"></strong></p>
+                </div>
+                <form id="verify-code-form" onsubmit="handleVerifyCode(event)">
+                    <div class="otp-container" id="otp-container">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="0" autocomplete="one-time-code">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="1">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="2">
+                        <div class="otp-separator">–</div>
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="3">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="4">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="5">
+                    </div>
+                    <div class="otp-timer" id="otp-timer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        Code expires in <span id="otp-countdown">5:00</span>
+                    </div>
+                    <div id="verify-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="verify-btn">
+                        <span id="verify-btn-text">Verify Code</span>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-md);">
+                    <button class="btn btn-ghost text-sm" onclick="handleResendCode()" id="resend-btn"
+                        style="padding: 0; color: var(--text-muted);">Didn't receive it? Resend code</button>
+                </div>
+                <div style="text-align: center; margin-top: var(--space-sm);">
+                    <button class="btn btn-ghost" onclick="showForgotPasswordView()" style="padding: 0;">
+                        ← Change email
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reset Password View -->
+            <div id="reset-password-view" style="display: none;">
+                <div style="text-align: center; margin-bottom: var(--space-lg);">
+                    <div class="fp-icon fp-icon-success">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <h2 style="margin-bottom: 4px;">Set New Password</h2>
+                    <p class="text-muted text-sm">Choose a strong password for your account.</p>
+                </div>
+                <form id="reset-password-form" onsubmit="handleResetPassword(event)">
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input" name="new_password" required
+                            placeholder="At least 6 characters" minlength="6" id="reset-new-password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-input" name="confirm_password" required
+                            placeholder="Re-enter your password" minlength="6" id="reset-confirm-password">
+                    </div>
+                    <div id="reset-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <div id="reset-success" class="text-success text-sm"
+                        style="display: none; margin-bottom: var(--space-md); color: #00b894;"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="reset-btn">
+                        <span id="reset-btn-text">Reset Password</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>

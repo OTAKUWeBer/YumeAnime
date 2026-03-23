@@ -2676,6 +2676,138 @@ h6 {
 }
 
 /* ============================================
+   Forgot Password / OTP Styles
+   ============================================ */
+.fp-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(162, 155, 254, 0.08));
+    border: 1px solid rgba(108, 92, 231, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-md);
+    color: #a29bfe;
+}
+
+.fp-icon-verify {
+    background: linear-gradient(135deg, rgba(0, 184, 148, 0.15), rgba(0, 184, 148, 0.05));
+    border-color: rgba(0, 184, 148, 0.25);
+    color: #00b894;
+}
+
+.fp-icon-success {
+    background: linear-gradient(135deg, rgba(9, 132, 227, 0.15), rgba(116, 185, 255, 0.08));
+    border-color: rgba(9, 132, 227, 0.25);
+    color: #74b9ff;
+}
+
+.forgot-link {
+    transition: color var(--transition-fast);
+}
+
+.forgot-link:hover {
+    color: var(--accent) !important;
+}
+
+/* OTP Input Container */
+.otp-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: var(--space-lg);
+}
+
+.otp-input {
+    width: 50px;
+    height: 56px;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: var(--bg-elevated);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    caret-color: var(--accent);
+}
+
+.otp-input:focus {
+    outline: none;
+    border-color: #6c5ce7;
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15), 0 0 20px rgba(108, 92, 231, 0.1);
+    background: rgba(108, 92, 231, 0.04);
+}
+
+.otp-input.success {
+    border-color: #00b894;
+    box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.15);
+    color: #00b894;
+}
+
+.otp-input.error {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    animation: otpShake 0.4s ease;
+}
+
+@keyframes otpShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+.otp-separator {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    font-weight: 300;
+    user-select: none;
+    padding: 0 2px;
+}
+
+/* OTP Timer */
+.otp-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-md);
+}
+
+.otp-timer.expiring {
+    color: #e17055;
+}
+
+.otp-timer.expired {
+    color: var(--error);
+}
+
+/* Mobile OTP */
+@media (max-width: 480px) {
+    .otp-container {
+        gap: 5px;
+    }
+
+    .otp-input {
+        width: 42px;
+        height: 48px;
+        font-size: 1.25rem;
+    }
+
+    .otp-separator {
+        font-size: 1rem;
+        padding: 0;
+    }
+}
+
+/* ============================================
    Scrollbar Styling
    ============================================ */
 ::-webkit-scrollbar {

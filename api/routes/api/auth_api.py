@@ -1,14 +1,21 @@
 """
 Authentication API endpoints
-Handles signup, login, logout, and session management
+Handles signup, login, logout, session management, and password reset
 """
 from flask import Blueprint, request, session, jsonify, current_app, make_response
 import re
+import random
+import secrets
 import logging
+from datetime import datetime, timedelta
+from bcrypt import hashpw, gensalt
 
 from ...utils.helpers import verify_turnstile
+from ...utils.mailer import send_reset_code_email
 from ...models.user import (
-    create_user, get_user, user_exists, email_exists, get_user_by_id, change_password
+    create_user, get_user, user_exists, email_exists, get_user_by_id,
+    get_user_by_email, change_password,
+    store_reset_code, verify_reset_code, clear_reset_code, reset_password
 )
 from ...core.caching import clear_user_cache
 from ...core.config import Config
@@ -221,3 +228,104 @@ def change_password_route():
     except Exception as e:
         current_app.logger.error(f"Error changing password: {e}")
         return jsonify({'success': False, 'message': 'Failed to change password. Please try again.'}), 500
+
+
+# ──────────────────────────────────────────────
+# Forgot-Password / Reset-Password endpoints
+# ──────────────────────────────────────────────
+
+@auth_api_bp.route('/forgot-password', methods=['POST'])
+@limiter.limit("3 per minute")
+def forgot_password():
+    """Send a 6-digit reset code to the user's email."""
+    data = request.get_json()
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'success': False, 'message': 'Email is required.'}), 400
+
+    # Always return success-like message to prevent email enumeration
+    generic_ok = {'success': True, 'message': 'If that email is registered, a reset code has been sent.'}
+
+    user = get_user_by_email(email)
+    if not user:
+        # Don't reveal whether the email exists
+        return jsonify(generic_ok), 200
+
+    # Generate 6-digit numeric code
+    code = f"{random.randint(0, 999999):06d}"
+    hashed_code = hashpw(code.encode('utf-8'), gensalt())
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    stored = store_reset_code(email, hashed_code, expires_at)
+    if not stored:
+        logger.error(f"Failed to store reset code for {email}")
+        return jsonify(generic_ok), 200
+
+    sent = send_reset_code_email(email, code)
+    if not sent:
+        logger.error(f"Failed to send reset email to {email}")
+        # Still return generic OK
+        return jsonify(generic_ok), 200
+
+    logger.info(f"Reset code sent to {email}")
+    return jsonify(generic_ok), 200
+
+
+@auth_api_bp.route('/verify-reset-code', methods=['POST'])
+@limiter.limit("5 per minute")
+def verify_reset_code_endpoint():
+    """Verify the 6-digit reset code."""
+    data = request.get_json()
+    email = (data.get('email') or '').strip().lower()
+    code = (data.get('code') or '').strip()
+
+    if not email or not code:
+        return jsonify({'success': False, 'message': 'Email and code are required.'}), 400
+
+    if not re.fullmatch(r'\d{6}', code):
+        return jsonify({'success': False, 'message': 'Code must be exactly 6 digits.'}), 400
+
+    if verify_reset_code(email, code):
+        # Issue a short-lived token stored in session so the reset-password
+        # endpoint knows this client proved knowledge of the code.
+        token = secrets.token_urlsafe(32)
+        session['reset_token'] = token
+        session['reset_email'] = email
+        return jsonify({'success': True, 'message': 'Code verified!', 'reset_token': token}), 200
+
+    return jsonify({'success': False, 'message': 'Invalid or expired code.'}), 400
+
+
+@auth_api_bp.route('/reset-password', methods=['POST'])
+@limiter.limit("3 per minute")
+def reset_password_endpoint():
+    """Set a new password after code verification."""
+    data = request.get_json()
+    email = (data.get('email') or '').strip().lower()
+    code = (data.get('code') or '').strip()
+    new_password = data.get('new_password', '')
+    token = data.get('reset_token', '')
+
+    if not email or not code or not new_password:
+        return jsonify({'success': False, 'message': 'All fields are required.'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'}), 400
+
+    # Verify the session-bound token
+    if not token or token != session.get('reset_token') or email != session.get('reset_email'):
+        return jsonify({'success': False, 'message': 'Invalid reset session. Please start over.'}), 403
+
+    # Re-verify the code (guards against race conditions)
+    if not verify_reset_code(email, code):
+        return jsonify({'success': False, 'message': 'Code expired. Please request a new one.'}), 400
+
+    if reset_password(email, new_password):
+        # Clean up session
+        session.pop('reset_token', None)
+        session.pop('reset_email', None)
+        logger.info(f"Password reset successful for {email}")
+        return jsonify({'success': True, 'message': 'Password reset successful! You can now sign in.'}), 200
+
+    return jsonify({'success': False, 'message': 'Failed to reset password. Please try again.'}), 500

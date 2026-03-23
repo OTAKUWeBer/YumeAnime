@@ -408,3 +408,65 @@ def _get_anilist_connection_info_uncached(user_id: int) -> dict:
     except Exception as e:
         logger.error(f"Error getting AniList connection info for user {user_id}: {e}")
         return {'connected': False, 'error': str(e)}
+
+
+# ──────────────────────────────────────────────
+# Password Reset (Forgot Password) helpers
+# ──────────────────────────────────────────────
+
+def store_reset_code(email: str, hashed_code: bytes, expires_at: datetime) -> bool:
+    """Store a bcrypt-hashed reset code and expiry on the user document."""
+    result = users_collection.update_one(
+        {"email": email},
+        {"$set": {
+            "reset_code": hashed_code,
+            "reset_code_expires": expires_at,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    return result.modified_count > 0
+
+
+def verify_reset_code(email: str, code: str) -> bool:
+    """Check that *code* matches the stored hash and has not expired."""
+    user = users_collection.find_one(
+        {"email": email},
+        {"reset_code": 1, "reset_code_expires": 1}
+    )
+    if not user or not user.get("reset_code") or not user.get("reset_code_expires"):
+        return False
+
+    if datetime.utcnow() > user["reset_code_expires"]:
+        # Expired — clean up
+        clear_reset_code(email)
+        return False
+
+    return checkpw(code.encode("utf-8"), user["reset_code"])
+
+
+def clear_reset_code(email: str) -> None:
+    """Remove reset-code fields from the user document."""
+    users_collection.update_one(
+        {"email": email},
+        {"$unset": {"reset_code": "", "reset_code_expires": ""}}
+    )
+
+
+def reset_password(email: str, new_password: str) -> bool:
+    """Set a new password for the user identified by *email* (no old password needed)."""
+    hashed = hashpw(new_password.encode("utf-8"), gensalt())
+    result = users_collection.update_one(
+        {"email": email},
+        {"$set": {
+            "password": hashed,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    if result.modified_count > 0:
+        user = users_collection.find_one({"email": email}, {"_id": 1})
+        if user:
+            clear_user_cache_func(user["_id"])
+        clear_reset_code(email)
+        return True
+    return False
+

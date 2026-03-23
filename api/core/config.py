@@ -32,6 +32,10 @@ class Config:
     # Application settings
     DEBUG = os.getenv("FLASK_ENV") == "development"
 
+    # Gmail SMTP (for password reset emails)
+    GMAIL_USER = os.getenv("GMAIL_USER")
+    GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+
     @classmethod
     def validate(cls):
         """Validate that required environment variables are set."""
