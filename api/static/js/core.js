@@ -57,11 +57,6 @@ function openLoginModal(view = 'login') {
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    // Ensure Turnstile renders inside modals
-    if (window.turnstile) {
-        document.querySelectorAll('.cf-turnstile').forEach(el => turnstile.render(el));
-    }
-
     if (view === 'signup') {
         showSignupView();
     } else {
@@ -368,18 +363,23 @@ async function handleForgotPassword(e) {
             body: JSON.stringify({ email })
         });
         
-        // Don't leak whether email exists; proceed to code verification either way
-        // to prevent email enumeration, unless rate limited.
         if (response.status === 429) {
             errorDiv.textContent = 'Too many requests. Please wait a moment.';
             errorDiv.style.display = 'block';
             return;
         }
 
-        currentResetEmail = email;
-        document.getElementById('verify-email-display').textContent = email;
-        showVerifyCodeView();
-        startOtpTimer(300); // 5 minutes
+        const data = await response.json();
+        
+        if (data.success) {
+            currentResetEmail = email;
+            document.getElementById('verify-email-display').textContent = email;
+            showVerifyCodeView();
+            startOtpTimer(300); // 5 minutes
+        } else {
+            errorDiv.textContent = data.message || 'Failed to send reset code.';
+            errorDiv.style.display = 'block';
+        }
     } catch (err) {
         errorDiv.textContent = 'An error occurred. Please try again.';
         errorDiv.style.display = 'block';

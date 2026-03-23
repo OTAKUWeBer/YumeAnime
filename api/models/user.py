@@ -118,8 +118,9 @@ def get_user_by_id(_id):
     return users_collection.find_one({"_id": _id})
 
 def get_user_by_email(email):
-    """Get user by email."""
-    return users_collection.find_one({"email": email})
+    """Get user by email (case-insensitive)."""
+    import re as _re
+    return users_collection.find_one({"email": _re.compile(f'^{_re.escape(email)}$', _re.IGNORECASE)})
 
 def user_exists(username):
     """Check if a user with the given username already exists."""
