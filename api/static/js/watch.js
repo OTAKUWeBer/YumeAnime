@@ -156,17 +156,42 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("[Player] Found URL:", videoUrl);
 
             if (Hls.isSupported() && (videoUrl.includes('.m3u8') || videoUrl.includes('/proxy/'))) {
-                console.log("[Player] Initializing Hls.js fallback");
+                console.log("[Player] Initializing Hls.js");
                 const hls = new Hls({
                     debug: false,
-                    enableWorker: true
+                    enableWorker: true,
+                    // Timeout & retry config to avoid infinite loading on PC
+                    manifestLoadingTimeOut: 15000,
+                    manifestLoadingMaxRetry: 3,
+                    manifestLoadingRetryDelay: 1000,
+                    levelLoadingTimeOut: 15000,
+                    levelLoadingMaxRetry: 3,
+                    levelLoadingRetryDelay: 1000,
+                    fragLoadingTimeOut: 20000,
+                    fragLoadingMaxRetry: 4,
+                    fragLoadingRetryDelay: 1000,
+                    // Lower start for faster first-frame
+                    startLevel: -1,
+                    // Bandwidth estimation
+                    abrEwmaDefaultEstimate: 500000,
+                    xhrSetup: function (xhr, url) {
+                        xhr.withCredentials = false;
+                    }
                 });
 
+                let hlsNetworkRetries = 0;
                 hls.on(Hls.Events.ERROR, (e, data) => {
                     console.error('[HLS Error]', data.type, data.details);
                     if (data.fatal) {
                         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                            hls.startLoad();
+                            hlsNetworkRetries++;
+                            if (hlsNetworkRetries <= 3) {
+                                console.log('[HLS] Network retry', hlsNetworkRetries);
+                                hls.startLoad();
+                            } else {
+                                console.warn('[Fallback] HLS network retries exhausted');
+                                tryFallback('hls');
+                            }
                         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
                             hls.recoverMediaError();
                         } else {
@@ -183,6 +208,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('[Player] HLS media attached!');
                     hls.loadSource(videoUrl);
                 });
+
+                // Stall detection: if video doesn't reach canplay within 20s, fallback
+                let hlsStallTimer = setTimeout(() => {
+                    if (video.readyState < 3) {
+                        console.warn('[Fallback] HLS stall detected after 20s, triggering fallback');
+                        tryFallback('hls');
+                    }
+                }, 20000);
+                video.addEventListener('canplay', () => clearTimeout(hlsStallTimer), { once: true });
+
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 // Native Safari HLS
                 console.log("[Player] Using Native HLS (iOS/Safari)");
@@ -422,12 +457,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (ui) ui.style.display = '';
 
                 if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
-                    window.hls = new Hls({ debug: false, enableWorker: true });
+                    window.hls = new Hls({
+                        debug: false,
+                        enableWorker: true,
+                        manifestLoadingTimeOut: 15000,
+                        manifestLoadingMaxRetry: 3,
+                        manifestLoadingRetryDelay: 1000,
+                        levelLoadingTimeOut: 15000,
+                        levelLoadingMaxRetry: 3,
+                        fragLoadingTimeOut: 20000,
+                        fragLoadingMaxRetry: 4,
+                        startLevel: -1,
+                        abrEwmaDefaultEstimate: 500000,
+                        xhrSetup: function (xhr, url) {
+                            xhr.withCredentials = false;
+                        }
+                    });
+                    let pillNetRetries = 0;
                     window.hls.on(Hls.Events.ERROR, (e, data) => {
                         console.error('[HLS Error]', data.type, data.details);
                         if (data.fatal) {
                             if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                                window.hls.startLoad();
+                                pillNetRetries++;
+                                if (pillNetRetries <= 3) {
+                                    window.hls.startLoad();
+                                } else {
+                                    console.warn('[Fallback] HLS network retries exhausted in pill switch');
+                                    tryFallback('hls');
+                                }
                             } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
                                 window.hls.recoverMediaError();
                             } else {
@@ -436,6 +493,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                     });
+
+                    // Stall detection for pill-switched HLS
+                    let pillStallTimer = setTimeout(() => {
+                        if (newVideo.readyState < 3) {
+                            console.warn('[Fallback] HLS stall in pill switch after 20s');
+                            tryFallback('hls');
+                        }
+                    }, 20000);
+                    newVideo.addEventListener('canplay', () => clearTimeout(pillStallTimer), { once: true });
 
                     window.hls.loadSource(url);
                     window.hls.attachMedia(newVideo);
@@ -815,29 +881,83 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        progressContainer.addEventListener('click', (e) => {
+        // ── Smooth Progress Bar Seeking (unified mouse + touch) ──────────────
+        let isSeeking = false;
+        let seekRaf = null;
+        let seekPos = 0;  // 0–1 fraction
+
+        function getSeekPos(clientX) {
             const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            video.currentTime = pos * video.duration;
+            return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        }
+
+        function updateSeekVisual(pos) {
+            const pct = pos * 100;
+            progressFill.style.width = pct + '%';
+            progressThumb.style.left = pct + '%';
+            // Live time preview
+            if (video.duration > 0) {
+                currTimeDisp.textContent = formatTime(pos * video.duration);
+            }
+        }
+
+        function startSeek(clientX) {
+            isSeeking = true;
+            seekPos = getSeekPos(clientX);
+            progressContainer.classList.add('seeking');
+            updateSeekVisual(seekPos);
+            showMobileControls();
+        }
+
+        function moveSeek(clientX) {
+            if (!isSeeking) return;
+            seekPos = getSeekPos(clientX);
+            // Use rAF for smooth 60fps visual updates without hammering video.currentTime
+            if (seekRaf) cancelAnimationFrame(seekRaf);
+            seekRaf = requestAnimationFrame(() => {
+                updateSeekVisual(seekPos);
+            });
+        }
+
+        function endSeek() {
+            if (!isSeeking) return;
+            isSeeking = false;
+            if (seekRaf) { cancelAnimationFrame(seekRaf); seekRaf = null; }
+            progressContainer.classList.remove('seeking');
+            // Apply the actual seek on release
+            if (video.duration > 0) {
+                video.currentTime = seekPos * video.duration;
+            }
+        }
+
+        // Mouse: click to seek instantly, drag for smooth scrubbing
+        progressContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startSeek(e.clientX);
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (isSeeking) moveSeek(e.clientX);
+        });
+        document.addEventListener('mouseup', () => {
+            if (isSeeking) endSeek();
         });
 
-        // Touch seeking for mobile progress bar
-        let isTouchSeeking = false;
+        // Touch: same logic, with preventDefault to block page scroll
         progressContainer.addEventListener('touchstart', (e) => {
-            isTouchSeeking = true;
-            const rect = progressContainer.getBoundingClientRect();
-            const pos = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
-            video.currentTime = pos * video.duration;
-            showMobileControls();
-        }, { passive: true });
-        progressContainer.addEventListener('touchmove', (e) => {
-            if (!isTouchSeeking) return;
-            const rect = progressContainer.getBoundingClientRect();
-            const pos = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
-            video.currentTime = pos * video.duration;
-        }, { passive: true });
-        progressContainer.addEventListener('touchend', () => {
-            isTouchSeeking = false;
+            e.preventDefault();
+            startSeek(e.touches[0].clientX);
+        }, { passive: false });
+        document.addEventListener('touchmove', (e) => {
+            if (isSeeking) {
+                e.preventDefault();
+                moveSeek(e.touches[0].clientX);
+            }
+        }, { passive: false });
+        document.addEventListener('touchend', () => {
+            if (isSeeking) endSeek();
+        });
+        document.addEventListener('touchcancel', () => {
+            if (isSeeking) endSeek();
         });
 
         // Volume & Mute
