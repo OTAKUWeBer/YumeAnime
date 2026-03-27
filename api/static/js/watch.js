@@ -688,6 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const progressFill = document.getElementById('progressFill');
         const progressThumb = document.getElementById('progressThumb');
         const progressBuffer = document.getElementById('progressBuffer');
+        const progressTooltip = document.getElementById('progressTooltip');
         const currTimeDisp = document.getElementById('currentTimeDisplay');
         const durDisp = document.getElementById('durationDisplay');
 
@@ -923,6 +924,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Mouse: click to seek instantly, drag for smooth scrubbing
+        progressContainer.addEventListener('mousemove', (e) => {
+            if (!video.duration || !progressTooltip) return;
+            const rect = progressContainer.getBoundingClientRect();
+            let pos = (e.clientX - rect.left) / rect.width;
+            pos = Math.max(0, Math.min(1, pos));
+            const hoverTime = pos * video.duration;
+            progressTooltip.textContent = formatTime(hoverTime);
+            progressTooltip.style.left = `${pos * 100}%`;
+        });
+        
         progressContainer.addEventListener('mousedown', (e) => {
             e.preventDefault();
             startSeek(e.clientX);
