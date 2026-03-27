@@ -50,10 +50,10 @@
                 setInterval(function () { try { window.close(); } catch (e) { } }, 50);
             }
             // Method 1: debugger timing
-            <!-- function _dd() { var t = performance.now(); debugger; return (performance.now() - t) > 200; }
+            function _dd() { var t = performance.now(); debugger; return (performance.now() - t) > 200; }
             // Method 2: console getter probe
             var _p = (function () { var f = false, o = {}; Object.defineProperty(o, '_c', { get: function () { f = true; return 1; } }); return { o: o, c: function () { f = false; console.log(o); console.clear(); return f; } }; })();
-            // Method 3: window size delta (desktop only — mobile chrome causes false positives) -->
+            // Method 3: window size delta (desktop only — mobile chrome causes false positives)
             var _isMobile = (
                 ('ontouchstart' in window) ||
                 navigator.maxTouchPoints > 0 ||
