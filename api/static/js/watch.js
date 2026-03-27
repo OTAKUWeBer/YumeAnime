@@ -937,7 +937,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playerLoader) playerLoader.style.display = 'none';
         });
         video.addEventListener('waiting', () => {
-            if (playerLoader) playerLoader.style.display = 'block';
+            if (playerLoader) playerLoader.style.display = 'flex';
         });
         video.addEventListener('canplay', () => {
             if (playerLoader) playerLoader.style.display = 'none';
