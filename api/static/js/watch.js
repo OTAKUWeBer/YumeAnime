@@ -176,6 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     abrEwmaDefaultEstimate: 500000,
                     // PC-specific: disable low-latency mode to improve compatibility
                     lowLatencyMode: false,
+                    // Seek optimization — tolerate gaps and nudge playback past them
+                    maxBufferHole: 0.5,
+                    nudgeMaxRetry: 5,
+                    maxFragLookUpTolerance: 0.25,
+                    highBufferWatchdogPeriod: 2,
                     xhrSetup: function (xhr, url) {
                         xhr.withCredentials = false;
                     }
@@ -531,6 +536,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         startLevel: -1,
                         lowLatencyMode: false,
                         abrEwmaDefaultEstimate: 500000,
+                        maxBufferHole: 0.5,
+                        nudgeMaxRetry: 5,
+                        maxFragLookUpTolerance: 0.25,
+                        highBufferWatchdogPeriod: 2,
                         xhrSetup: function (xhr, url) {
                             xhr.withCredentials = false;
                         }
@@ -940,6 +949,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playerLoader) playerLoader.style.display = 'flex';
         });
         video.addEventListener('canplay', () => {
+            if (playerLoader) playerLoader.style.display = 'none';
+        });
+        // Show loader immediately on seek, hide when seeked completes
+        video.addEventListener('seeking', () => {
+            if (playerLoader) playerLoader.style.display = 'flex';
+        });
+        video.addEventListener('seeked', () => {
             if (playerLoader) playerLoader.style.display = 'none';
         });
 
@@ -1637,6 +1653,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 fragLoadingMaxRetry: 4,
                                 startLevel: -1,
                                 abrEwmaDefaultEstimate: 500000,
+                                maxBufferHole: 0.5,
+                                nudgeMaxRetry: 5,
+                                maxFragLookUpTolerance: 0.25,
+                                highBufferWatchdogPeriod: 2,
                                 xhrSetup: function (xhr) { xhr.withCredentials = false; }
                             });
                             let ajaxNetRetries = 0;
