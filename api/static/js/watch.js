@@ -312,11 +312,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 video.removeAttribute('src');
                 video.load();
             } catch (e) { console.warn('[cleanup] video reset error:', e); }
+            video.style.display = 'none';
         }
-        // Clear any embed iframe so its audio/video stops
+        // Hide the video container and custom player UI
+        const vc = document.getElementById('videoContainer');
+        if (vc) vc.style.display = 'none';
+        const ui = document.getElementById('customPlayerUI');
+        if (ui) ui.style.display = 'none';
+        // Clear any embed iframe so its audio/video stops, and hide it
         const embedFrame = document.getElementById('embedPlayer');
         if (embedFrame) {
             embedFrame.src = '';
+            embedFrame.style.display = 'none';
         }
     }
 
@@ -441,177 +448,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Stream Pill Click Logic (delegated)
+    // ── Server Section Pill Click Logic (INTERNAL/EXTERNAL) ─────────────────
+    // Clicking an INTERNAL pill → switch to that provider and load HLS
+    // Clicking an EXTERNAL pill → switch to that provider and load Embed
     document.addEventListener('DOMContentLoaded', function () {
-        const selector = document.getElementById('streamSelector');
-        if (!selector) return;
+        const serverSections = document.getElementById('serverSections');
+        if (!serverSections) return;
 
-        const videoContainer = document.getElementById('videoContainer');
-        const masterWrapper = document.getElementById('video-wrapper');
+        serverSections.addEventListener('click', function (e) {
+            const pill = e.target.closest('.server-pill');
+            if (!pill || pill.disabled || pill.classList.contains('unavailable')) return;
 
-        selector.addEventListener('click', function (e) {
-            const pill = e.target.closest('.stream-pill');
-            if (!pill) return;
-
-            // ── Provider pill ──
-            if (pill.dataset.provider) {
-                const providerPills = document.querySelectorAll('#providerPills .stream-pill');
-                providerPills.forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                switchProvider(pill.dataset.provider);
-                return;
-            }
-
-            // ── Source pill (HLS / Embed) ──
-            const type = pill.dataset.sourceType;
-            const url = pill.dataset.sourceUrl;
-            if (!type || !url || !masterWrapper) return;
+            const streamType = pill.dataset.streamType; // 'hls' or 'embed'
+            const provider = pill.dataset.provider;
+            if (!streamType || !provider) return;
 
             e.preventDefault();
 
-            // --- CRITICAL: tear down ALL old players before switching ---
-            cleanupCurrentPlayer();
-
-            const sourcePills = document.querySelectorAll('#sourcePills .stream-pill');
-            sourcePills.forEach(p => p.classList.remove('active'));
+            // Update active state: deactivate ALL pills in the OTHER section,
+            // and set active within the clicked section
+            const allSections = serverSections.querySelectorAll('.server-section-pills');
+            allSections.forEach(sec => {
+                sec.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+            });
             pill.classList.add('active');
 
-            if (type === 'embed') {
-                if (videoContainer) videoContainer.style.display = 'none';
+            // Store desired stream type so fetchAndLoadSources knows what to play
+            window._watchState._desiredStreamType = streamType;
+            window._watchState.provider = provider;
 
-                let embedFrame = masterWrapper.querySelector('#embedPlayer');
-                if (!embedFrame) {
-                    embedFrame = document.createElement('iframe');
-                    embedFrame.id = 'embedPlayer';
-                    embedFrame.className = 'embed-player-frame';
-                    embedFrame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
-                    embedFrame.allowFullscreen = true;
-
-                    // Basic iframe error detection (may not catch cross-origin HTTP errors, but catches generic frame errors)
-                    embedFrame.onerror = function () {
-                        console.warn('[Fallback] Embed iframe onerror triggered');
-                        tryFallback('embed');
-                    };
-
-                    masterWrapper.insertBefore(embedFrame, masterWrapper.firstChild);
-                }
-                embedFrame.src = url;
-                embedFrame.style.display = 'block';
-
-            } else if (type === 'hls') {
-                let embedFrame = masterWrapper.querySelector('#embedPlayer');
-                if (embedFrame) embedFrame.style.display = 'none';
-
-                if (videoContainer) videoContainer.style.display = 'block';
-
-                let newVideo = document.getElementById('videoPlayer');
-                if (!newVideo) {
-                    newVideo = document.createElement('video');
-                    newVideo.id = 'videoPlayer';
-                    newVideo.className = 'raw-video-player';
-                    newVideo.setAttribute('playsinline', '');
-                    newVideo.setAttribute('webkit-playsinline', 'true');
-                    newVideo.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;';
-                    if (videoContainer) videoContainer.insertBefore(newVideo, videoContainer.firstChild || null);
-                }
-
-                newVideo.setAttribute('data-video-url', url);
-                newVideo.innerHTML = '<source src="' + url + '" type="application/x-mpegURL">';
-                newVideo.style.display = '';
-
-                let ui = document.getElementById('customPlayerUI');
-                if (ui) ui.style.display = '';
-
-                if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
-                    window.hls = new Hls({
-                        debug: false,
-                        enableWorker: true,
-                        manifestLoadingTimeOut: 15000,
-                        manifestLoadingMaxRetry: 3,
-                        manifestLoadingRetryDelay: 1000,
-                        levelLoadingTimeOut: 15000,
-                        levelLoadingMaxRetry: 3,
-                        fragLoadingTimeOut: 20000,
-                        fragLoadingMaxRetry: 4,
-                        startLevel: -1,
-                        lowLatencyMode: false,
-                        abrEwmaDefaultEstimate: 500000,
-                        maxBufferHole: 0.5,
-                        nudgeMaxRetry: 5,
-                        maxFragLookUpTolerance: 0.25,
-                        highBufferWatchdogPeriod: 2,
-                        xhrSetup: function (xhr, url) {
-                            xhr.withCredentials = false;
-                        }
-                    });
-                    let pillNetRetries = 0;
-                    let pillMediaRetries = 0;
-                    window.hls.on(Hls.Events.ERROR, (e, data) => {
-                        console.error('[HLS Error]', data.type, data.details);
-                        if (data.fatal) {
-                            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                                pillNetRetries++;
-                                if (pillNetRetries <= 3) {
-                                    window.hls.startLoad();
-                                } else {
-                                    console.warn('[Fallback] HLS network retries exhausted in pill switch');
-                                    tryFallback('hls');
-                                }
-                            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                                pillMediaRetries++;
-                                if (pillMediaRetries <= 2) {
-                                    console.log('[HLS] Pill switch media recovery attempt', pillMediaRetries);
-                                    window.hls.recoverMediaError();
-                                } else {
-                                    console.warn('[Fallback] HLS media recovery exhausted in pill switch');
-                                    tryFallback('hls');
-                                }
-                            } else {
-                                console.warn('[Fallback] HLS fatal in pill switch, triggering fallback');
-                                tryFallback('hls');
-                            }
-                        }
-                    });
-
-                    // Trigger play after manifest is parsed
-                    window.hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                        newVideo.play().catch(function (e) {
-                            console.log('[Player] Pill switch auto-play blocked:', e.name);
-                        });
-                    });
-
-                    // Multi-stage stall detection for pill-switched HLS
-                    let pillStallStage = 0;
-                    let pillStallTimer = setTimeout(function pillStallCheck() {
-                        if (newVideo.readyState >= 3 && !newVideo.paused && newVideo.currentTime > 0) return;
-                        pillStallStage++;
-                        if (pillStallStage <= 2) {
-                            console.warn('[HLS Recovery] Pill stall stage', pillStallStage);
-                            if (window.hls) window.hls.recoverMediaError();
-                            newVideo.play().catch(function () { });
-                            pillStallTimer = setTimeout(pillStallCheck, 10000);
-                        } else {
-                            if (newVideo.readyState < 3 || (newVideo.paused && newVideo.currentTime === 0)) {
-                                console.warn('[Fallback] HLS stall in pill switch unrecoverable');
-                                tryFallback('hls');
-                            }
-                        }
-                    }, 15000);
-                    newVideo.addEventListener('playing', function onPillPlaying() {
-                        clearTimeout(pillStallTimer);
-                        newVideo.removeEventListener('playing', onPillPlaying);
-                    });
-
-                    window.hls.loadSource(url);
-                    window.hls.attachMedia(newVideo);
-                } else if (newVideo.canPlayType('application/vnd.apple.mpegurl')) {
-                    newVideo.src = url;
-                    newVideo.play().catch(e => console.log("Play rejected:", e));
-                } else {
-                    newVideo.src = url;
-                    newVideo.play().catch(e => console.log("Play rejected:", e));
-                }
+            // Save preference
+            if (window.serverManager) {
+                window.serverManager.savePreferredServer(provider);
+            } else {
+                try {
+                    localStorage.setItem('yumePreferredServer', provider);
+                    document.cookie = `preferred_server=${provider}; path=/; max-age=31536000`;
+                } catch (e) { }
             }
+
+            fetchAndLoadSources();
         });
     });
 
@@ -1440,7 +1316,8 @@ document.addEventListener('DOMContentLoaded', () => {
     failedProviders: new Set(),
         hlsRetries: 0,
             embedRetries: 0,
-                _fallbackActive: false
+                _fallbackActive: false,
+        _desiredStreamType: 'hls'
     };
 
     // ── Auto-Fallback System ────────────────────────────────────────────────
@@ -1452,14 +1329,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('[Fallback] Triggered from:', failedType, '| Provider:', state.provider);
 
-        // 1) If HLS failed, try the Embed pill on the same provider
+        // 1) If HLS failed, try same provider's Embed pill
         if (failedType === 'hls') {
-            const embedPill = document.querySelector('#sourcePills .stream-pill[data-source-type="embed"]');
-            if (embedPill && !embedPill.classList.contains('active')) {
-                console.log('[Fallback] HLS failed → switching to Embed');
+            const embedPill = document.querySelector('#embedServerPills .server-pill[data-provider="' + state.provider + '"]');
+            if (embedPill) {
+                console.log('[Fallback] HLS failed → switching to Embed for', state.provider);
                 if(typeof showToast === 'function') showToast('HLS source failed, switching to Embed fallback...', 'warning');
                 state._fallbackActive = false;
-                embedPill.click();
+                state._desiredStreamType = 'embed';
+                // Activate embed pill
+                const embedSection = document.getElementById('embedServerPills');
+                if (embedSection) {
+                    embedSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                    embedPill.classList.add('active');
+                }
+                fetchAndLoadSources();
                 return;
             }
         }
@@ -1474,18 +1358,21 @@ document.addEventListener('DOMContentLoaded', () => {
             state._fallbackActive = false;
             state.hlsRetries = 0;
             state.embedRetries = 0;
+            state._desiredStreamType = 'hls'; // Try HLS first on new provider
+            state.provider = nextProvider;
 
-            // Update provider pill UI
-            const providerPills = document.querySelectorAll('#providerPills .stream-pill');
-            providerPills.forEach(p => {
-                p.classList.toggle('active', p.dataset.provider === nextProvider);
-            });
+            // Update HLS pill UI for new provider
+            const hlsSection = document.getElementById('hlsServerPills');
+            if (hlsSection) {
+                hlsSection.querySelectorAll('.server-pill').forEach(p => {
+                    p.classList.toggle('active', p.dataset.provider === nextProvider);
+                });
+            }
 
             switchProvider(nextProvider);
         } else {
             console.warn('[Fallback] All providers exhausted, no more fallbacks available');
             state._fallbackActive = false;
-            // Reset failed set so user can manually retry
             state.failedProviders.clear();
         }
     }
@@ -1516,9 +1403,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const state = window._watchState;
         console.log('[AJAX] Fetching sources:', state);
 
-        // Show a loading indicator
         const videoContainer = document.getElementById('videoContainer');
         const masterWrapper = document.getElementById('video-wrapper');
+
+        // Show loading state on server sections
+        const serverSectionsEl = document.getElementById('serverSections');
+        if (serverSectionsEl) serverSectionsEl.classList.add('loading');
 
         // Cleanup current player first
         cleanupCurrentPlayer();
@@ -1561,60 +1451,85 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
 
-                // ── Update the Stream pill buttons with new sources ──
-                const sourcePillsEl = document.getElementById('sourcePills');
-                if (sourcePillsEl) {
-                    const embedSrcs = data.embed_sources || [];
-                    const hlsSrcs = data.hls_sources || [];
+                // ── Update the Server Section pills with new sources ──
+                // (pills already present from template, just update active states if needed)
+                // The provider pill was already activated by the click handler.
+                // Here we just ensure disabled state if a type has no source
+                const embedSrcs = data.embed_sources || [];
+                const hlsSrcs = data.hls_sources || [];
+                const currentProvider = data.provider || state.provider;
 
-                    // Clear and rebuild — only best (first) source per type
-                    sourcePillsEl.innerHTML = '';
+                // Determine which type to play
+                const desiredType = state._desiredStreamType || 'hls';
+                const effectiveType = (desiredType === 'hls' && hlsSrcs.length > 0) ? 'hls'
+                    : (desiredType === 'embed' && embedSrcs.length > 0) ? 'embed'
+                    : (hlsSrcs.length > 0) ? 'hls'
+                    : (embedSrcs.length > 0) ? 'embed'
+                    : null;
 
-                    if (hlsSrcs.length > 0) {
-                        const hs = hlsSrcs[0];
-                        const btn = document.createElement('button');
-                        btn.className = 'stream-pill' + (data.source_type === 'hls' ? ' active' : '');
-                        btn.dataset.sourceType = 'hls';
-                        btn.dataset.sourceUrl = hs.file || hs.url || '';
-                        btn.innerHTML = 'Miku <span class="pill-badge badge-hls">HLS</span>';
-                        sourcePillsEl.appendChild(btn);
-                    }
+                // Remove loading state
+                if (serverSectionsEl) serverSectionsEl.classList.remove('loading');
 
-                    if (embedSrcs.length > 0) {
-                        const es = embedSrcs[0];
-                        const btn = document.createElement('button');
-                        btn.className = 'stream-pill' + (data.source_type === 'embed' ? ' active' : '');
-                        btn.dataset.sourceType = 'embed';
-                        btn.dataset.sourceUrl = es.url || '';
-                        btn.innerHTML = 'Zen <span class="pill-badge badge-embed">Embed</span>';
-                        sourcePillsEl.appendChild(btn);
-                    }
+                // Sync pill active states: only ONE section should have an active pill
+                const hlsSection = document.getElementById('hlsServerPills');
+                const embedSection = document.getElementById('embedServerPills');
 
-                    // Show/hide the source group
-                    const sourceGroup = document.getElementById('sourceGroup');
-                    if (sourceGroup) sourceGroup.style.display = (hlsSrcs.length + embedSrcs.length > 0) ? '' : 'none';
+                // Clear ALL pills first
+                if (hlsSection) hlsSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                if (embedSection) embedSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+
+                // Activate the correct pill in the effective section
+                if (effectiveType === 'hls' && hlsSection) {
+                    const pill = hlsSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
+                    if (pill) pill.classList.add('active');
+                } else if (effectiveType === 'embed' && embedSection) {
+                    const pill = embedSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
+                    if (pill) pill.classList.add('active');
                 }
 
-                // ── Update provider pills active state ──
-                const providerPillsEl = document.getElementById('providerPills');
-                if (providerPillsEl && data.provider) {
-                    providerPillsEl.querySelectorAll('.stream-pill').forEach(p => {
-                        p.classList.toggle('active', p.dataset.provider === data.provider);
-                    });
+                // Disable/enable pills for this provider based on available sources
+                if (hlsSection) {
+                    const hlsPill = hlsSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
+                    if (hlsPill) {
+                        if (hlsSrcs.length === 0) {
+                            hlsPill.disabled = true;
+                            hlsPill.classList.add('unavailable');
+                        } else {
+                            hlsPill.disabled = false;
+                            hlsPill.classList.remove('unavailable');
+                        }
+                    }
+                }
+                if (embedSection) {
+                    const embedPill = embedSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
+                    if (embedPill) {
+                        if (embedSrcs.length === 0) {
+                            embedPill.disabled = true;
+                            embedPill.classList.add('unavailable');
+                        } else {
+                            embedPill.disabled = false;
+                            embedPill.classList.remove('unavailable');
+                        }
+                    }
                 }
 
-                // Load the new video source
-                const sourceType = data.source_type;
+                // Clear desired type after use
+                state._desiredStreamType = null;
+
+                // ── Load the correct player based on desired type ──
+                const sourceType = effectiveType || data.source_type;
                 const videoLink = data.video_link;
                 const embedSources = data.embed_sources || [];
                 const hlsSources = data.hls_sources || [];
 
-                const embedPlayer = document.getElementById('embedPlayer');
-                const videoPlayer = document.getElementById('videoPlayer');
-
                 if (sourceType === 'embed' && embedSources.length > 0) {
-                    // Use first embed source
+                    // Use first embed source — hide HLS elements first
                     if (videoContainer) videoContainer.style.display = 'none';
+                    const existingVid = document.getElementById('videoPlayer');
+                    if (existingVid) existingVid.style.display = 'none';
+                    const existingUI = document.getElementById('customPlayerUI');
+                    if (existingUI) existingUI.style.display = 'none';
+
                     let frame = masterWrapper ? masterWrapper.querySelector('#embedPlayer') : null;
                     if (!frame) {
                         frame = document.createElement('iframe');
@@ -1629,12 +1544,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     frame.src = embedSources[0].url;
                     frame.style.display = 'block';
-                } else if (videoLink || (hlsSources && hlsSources.length > 0)) {
-                    // HLS / direct video
-                    const url = videoLink || (hlsSources[0] && (hlsSources[0].file || hlsSources[0].url));
+                } else if (hlsSources && hlsSources.length > 0) {
+                    // HLS / direct video — hide embed first
+                    const url = hlsSources[0].file || hlsSources[0].url;
                     if (!url) return;
 
-                    if (embedPlayer) embedPlayer.style.display = 'none';
+                    const existingEmbed = document.getElementById('embedPlayer');
+                    if (existingEmbed) existingEmbed.style.display = 'none';
                     if (videoContainer) videoContainer.style.display = 'block';
 
                     let vid = document.getElementById('videoPlayer');

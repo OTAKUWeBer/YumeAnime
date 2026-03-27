@@ -1019,6 +1019,147 @@
         color: #3b82f6;
     }
 
+    /* ── Server Sections — INTERNAL / EXTERNAL pill layout ──────── */
+    .server-sections {
+        display: flex;
+        gap: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: var(--radius-md);
+        padding: 14px 18px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .server-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .server-section + .server-section {
+        margin-left: 28px;
+        padding-left: 28px;
+        border-left: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .server-section-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+    }
+
+    .server-section-label svg {
+        opacity: 0.5;
+    }
+
+    .server-section-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .server-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        white-space: nowrap;
+    }
+
+    .server-pill:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: var(--text-primary);
+    }
+
+    .server-pill.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg-primary);
+        box-shadow: 0 2px 12px rgba(var(--accent-rgb, 128, 90, 213), 0.35);
+    }
+
+    .server-pill.active .srv-badge {
+        background: rgba(255, 255, 255, 0.25);
+        color: var(--bg-primary);
+    }
+
+    .srv-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.58rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        line-height: 1;
+    }
+
+    .srv-badge.badge-hls {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+    }
+
+    .srv-badge.badge-embed {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    /* Loading state: pulse animation during AJAX */
+    .server-sections.loading {
+        pointer-events: none;
+        position: relative;
+    }
+
+    .server-sections.loading .server-section-pills {
+        opacity: 0.35;
+        transition: opacity 0.2s ease;
+    }
+
+    .server-sections.loading::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+        animation: serverShimmer 1.2s ease infinite;
+        border-radius: var(--radius-md);
+    }
+
+    @keyframes serverShimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Unavailable pill: dimmed + line-through */
+    .server-pill.unavailable {
+        opacity: 0.3;
+        cursor: not-allowed;
+        text-decoration: line-through;
+    }
+
+    .server-pill.unavailable:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+    }
+
     @media (max-width: 600px) {
         .stream-selector {
             padding: 8px 12px;
@@ -1496,6 +1637,36 @@
         white-space: nowrap;
     }
 
+    /* Server sections: stack on mobile */
+    .server-sections {
+        flex-direction: column;
+        gap: 0;
+        padding: 10px 14px;
+    }
+
+    .server-section + .server-section {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .server-section-label {
+        font-size: 0.62rem;
+    }
+
+    .server-pill {
+        padding: 5px 10px;
+        font-size: 0.76rem;
+    }
+
+    .srv-badge {
+        font-size: 0.52rem;
+        padding: 1px 4px;
+    }
+
     .stream-pill .pill-badge {
         font-size: 0.58rem;
         padding: 1px 4px;
@@ -1538,6 +1709,16 @@
 
     .stream-pill .pill-badge {
         display: none;
+    }
+
+    .server-pill {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+
+    .srv-badge {
+        font-size: 0.48rem;
+        padding: 1px 3px;
     }
 
     .lang-btn {

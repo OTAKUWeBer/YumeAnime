@@ -73,7 +73,13 @@ class MiruroSourcesService:
                             zoro_data = episodes_resp.get("providers", {}).get("zoro", {})
                             zoro_eps = zoro_data.get("episodes", {}).get(category, []) or []
                             for ep in zoro_eps:
-                                if ep.get("number") == ep_number:
+                                try:
+                                    api_num = float(ep.get("number", -1))
+                                    target_num = float(ep_number)
+                                except (TypeError, ValueError):
+                                    api_num, target_num = -1, -2
+                                    
+                                if api_num == target_num:
                                     ep_url = ep.get("url", "")
                                     if "?ep=" in ep_url:
                                         embed_ep_id = ep_url.split("?ep=")[1]
