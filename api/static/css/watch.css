@@ -598,6 +598,30 @@
         transform: translate(-50%, -50%) scale(1.2);
     }
 
+    .progress-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        transform: translateX(-50%);
+        margin-bottom: 8px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: var(--font-mono, monospace);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        white-space: nowrap;
+        z-index: 10;
+    }
+
+    .progress-container:hover .progress-tooltip,
+    .progress-container.seeking .progress-tooltip {
+        opacity: 1;
+    }
+
     /* Buttons */
     .controls-main {
         display: flex;
