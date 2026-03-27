@@ -835,11 +835,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mouse Inactivity Timeout (3 seconds)
         let inactivityTimeout;
         const resetInactivity = () => {
-            if (masterWrapper) masterWrapper.classList.remove('user-inactive');
+            if (masterWrapper) {
+                masterWrapper.classList.remove('user-inactive');
+            }
             clearTimeout(inactivityTimeout);
             if (!video.paused) {
                 inactivityTimeout = setTimeout(() => {
-                    if (masterWrapper) masterWrapper.classList.add('user-inactive');
+                    if (masterWrapper) {
+                        masterWrapper.classList.add('user-inactive');
+                        masterWrapper.classList.remove('controls-visible');
+                    }
+                    mobileControlsVisible = false;
                 }, 3000);
             }
         };
@@ -866,18 +872,23 @@ document.addEventListener('DOMContentLoaded', () => {
             masterWrapper.addEventListener('mouseleave', () => {
                 if (!video.paused) {
                     clearTimeout(inactivityTimeout);
-                    if (masterWrapper) masterWrapper.classList.add('user-inactive');
+                    if (masterWrapper) {
+                        masterWrapper.classList.add('user-inactive');
+                        masterWrapper.classList.remove('controls-visible');
+                    }
+                    mobileControlsVisible = false;
                 }
             });
             // On mobile: single tap toggles control bar visibility
             masterWrapper.addEventListener('touchstart', (e) => {
                 // Only toggle if the tap isn't on a control button/progress bar
-                const tag = e.target.tagName.toLowerCase();
                 const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.id === 'mobilePlayOverlay';
                 if (!isControl) {
                     showMobileControls();
+                } else {
+                    // Even control taps should reset the hide timer
+                    resetInactivity();
                 }
-                resetInactivity();
             }, { passive: true });
             document.addEventListener('keydown', resetInactivity);
         }
