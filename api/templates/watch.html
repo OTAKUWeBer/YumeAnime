@@ -261,48 +261,50 @@
 
                     <!-- Controls Row -->
                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 5px;">
-                        <!-- Stream & Server Selector (Premium Segmented Controls) -->
-                        <div class="stream-selector" id="streamSelector">
-                            {% if episodes and episodes.providers_map and (episodes.providers_map|length > 1) %}
-                            <div class="stream-selector-group" id="providerGroup">
-                                <span class="stream-selector-label">Server</span>
-                                <div class="stream-selector-pills" id="providerPills">
-                                    {% for p_name, p_data in episodes.providers_map.items() %}
-                                    {% set is_active = (p_name == selected_server) or (p_name ==
-                                    episodes.default_provider and not selected_server) %}
-                                    <button class="stream-pill {% if is_active %}active{% endif %}"
-                                        data-provider="{{ p_name }}">
+                        <!-- Server Sections: INTERNAL (HLS) & EXTERNAL (Embed) -->
+                        {% if episodes and episodes.providers_map %}
+                        {% set default_p = selected_server or episodes.default_provider %}
+                        <div class="server-sections" id="serverSections">
+                            <!-- INTERNAL (HLS) -->
+                            <div class="server-section">
+                                <div class="server-section-label">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                    INTERNAL
+                                </div>
+                                <div class="server-section-pills" id="hlsServerPills">
+                                    {% for p_name in episodes.providers_map %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {} %}
+                                    {% if caps.get('hls', false) %}
+                                    <button class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %}"
+                                        data-stream-type="hls" data-provider="{{ p_name }}">
                                         {{ p_name | title }}
+                                        <span class="srv-badge badge-hls">HLS</span>
                                     </button>
+                                    {% endif %}
                                     {% endfor %}
                                 </div>
                             </div>
-                            {% endif %}
-
-                            {% if (embed_sources and embed_sources|length > 0) or (hls_sources and hls_sources|length >
-                            0) %}
-                            <div class="stream-selector-group" id="sourceGroup">
-                                <span class="stream-selector-label">Stream</span>
-                                <div class="stream-selector-pills" id="sourcePills">
-                                    {% if hls_sources and hls_sources|length > 0 %}
-                                    <button class="stream-pill {% if source_type == 'hls' %}active{% endif %}"
-                                        data-source-type="hls"
-                                        data-source-url="{{ hls_sources[0].file or hls_sources[0].url }}">
-                                        Miku
-                                        <span class="pill-badge badge-hls">HLS</span>
+                            <!-- EXTERNAL (Embed) -->
+                            <div class="server-section">
+                                <div class="server-section-label">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    EXTERNAL
+                                </div>
+                                <div class="server-section-pills" id="embedServerPills">
+                                    {% for p_name in episodes.providers_map %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {} %}
+                                    {% if caps.get('embed', false) %}
+                                    <button class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %}"
+                                        data-stream-type="embed" data-provider="{{ p_name }}">
+                                        {{ 'Megaplay' if p_name == 'zoro' else p_name | title }}
+                                        <span class="srv-badge badge-embed">EMBED</span>
                                     </button>
                                     {% endif %}
-                                    {% if embed_sources and embed_sources|length > 0 %}
-                                    <button class="stream-pill {% if source_type == 'embed' %}active{% endif %}"
-                                        data-source-type="embed" data-source-url="{{ embed_sources[0].url }}">
-                                        Zen
-                                        <span class="pill-badge badge-embed">Embed</span>
-                                    </button>
-                                    {% endif %}
+                                    {% endfor %}
                                 </div>
                             </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
 
                         <!-- Right Actions: Language & Report -->
                         <div class="watch-actions-row">

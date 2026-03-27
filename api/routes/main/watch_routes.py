@@ -143,7 +143,11 @@ def _fetch_video_data(full_slug, lang, server, anilist_id):
     raw = asyncio.run(
         current_app.ha_scraper.video(full_slug, lang, server, anilist_id)
     )
+    return _parse_video_raw(raw)
 
+
+def _parse_video_raw(raw):
+    """Parse raw scraper response into structured video data."""
     video_link = None
     subtitle_tracks = []
     intro = outro = None
@@ -159,13 +163,21 @@ def _fetch_video_data(full_slug, lang, server, anilist_id):
         hls_sources = raw.get("hls_sources", raw.get("sources", []))
         video_link = raw.get("video_link")
 
-        if not source_type:
+        # Prefer HLS over embed when both are available
+        if hls_sources:
+            source_type = "hls"
+        elif not source_type:
             if embed_sources:
                 source_type = "embed"
-            elif video_link or hls_sources:
-                source_type = "hls"
 
-        if source_type == "hls" and not video_link:
+        # When HLS is selected, ALWAYS use actual HLS URL (not embed URL from scraper)
+        if source_type == "hls" and hls_sources:
+            first_hls = hls_sources[0] if isinstance(hls_sources, list) else None
+            if isinstance(first_hls, dict):
+                video_link = first_hls.get("file") or first_hls.get("url") or video_link
+            elif isinstance(first_hls, str):
+                video_link = first_hls
+        elif source_type == "hls" and not video_link:
             sources = raw.get("sources")
             if isinstance(sources, dict):
                 video_link = sources.get("file") or sources.get("url")
@@ -187,6 +199,8 @@ def _fetch_video_data(full_slug, lang, server, anilist_id):
         intro = raw.get("intro")
         outro = raw.get("outro")
 
+    print(f"[_fetch_video_data] source_type={source_type}, video_link={str(video_link)[:80] if video_link else 'NONE'}")
+
     return {
         "video_link": video_link,
         "subtitle_tracks": subtitle_tracks,
@@ -198,6 +212,94 @@ def _fetch_video_data(full_slug, lang, server, anilist_id):
         "hls_sources": hls_sources,
         "source_type": source_type,
     }
+
+
+def _fetch_video_and_scan(full_slug, lang, server, anilist_id, providers_map, ep_number):
+    """
+    Fetch default provider video data AND scan all providers' capabilities
+    in a SINGLE asyncio.run() call to avoid event loop conflicts.
+    Returns (video_data_dict, provider_capabilities_dict).
+    """
+    # Build scan tasks for all providers
+    scan_slugs = {}  # provider_name -> full_slug
+    if providers_map:
+        for p_name in providers_map:
+            ep_id = _find_episode_id_for_provider(providers_map, p_name, ep_number, lang)
+            if ep_id:
+                slug = ep_id if ep_id.startswith("watch/") else f"watch/{p_name}/{anilist_id}/{lang}/{ep_id}"
+            else:
+                # Fallback: construct slug from provider name + episode number
+                # This works for providers like Zoro whose source handler extracts ep number from slug
+                slug = f"watch/{p_name}/{anilist_id}/{lang}/{p_name}-{ep_number}"
+            scan_slugs[p_name] = slug
+
+    async def _combined_fetch():
+        scraper = current_app.ha_scraper
+        # 1) Fetch main video data for default provider
+        main_task = scraper.video(full_slug, lang, server, anilist_id)
+        # 2) Scan all providers concurrently
+        scan_names = list(scan_slugs.keys())
+        scan_tasks = [scraper.video(scan_slugs[p], lang, p, anilist_id) for p in scan_names]
+        # Run all together
+        all_results = await asyncio.gather(main_task, *scan_tasks, return_exceptions=True)
+        return all_results, scan_names
+
+    try:
+        all_results, scan_names = asyncio.run(_combined_fetch())
+    except Exception as e:
+        print(f"[FetchAndScan] Fatal error: {e}")
+        # Fallback: try just the main fetch
+        try:
+            raw = asyncio.run(current_app.ha_scraper.video(full_slug, lang, server, anilist_id))
+            video_data = _parse_video_raw(raw)
+        except Exception:
+            video_data = _parse_video_raw(None)
+        # Mark all providers as available so pills show
+        capabilities = {p: {"hls": True, "embed": True} for p in (providers_map or {})}
+        return video_data, capabilities
+
+    # Parse main video result
+    main_raw = all_results[0]
+    if isinstance(main_raw, Exception):
+        print(f"[FetchAndScan] Main fetch error: {main_raw}")
+        video_data = _parse_video_raw(None)
+    else:
+        video_data = _parse_video_raw(main_raw)
+
+    # Parse scan results
+    capabilities = {}
+    for i, p_name in enumerate(scan_names):
+        raw = all_results[i + 1]  # +1 because index 0 is main_task
+        if isinstance(raw, Exception):
+            print(f"[ProviderScan] Error for {p_name}: {raw}")
+            capabilities[p_name] = {"hls": False, "embed": False}
+        elif isinstance(raw, dict):
+            # Skip error responses
+            if raw.get("error"):
+                print(f"[ProviderScan] {p_name} returned error: {raw.get('error')}")
+                capabilities[p_name] = {"hls": False, "embed": False}
+                continue
+            hls = raw.get("hls_sources", raw.get("sources", []))
+            embed = raw.get("embed_sources", [])
+            # Also check video_link — if source_type is 'embed' and video_link exists, embed is available
+            has_embed = bool(embed and len(embed) > 0)
+            if not has_embed and raw.get("source_type") == "embed" and raw.get("video_link"):
+                has_embed = True
+            capabilities[p_name] = {
+                "hls": bool(hls and len(hls) > 0),
+                "embed": has_embed,
+            }
+        else:
+            capabilities[p_name] = {"hls": False, "embed": False}
+
+    # Providers not in scan_slugs (no episode ID found)
+    if providers_map:
+        for p_name in providers_map:
+            if p_name not in capabilities:
+                capabilities[p_name] = {"hls": False, "embed": False}
+
+    print(f"[ProviderScan] capabilities: {capabilities}")
+    return video_data, capabilities
 
 
 # ──────────────────────────────────────────────────────────────
@@ -420,8 +522,10 @@ def watch(anime_id, ep_number):
         if not selected_server:
             selected_server = "hd-1"
 
-    # ── Fetch video data ──
-    video_data = _fetch_video_data(full_slug, lang, selected_server, anilist_id)
+    # ── Fetch video data + scan all provider capabilities in ONE async batch ──
+    video_data, provider_capabilities = _fetch_video_and_scan(
+        full_slug, lang, selected_server, anilist_id, providers_map, ep_number
+    )
 
     # Save last used server
     if selected_server:
@@ -573,6 +677,7 @@ def watch(anime_id, ep_number):
             hls_sources=video_data["hls_sources"],
             server_progress=server_progress_dict,
             is_logged_in=is_logged_in,
+            provider_capabilities=provider_capabilities,
         )
     except Exception as e:
         print("watch error:", e)
