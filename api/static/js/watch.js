@@ -174,12 +174,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     startLevel: -1,
                     // Bandwidth estimation
                     abrEwmaDefaultEstimate: 500000,
+                    // PC-specific: disable low-latency mode to improve compatibility
+                    lowLatencyMode: false,
                     xhrSetup: function (xhr, url) {
                         xhr.withCredentials = false;
                     }
                 });
 
                 let hlsNetworkRetries = 0;
+                let hlsMediaRecoveryAttempts = 0;
                 hls.on(Hls.Events.ERROR, (e, data) => {
                     console.error('[HLS Error]', data.type, data.details);
                     if (data.fatal) {
@@ -193,7 +196,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tryFallback('hls');
                             }
                         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                            hls.recoverMediaError();
+                            hlsMediaRecoveryAttempts++;
+                            if (hlsMediaRecoveryAttempts <= 2) {
+                                console.log('[HLS] Recovering media error, attempt', hlsMediaRecoveryAttempts);
+                                hls.recoverMediaError();
+                            } else {
+                                console.warn('[Fallback] HLS media recovery exhausted');
+                                tryFallback('hls');
+                            }
                         } else {
                             console.warn('[Fallback] HLS fatal error on initial load, triggering fallback');
                             tryFallback('hls');
@@ -209,14 +219,65 @@ document.addEventListener('DOMContentLoaded', () => {
                     hls.loadSource(videoUrl);
                 });
 
-                // Stall detection: if video doesn't reach canplay within 20s, fallback
-                let hlsStallTimer = setTimeout(() => {
-                    if (video.readyState < 3) {
-                        console.warn('[Fallback] HLS stall detected after 20s, triggering fallback');
-                        tryFallback('hls');
+                // KEY FIX: Trigger play on MANIFEST_PARSED — standard HLS.js pattern
+                // Without this, PC browsers never start playback (autoplay policy)
+                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    console.log('[Player] HLS manifest parsed, levels:', data.levels.length);
+                    video.play().catch(function (e) {
+                        console.log('[Player] Auto-play blocked by browser, awaiting user interaction:', e.name);
+                        // Show the play overlay so user knows to click
+                        var overlay = document.getElementById('mobilePlayOverlay');
+                        if (overlay) overlay.style.display = 'flex';
+                    });
+                });
+
+                // Multi-stage stall detection with recovery before fallback
+                let hlsStallRecoveryStage = 0;
+                let hlsStallTimer = setTimeout(function hlsStallCheck() {
+                    // If video is playing fine, stop checking
+                    if (video.readyState >= 3 && !video.paused && video.currentTime > 0) {
+                        console.log('[Player] HLS playing successfully');
+                        return;
                     }
-                }, 20000);
-                video.addEventListener('canplay', () => clearTimeout(hlsStallTimer), { once: true });
+                    hlsStallRecoveryStage++;
+                    if (hlsStallRecoveryStage === 1) {
+                        // Stage 1: Check if we have buffered data but video is stuck
+                        if (video.buffered.length > 0 && video.readyState < 3) {
+                            console.warn('[HLS Recovery] Buffered data exists but readyState=' + video.readyState + ', attempting recoverMediaError');
+                            hls.recoverMediaError();
+                            video.play().catch(function () { });
+                        } else if (video.readyState >= 3) {
+                            // Data ready but not playing — try play again
+                            console.log('[HLS Recovery] readyState OK, re-triggering play');
+                            video.play().catch(function () { });
+                        }
+                        hlsStallTimer = setTimeout(hlsStallCheck, 10000);
+                    } else if (hlsStallRecoveryStage === 2) {
+                        // Stage 2: If still stuck, try swapping codec levels
+                        if (video.readyState < 3 || (video.paused && video.currentTime === 0)) {
+                            console.warn('[HLS Recovery] Stage 2: Attempting level switch + recoverMediaError');
+                            if (hls.levels && hls.levels.length > 1) {
+                                hls.currentLevel = hls.levels.length - 1; // Force lowest quality
+                            }
+                            hls.recoverMediaError();
+                            video.play().catch(function () { });
+                            hlsStallTimer = setTimeout(hlsStallCheck, 10000);
+                        } else {
+                            console.log('[Player] HLS recovered at stage 2');
+                        }
+                    } else {
+                        // Stage 3: Give up and fallback
+                        if (video.readyState < 3 || (video.paused && video.currentTime === 0)) {
+                            console.warn('[Fallback] HLS stall unrecoverable after multi-stage recovery, triggering fallback');
+                            tryFallback('hls');
+                        }
+                    }
+                }, 15000);
+                // Clear stall timer once video is genuinely playing
+                video.addEventListener('playing', function onPlaying() {
+                    clearTimeout(hlsStallTimer);
+                    video.removeEventListener('playing', onPlaying);
+                }, { once: false });
 
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 // Native Safari HLS
@@ -468,12 +529,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         fragLoadingTimeOut: 20000,
                         fragLoadingMaxRetry: 4,
                         startLevel: -1,
+                        lowLatencyMode: false,
                         abrEwmaDefaultEstimate: 500000,
                         xhrSetup: function (xhr, url) {
                             xhr.withCredentials = false;
                         }
                     });
                     let pillNetRetries = 0;
+                    let pillMediaRetries = 0;
                     window.hls.on(Hls.Events.ERROR, (e, data) => {
                         console.error('[HLS Error]', data.type, data.details);
                         if (data.fatal) {
@@ -486,7 +549,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                     tryFallback('hls');
                                 }
                             } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                                window.hls.recoverMediaError();
+                                pillMediaRetries++;
+                                if (pillMediaRetries <= 2) {
+                                    console.log('[HLS] Pill switch media recovery attempt', pillMediaRetries);
+                                    window.hls.recoverMediaError();
+                                } else {
+                                    console.warn('[Fallback] HLS media recovery exhausted in pill switch');
+                                    tryFallback('hls');
+                                }
                             } else {
                                 console.warn('[Fallback] HLS fatal in pill switch, triggering fallback');
                                 tryFallback('hls');
@@ -494,18 +564,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
 
-                    // Stall detection for pill-switched HLS
-                    let pillStallTimer = setTimeout(() => {
-                        if (newVideo.readyState < 3) {
-                            console.warn('[Fallback] HLS stall in pill switch after 20s');
-                            tryFallback('hls');
+                    // Trigger play after manifest is parsed
+                    window.hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                        newVideo.play().catch(function (e) {
+                            console.log('[Player] Pill switch auto-play blocked:', e.name);
+                        });
+                    });
+
+                    // Multi-stage stall detection for pill-switched HLS
+                    let pillStallStage = 0;
+                    let pillStallTimer = setTimeout(function pillStallCheck() {
+                        if (newVideo.readyState >= 3 && !newVideo.paused && newVideo.currentTime > 0) return;
+                        pillStallStage++;
+                        if (pillStallStage <= 2) {
+                            console.warn('[HLS Recovery] Pill stall stage', pillStallStage);
+                            if (window.hls) window.hls.recoverMediaError();
+                            newVideo.play().catch(function () { });
+                            pillStallTimer = setTimeout(pillStallCheck, 10000);
+                        } else {
+                            if (newVideo.readyState < 3 || (newVideo.paused && newVideo.currentTime === 0)) {
+                                console.warn('[Fallback] HLS stall in pill switch unrecoverable');
+                                tryFallback('hls');
+                            }
                         }
-                    }, 20000);
-                    newVideo.addEventListener('canplay', () => clearTimeout(pillStallTimer), { once: true });
+                    }, 15000);
+                    newVideo.addEventListener('playing', function onPillPlaying() {
+                        clearTimeout(pillStallTimer);
+                        newVideo.removeEventListener('playing', onPillPlaying);
+                    });
 
                     window.hls.loadSource(url);
                     window.hls.attachMedia(newVideo);
-                    newVideo.play().catch(e => console.log("Play rejected:", e));
                 } else if (newVideo.canPlayType('application/vnd.apple.mpegurl')) {
                     newVideo.src = url;
                     newVideo.play().catch(e => console.log("Play rejected:", e));
@@ -1537,17 +1626,62 @@ document.addEventListener('DOMContentLoaded', () => {
                         vid.style.display = '';
 
                         if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
-                            window.hls = new Hls({ debug: false, enableWorker: true });
+                            window.hls = new Hls({
+                                debug: false,
+                                enableWorker: true,
+                                lowLatencyMode: false,
+                                manifestLoadingTimeOut: 15000,
+                                manifestLoadingMaxRetry: 3,
+                                levelLoadingTimeOut: 15000,
+                                fragLoadingTimeOut: 20000,
+                                fragLoadingMaxRetry: 4,
+                                startLevel: -1,
+                                abrEwmaDefaultEstimate: 500000,
+                                xhrSetup: function (xhr) { xhr.withCredentials = false; }
+                            });
+                            let ajaxNetRetries = 0;
+                            let ajaxMediaRetries = 0;
                             window.hls.on(Hls.Events.ERROR, (e, d) => {
                                 console.error('[HLS Error]', d.type, d.details);
                                 if (d.fatal) {
-                                    if (d.type === Hls.ErrorTypes.NETWORK_ERROR) window.hls.startLoad();
-                                    else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) window.hls.recoverMediaError();
+                                    if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                                        ajaxNetRetries++;
+                                        if (ajaxNetRetries <= 3) window.hls.startLoad();
+                                        else tryFallback('hls');
+                                    } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                                        ajaxMediaRetries++;
+                                        if (ajaxMediaRetries <= 2) window.hls.recoverMediaError();
+                                        else tryFallback('hls');
+                                    } else {
+                                        tryFallback('hls');
+                                    }
                                 }
+                            });
+                            // Trigger play on manifest parsed
+                            window.hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                                vid.play().catch(function (e) {
+                                    console.log('[Player] AJAX HLS auto-play blocked:', e.name);
+                                });
                             });
                             window.hls.loadSource(url);
                             window.hls.attachMedia(vid);
-                            vid.play().catch(err => console.log("Play rejected:", err));
+
+                            // Stall recovery for AJAX-loaded HLS
+                            let ajaxStallStage = 0;
+                            let ajaxStallTimer = setTimeout(function ajaxStallCheck() {
+                                if (vid.readyState >= 3 && !vid.paused && vid.currentTime > 0) return;
+                                ajaxStallStage++;
+                                if (ajaxStallStage <= 2) {
+                                    if (window.hls) window.hls.recoverMediaError();
+                                    vid.play().catch(function () { });
+                                    ajaxStallTimer = setTimeout(ajaxStallCheck, 10000);
+                                } else {
+                                    if (vid.readyState < 3 || (vid.paused && vid.currentTime === 0)) {
+                                        tryFallback('hls');
+                                    }
+                                }
+                            }, 15000);
+                            vid.addEventListener('playing', function () { clearTimeout(ajaxStallTimer); }, { once: true });
                         } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
                             vid.src = url;
                             vid.play().catch(err => console.log("Play rejected:", err));
