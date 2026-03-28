@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Multi-stage stall detection with recovery before fallback
                 let hlsStallRecoveryStage = 0;
-                let hlsStallTimer = setTimeout(function hlsStallCheck() {
+                window._hlsStallTimer = setTimeout(function hlsStallCheck() {
                     // If video is playing fine, stop checking
                     if (video.readyState >= 3 && !video.paused && video.currentTime > 0) {
                         console.log('[Player] HLS playing successfully');
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.log('[HLS Recovery] readyState OK, re-triggering play');
                             video.play().catch(function () { });
                         }
-                        hlsStallTimer = setTimeout(hlsStallCheck, 10000);
+                        window._hlsStallTimer = setTimeout(hlsStallCheck, 10000);
                     } else if (hlsStallRecoveryStage === 2) {
                         // Stage 2: If still stuck, try swapping codec levels
                         if (video.readyState < 3 || (video.paused && video.currentTime === 0)) {
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             hls.recoverMediaError();
                             video.play().catch(function () { });
-                            hlsStallTimer = setTimeout(hlsStallCheck, 10000);
+                            window._hlsStallTimer = setTimeout(hlsStallCheck, 10000);
                         } else {
                             console.log('[Player] HLS recovered at stage 2');
                         }
@@ -280,7 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 15000);
                 // Clear stall timer once video is genuinely playing
                 video.addEventListener('playing', function onPlaying() {
-                    clearTimeout(hlsStallTimer);
+                    clearTimeout(window._hlsStallTimer);
+                    window._hlsStallTimer = null;
                     video.removeEventListener('playing', onPlaying);
                 }, { once: false });
 
@@ -299,6 +300,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Shared cleanup helper — tears down ALL active players (HLS, video, embed)
     function cleanupCurrentPlayer() {
+        // Cancel any pending stall detection timers to prevent ghost fallbacks
+        if (window._hlsStallTimer) {
+            clearTimeout(window._hlsStallTimer);
+            window._hlsStallTimer = null;
+        }
+        if (window._ajaxStallTimer) {
+            clearTimeout(window._ajaxStallTimer);
+            window._ajaxStallTimer = null;
+        }
         // Destroy any active HLS.js instance
         if (window.hls) {
             try { window.hls.destroy(); } catch (e) { console.warn('[cleanup] hls destroy error:', e); }
@@ -1631,20 +1641,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             // Stall recovery for AJAX-loaded HLS
                             let ajaxStallStage = 0;
-                            let ajaxStallTimer = setTimeout(function ajaxStallCheck() {
+                            window._ajaxStallTimer = setTimeout(function ajaxStallCheck() {
                                 if (vid.readyState >= 3 && !vid.paused && vid.currentTime > 0) return;
                                 ajaxStallStage++;
                                 if (ajaxStallStage <= 2) {
                                     if (window.hls) window.hls.recoverMediaError();
                                     vid.play().catch(function () { });
-                                    ajaxStallTimer = setTimeout(ajaxStallCheck, 10000);
+                                    window._ajaxStallTimer = setTimeout(ajaxStallCheck, 10000);
                                 } else {
                                     if (vid.readyState < 3 || (vid.paused && vid.currentTime === 0)) {
                                         tryFallback('hls');
                                     }
                                 }
                             }, 15000);
-                            vid.addEventListener('playing', function () { clearTimeout(ajaxStallTimer); }, { once: true });
+                            vid.addEventListener('playing', function () { clearTimeout(window._ajaxStallTimer); window._ajaxStallTimer = null; }, { once: true });
                         } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
                             vid.src = url;
                             vid.play().catch(err => console.log("Play rejected:", err));
