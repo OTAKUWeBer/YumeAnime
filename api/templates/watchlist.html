@@ -12,7 +12,7 @@
 
     <!-- Profile Hero -->
     <div class="profile-hero">
-        <div class="profile-hero-bg"></div>
+        <div class="profile-hero-bg" {% if user.banner_image %}style="background: url('{{ user.banner_image }}') center/cover;"{% endif %}></div>
         <div class="profile-hero-content">
             {% if user.avatar %}
             <img src="{{ user.avatar }}" alt="{{ username }}" class="hero-avatar">
