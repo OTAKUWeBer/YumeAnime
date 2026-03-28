@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="YumeAnime - Service Disruption Notice">
+    <meta property="og:title" content="YumeAnime - Service Disruption">
+    <meta property="og:description" content="We are currently experiencing issues and our team is working to restore service.">
+    <title>Service Disruption — YumeAnime</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Pure monochrome palette */
+            --bg-primary: #060606;
+            --bg-card: #0b0b0b;
+            --bg-row: #0f0f0f;
+            --bg-row-hover: #131313;
+            --border-card: #1a1a1a;
+            --border-row: #161616;
+            --border-subtle: #1f1f1f;
+
+            /* White hierarchy — bright to dim */
+            --white-100: #ffffff;
+            --white-90: #e6e6e6;
+            --white-70: #b3b3b3;
+            --white-50: #808080;
+            --white-35: #595959;
+            --white-20: #333333;
+            --white-12: #1f1f1f;
+
+            /* Accent — used sparingly */
+            --red: #c94444;
+            --red-dim: #1c1010;
+            --red-border: #2a1616;
+            --white-08: #141414;
+
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-primary);
+            color: var(--white-90);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ═══════════════════════════════════════════
+           BACKGROUND
+           ═══════════════════════════════════════════ */
+        .bg-noise {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+            pointer-events: none;
+        }
+
+        .bg-glow-1 {
+            position: fixed;
+            width: 450px;
+            height: 450px;
+            top: -160px;
+            right: -120px;
+            border-radius: 50%;
+            background: #0f0a0a;
+            filter: blur(100px);
+            z-index: 0;
+            animation: driftSlow 22s ease-in-out infinite;
+        }
+
+        .bg-glow-2 {
+            position: fixed;
+            width: 350px;
+            height: 350px;
+            bottom: -100px;
+            left: -80px;
+            border-radius: 50%;
+            background: #0a0a0f;
+            filter: blur(100px);
+            z-index: 0;
+            animation: driftSlow 26s ease-in-out infinite reverse;
+        }
+
+        @keyframes driftSlow {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(25px, -15px); }
+        }
+
+        .bg-grid {
+            position: fixed;
+            inset: -60%;
+            z-index: 0;
+            background-image:
+                linear-gradient(#0e0e0e 1px, transparent 1px),
+                linear-gradient(90deg, #0e0e0e 1px, transparent 1px);
+            background-size: 80px 80px;
+            transform: perspective(600px) rotateX(55deg);
+            transform-origin: center top;
+            animation: gridPull 18s linear infinite;
+            mask-image: radial-gradient(ellipse 70% 50% at 50% 0%, #000 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 0%, #000 20%, transparent 70%);
+        }
+
+        @keyframes gridPull {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 80px; }
+        }
+
+        .bg-vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            background: radial-gradient(ellipse 65% 65% at 50% 50%, transparent 30%, var(--bg-primary) 100%);
+            pointer-events: none;
+        }
+
+        /* ═══════════════════════════════════════════
+           PARTICLES
+           ═══════════════════════════════════════════ */
+        #particle-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* ═══════════════════════════════════════════
+           CONTENT
+           ═══════════════════════════════════════════ */
+        .announcement-wrapper {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 2rem;
+            max-width: 540px;
+            width: 100%;
+        }
+
+        /* ── Logo ── */
+        .announcement-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            margin-bottom: 2.5rem;
+            opacity: 0;
+            animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+        }
+
+        .announcement-logo img {
+            height: 38px;
+            width: auto;
+        }
+
+        .announcement-logo span {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--white-100);
+        }
+
+        /* ── Card ── */
+        .announcement-card {
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 2.75rem 2.25rem 2.25rem;
+            overflow: hidden;
+            opacity: 0;
+            animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
+        }
+
+        /* Subtle top highlight */
+        .announcement-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20%;
+            right: 20%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--white-12), transparent);
+            pointer-events: none;
+        }
+
+        /* ── Status Icon with rings ── */
+        .status-icon-wrapper {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 1.75rem;
+        }
+
+        .status-icon-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--red);
+            border-right-color: var(--red-dim);
+            animation: spin 2.5s linear infinite;
+        }
+
+        .status-icon-ring-inner {
+            position: absolute;
+            inset: 7px;
+            border-radius: 50%;
+            border: 1.5px solid transparent;
+            border-bottom-color: var(--white-35);
+            border-left-color: var(--white-20);
+            animation: spin 1.8s linear infinite reverse;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status-icon-core {
+            position: absolute;
+            inset: 15px;
+            border-radius: 50%;
+            background: var(--bg-row);
+            border: 1px solid var(--border-row);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-icon-core svg {
+            color: var(--red);
+            animation: alertPulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* ── Badge ── */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            background: var(--red-dim);
+            border: 1px solid var(--red-border);
+            border-radius: 9999px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--red);
+            margin-bottom: 1.25rem;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--red);
+            animation: dotFlash 1.4s ease-in-out infinite;
+        }
+
+        @keyframes dotFlash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.15; }
+        }
+
+        /* ── Title ── */
+        .announcement-title {
+            font-size: 1.85rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.2;
+            margin-bottom: 0.9rem;
+            color: var(--white-100);
+        }
+
+        /* ── Subtitle ── */
+        .announcement-subtitle {
+            font-size: 0.88rem;
+            color: var(--white-50);
+            line-height: 1.8;
+            margin-bottom: 1.75rem;
+            font-weight: 400;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ── Divider ── */
+        .card-divider {
+            width: 100%;
+            height: 1px;
+            background: var(--border-card);
+            margin: 0 auto 1.25rem;
+        }
+
+        /* ── Status rows ── */
+        .status-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 0.9rem;
+            background: var(--bg-row);
+            border: 1px solid var(--border-row);
+            border-radius: 8px;
+            font-size: 0.78rem;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .status-row:hover {
+            background: var(--bg-row-hover);
+            border-color: var(--border-subtle);
+        }
+
+        .status-row-label {
+            color: var(--white-35);
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 500;
+        }
+
+        .status-row-value {
+            color: var(--white-70);
+            font-weight: 500;
+        }
+
+        .status-row-value.highlight {
+            color: var(--red);
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--red);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .live-dot::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            background: var(--red-dim);
+            animation: ping 2s ease-out infinite;
+        }
+
+        @keyframes ping {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        /* ── Activity indicator (replaces colorful progress bar) ── */
+        .activity-section {
+            margin-bottom: 1.75rem;
+            padding: 0.75rem 0.9rem;
+            background: var(--bg-row);
+            border: 1px solid var(--border-row);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .activity-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--white-12);
+            border-top-color: var(--white-35);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .activity-text {
+            font-size: 0.76rem;
+            color: var(--white-50);
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .activity-text strong {
+            color: var(--white-70);
+            font-weight: 600;
+        }
+
+        .activity-dots::after {
+            content: '';
+            animation: loadingDots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes loadingDots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        /* ── Buttons ── */
+        .btn-group {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.6rem 1.35rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
+            border: 1px solid transparent;
+        }
+
+        .btn-github {
+            background: var(--bg-row);
+            border-color: var(--border-row);
+            color: var(--white-70);
+        }
+
+        .btn-github:hover {
+            background: var(--bg-row-hover);
+            border-color: var(--border-subtle);
+            color: var(--white-90);
+            transform: translateY(-1px);
+        }
+
+        .btn-github:active { transform: translateY(0); }
+        .btn-github svg { transition: transform 0.2s ease; }
+        .btn-github:hover svg { transform: scale(1.12); }
+
+        .btn-retry {
+            background: transparent;
+            border-color: var(--border-row);
+            color: var(--white-35);
+        }
+
+        .btn-retry:hover {
+            border-color: var(--border-subtle);
+            color: var(--white-50);
+            background: var(--bg-row);
+        }
+
+        .btn-retry:hover .retry-icon {
+            animation: retryRotate 0.5s ease;
+        }
+
+        @keyframes retryRotate { to { transform: rotate(360deg); } }
+
+        /* ── Footer ── */
+        .announcement-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            text-align: center;
+            padding: 1.25rem;
+            font-size: 0.7rem;
+            color: var(--white-35);
+            letter-spacing: 0.02em;
+            opacity: 0;
+            animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+        }
+
+        /* ═══════════════════════════════════════════
+           ANIMATIONS
+           ═══════════════════════════════════════════ */
+        @keyframes revealUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+                filter: blur(4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════ */
+        @media (max-width: 640px) {
+            .announcement-wrapper { padding: 1.25rem; }
+
+            .announcement-card {
+                padding: 2rem 1.4rem 1.75rem;
+                border-radius: 16px;
+            }
+
+            .announcement-title { font-size: 1.4rem; }
+            .announcement-subtitle { font-size: 0.82rem; }
+
+            .status-row {
+                flex-direction: column;
+                gap: 0.15rem;
+                text-align: center;
+                padding: 0.55rem 0.7rem;
+            }
+
+            .status-icon-wrapper {
+                width: 60px;
+                height: 60px;
+                margin-bottom: 1.5rem;
+            }
+
+            .status-icon-core { inset: 12px; }
+            .status-icon-core svg { width: 18px; height: 18px; }
+
+            .btn-group { flex-direction: column; }
+            .btn { justify-content: center; }
+
+            .bg-glow-1 { width: 280px; height: 280px; }
+            .bg-glow-2 { width: 220px; height: 220px; }
+        }
+
+        @media (max-width: 360px) {
+            .announcement-title { font-size: 1.25rem; }
+            .announcement-card { padding: 1.5rem 1.15rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background -->
+    <div class="bg-noise"></div>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-vignette"></div>
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Content -->
+    <div class="announcement-wrapper">
+        <div class="announcement-logo">
+            <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime">
+            <span>YumeAnime</span>
+        </div>
+
+        <div class="announcement-card">
+            <!-- Spinning rings icon -->
+            <div class="status-icon-wrapper">
+                <div class="status-icon-ring"></div>
+                <div class="status-icon-ring-inner"></div>
+                <div class="status-icon-core">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Badge -->
+            <div class="status-badge">
+                <span class="badge-dot"></span>
+                Major Service Disruption
+            </div>
+
+            <h1 class="announcement-title">We're Experiencing Major Issues</h1>
+            <p class="announcement-subtitle">
+                Our services are currently affected by critical technical issues.
+                Our engineering team has been mobilized and is actively working
+                around the clock to diagnose and resolve the problem. We sincerely
+                apologize for the inconvenience.
+            </p>
+
+            <div class="card-divider"></div>
+
+            <!-- Status info -->
+            <div class="status-details">
+                <div class="status-row">
+                    <span class="status-row-label">
+                        <span class="live-dot"></span>
+                        Severity
+                    </span>
+                    <span class="status-row-value highlight">Critical</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-row-label">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                        Status
+                    </span>
+                    <span class="status-row-value">Investigating &amp; Fixing</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-row-label">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        ETA
+                    </span>
+                    <span class="status-row-value">Resolving as fast as possible</span>
+                </div>
+            </div>
+
+            <!-- Activity indicator -->
+            <div class="activity-section">
+                <div class="activity-spinner"></div>
+                <div class="activity-text">
+                    <strong>Active remediation in progress.</strong>
+                    Our team is working to restore full service<span class="activity-dots"></span>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="btn-group">
+                <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" rel="noopener noreferrer"
+                    class="btn btn-github">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <span>Follow Updates</span>
+                </a>
+                <button class="btn btn-retry" onclick="location.reload()">
+                    <svg class="retry-icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    <span>Retry</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="announcement-footer">
+        &copy; 2026 YumeAnime &middot; We're working hard to bring everything back online.
+    </div>
+
+    <script>
+        // ── Disable right-click, copy, devtools ──
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+        document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+        document.addEventListener('copy', function(e) { e.preventDefault(); });
+        document.addEventListener('cut', function(e) { e.preventDefault(); });
+        document.addEventListener('dragstart', function(e) { e.preventDefault(); });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12') { e.preventDefault(); return; }
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].indexOf(e.key.toLowerCase()) !== -1) { e.preventDefault(); }
+            if ((e.ctrlKey || e.metaKey) && ['u','s','p'].indexOf(e.key.toLowerCase()) !== -1) { e.preventDefault(); }
+        });
+
+        // ── Canvas particle system ──
+        (function() {
+            var canvas = document.getElementById('particle-canvas');
+            var ctx = canvas.getContext('2d');
+            var w, h, particles = [];
+            var mouse = { x: -999, y: -999 };
+
+            function resize() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            document.addEventListener('mousemove', function(e) {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+            document.addEventListener('mouseleave', function() {
+                mouse.x = -999;
+                mouse.y = -999;
+            });
+
+            function Particle() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.size = Math.random() * 1.2 + 0.4;
+                this.vx = (Math.random() - 0.5) * 0.2;
+                this.vy = (Math.random() - 0.5) * 0.2;
+                this.baseAlpha = Math.random() * 0.2 + 0.04;
+                this.alpha = this.baseAlpha;
+                // Monochrome grays
+                var shades = ['#3a3a3a', '#444444', '#4e4e4e', '#383838', '#505050'];
+                this.color = shades[Math.floor(Math.random() * shades.length)];
+            }
+
+            Particle.prototype.update = function() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                var dx = this.x - mouse.x;
+                var dy = this.y - mouse.y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 100) {
+                    var force = (100 - dist) / 100 * 0.5;
+                    this.x += (dx / dist) * force;
+                    this.y += (dy / dist) * force;
+                    this.alpha = Math.min(this.baseAlpha + 0.15, 0.4);
+                } else {
+                    this.alpha += (this.baseAlpha - this.alpha) * 0.03;
+                }
+
+                if (this.x < -10) this.x = w + 10;
+                if (this.x > w + 10) this.x = -10;
+                if (this.y < -10) this.y = h + 10;
+                if (this.y > h + 10) this.y = -10;
+            };
+
+            Particle.prototype.draw = function() {
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            };
+
+            var count = Math.min(55, Math.floor((w * h) / 20000));
+            for (var i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+
+            function drawLines() {
+                for (var i = 0; i < particles.length; i++) {
+                    for (var j = i + 1; j < particles.length; j++) {
+                        var dx = particles[i].x - particles[j].x;
+                        var dy = particles[i].y - particles[j].y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 85) {
+                            ctx.globalAlpha = (1 - dist / 85) * 0.035;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = '#404040';
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                            ctx.globalAlpha = 1;
+                        }
+                    }
+                }
+            }
+
+            function loop() {
+                ctx.clearRect(0, 0, w, h);
+                for (var i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+                }
+                drawLines();
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+    </script>
+</body>
+
+</html>

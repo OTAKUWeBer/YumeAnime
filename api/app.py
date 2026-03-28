@@ -18,6 +18,11 @@ from api.core.extensions import limiter
 
 _RE_STRIP_ANIME_ID = re.compile(r'-\d+$')
 
+# ── Urgent Announcement Mode ──────────────────────────────────────────
+# Set to True to put the entire site into maintenance mode.
+# All routes will display the announcement page instead of normal content.
+URGENT_ANNOUNCEMENT = True
+
 HEADLESS_PATTERNS = [
     r"headless", r"phantom", r"selenium", r"puppeteer",
     r"playwright", r"chromium", r"firefox.*headless",
@@ -71,6 +76,14 @@ def create_app():
     app.register_blueprint(auth_bp,      url_prefix='/auth')
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp,       url_prefix='/api')
+
+    @app.before_request
+    def check_urgent_announcement():
+        if not URGENT_ANNOUNCEMENT:
+            return
+        if request.path.startswith('/static/'):
+            return
+        return render_template('announcement.html'), 503
 
     @app.before_request
     def block_obvious_bots():
