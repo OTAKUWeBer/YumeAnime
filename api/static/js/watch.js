@@ -786,9 +786,14 @@ document.addEventListener('DOMContentLoaded', () => {
         playBtn.addEventListener('click', togglePlay);
         centerPlayBtn.addEventListener('click', togglePlay);
         wrapper.addEventListener('click', (e) => {
-            if (e.target === wrapper || e.target.tagName === 'VIDEO' || e.target.classList.contains('player-bottom-gradient')) {
-                togglePlay();
+            // Ignore if clicking on interactive UI elements or controls
+            if (e.target.closest('.controls-bar') || 
+                e.target.closest('.player-top-bar') || 
+                e.target.closest('.player-menu') ||
+                e.target.closest('.center-play-pause')) {
+                return;
             }
+            togglePlay();
         });
 
         // Mobile Overlay Logic
