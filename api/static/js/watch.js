@@ -157,8 +157,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (Hls.isSupported() && (videoUrl.includes('.m3u8') || videoUrl.includes('/proxy/'))) {
                 console.log("[Player] Initializing Hls.js");
+                let initialSavedTime = 0;
+                try {
+                    const match = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
+                    if (match) {
+                        const storKey = `yumeResume_${match[1]}_ep${match[2]}`;
+                        initialSavedTime = parseFloat(localStorage.getItem(storKey)) || 0;
+                    }
+                } catch(e) {}
+
                 const hls = new Hls({
                     debug: false,
+                    startPosition: initialSavedTime > 5 ? initialSavedTime : -1,
                     enableWorker: true,
                     // Timeout & retry config to avoid infinite loading on PC
                     manifestLoadingTimeOut: 15000,
@@ -906,6 +916,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Live time preview
             if (video.duration > 0) {
                 currTimeDisp.textContent = formatTime(pos * video.duration);
+                if (isSeeking && progressTooltip) {
+                    progressTooltip.textContent = formatTime(pos * video.duration);
+                    progressTooltip.style.left = pct + '%';
+                }
             }
         }
 
@@ -1595,8 +1609,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         vid.style.display = '';
 
                         if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
+                            let ajaxSavedTime = 0;
+                            try {
+                                const state = window._watchState;
+                                if (state && state.animeId && state.episodeNumber) {
+                                    const storKey = `yumeResume_${state.animeId}_ep${state.episodeNumber}`;
+                                    ajaxSavedTime = parseFloat(localStorage.getItem(storKey)) || 0;
+                                }
+                            } catch(e) {}
+
                             window.hls = new Hls({
                                 debug: false,
+                                startPosition: ajaxSavedTime > 5 ? ajaxSavedTime : -1,
                                 enableWorker: true,
                                 lowLatencyMode: false,
                                 manifestLoadingTimeOut: 15000,
