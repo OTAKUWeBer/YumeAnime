@@ -65,8 +65,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             position: relative;
+            padding-bottom: 3.5rem;
         }
 
         /* ═══════════════════════════════════════════
@@ -527,42 +529,146 @@
            RESPONSIVE
            ═══════════════════════════════════════════ */
         @media (max-width: 640px) {
-            .announcement-wrapper { padding: 1.25rem; }
-
-            .announcement-card {
-                padding: 2rem 1.4rem 1.75rem;
-                border-radius: 16px;
+            body {
+                justify-content: flex-start;
+                padding-top: 2rem;
+                padding-bottom: 4rem;
             }
 
-            .announcement-title { font-size: 1.4rem; }
-            .announcement-subtitle { font-size: 0.82rem; }
+            .announcement-wrapper {
+                padding: 1rem;
+                max-width: 100%;
+            }
+
+            .announcement-logo {
+                margin-bottom: 1.75rem;
+            }
+
+            .announcement-logo img {
+                height: 32px;
+            }
+
+            .announcement-logo span {
+                font-size: 1.15rem;
+            }
+
+            .announcement-card {
+                padding: 1.75rem 1.25rem 1.5rem;
+                border-radius: 14px;
+            }
+
+            .announcement-title {
+                font-size: 1.3rem;
+                margin-bottom: 0.7rem;
+            }
+
+            .announcement-subtitle {
+                font-size: 0.8rem;
+                line-height: 1.65;
+                margin-bottom: 1.25rem;
+            }
+
+            .status-icon-wrapper {
+                width: 56px;
+                height: 56px;
+                margin-bottom: 1.25rem;
+            }
+
+            .status-icon-core { inset: 11px; }
+            .status-icon-core svg { width: 17px; height: 17px; }
+
+            .status-badge {
+                font-size: 0.62rem;
+                padding: 4px 11px;
+                margin-bottom: 1rem;
+            }
+
+            .card-divider {
+                margin-bottom: 1rem;
+            }
+
+            .status-details {
+                gap: 0.3rem;
+                margin-bottom: 1rem;
+            }
 
             .status-row {
                 flex-direction: column;
                 gap: 0.15rem;
                 text-align: center;
-                padding: 0.55rem 0.7rem;
+                padding: 0.5rem 0.65rem;
+                font-size: 0.73rem;
+            }
+
+            .status-row-label {
+                justify-content: center;
+            }
+
+            .activity-section {
+                margin-bottom: 1.25rem;
+                padding: 0.6rem 0.75rem;
+                gap: 0.6rem;
+            }
+
+            .activity-spinner {
+                width: 15px;
+                height: 15px;
+            }
+
+            .activity-text {
+                font-size: 0.7rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .btn {
+                justify-content: center;
+                padding: 0.55rem 1.2rem;
+                font-size: 0.78rem;
+            }
+
+            .announcement-footer {
+                padding: 1rem;
+                font-size: 0.65rem;
+            }
+
+            .bg-glow-1 { width: 250px; height: 250px; top: -120px; right: -80px; }
+            .bg-glow-2 { width: 200px; height: 200px; bottom: -80px; left: -60px; }
+            .bg-grid { display: none; }
+        }
+
+        @media (max-width: 380px) {
+            .announcement-title { font-size: 1.15rem; }
+
+            .announcement-card {
+                padding: 1.5rem 1rem 1.25rem;
+                border-radius: 12px;
+            }
+
+            .announcement-subtitle {
+                font-size: 0.75rem;
             }
 
             .status-icon-wrapper {
-                width: 60px;
-                height: 60px;
-                margin-bottom: 1.5rem;
+                width: 48px;
+                height: 48px;
+                margin-bottom: 1rem;
             }
 
-            .status-icon-core { inset: 12px; }
-            .status-icon-core svg { width: 18px; height: 18px; }
-
-            .btn-group { flex-direction: column; }
-            .btn { justify-content: center; }
-
-            .bg-glow-1 { width: 280px; height: 280px; }
-            .bg-glow-2 { width: 220px; height: 220px; }
+            .status-icon-core { inset: 9px; }
+            .status-icon-core svg { width: 15px; height: 15px; }
         }
 
-        @media (max-width: 360px) {
-            .announcement-title { font-size: 1.25rem; }
-            .announcement-card { padding: 1.5rem 1.15rem; }
+        @media (max-height: 650px) {
+            body {
+                justify-content: flex-start;
+                padding-top: 1.5rem;
+            }
+
+            .announcement-logo { margin-bottom: 1.25rem; }
         }
     </style>
 </head>
