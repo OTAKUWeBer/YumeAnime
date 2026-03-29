@@ -228,11 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Without this, PC browsers never start playback (autoplay policy)
                 hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
                     console.log('[Player] HLS manifest parsed, levels:', data.levels.length);
-                    video.play().catch(function (e) {
+                    // Show overlay NOW — video is ready, so tapping it will actually work
+                    var overlay = document.getElementById('mobilePlayOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    video.play().then(function () {
+                        // Autoplay succeeded — hide the overlay
+                        if (overlay) overlay.style.display = 'none';
+                    }).catch(function (e) {
                         console.log('[Player] Auto-play blocked by browser, awaiting user interaction:', e.name);
-                        // Show the play overlay so user knows to click
-                        var overlay = document.getElementById('mobilePlayOverlay');
-                        if (overlay) overlay.style.display = 'flex';
+                        // Overlay is already visible — user can tap it to start playback
                     });
                 });
 
@@ -290,6 +294,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("[Player] Using Native HLS (iOS/Safari)");
                 video.src = videoUrl;
                 video.load(); // Force iOS Safari to load metadata immediately
+                // Show overlay once video is ready to play (so tap reliably starts it)
+                video.addEventListener('canplay', function onNativeCanPlay() {
+                    video.removeEventListener('canplay', onNativeCanPlay);
+                    var overlay = document.getElementById('mobilePlayOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    video.play().then(function () {
+                        if (overlay) overlay.style.display = 'none';
+                    }).catch(function () {
+                        // Overlay stays visible for user to tap
+                    });
+                }, { once: true });
             } else {
                 console.log("[Player] Basic MP4 Embed");
                 video.src = videoUrl;
