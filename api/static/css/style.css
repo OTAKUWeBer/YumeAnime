@@ -4195,6 +4195,7 @@ h6 {
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding-bottom: var(--space-sm);
+    padding-right: 40px; /* Provides extra space so the last item isn't covered by the fade */
 }
 
 .cw-scroll::-webkit-scrollbar {
@@ -4216,43 +4217,43 @@ h6 {
 
 @media (max-width: 640px) {
     .cw-card-shell {
-        flex: 0 0 140px;
+        flex: 0 0 110px;
         gap: 4px; /* reduce gap between image and title */
     }
 
     .cw-card-label {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         padding: 2px 4px;
     }
 
     .cw-card-title-text {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     .cw-card-subtitle-text {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
     }
 
     .cw-card-progress-container {
-        height: 2.5px; /* smaller progress bar */
+        height: 2px; /* smaller progress bar */
     }
 
     .cw-play-button {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
     }
 
     .cw-play-button svg {
-        font-size: 16px;
+        font-size: 14px;
         margin-left: 2px;
     }
 
     .cw-card-info-bottom {
-        padding: 12px 6px 6px 6px;
+        padding: 8px 4px 4px 4px;
     }
     
     .cw-card-info-top {
-        padding: 6px;
+        padding: 4px;
     }
 }
 
