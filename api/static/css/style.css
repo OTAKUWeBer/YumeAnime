@@ -1546,15 +1546,7 @@ h6 {
     }
 
     .spotlight-nav-btn {
-        width: 36px;
-        height: 36px;
-    }
-}
-
-@media (max-width: 480px) {
-    .spotlight-nav-btn {
-        width: 32px;
-        height: 32px;
+        display: none;
     }
 }
 
@@ -4224,7 +4216,43 @@ h6 {
 
 @media (max-width: 640px) {
     .cw-card-shell {
-        flex: 0 0 180px;
+        flex: 0 0 140px;
+        gap: 4px; /* reduce gap between image and title */
+    }
+
+    .cw-card-label {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+    }
+
+    .cw-card-title-text {
+        font-size: 0.8rem;
+    }
+
+    .cw-card-subtitle-text {
+        font-size: 0.65rem;
+    }
+
+    .cw-card-progress-container {
+        height: 2.5px; /* smaller progress bar */
+    }
+
+    .cw-play-button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .cw-play-button svg {
+        font-size: 16px;
+        margin-left: 2px;
+    }
+
+    .cw-card-info-bottom {
+        padding: 12px 6px 6px 6px;
+    }
+    
+    .cw-card-info-top {
+        padding: 6px;
     }
 }
 
