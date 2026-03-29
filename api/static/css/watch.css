@@ -1843,3 +1843,61 @@
         transform: translateY(0);
     }
 }
+
+/* Thumbnail tooltip layout */
+.progress-tooltip {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 4px 4px 6px !important;
+    min-width: 50px !important;
+    width: auto !important;
+}
+#tooltipThumbCanvas {
+    display: none;          /* hidden until first frame is captured */
+    border-radius: 4px 4px 0 0;
+    width: 160px;
+    height: 90px;
+    background: #111;
+    flex-shrink: 0;
+}
+#tooltipThumbCanvas.has-frame {
+    display: block;
+}
+#tooltipTimeText {
+    font-size: 0.78rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+/* On very small screens, shrink the thumb a bit */
+@media (max-width: 480px) {
+    #tooltipThumbCanvas { width: 120px; height: 67px; }
+}
+
+/* Center Play Button Default Sizing for Static Overlay */
+.center-play-pause-static {
+    width: 80px;
+    height: 80px;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.center-play-pause-static svg {
+    width: 40px;
+    height: 40px;
+}
+
+/* Mobile size reduction for center play buttons (when not fullscreen) */
+@media (max-width: 768px) {
+    .video-wrapper:not(.vjs-fullscreen) .center-play-pause,
+    .video-wrapper:not(.vjs-fullscreen) .center-play-pause-static {
+        width: 55px !important;
+        height: 55px !important;
+    }
+    
+    .video-wrapper:not(.vjs-fullscreen) .center-play-pause svg,
+    .video-wrapper:not(.vjs-fullscreen) .center-play-pause-static svg {
+        width: 26px !important;
+        height: 26px !important;
+    }
+}
+
