@@ -214,15 +214,16 @@
                         </div>
                     </div>
                 </div>
-                {% else %}
-                <div
-                    style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:var(--bg-surface);">
+                {% endif %}
+
+                <!-- Fallback container -->
+                <div id="errorFallbackContainer"
+                    style="aspect-ratio:16/9; align-items:center; justify-content:center; background:var(--bg-surface); {% if video_link or (source_type == 'embed' and embed_sources) or source_type == 'hls' %}display:none;{% else %}display:flex;{% endif %}">
                     <div class="text-center">
                         <div class="no-results-icon">🎬</div>
                         <p class="text-muted">Video not available</p>
                     </div>
                 </div>
-                {% endif %}
             </div>
 
 
