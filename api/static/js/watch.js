@@ -856,31 +856,8 @@ document.addEventListener('DOMContentLoaded', () => {
             togglePlay();
         });
 
-        // Mobile Overlay Logic
-        const mobilePlayOverlay = document.getElementById('mobilePlayOverlay');
-        if (mobilePlayOverlay) {
-            const handleOverlayPlay = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                mobilePlayOverlay.style.display = 'none';
-                centerPlayBtn.style.display = ''; // Restore normal center button behavior 
-
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(err => {
-                        console.error("Mobile overlay play error:", err);
-                        // If it fails, fallback to standard play UI
-                        togglePlay();
-                    });
-                }
-            };
-            // Use touchend for mobile (iOS Safari requires touchend/click as user gesture for video.play())
-            mobilePlayOverlay.addEventListener('touchend', (e) => {
-                e.preventDefault(); // prevents the subsequent click from double-firing
-                handleOverlayPlay(e);
-            });
-            mobilePlayOverlay.addEventListener('click', handleOverlayPlay); // desktop mouse fallback
-        }
+        // Mobile Overlay Logic is handled by the standalone initMobileOverlay() below.
+        // Do NOT attach duplicate listeners here.
 
         const iconPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/></svg>';
         const iconPause = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/></svg>';
@@ -1353,8 +1330,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Standalone Mobile Overlay Init ──────────────────────────────────────
+    // This MUST run immediately at DOMContentLoaded with NO setTimeout delay.
+    // The overlay listener must exist before MANIFEST_PARSED shows the overlay,
+    // and must work even if initVanillaPlayerUI hasn't run yet.
+    // On Android Chrome/Brave, video.play() only works from a direct user gesture.
+    // The most reliable fix: on overlay tap, programmatically click the video element
+    // itself so the browser treats it as a gesture on the media element.
+    function initMobileOverlay() {
+        const overlay = document.getElementById('mobilePlayOverlay');
+        if (!overlay) return;
+
+        let _overlayTouchHandled = false;
+
+        function doOverlayPlay(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const video = document.getElementById('videoPlayer');
+            if (!video) return;
+
+            overlay.style.display = 'none';
+
+            // Ensure centerPlayBtn is visible for subsequent play/pause
+            const centerPlayBtn = document.getElementById('centerPlayBtn');
+            if (centerPlayBtn) centerPlayBtn.style.display = '';
+
+            // video.play() must be called synchronously inside the user gesture handler.
+            // Do NOT wrap in setTimeout or Promise chains before calling play().
+            const p = video.play();
+            if (p !== undefined) {
+                p.catch(function(err) {
+                    console.warn('[Overlay] play() rejected:', err.name, err.message);
+                    // Re-show overlay so user can try again
+                    overlay.style.display = 'flex';
+                });
+            }
+        }
+
+        // touchend is the correct event for iOS/Android — it fires synchronously
+        // within the user gesture context. We set _overlayTouchHandled so the
+        // subsequent synthetic 'click' event doesn't double-fire.
+        overlay.addEventListener('touchend', function(e) {
+            _overlayTouchHandled = true;
+            doOverlayPlay(e);
+            // Reset flag after the synthetic click fires (~300ms later)
+            setTimeout(function() { _overlayTouchHandled = false; }, 600);
+        }, { passive: false });
+
+        overlay.addEventListener('click', function(e) {
+            if (_overlayTouchHandled) return; // skip synthetic click after touchend
+            doOverlayPlay(e);
+        });
+    }
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
+        initMobileOverlay(); // no delay — must be ready before overlay becomes visible
         setTimeout(initVanillaPlayerUI, 100);
 
         // ── Validate & repair Prev/Next nav URLs using URL-derived episode number ──
