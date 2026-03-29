@@ -4228,11 +4228,11 @@ h6 {
 
 /* ── Card Shell & Layout ── */
 .cw-card-shell {
-    flex: 0 0 160px; /* Halved size */
+    flex: 0 0 300px;
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs); /* Reduced gap */
+    gap: var(--space-sm); 
     position: relative;
     text-decoration: none;
     color: inherit;
@@ -4241,43 +4241,44 @@ h6 {
 
 @media (max-width: 640px) {
     .cw-card-shell {
-        flex: 0 0 110px;
-        gap: 4px; /* reduce gap between image and title */
+        flex: 0 0 190px;
+        gap: var(--space-xs); /* Normal gap */
     }
 
     .cw-card-label {
-        font-size: 0.6rem;
+        font-size: 0.7rem;
         padding: 2px 4px;
     }
 
     .cw-card-title-text {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
+        height: 2.6em; /* 2 lines exactly */
     }
 
     .cw-card-subtitle-text {
-        font-size: 0.6rem;
+        font-size: 0.7rem;
     }
 
     .cw-card-progress-container {
-        height: 2px; /* smaller progress bar */
+        height: 3px; 
     }
 
     .cw-play-button {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
     }
 
     .cw-play-button svg {
-        font-size: 14px;
+        font-size: 18px;
         margin-left: 2px;
     }
 
     .cw-card-info-bottom {
-        padding: 8px 4px 4px 4px;
+        padding: 12px 6px 6px 6px;
     }
     
     .cw-card-info-top {
-        padding: 4px;
+        padding: 6px;
     }
 }
 
@@ -4328,8 +4329,8 @@ h6 {
     justify-content: center;
     background: rgba(0, 0, 0, 0.6);
     border-radius: 50%;
-    width: 36px; /* Halved relative */
-    height: 36px;
+    width: 44px; 
+    height: 44px;
     opacity: 0;
     transition: opacity var(--transition-normal), transform var(--transition-normal);
     z-index: 3;
@@ -4343,7 +4344,7 @@ h6 {
 }
 
 .cw-play-button svg {
-    font-size: 18px;
+    font-size: 22px;
     fill: white;
     margin-left: 2px;
 }
@@ -4467,6 +4468,7 @@ h6 {
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.3;
+    height: 2.6em; /* Fixed height — exactly 2 lines always, regardless of title length */
 }
 
 .cw-card-subtitle-text {
