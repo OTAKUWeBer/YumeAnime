@@ -1378,6 +1378,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.failedProviders.add(state.provider);
         const nextProvider = state.providers.find(p => !state.failedProviders.has(p));
 
+        
         if (nextProvider) {
             console.log('[Fallback] Switching to provider:', nextProvider);
             if(typeof showToast === 'function') showToast('Stream failed, auto-switching to server ' + nextProvider + '...', 'warning');
