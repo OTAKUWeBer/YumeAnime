@@ -792,19 +792,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Play/Pause
-        const togglePlay = () => {
+        let playThrottleTimer = null;
+        const togglePlay = (e) => {
+            if (e && e.type) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            // Prevent ghost clicks from firing immediately after pointerup
+            if (playThrottleTimer) return;
+            playThrottleTimer = setTimeout(() => { playThrottleTimer = null; }, 400);
+
             if (video.paused) {
                 const playPromise = video.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        console.error("Play error:", e);
+                    playPromise.catch(err => {
+                        console.error("Play error:", err);
                     });
                 }
             } else {
                 video.pause();
             }
         };
+        playBtn.addEventListener('pointerup', togglePlay);
         playBtn.addEventListener('click', togglePlay);
+        centerPlayBtn.addEventListener('pointerup', togglePlay);
         centerPlayBtn.addEventListener('click', togglePlay);
 
         // Track the timestamp of the last touchend so we can distinguish
@@ -833,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mobile Overlay Logic
         const mobilePlayOverlay = document.getElementById('mobilePlayOverlay');
         if (mobilePlayOverlay) {
-            mobilePlayOverlay.addEventListener('click', (e) => {
+            const handleOverlayPlay = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 mobilePlayOverlay.style.display = 'none';
@@ -841,13 +852,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const playPromise = video.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        console.error("Mobile overlay play error:", e);
+                    playPromise.catch(err => {
+                        console.error("Mobile overlay play error:", err);
                         // If it fails, fallback to standard play UI
                         togglePlay();
                     });
                 }
-            });
+            };
+            mobilePlayOverlay.addEventListener('pointerup', handleOverlayPlay);
+            mobilePlayOverlay.addEventListener('click', handleOverlayPlay);
         }
 
         const iconPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/></svg>';

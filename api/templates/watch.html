@@ -90,10 +90,10 @@
                         <!-- Big Mobile Play Overlay -->
                         <div id="mobilePlayOverlay"
                             style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); cursor: pointer;">
-                            <div
-                                style="background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.15); color: white; border-radius: 50%; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                            <div class="center-play-pause-static"
+                                style="background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.15); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
                                 <svg viewBox="0 0 24 24" fill="currentColor"
-                                    style="width: 40px; height: 40px; margin-left: 5px;">
+                                    style="margin-left: 5px;">
                                     <path
                                         d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
                                 </svg>
@@ -604,39 +604,7 @@
 <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
 
-<!-- Thumbnail tooltip & mobile control styles -->
-<style>
-/* Thumbnail tooltip layout */
-.progress-tooltip {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 4px !important;
-    padding: 4px 4px 6px !important;
-    min-width: 50px !important;
-    width: auto !important;
-}
-#tooltipThumbCanvas {
-    display: none;          /* hidden until first frame is captured */
-    border-radius: 4px 4px 0 0;
-    width: 160px;
-    height: 90px;
-    background: #111;
-    flex-shrink: 0;
-}
-#tooltipThumbCanvas.has-frame {
-    display: block;
-}
-#tooltipTimeText {
-    font-size: 0.78rem;
-    line-height: 1;
-    white-space: nowrap;
-}
-/* On very small screens, shrink the thumb a bit */
-@media (max-width: 480px) {
-    #tooltipThumbCanvas { width: 120px; height: 67px; }
-}
-</style>
+<!-- Thumbnail tooltip & mobile control styles moved to watch.css -->
 
 {% block extra_js %}
 <!-- Simple Clean Player Scripts -->
