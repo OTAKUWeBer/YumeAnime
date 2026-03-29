@@ -124,33 +124,25 @@
     <!-- Navbar -->
     <nav class="navbar" id="navbar">
         <div class="navbar-container">
-            <!-- Brand -->
-            <a href="{{ url_for('main.home_routes.home') }}" class="navbar-brand">
-                <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo"
-                    style="height: 40px;">
-                <span>YumeAnime</span>
-            </a>
-
-            <!-- Navigation Links -->
-            <div class="navbar-nav" id="navbar-nav">
-                <a href="{{ url_for('main.home_routes.home') }}"
-                    class="nav-link {% if request.endpoint == 'main.home_routes.home' %}active{% endif %}">Home</a>
-                <a href="/category/movie" class="nav-link {% if 'movie' in request.path %}active{% endif %}">Movies</a>
-                {% if session.get('username') %}
-                <a href="{{ url_for('watchlist.watchlist') }}"
-                    class="nav-link {% if request.endpoint == 'watchlist.watchlist' %}active{% endif %}">Watchlist</a>
-                {% endif %}
-                <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="nav-link" title="Source Code">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
-                        </path>
+            <div class="navbar-left">
+                <!-- Sidebar Toggle (Hamburger) -->
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
                     </svg>
+                </button>
+
+                <!-- Brand -->
+                <a href="{{ url_for('main.home_routes.home') }}" class="navbar-brand">
+                    <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                        style="height: 40px;">
+                    <span>YumeAnime</span>
                 </a>
             </div>
 
-            <!-- Search -->
+            <!-- Search (Centered) -->
             <div class="search-container">
                 <form action="{{ url_for('main.search_routes.search') }}" method="GET" class="search-input-wrapper"
                     id="search-form">
@@ -259,14 +251,6 @@
                 </button>
                 {% endif %}
 
-                <!-- Mobile Toggle -->
-                <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Menu">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="3" y1="12" x2="21" y2="12" />
-                        <line x1="3" y1="6" x2="21" y2="6" />
-                        <line x1="3" y1="18" x2="21" y2="18" />
-                    </svg>
-                </button>
             </div>
         </div>
     </nav>
@@ -305,21 +289,84 @@
         </div>
     </div>
 
-    <!-- Mobile Navigation -->
-    <div class="mobile-nav" id="mobile-nav">
-        <div class="mobile-nav-links">
-            <a href="{{ url_for('main.home_routes.home') }}" class="mobile-nav-link">Home</a>
-            <a href="/category/movie" class="mobile-nav-link">Movies</a>
-            {% if session.get('username') %}
-            <a href="{{ url_for('watchlist.watchlist') }}" class="mobile-nav-link">Watchlist</a>
-            <a href="{{ url_for('main.catalog_routes.profile') }}" class="mobile-nav-link">Profile</a>
-            <a href="{{ url_for('main.catalog_routes.settings') }}" class="mobile-nav-link">Settings</a>
-            {% else %}
-            <a href="#" onclick="openLoginModal()" class="mobile-nav-link">Sign In</a>
-            {% endif %}
-            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="mobile-nav-link">GitHub</a>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('main.home_routes.home') }}" class="sidebar-brand">
+                <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo">
+                <span>YumeAnime</span>
+            </a>
+            <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
         </div>
-    </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('main.home_routes.home') }}" class="sidebar-link {% if request.endpoint == 'main.home_routes.home' %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <span>Home</span>
+            </a>
+            <a href="/category/trending" class="sidebar-link {% if 'trending' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                    <polyline points="17 6 23 6 23 12" />
+                </svg>
+                <span>Trending</span>
+            </a>
+            <a href="/category/movie" class="sidebar-link {% if 'movie' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                    <line x1="7" y1="2" x2="7" y2="22" />
+                    <line x1="17" y1="2" x2="17" y2="22" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                </svg>
+                <span>Movies</span>
+            </a>
+            <a href="/category/recently-updated" class="sidebar-link {% if 'recently-updated' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>Schedule</span>
+            </a>
+            {% if session.get('username') %}
+            <a href="{{ url_for('watchlist.watchlist') }}" class="sidebar-link {% if request.endpoint == 'watchlist.watchlist' %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>Watchlist</span>
+            </a>
+            {% endif %}
+            <div class="sidebar-divider"></div>
+            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="sidebar-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                </svg>
+                <span>GitHub</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            {% if session.get('username') %}
+            <div class="sidebar-user">
+                <img src="{{ session.get('avatar') or '' }}" alt="{{ session.get('username', 'User') }}" class="sidebar-user-avatar"
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                <span class="sidebar-user-name">{{ session.get('username') }}</span>
+            </div>
+            {% endif %}
+            <a href="{{ url_for('main.catalog_routes.settings') }}" class="sidebar-settings-btn" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </a>
+        </div>
+    </aside>
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
