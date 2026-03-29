@@ -391,6 +391,12 @@
     .video-wrapper.menu-open .player-container,
     .video-wrapper.controls-visible .player-container {
         opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Overlay always receives pointer events regardless of container state */
+    #mobilePlayOverlay {
+        pointer-events: auto;
     }
 
     /* Gradients */
@@ -1900,4 +1906,3 @@
         height: 26px !important;
     }
 }
-
