@@ -325,11 +325,9 @@
     const cwClearBtn = document.getElementById('cw-clear-btn');
     if (cwClearBtn) {
         cwClearBtn.addEventListener('click', () => {
-            // Remove all yumeHistory_ and yumeResume_ keys for items in Continue Watching
+            // Remove ALL yumeHistory_ and yumeResume_ keys so the section fully clears
             const entries = getHistoryEntries();
-            const deduped = dedupeByAnime(entries);
-            const { continueWatching } = categorize(deduped);
-            for (const entry of continueWatching) {
+            for (const entry of entries) {
                 try {
                     localStorage.removeItem(entry._key);
                     localStorage.removeItem(`yumeResume_${entry.animeId}_ep${entry.epNum}`);
