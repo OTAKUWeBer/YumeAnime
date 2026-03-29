@@ -238,11 +238,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Without this, PC browsers never start playback (autoplay policy)
                 hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
                     console.log('[Player] HLS manifest parsed, levels:', data.levels.length);
-                    video.play().catch(function (e) {
+                    // Show overlay NOW — video is ready, so tapping it will actually work
+                    var overlay = document.getElementById('mobilePlayOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    video.play().then(function () {
+                        // Autoplay succeeded — hide the overlay
+                        if (overlay) overlay.style.display = 'none';
+                    }).catch(function (e) {
                         console.log('[Player] Auto-play blocked by browser, awaiting user interaction:', e.name);
-                        // Show the play overlay so user knows to click
-                        var overlay = document.getElementById('mobilePlayOverlay');
-                        if (overlay) overlay.style.display = 'flex';
+                        // Overlay is already visible — user can tap it to start playback
                     });
                 });
 
@@ -300,6 +304,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("[Player] Using Native HLS (iOS/Safari)");
                 video.src = videoUrl;
                 video.load(); // Force iOS Safari to load metadata immediately
+                // Show overlay once video is ready to play (so tap reliably starts it)
+                video.addEventListener('canplay', function onNativeCanPlay() {
+                    video.removeEventListener('canplay', onNativeCanPlay);
+                    var overlay = document.getElementById('mobilePlayOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    video.play().then(function () {
+                        if (overlay) overlay.style.display = 'none';
+                    }).catch(function () {
+                        // Overlay stays visible for user to tap
+                    });
+                }, { once: true });
             } else {
                 console.log("[Player] Basic MP4 Embed");
                 video.src = videoUrl;
@@ -709,6 +724,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const progressThumb = document.getElementById('progressThumb');
         const progressBuffer = document.getElementById('progressBuffer');
         const progressTooltip = document.getElementById('progressTooltip');
+        const tooltipThumbCanvas = document.getElementById('tooltipThumbCanvas');
+        const tooltipTimeText   = document.getElementById('tooltipTimeText');
+        const tooltipThumbCtx   = tooltipThumbCanvas ? tooltipThumbCanvas.getContext('2d') : null;
         const currTimeDisp = document.getElementById('currentTimeDisplay');
         const durDisp = document.getElementById('durationDisplay');
 
@@ -776,12 +794,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     mobileControlsVisible = false;
                 }
             });
-            // On mobile: single tap toggles control bar visibility
+            // On mobile: single tap toggles control bar visibility (show ↔ hide)
             masterWrapper.addEventListener('touchstart', (e) => {
                 // Only toggle if the tap isn't on a control button/progress bar
-                const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.id === 'mobilePlayOverlay';
+                const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.closest('#mobilePlayOverlay');
                 if (!isControl) {
-                    showMobileControls();
+                    // Toggle: if already visible, hide; if hidden, show
+                    if (mobileControlsVisible) {
+                        clearTimeout(inactivityTimeout);
+                        masterWrapper.classList.remove('controls-visible');
+                        if (!video.paused) masterWrapper.classList.add('user-inactive');
+                        mobileControlsVisible = false;
+                    } else {
+                        showMobileControls();
+                    }
                 } else {
                     // Even control taps should reset the hide timer
                     resetInactivity();
@@ -791,21 +817,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Play/Pause
-        const togglePlay = () => {
+        let playThrottleTimer = null;
+        const togglePlay = (e) => {
+            if (e && e.type) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            // Prevent ghost clicks from firing immediately after pointerup
+            if (playThrottleTimer) return;
+            playThrottleTimer = setTimeout(() => { playThrottleTimer = null; }, 400);
+
             if (video.paused) {
                 const playPromise = video.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        console.error("Play error:", e);
+                    playPromise.catch(err => {
+                        console.error("Play error:", err);
                     });
                 }
             } else {
                 video.pause();
             }
         };
+        playBtn.addEventListener('pointerup', togglePlay);
         playBtn.addEventListener('click', togglePlay);
+        centerPlayBtn.addEventListener('pointerup', togglePlay);
         centerPlayBtn.addEventListener('click', togglePlay);
+
+        // Track the timestamp of the last touchend so we can distinguish
+        // a real mouse-click from a synthetic click fired after a touch tap.
+        // This is the most reliable cross-browser approach and works in
+        // Brave, Firefox, Safari, and Chrome on Android/iOS.
+        let _lastTouchEnd = 0;
+        wrapper.addEventListener('touchend', () => { _lastTouchEnd = Date.now(); }, { passive: true });
+
         wrapper.addEventListener('click', (e) => {
+            // On touch devices a tap fires touchstart → touchend → click.
+            // We only want the click handler to run for genuine mouse clicks.
+            // 500 ms is well above the typical 300 ms click-delay on mobile.
+            if (Date.now() - _lastTouchEnd < 500) return;
+
             // Ignore if clicking on interactive UI elements or controls
             if (e.target.closest('.controls-bar') || 
                 e.target.closest('.player-top-bar') || 
@@ -816,25 +866,8 @@ document.addEventListener('DOMContentLoaded', () => {
             togglePlay();
         });
 
-        // Mobile Overlay Logic
-        const mobilePlayOverlay = document.getElementById('mobilePlayOverlay');
-        if (mobilePlayOverlay) {
-            mobilePlayOverlay.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                mobilePlayOverlay.style.display = 'none';
-                centerPlayBtn.style.display = ''; // Restore normal center button behavior 
-
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        console.error("Mobile overlay play error:", e);
-                        // If it fails, fallback to standard play UI
-                        togglePlay();
-                    });
-                }
-            });
-        }
+        // Mobile Overlay Logic is handled by the standalone initMobileOverlay() below.
+        // Do NOT attach duplicate listeners here.
 
         const iconPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/></svg>';
         const iconPause = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z"/></svg>';
@@ -879,6 +912,78 @@ document.addEventListener('DOMContentLoaded', () => {
             let h = Math.floor(m / 60); m = m % 60;
             return (h > 0 ? h + ':' : '') + (m < 10 && h > 0 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
         };
+
+        // ── Thumbnail preview engine ──────────────────────────────────────────
+        // Captures video frames periodically while the video plays and uses the
+        // nearest cached frame when the user hovers or scrubs the progress bar.
+        // A hidden offscreen canvas is used; CORS is not needed because we draw
+        // from the same <video> element that is already playing the content.
+        const THUMB_INTERVAL_S = 5;   // capture one frame every 5 s of video time
+        const thumbFrames = new Map(); // key = bucketed time (s), value = ImageData
+
+        // Offscreen scratch canvas for capture (reused to avoid GC pressure)
+        const captureCanvas = document.createElement('canvas');
+        captureCanvas.width  = 160;
+        captureCanvas.height = 90;
+        const captureCtx = captureCanvas.getContext('2d');
+
+        function captureFrame() {
+            if (!video || video.readyState < 2 || video.videoWidth === 0) return;
+            try {
+                captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+                const bucket = Math.floor(video.currentTime / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
+                if (!thumbFrames.has(bucket)) {
+                    // Store ImageData (cheaper than toDataURL, no encoding)
+                    thumbFrames.set(bucket, captureCtx.getImageData(0, 0, captureCanvas.width, captureCanvas.height));
+                }
+            } catch (e) { /* cross-origin guard — silently skip */ }
+        }
+
+        // Capture a frame every THUMB_INTERVAL_S of playback time
+        let _lastCaptureBucket = -1;
+        video.addEventListener('timeupdate', () => {
+            const bucket = Math.floor(video.currentTime / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
+            if (bucket !== _lastCaptureBucket) {
+                _lastCaptureBucket = bucket;
+                captureFrame();
+            }
+        });
+
+        // Render nearest cached frame into the tooltip canvas
+        function showTooltipThumb(timeSec) {
+            if (!tooltipThumbCtx || !tooltipThumbCanvas || thumbFrames.size === 0) return;
+            const bucket = Math.round(timeSec / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
+            // Find closest available bucket
+            let bestKey = null, bestDist = Infinity;
+            thumbFrames.forEach((_, k) => {
+                const d = Math.abs(k - bucket);
+                if (d < bestDist) { bestDist = d; bestKey = k; }
+            });
+            if (bestKey === null) return;
+            tooltipThumbCtx.putImageData(thumbFrames.get(bestKey), 0, 0);
+            tooltipThumbCanvas.classList.add('has-frame');
+        }
+
+        // Unified tooltip updater (time text + optional thumb)
+        function updateProgressTooltip(pos) {
+            if (!progressTooltip || !video.duration) return;
+            const timeSec = pos * video.duration;
+            // Update time text
+            if (tooltipTimeText) {
+                tooltipTimeText.textContent = formatTime(timeSec);
+            } else {
+                progressTooltip.textContent = formatTime(timeSec);
+            }
+            // Position the tooltip, clamped to bar edges
+            const thumbW = tooltipThumbCanvas && tooltipThumbCanvas.classList.contains('has-frame') ? 160 : 0;
+            const tooltipHalfW = Math.max(thumbW / 2, 25);
+            const barW = progressContainer.getBoundingClientRect().width;
+            const pxPos = pos * barW;
+            const clampedPct = Math.max(tooltipHalfW, Math.min(barW - tooltipHalfW, pxPos)) / barW * 100;
+            progressTooltip.style.left = `${clampedPct}%`;
+            showTooltipThumb(timeSec);
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         video.addEventListener('timeupdate', () => {
             const cur = video.currentTime;
@@ -938,6 +1043,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (seekRaf) cancelAnimationFrame(seekRaf);
             seekRaf = requestAnimationFrame(() => {
                 updateSeekVisual(seekPos);
+                // Show tooltip (with thumbnail) during scrubbing on all devices
+                if (progressTooltip) updateProgressTooltip(seekPos);
             });
         }
 
@@ -958,9 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rect = progressContainer.getBoundingClientRect();
             let pos = (e.clientX - rect.left) / rect.width;
             pos = Math.max(0, Math.min(1, pos));
-            const hoverTime = pos * video.duration;
-            progressTooltip.textContent = formatTime(hoverTime);
-            progressTooltip.style.left = `${pos * 100}%`;
+            updateProgressTooltip(pos);
         });
         
         progressContainer.addEventListener('mousedown', (e) => {
@@ -977,6 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Touch: same logic, with preventDefault to block page scroll
         progressContainer.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            if (progressTooltip) progressTooltip.style.opacity = '1';
             startSeek(e.touches[0].clientX);
         }, { passive: false });
         document.addEventListener('touchmove', (e) => {
@@ -986,7 +1092,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, { passive: false });
         document.addEventListener('touchend', () => {
-            if (isSeeking) endSeek();
+            if (isSeeking) {
+                endSeek();
+                // Fade the tooltip out shortly after releasing
+                setTimeout(() => {
+                    if (progressTooltip) progressTooltip.style.opacity = '';
+                }, 600);
+            }
         });
         document.addEventListener('touchcancel', () => {
             if (isSeeking) endSeek();
@@ -1232,8 +1344,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Standalone Mobile Overlay Init ──────────────────────────────────────
+    // This MUST run immediately at DOMContentLoaded with NO setTimeout delay.
+    // The overlay listener must exist before MANIFEST_PARSED shows the overlay,
+    // and must work even if initVanillaPlayerUI hasn't run yet.
+    // On Android Chrome/Brave, video.play() only works from a direct user gesture.
+    // The most reliable fix: on overlay tap, programmatically click the video element
+    // itself so the browser treats it as a gesture on the media element.
+    function initMobileOverlay() {
+        const overlay = document.getElementById('mobilePlayOverlay');
+        if (!overlay) return;
+
+        let _overlayTouchHandled = false;
+
+        function doOverlayPlay(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const video = document.getElementById('videoPlayer');
+            if (!video) return;
+
+            overlay.style.display = 'none';
+
+            // Ensure centerPlayBtn is visible for subsequent play/pause
+            const centerPlayBtn = document.getElementById('centerPlayBtn');
+            if (centerPlayBtn) centerPlayBtn.style.display = '';
+
+            // video.play() must be called synchronously inside the user gesture handler.
+            // Do NOT wrap in setTimeout or Promise chains before calling play().
+            const p = video.play();
+            if (p !== undefined) {
+                p.catch(function(err) {
+                    console.warn('[Overlay] play() rejected:', err.name, err.message);
+                    // Re-show overlay so user can try again
+                    overlay.style.display = 'flex';
+                });
+            }
+        }
+
+        // touchend is the correct event for iOS/Android — it fires synchronously
+        // within the user gesture context. We set _overlayTouchHandled so the
+        // subsequent synthetic 'click' event doesn't double-fire.
+        overlay.addEventListener('touchend', function(e) {
+            _overlayTouchHandled = true;
+            doOverlayPlay(e);
+            // Reset flag after the synthetic click fires (~300ms later)
+            setTimeout(function() { _overlayTouchHandled = false; }, 600);
+        }, { passive: false });
+
+        overlay.addEventListener('click', function(e) {
+            if (_overlayTouchHandled) return; // skip synthetic click after touchend
+            doOverlayPlay(e);
+        });
+    }
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
+        initMobileOverlay(); // no delay — must be ready before overlay becomes visible
         setTimeout(initVanillaPlayerUI, 100);
 
         // ── Validate & repair Prev/Next nav URLs using URL-derived episode number ──
@@ -1392,6 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.failedProviders.add(state.provider);
         const nextProvider = state.providers.find(p => !state.failedProviders.has(p));
 
+        
         if (nextProvider) {
             console.log('[Fallback] Switching to provider:', nextProvider);
             if(typeof showToast === 'function') showToast('Stream failed, auto-switching to server ' + nextProvider + '...', 'warning');
