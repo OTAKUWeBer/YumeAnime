@@ -289,51 +289,35 @@
 
     function checkSectionVisibility() {
         const cwContainer = document.getElementById('cw-scroll-container');
-        const whContainer = document.getElementById('wh-scroll-container');
         const cwSection = document.getElementById('continue-watching-section');
-        const whSection = document.getElementById('watch-history-section');
 
         if (cwSection && cwContainer) {
             cwSection.style.display = cwContainer.children.length > 0 ? '' : 'none';
-        }
-        if (whSection && whContainer) {
-            whSection.style.display = whContainer.children.length > 0 ? '' : 'none';
         }
     }
 
     // Render everything
     function render() {
         const cwContainer = document.getElementById('cw-scroll-container');
-        const whContainer = document.getElementById('wh-scroll-container');
         const cwSection = document.getElementById('continue-watching-section');
-        const whSection = document.getElementById('watch-history-section');
 
-        if (!cwContainer || !whContainer) return;
+        if (!cwContainer) return;
 
         const allEntries = getHistoryEntries();
         const deduped = dedupeByAnime(allEntries);
+        // Fallback: show all history items in "Continue Watching" if they exist
         const { continueWatching, watchHistory } = categorize(deduped);
+        const combined = [...continueWatching, ...watchHistory];
 
-        // Render Continue Watching
+        // Render combined list into Continue Watching
         cwContainer.innerHTML = '';
-        if (continueWatching.length > 0) {
-            for (const entry of continueWatching.slice(0, 20)) {
+        if (combined.length > 0) {
+            for (const entry of combined.slice(0, 20)) {
                 cwContainer.appendChild(createCard(entry, true));
             }
             cwSection.style.display = '';
         } else {
             cwSection.style.display = 'none';
-        }
-
-        // Render Watch History
-        whContainer.innerHTML = '';
-        if (watchHistory.length > 0) {
-            for (const entry of watchHistory.slice(0, 20)) {
-                whContainer.appendChild(createCard(entry, false));
-            }
-            whSection.style.display = '';
-        } else {
-            whSection.style.display = 'none';
         }
     }
 
@@ -355,20 +339,7 @@
         });
     }
 
-    const whClearBtn = document.getElementById('wh-clear-btn');
-    if (whClearBtn) {
-        whClearBtn.addEventListener('click', () => {
-            const entries = getHistoryEntries();
-            const deduped = dedupeByAnime(entries);
-            const { watchHistory } = categorize(deduped);
-            for (const entry of watchHistory) {
-                try {
-                    localStorage.removeItem(entry._key);
-                } catch (e) { }
-            }
-            render();
-        });
-    }
+    // Watch history clear btn removed
 
     // Initial render
     if (document.readyState === 'loading') {

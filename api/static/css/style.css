@@ -883,6 +883,10 @@ h6 {
     }
 }
 
+.home-main {
+    min-width: 0; /* Prevents flex/grid children from causing overflow */
+}
+
 /* Share Banner */
 .share-banner {
     display: flex;
@@ -980,6 +984,26 @@ h6 {
 
 .tab-content.active {
     display: block;
+}
+
+@media (max-width: 640px) {
+    .content-tabs {
+        gap: 8px; /* Slightly smaller gap so they fit */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        padding-bottom: 2px;
+    }
+    
+    .content-tabs::-webkit-scrollbar {
+        display: none; /* Safari and Chrome */
+    }
+
+    .tab-btn {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        flex-shrink: 0; /* Let buttons keep their size and enable scrolling if necessary */
+    }
 }
 
 /* Sidebar List */
@@ -1085,8 +1109,8 @@ h6 {
    ============================================ */
 .anime-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: var(--space-sm);
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* slightly smaller for narrow phones */
+    gap: 8px; /* reduce gap to prevent overflow */
 }
 
 @media (min-width: 640px) {
@@ -4204,11 +4228,11 @@ h6 {
 
 /* ── Card Shell & Layout ── */
 .cw-card-shell {
-    flex: 0 0 280px;
+    flex: 0 0 160px; /* Halved size */
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: var(--space-xs); /* Reduced gap */
     position: relative;
     text-decoration: none;
     color: inherit;
@@ -4304,8 +4328,8 @@ h6 {
     justify-content: center;
     background: rgba(0, 0, 0, 0.6);
     border-radius: 50%;
-    width: 48px;
-    height: 48px;
+    width: 36px; /* Halved relative */
+    height: 36px;
     opacity: 0;
     transition: opacity var(--transition-normal), transform var(--transition-normal);
     z-index: 3;
@@ -4319,9 +4343,9 @@ h6 {
 }
 
 .cw-play-button svg {
-    font-size: 24px;
+    font-size: 18px;
     fill: white;
-    margin-left: 4px;
+    margin-left: 2px;
 }
 
 /* ── Top/Bottom Overlays ── */
@@ -4332,7 +4356,7 @@ h6 {
     right: 0;
     display: flex;
     justify-content: flex-end;
-    padding: 8px;
+    padding: 6px;
     z-index: 4;
 }
 
@@ -4343,7 +4367,7 @@ h6 {
     right: 0;
     display: flex;
     justify-content: space-between;
-    padding: 24px 8px 8px 8px;
+    padding: 16px 6px 6px 6px;
     background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
     z-index: 4;
     pointer-events: none;
