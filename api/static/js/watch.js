@@ -699,6 +699,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const progressThumb = document.getElementById('progressThumb');
         const progressBuffer = document.getElementById('progressBuffer');
         const progressTooltip = document.getElementById('progressTooltip');
+        const tooltipThumbCanvas = document.getElementById('tooltipThumbCanvas');
+        const tooltipTimeText   = document.getElementById('tooltipTimeText');
+        const tooltipThumbCtx   = tooltipThumbCanvas ? tooltipThumbCanvas.getContext('2d') : null;
         const currTimeDisp = document.getElementById('currentTimeDisplay');
         const durDisp = document.getElementById('durationDisplay');
 
@@ -766,12 +769,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     mobileControlsVisible = false;
                 }
             });
-            // On mobile: single tap toggles control bar visibility
+            // On mobile: single tap toggles control bar visibility (show ↔ hide)
             masterWrapper.addEventListener('touchstart', (e) => {
                 // Only toggle if the tap isn't on a control button/progress bar
                 const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.id === 'mobilePlayOverlay';
                 if (!isControl) {
-                    showMobileControls();
+                    // Toggle: if already visible, hide; if hidden, show
+                    if (mobileControlsVisible) {
+                        clearTimeout(inactivityTimeout);
+                        masterWrapper.classList.remove('controls-visible');
+                        if (!video.paused) masterWrapper.classList.add('user-inactive');
+                        mobileControlsVisible = false;
+                    } else {
+                        showMobileControls();
+                    }
                 } else {
                     // Even control taps should reset the hide timer
                     resetInactivity();
@@ -795,7 +806,20 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         playBtn.addEventListener('click', togglePlay);
         centerPlayBtn.addEventListener('click', togglePlay);
+
+        // Track the timestamp of the last touchend so we can distinguish
+        // a real mouse-click from a synthetic click fired after a touch tap.
+        // This is the most reliable cross-browser approach and works in
+        // Brave, Firefox, Safari, and Chrome on Android/iOS.
+        let _lastTouchEnd = 0;
+        wrapper.addEventListener('touchend', () => { _lastTouchEnd = Date.now(); }, { passive: true });
+
         wrapper.addEventListener('click', (e) => {
+            // On touch devices a tap fires touchstart → touchend → click.
+            // We only want the click handler to run for genuine mouse clicks.
+            // 500 ms is well above the typical 300 ms click-delay on mobile.
+            if (Date.now() - _lastTouchEnd < 500) return;
+
             // Ignore if clicking on interactive UI elements or controls
             if (e.target.closest('.controls-bar') || 
                 e.target.closest('.player-top-bar') || 
@@ -870,6 +894,78 @@ document.addEventListener('DOMContentLoaded', () => {
             return (h > 0 ? h + ':' : '') + (m < 10 && h > 0 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
         };
 
+        // ── Thumbnail preview engine ──────────────────────────────────────────
+        // Captures video frames periodically while the video plays and uses the
+        // nearest cached frame when the user hovers or scrubs the progress bar.
+        // A hidden offscreen canvas is used; CORS is not needed because we draw
+        // from the same <video> element that is already playing the content.
+        const THUMB_INTERVAL_S = 5;   // capture one frame every 5 s of video time
+        const thumbFrames = new Map(); // key = bucketed time (s), value = ImageData
+
+        // Offscreen scratch canvas for capture (reused to avoid GC pressure)
+        const captureCanvas = document.createElement('canvas');
+        captureCanvas.width  = 160;
+        captureCanvas.height = 90;
+        const captureCtx = captureCanvas.getContext('2d');
+
+        function captureFrame() {
+            if (!video || video.readyState < 2 || video.videoWidth === 0) return;
+            try {
+                captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+                const bucket = Math.floor(video.currentTime / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
+                if (!thumbFrames.has(bucket)) {
+                    // Store ImageData (cheaper than toDataURL, no encoding)
+                    thumbFrames.set(bucket, captureCtx.getImageData(0, 0, captureCanvas.width, captureCanvas.height));
+                }
+            } catch (e) { /* cross-origin guard — silently skip */ }
+        }
+
+        // Capture a frame every THUMB_INTERVAL_S of playback time
+        let _lastCaptureBucket = -1;
+        video.addEventListener('timeupdate', () => {
+            const bucket = Math.floor(video.currentTime / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
+            if (bucket !== _lastCaptureBucket) {
+                _lastCaptureBucket = bucket;
+                captureFrame();
+            }
+        });
+
+        // Render nearest cached frame into the tooltip canvas
+        function showTooltipThumb(timeSec) {
+            if (!tooltipThumbCtx || !tooltipThumbCanvas || thumbFrames.size === 0) return;
+            const bucket = Math.round(timeSec / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
+            // Find closest available bucket
+            let bestKey = null, bestDist = Infinity;
+            thumbFrames.forEach((_, k) => {
+                const d = Math.abs(k - bucket);
+                if (d < bestDist) { bestDist = d; bestKey = k; }
+            });
+            if (bestKey === null) return;
+            tooltipThumbCtx.putImageData(thumbFrames.get(bestKey), 0, 0);
+            tooltipThumbCanvas.classList.add('has-frame');
+        }
+
+        // Unified tooltip updater (time text + optional thumb)
+        function updateProgressTooltip(pos) {
+            if (!progressTooltip || !video.duration) return;
+            const timeSec = pos * video.duration;
+            // Update time text
+            if (tooltipTimeText) {
+                tooltipTimeText.textContent = formatTime(timeSec);
+            } else {
+                progressTooltip.textContent = formatTime(timeSec);
+            }
+            // Position the tooltip, clamped to bar edges
+            const thumbW = tooltipThumbCanvas && tooltipThumbCanvas.classList.contains('has-frame') ? 160 : 0;
+            const tooltipHalfW = Math.max(thumbW / 2, 25);
+            const barW = progressContainer.getBoundingClientRect().width;
+            const pxPos = pos * barW;
+            const clampedPct = Math.max(tooltipHalfW, Math.min(barW - tooltipHalfW, pxPos)) / barW * 100;
+            progressTooltip.style.left = `${clampedPct}%`;
+            showTooltipThumb(timeSec);
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         video.addEventListener('timeupdate', () => {
             const cur = video.currentTime;
             const dur = video.duration;
@@ -924,6 +1020,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (seekRaf) cancelAnimationFrame(seekRaf);
             seekRaf = requestAnimationFrame(() => {
                 updateSeekVisual(seekPos);
+                // Show tooltip (with thumbnail) during scrubbing on all devices
+                if (progressTooltip) updateProgressTooltip(seekPos);
             });
         }
 
@@ -944,9 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rect = progressContainer.getBoundingClientRect();
             let pos = (e.clientX - rect.left) / rect.width;
             pos = Math.max(0, Math.min(1, pos));
-            const hoverTime = pos * video.duration;
-            progressTooltip.textContent = formatTime(hoverTime);
-            progressTooltip.style.left = `${pos * 100}%`;
+            updateProgressTooltip(pos);
         });
         
         progressContainer.addEventListener('mousedown', (e) => {
@@ -963,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Touch: same logic, with preventDefault to block page scroll
         progressContainer.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            if (progressTooltip) progressTooltip.style.opacity = '1';
             startSeek(e.touches[0].clientX);
         }, { passive: false });
         document.addEventListener('touchmove', (e) => {
@@ -972,7 +1069,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, { passive: false });
         document.addEventListener('touchend', () => {
-            if (isSeeking) endSeek();
+            if (isSeeking) {
+                endSeek();
+                // Fade the tooltip out shortly after releasing
+                setTimeout(() => {
+                    if (progressTooltip) progressTooltip.style.opacity = '';
+                }, 600);
+            }
         });
         document.addEventListener('touchcancel', () => {
             if (isSeeking) endSeek();

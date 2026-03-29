@@ -112,7 +112,10 @@
                                 <div class="progress-buffer" id="progressBuffer"></div>
                                 <div class="progress-fill" id="progressFill"></div>
                                 <div class="progress-thumb" id="progressThumb"></div>
-                                <div class="progress-tooltip" id="progressTooltip">00:00</div>
+                                <div class="progress-tooltip" id="progressTooltip">
+                                    <canvas id="tooltipThumbCanvas" width="160" height="90"></canvas>
+                                    <span id="tooltipTimeText">00:00</span>
+                                </div>
                             </div>
 
                             <div class="controls-main">
@@ -600,6 +603,40 @@
 <!-- Toast Container -->
 <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
+
+<!-- Thumbnail tooltip & mobile control styles -->
+<style>
+/* Thumbnail tooltip layout */
+.progress-tooltip {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 4px 4px 6px !important;
+    min-width: 50px !important;
+    width: auto !important;
+}
+#tooltipThumbCanvas {
+    display: none;          /* hidden until first frame is captured */
+    border-radius: 4px 4px 0 0;
+    width: 160px;
+    height: 90px;
+    background: #111;
+    flex-shrink: 0;
+}
+#tooltipThumbCanvas.has-frame {
+    display: block;
+}
+#tooltipTimeText {
+    font-size: 0.78rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+/* On very small screens, shrink the thumb a bit */
+@media (max-width: 480px) {
+    #tooltipThumbCanvas { width: 120px; height: 67px; }
+}
+</style>
 
 {% block extra_js %}
 <!-- Simple Clean Player Scripts -->
