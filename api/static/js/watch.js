@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // On mobile: single tap toggles control bar visibility (show ↔ hide)
             masterWrapper.addEventListener('touchstart', (e) => {
                 // Only toggle if the tap isn't on a control button/progress bar
-                const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.id === 'mobilePlayOverlay';
+                const isControl = e.target.closest('.controls-bar') || e.target.closest('.player-top-bar') || e.target.closest('#mobilePlayOverlay');
                 if (!isControl) {
                     // Toggle: if already visible, hide; if hidden, show
                     if (mobileControlsVisible) {
@@ -859,8 +859,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             };
-            mobilePlayOverlay.addEventListener('pointerup', handleOverlayPlay);
-            mobilePlayOverlay.addEventListener('click', handleOverlayPlay);
+            // Use touchend for mobile (iOS Safari requires touchend/click as user gesture for video.play())
+            mobilePlayOverlay.addEventListener('touchend', (e) => {
+                e.preventDefault(); // prevents the subsequent click from double-firing
+                handleOverlayPlay(e);
+            });
+            mobilePlayOverlay.addEventListener('click', handleOverlayPlay); // desktop mouse fallback
         }
 
         const iconPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z"/></svg>';
