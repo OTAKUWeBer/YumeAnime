@@ -710,6 +710,99 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
     // ──────────────────────────────────────────────────────────────────────────
 
+    // ─── Watch History Metadata Tracker ──────────────────────────────────────
+    // Saves rich metadata to localStorage for Continue Watching / Watch History
+    // sections on the home page. Uses key: yumeHistory_{animeId}_ep{epNum}
+    (function initWatchHistoryTracker() {
+        const pathMatch = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
+        if (!pathMatch) return;
+
+        const animeId = pathMatch[1];
+        const epNum = pathMatch[2];
+        const historyKey = `yumeHistory_${animeId}_ep${epNum}`;
+        const resumeKey = `yumeResume_${animeId}_ep${epNum}`;
+
+        // Gather metadata from page
+        const animeTitle = document.querySelector('.anime-title-main')?.textContent?.trim()
+            || document.querySelector('title')?.textContent?.replace(/ - YumeAnime.*/, '').replace(/,?\s*Episode \d+/, '').trim()
+            || animeId.replace(/-/g, ' ');
+        const posterEl = document.querySelector('.anime-poster');
+        const poster = posterEl ? posterEl.src : '';
+        const epTitleEl = document.querySelector('.player-title span:last-child');
+        const episodeTitle = epTitleEl ? epTitleEl.textContent.trim() : '';
+
+        function saveHistoryMeta(currentTime, duration, completed) {
+            try {
+                const existing = JSON.parse(localStorage.getItem(historyKey) || '{}');
+                const entry = {
+                    animeId: animeId,
+                    epNum: parseInt(epNum),
+                    animeName: animeTitle,
+                    episodeTitle: episodeTitle,
+                    poster: poster,
+                    timestamp: currentTime || existing.timestamp || 0,
+                    duration: duration || existing.duration || 0,
+                    completed: completed || false,
+                    watchedAt: Date.now()
+                };
+                localStorage.setItem(historyKey, JSON.stringify(entry));
+            } catch (e) { }
+        }
+
+        // Save initial entry immediately (marks that user visited this episode)
+        setTimeout(() => {
+            saveHistoryMeta(0, 0, false);
+        }, 2000);
+
+        // HLS video tracking
+        const hlsVideo = document.getElementById('videoPlayer');
+        if (hlsVideo) {
+            let lastHistorySave = 0;
+            hlsVideo.addEventListener('timeupdate', () => {
+                const now = Date.now();
+                if (now - lastHistorySave > 10000) { // Save every 10 seconds
+                    lastHistorySave = now;
+                    saveHistoryMeta(hlsVideo.currentTime, hlsVideo.duration, false);
+                }
+            });
+            hlsVideo.addEventListener('pause', () => {
+                saveHistoryMeta(hlsVideo.currentTime, hlsVideo.duration, false);
+            });
+            hlsVideo.addEventListener('ended', () => {
+                saveHistoryMeta(hlsVideo.duration, hlsVideo.duration, true);
+                // Remove resume key on completion
+                try { localStorage.removeItem(resumeKey); } catch(e) {}
+            });
+            window.addEventListener('beforeunload', () => {
+                saveHistoryMeta(hlsVideo.currentTime, hlsVideo.duration, false);
+            });
+        }
+
+        // Embed tracking (wall-clock based)
+        const embedFrame = document.getElementById('embedPlayer');
+        if (embedFrame && !hlsVideo) {
+            let embedElapsed = 0;
+            try {
+                const saved = parseFloat(localStorage.getItem(resumeKey)) || 0;
+                embedElapsed = saved;
+            } catch(e) {}
+
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    embedElapsed++;
+                    if (embedElapsed % 15 === 0) { // Save every 15 seconds
+                        saveHistoryMeta(embedElapsed, 0, false);
+                    }
+                }
+            }, 1000);
+
+            window.addEventListener('beforeunload', () => {
+                saveHistoryMeta(embedElapsed, 0, false);
+            });
+        }
+    })();
+    // ──────────────────────────────────────────────────────────────────────────
+
     // Custom Vanilla UI Driver
     function initVanillaPlayerUI() {
         const video = document.getElementById('videoPlayer');
@@ -1737,6 +1830,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (existingVid) existingVid.style.display = 'none';
                     const existingUI = document.getElementById('customPlayerUI');
                     if (existingUI) existingUI.style.display = 'none';
+                    const fallback = document.getElementById('errorFallbackContainer');
+                    if (fallback) fallback.style.display = 'none';
 
                     let frame = masterWrapper ? masterWrapper.querySelector('#embedPlayer') : null;
                     if (!frame) {
@@ -1760,6 +1855,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const existingEmbed = document.getElementById('embedPlayer');
                     if (existingEmbed) existingEmbed.style.display = 'none';
                     if (videoContainer) videoContainer.style.display = 'block';
+                    const fallback = document.getElementById('errorFallbackContainer');
+                    if (fallback) fallback.style.display = 'none';
 
                     let vid = document.getElementById('videoPlayer');
                     if (!vid && videoContainer) {

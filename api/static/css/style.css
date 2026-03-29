@@ -873,44 +873,29 @@ h6 {
 .spotlight-carousel {
     position: relative;
     border-radius: var(--radius-xl);
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 0;
+    overflow: hidden;
     margin: 0;
     padding: 0;
 }
 
-.spotlight-carousel.dragging {
-    scroll-snap-type: none;
-    scroll-behavior: auto;
-    cursor: grabbing;
-}
-
-.spotlight-carousel.dragging .spotlight-slide {
-    pointer-events: none;
-}
-
-.spotlight-carousel:not(.dragging) {
-    cursor: grab;
-}
-
-.spotlight-carousel::-webkit-scrollbar {
-    display: none;
-}
-
 /* Base spotlight slide styling */
 .spotlight-slide {
-    position: relative;
+    position: absolute;
+    inset: 0;
     height: 500px;
-    /* Increased height for better visual impact */
-    flex: 0 0 100%;
     width: 100%;
-    scroll-snap-align: start;
     box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+    z-index: 0;
+}
+
+.spotlight-slide.active {
+    position: relative;
+    opacity: 1;
+    visibility: visible;
+    z-index: 1;
 }
 
 .spotlight-backdrop {
@@ -932,7 +917,18 @@ h6 {
 
 .spotlight-slide.active .spotlight-backdrop img {
     transform: scale(1);
-    /* Ken burns transition when active */
+}
+
+/* Content entrance animation */
+.spotlight-slide .spotlight-content {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+}
+
+.spotlight-slide.active .spotlight-content {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .spotlight-gradient {
@@ -1083,16 +1079,18 @@ h6 {
     bottom: var(--space-xl);
     right: var(--space-2xl);
     display: flex;
+    align-items: center;
     gap: var(--space-sm);
+    z-index: 5;
 }
 
 .spotlight-nav-btn {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(20, 20, 20, 0.6);
+    background: rgba(20, 20, 20, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
     border-radius: var(--radius-full);
@@ -1102,34 +1100,44 @@ h6 {
 }
 
 .spotlight-nav-btn:hover {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
     transform: scale(1.1);
-    box-shadow: 0 0 20px var(--primary-color-alpha, rgba(168, 85, 247, 0.5));
+}
+
+.spotlight-fraction {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    font-family: var(--font-mono);
+    min-width: 48px;
+    text-align: center;
+    user-select: none;
+    letter-spacing: 0.05em;
+}
+
+.spotlight-fraction .spotlight-current {
+    color: #fff;
 }
 
 /* Mobile responsive adjustments for spotlight navigation */
 @media (max-width: 768px) {
     .spotlight-nav {
-        bottom: auto;
-        top: var(--space-md);
+        bottom: var(--space-md);
         right: var(--space-md);
         gap: var(--space-xs);
     }
 
     .spotlight-nav-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 0.9rem;
+        width: 36px;
+        height: 36px;
     }
 }
 
 @media (max-width: 480px) {
-
-    .spotlight-nav,
     .spotlight-nav-btn {
-        display: none;
+        width: 32px;
+        height: 32px;
     }
 }
 
@@ -3769,4 +3777,354 @@ h6 {
 .sync-percent {
     font-family: var(--font-mono);
     color: var(--text-primary);
+}
+
+/* ============================================
+   Continue Watching & Watch History Sections
+   ============================================ */
+.cw-section {
+    margin-bottom: var(--space-2xl);
+}
+
+.cw-section .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
+.cw-section .section-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.cw-section .section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.cw-scroll-wrapper {
+    position: relative;
+}
+
+.cw-scroll {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: var(--space-sm);
+}
+
+.cw-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Card Shell & Layout ── */
+.cw-card-shell {
+    flex: 0 0 280px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+    animation: cwFadeIn 0.4s ease forwards;
+}
+
+@media (max-width: 640px) {
+    .cw-card-shell {
+        flex: 0 0 240px;
+    }
+}
+
+.cw-card-shell:nth-child(1) { animation-delay: 0s; }
+.cw-card-shell:nth-child(2) { animation-delay: 0.05s; }
+.cw-card-shell:nth-child(3) { animation-delay: 0.1s; }
+.cw-card-shell:nth-child(4) { animation-delay: 0.15s; }
+.cw-card-shell:nth-child(5) { animation-delay: 0.2s; }
+.cw-card-shell:nth-child(6) { animation-delay: 0.25s; }
+
+/* ── Card Wrapper (Image Area) ── */
+.cw-card-wrapper {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    display: block;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    cursor: pointer;
+}
+
+.cw-card-shell:hover .cw-card-wrapper {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+}
+
+.cw-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+
+.cw-card-shell:hover .cw-card-image {
+    transform: scale(1.05);
+}
+
+/* Play overlay on hover */
+.cw-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    opacity: 0;
+    transition: opacity var(--transition-normal), transform var(--transition-normal);
+    z-index: 3;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.cw-card-shell:hover .cw-play-button {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.cw-play-button svg {
+    font-size: 24px;
+    fill: white;
+    margin-left: 4px;
+}
+
+/* ── Top/Bottom Overlays ── */
+.cw-card-info-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px;
+    z-index: 4;
+}
+
+.cw-card-info-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 24px 8px 8px 8px;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+    z-index: 4;
+    pointer-events: none;
+}
+
+.cw-card-label {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+    letter-spacing: 0.02em;
+    font-family: var(--font-mono);
+}
+
+.cw-card-duration-total {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── Remove (×) Button ── */
+.cw-card-remove {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--text-secondary);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all var(--transition-fast);
+    backdrop-filter: blur(4px);
+    padding: 0;
+    /* Ensure it overlays completely and is clickable */
+    pointer-events: auto;
+}
+
+.cw-card-shell:hover .cw-card-remove {
+    opacity: 1;
+}
+
+.cw-card-remove:hover {
+    background: var(--error);
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.cw-card-remove svg {
+    font-size: 14px;
+}
+
+/* ── Progress Bar ── */
+.cw-card-progress-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    z-index: 5;
+}
+
+.cw-card-progress-track {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+}
+
+.cw-card-progress-fill {
+    height: 100%;
+    background: var(--error);
+    position: relative;
+    z-index: 1;
+    transition: width 0.3s ease;
+}
+
+/* ── Title Area (Below Image) ── */
+.cw-card-title-below {
+    padding: 0 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cw-card-title-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.3;
+}
+
+.cw-card-subtitle-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+
+/* ── Empty state ── */
+.cw-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl) var(--space-lg);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border-color);
+}
+
+/* ── Scroll fade edges ── */
+.cw-scroll-wrapper::before,
+.cw-scroll-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    z-index: 6;
+    pointer-events: none;
+}
+
+.cw-scroll-wrapper::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg-primary), transparent);
+    opacity: 0;
+}
+
+.cw-scroll-wrapper::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg-primary), transparent);
+}
+
+/* ── View All link ── */
+.cw-view-all {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color var(--transition-fast);
+    text-decoration: none;
+}
+
+.cw-view-all:hover {
+    color: var(--text-primary);
+}
+
+
+
+/* ── Card animation on entry ── */
+@keyframes cwFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Section clear all button ── */
+.cw-clear-btn {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.cw-clear-btn:hover {
+    color: var(--error);
+    background: rgba(239, 68, 68, 0.1);
 }
