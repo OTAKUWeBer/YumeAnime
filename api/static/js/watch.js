@@ -66,15 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentEl = list.querySelector('.episode-sidebar-item.current');
                 if (currentEl) {
                     setTimeout(() => {
-                        const scrollContainer = document.getElementById('episodeList');
-                        if (scrollContainer) {
-                            const containerTop = scrollContainer.scrollTop;
-                            const containerHeight = scrollContainer.clientHeight;
-                            const elOffsetTop = currentEl.offsetTop;
-                            const elHeight = currentEl.clientHeight;
-                            // Only scroll the container, center the current episode within it
-                            const targetScrollTop = elOffsetTop - (containerHeight / 2) + (elHeight / 2);
-                            scrollContainer.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
+                        const container = document.getElementById('episodeList');
+                        if (container) {
+                            const targetScrollTop = currentEl.offsetTop - (container.clientHeight / 2) + (currentEl.clientHeight / 2);
+                            container.scrollTop = Math.max(0, targetScrollTop);
                         }
                     }, 300);
                 }
@@ -1608,7 +1603,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.classList.toggle('current', parseFloat(item.dataset.number) === epNum);
                 });
                 var current = list.querySelector('.episode-sidebar-item.current');
-                if (current) current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                if (current) {
+                    var container = list;
+                    var targetScrollTop = current.offsetTop - (container.clientHeight / 2) + (current.clientHeight / 2);
+                    container.scrollTop = Math.max(0, targetScrollTop);
+                }
             }
         })();
     });
