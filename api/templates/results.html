@@ -36,7 +36,7 @@
                     <span class="badge badge-dub">{{ anime.episodes.dub }}</span>
                     {% endif %}
                     {% if anime.rating %}
-                    <span class="badge badge-rating">★ {{ anime.rating }}</span>
+                    <span class="badge badge-rating">★ {{ (anime.rating / 10) | round(1) }}</span>
                     {% endif %}
                 </div>
                 <div class="anime-card-overlay">
