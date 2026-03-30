@@ -143,6 +143,8 @@
     .episode-sidebar-list {
         flex: 1;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* smooth momentum scroll on iOS */
+        overscroll-behavior: contain;      /* prevent scroll from bubbling to page */
         padding: var(--space-sm);
         scrollbar-width: thin;
         scrollbar-color: var(--border-color) transparent;

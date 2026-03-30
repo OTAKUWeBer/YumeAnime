@@ -61,12 +61,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (shouldBeCurrent) foundCurrent = true;
             });
 
-            // Auto-scroll to current episode in sidebar
+            // Auto-scroll to current episode inside the list container only (never scrolls the page)
             if (foundCurrent) {
                 const currentEl = list.querySelector('.episode-sidebar-item.current');
                 if (currentEl) {
                     setTimeout(() => {
-                        currentEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                        const scrollContainer = document.getElementById('episodeList');
+                        if (scrollContainer) {
+                            const containerTop = scrollContainer.scrollTop;
+                            const containerHeight = scrollContainer.clientHeight;
+                            const elOffsetTop = currentEl.offsetTop;
+                            const elHeight = currentEl.clientHeight;
+                            // Only scroll the container, center the current episode within it
+                            const targetScrollTop = elOffsetTop - (containerHeight / 2) + (elHeight / 2);
+                            scrollContainer.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
+                        }
                     }, 300);
                 }
             }
