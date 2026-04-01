@@ -21,7 +21,7 @@ _RE_STRIP_ANIME_ID = re.compile(r'-\d+$')
 # ── Urgent Announcement Mode ──────────────────────────────────────────
 # Set to True to put the entire site into maintenance mode.
 # All routes will display the announcement page instead of normal content.
-URGENT_ANNOUNCEMENT = False
+URGENT_ANNOUNCEMENT = True
 
 HEADLESS_PATTERNS = [
     r"headless", r"phantom", r"selenium", r"puppeteer",
