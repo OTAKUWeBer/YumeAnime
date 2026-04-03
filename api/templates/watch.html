@@ -230,29 +230,53 @@
 
             <!-- Episode Controls & Info Section -->
             <div id="watch-navigation" style="margin-top: 15px;">
-                <!-- Small Navigation Buttons -->
-                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                    <a href="{% if prev_episode_url %}{{ prev_episode_url }}{% else %}javascript:void(0){% endif %}"
-                        class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
-                        not prev_episode_url %}onclick="return false;" aria-disabled="true" {% endif %}
-                        style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                        Prev
-                    </a>
-                    <a href="{% if next_episode_url %}{{ next_episode_url }}{% else %}javascript:void(0){% endif %}"
-                        class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
-                        next_episode_url %}onclick="window._forceEpisodeComplete = true;" {% else
-                        %}onclick="return false;" aria-disabled="true" {% endif %}
-                        style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
-                        Next
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </a>
+                <!-- Navigation + Language Row -->
+                <div class="watch-nav-bar">
+                    <div class="watch-nav-left">
+                        <a href="{% if prev_episode_url %}{{ prev_episode_url }}{% else %}javascript:void(0){% endif %}"
+                            class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
+                            not prev_episode_url %}onclick="return false;" aria-disabled="true" {% endif %}
+                            style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Prev
+                        </a>
+                        <a href="{% if next_episode_url %}{{ next_episode_url }}{% else %}javascript:void(0){% endif %}"
+                            class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
+                            next_episode_url %}onclick="window._forceEpisodeComplete = true;" {% else
+                            %}onclick="return false;" aria-disabled="true" {% endif %}
+                            style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+
+                    <div class="watch-nav-right">
+                        <!-- Language Selection -->
+                        <div class="lang-toggle">
+                            <button id="btnSub" class="lang-btn {% if lang == 'sub' %}active{% endif %}" 
+                                onclick="switchLanguage('sub')">SUB</button>
+                            {% if dub_available %}
+                            <button id="btnDub" class="lang-btn {% if lang == 'dub' %}active{% endif %}" 
+                                onclick="switchLanguage('dub')">DUB</button>
+                            {% else %}
+                            <button class="lang-btn" disabled title="Dub not available">DUB</button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Report Issue Button -->
+                        <button id="openReportBtn" class="premium-action-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>
+                            </svg>
+                            <span class="report-label">Report</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Episode Info Bar - Responsive -->
@@ -311,28 +335,7 @@
                         </div>
                         {% endif %}
 
-                        <!-- Right Actions: Language & Report -->
-                        <div class="watch-actions-row">
-                            <!-- Language Selection -->
-                            <div class="lang-toggle">
-                                <button id="btnSub" class="lang-btn {% if lang == 'sub' %}active{% endif %}" 
-                                    onclick="switchLanguage('sub')">SUB</button>
-                                {% if dub_available %}
-                                <button id="btnDub" class="lang-btn {% if lang == 'dub' %}active{% endif %}" 
-                                    onclick="switchLanguage('dub')">DUB</button>
-                                {% else %}
-                                <button class="lang-btn" disabled title="Dub not available">DUB</button>
-                                {% endif %}
-                            </div>
-    
-                            <!-- Report Issue Button -->
-                            <button id="openReportBtn" class="premium-action-btn">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>
-                                </svg>
-                                <span class="report-label">Report</span>
-                            </button>
-                        </div>
+
                     </div>
                 </div>
 

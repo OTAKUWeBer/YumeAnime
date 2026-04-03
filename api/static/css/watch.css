@@ -1610,17 +1610,31 @@
     }
 
 /* ============================================================
-   WATCH PAGE — CONTROLS LAYOUT PATCH
-   Desktop: compact inline row  |  Mobile: stacked full-width
+   WATCH PAGE — NAV BAR (Prev/Next + SUB/DUB + Report)
    ============================================================ */
 
-/* ── Desktop: actions row sits right, auto-width ────────────── */
-.watch-actions-row {
+.watch-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding: 10px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.watch-nav-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.watch-nav-right {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: auto;
-    flex-shrink: 0;
 }
 
 /* ── Mobile ≤ 600px: full stack layout ──────────────────────── */
@@ -1704,11 +1718,14 @@
         padding: 1px 4px;
     }
 
-    /* Actions row: full width, space-between */
-    .watch-actions-row {
-        margin-left: 0;
-        width: 100%;
-        justify-content: space-between;
+    /* Nav bar: compact on mobile */
+    .watch-nav-bar {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .watch-nav-right {
+        gap: 6px;
     }
 
     .lang-toggle {
