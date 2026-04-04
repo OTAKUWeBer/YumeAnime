@@ -300,3 +300,140 @@ def anilist_status():
     except Exception as e:
         logger.error(f"Error checking AniList status for user {session.get('username', 'Unknown')}: {e}")
         return jsonify({'connected': False, 'message': 'Error checking connection status.'}), 500
+
+
+# ──────────────────────────────────────────────────────────────
+#  MyAnimeList OAuth routes
+# ──────────────────────────────────────────────────────────────
+
+@auth_bp.route('/mal/connect', methods=['GET'])
+def connect_mal_account():
+    """Redirect user to MAL OAuth authorization page (with PKCE)."""
+    if 'username' not in session or '_id' not in session:
+        flash('Please log in first to connect your MyAnimeList account.', 'warning')
+        return redirect(url_for('main.home_routes.home'))
+
+    # Check if already connected
+    user_id = session.get('_id')
+    user = get_user_by_id(user_id)
+    if user and user.get('mal_id'):
+        flash('Your MyAnimeList account is already connected.', 'info')
+        return redirect(url_for('main.catalog_routes.settings'))
+
+    from ..utils.mal_service import get_mal_auth_url, _generate_code_verifier
+
+    state = secrets.token_urlsafe(32)
+    code_verifier = _generate_code_verifier()
+    session['mal_oauth_state'] = state
+    session['mal_code_verifier'] = code_verifier
+
+    auth_url = get_mal_auth_url(state, code_verifier)
+    return redirect(auth_url)
+
+
+@auth_bp.route('/mal/callback')
+def mal_callback():
+    """Handle MAL OAuth callback — exchange code for tokens and store."""
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+
+    if error:
+        logger.error(f"MAL OAuth error: {error}")
+        flash('MyAnimeList login failed. Please try again.', 'error')
+        return redirect(url_for('main.catalog_routes.settings'))
+
+    if not code:
+        flash('No authorization code received from MyAnimeList.', 'error')
+        return redirect(url_for('main.catalog_routes.settings'))
+
+    # Must be logged in
+    if 'username' not in session or '_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect(url_for('main.home_routes.home'))
+
+    code_verifier = session.pop('mal_code_verifier', None)
+    if not code_verifier:
+        flash('Session expired. Please try connecting again.', 'error')
+        return redirect(url_for('main.catalog_routes.settings'))
+
+    from ..utils.mal_service import exchange_mal_code, get_mal_user_info
+    from ..models.user import connect_mal_to_user
+
+    try:
+        # Exchange code for tokens
+        tokens = exchange_mal_code(code, code_verifier)
+        if not tokens:
+            flash('Failed to get access token from MyAnimeList.', 'error')
+            return redirect(url_for('main.catalog_routes.settings'))
+
+        # Fetch user info
+        mal_user = get_mal_user_info(tokens['access_token'])
+        if not mal_user:
+            flash('Failed to get user info from MyAnimeList.', 'error')
+            return redirect(url_for('main.catalog_routes.settings'))
+
+        # Store in DB
+        user_id = session['_id']
+        result = connect_mal_to_user(
+            user_id, mal_user, tokens['access_token'],
+            tokens.get('refresh_token', ''), tokens.get('expires_in', 3600)
+        )
+
+        if result:
+            session['mal_authenticated'] = True
+            session['mal_username'] = mal_user.get('name')
+            flash(f'MyAnimeList account ({mal_user.get("name")}) connected!', 'success')
+        else:
+            flash('Failed to save MyAnimeList connection.', 'error')
+
+    except Exception as e:
+        logger.error(f"MAL callback error: {e}")
+        flash('An error occurred connecting MyAnimeList.', 'error')
+
+    return redirect(url_for('main.catalog_routes.settings'))
+
+
+@auth_bp.route('/mal/disconnect', methods=['POST'])
+def disconnect_mal_account():
+    """Remove MAL connection from the current user."""
+    if 'username' not in session or '_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in.'}), 401
+
+    try:
+        from ..models.user import delete_mal_data
+
+        user_id = session.get('_id')
+        result = delete_mal_data(user_id)
+
+        if result:
+            session.pop('mal_authenticated', None)
+            session.pop('mal_username', None)
+            return jsonify({'success': True, 'message': 'MyAnimeList disconnected successfully.'})
+        return jsonify({'success': False, 'message': 'Failed to disconnect.'}), 500
+
+    except Exception as e:
+        logger.error(f"MAL disconnect error: {e}")
+        return jsonify({'success': False, 'message': 'An error occurred.'}), 500
+
+
+@auth_bp.route('/mal/status', methods=['GET'])
+def mal_status():
+    """Check MAL connection status for the current user."""
+    if 'username' not in session or '_id' not in session:
+        return jsonify({'connected': False}), 200
+
+    try:
+        user = get_user_by_id(session.get('_id'))
+        if not user:
+            return jsonify({'connected': False}), 200
+
+        is_connected = bool(user.get('mal_id'))
+        return jsonify({
+            'connected': is_connected,
+            'mal_username': user.get('mal_username') if is_connected else None,
+            'mal_id': user.get('mal_id') if is_connected else None,
+        })
+    except Exception as e:
+        logger.error(f"MAL status error: {e}")
+        return jsonify({'connected': False}), 500

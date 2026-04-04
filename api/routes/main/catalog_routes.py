@@ -157,7 +157,10 @@ def settings():
             'anilist_authenticated': bool(user.get('anilist_id')),
             'anilist_id': user.get('anilist_id'),
             'avatar': user.get('avatar'),
-            'created_at': user.get('created_at')
+            'created_at': user.get('created_at'),
+            'mal_authenticated': bool(user.get('mal_id')),
+            'mal_id': user.get('mal_id'),
+            'mal_username': user.get('mal_username'),
         }
         
         return render_template('settings.html', user=user_data)

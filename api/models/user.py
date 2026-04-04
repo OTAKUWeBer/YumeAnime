@@ -471,3 +471,99 @@ def reset_password(email: str, new_password: str) -> bool:
         return True
     return False
 
+
+# ──────────────────────────────────────────────
+# MyAnimeList integration helpers
+# ──────────────────────────────────────────────
+
+def connect_mal_to_user(user_id: int, mal_user_info: dict, access_token: str,
+                        refresh_token: str, expires_in: int) -> bool:
+    """Store MAL credentials on an existing user document."""
+    try:
+        import time as _time
+        update_doc = {
+            "$set": {
+                "mal_id": mal_user_info.get("id"),
+                "mal_username": mal_user_info.get("name"),
+                "mal_access_token": access_token,
+                "mal_refresh_token": refresh_token,
+                "mal_token_expires_at": _time.time() + expires_in,
+                "updated_at": datetime.utcnow(),
+            }
+        }
+        result = users_collection.update_one({"_id": user_id}, update_doc)
+        if result.modified_count > 0:
+            logger.info(f"MAL account {mal_user_info.get('id')} connected to user {user_id}")
+            clear_user_cache_func(user_id)
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error connecting MAL to user {user_id}: {e}")
+        return False
+
+
+def delete_mal_data(user_id: int) -> bool:
+    """Remove all MAL-related fields from a user document."""
+    try:
+        result = users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$unset": {
+                    "mal_id": "",
+                    "mal_username": "",
+                    "mal_access_token": "",
+                    "mal_refresh_token": "",
+                    "mal_token_expires_at": "",
+                },
+                "$set": {"updated_at": datetime.utcnow()},
+            }
+        )
+        if result.modified_count > 0:
+            logger.info(f"MAL data deleted for user {user_id}")
+            clear_user_cache_func(user_id)
+        return True
+    except Exception as e:
+        logger.error(f"Error deleting MAL data for user {user_id}: {e}")
+        return False
+
+
+def get_mal_tokens(user_id: int) -> dict | None:
+    """Return MAL tokens for a user, or None if not connected."""
+    try:
+        user = users_collection.find_one(
+            {"_id": user_id},
+            {"mal_access_token": 1, "mal_refresh_token": 1, "mal_token_expires_at": 1, "mal_id": 1}
+        )
+        if not user or not user.get("mal_access_token"):
+            return None
+        return {
+            "access_token": user["mal_access_token"],
+            "refresh_token": user.get("mal_refresh_token"),
+            "expires_at": user.get("mal_token_expires_at", 0),
+            "mal_id": user.get("mal_id"),
+        }
+    except Exception as e:
+        logger.error(f"Error getting MAL tokens for user {user_id}: {e}")
+        return None
+
+
+def update_mal_tokens(user_id: int, access_token: str, refresh_token: str, expires_in: int) -> bool:
+    """Update MAL tokens after a refresh."""
+    try:
+        import time as _time
+        result = users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "mal_access_token": access_token,
+                "mal_refresh_token": refresh_token,
+                "mal_token_expires_at": _time.time() + expires_in,
+                "updated_at": datetime.utcnow(),
+            }}
+        )
+        if result.modified_count > 0:
+            clear_user_cache_func(user_id)
+        return True
+    except Exception as e:
+        logger.error(f"Error updating MAL tokens for user {user_id}: {e}")
+        return False
+

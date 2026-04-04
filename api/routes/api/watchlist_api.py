@@ -13,6 +13,46 @@ logger = logging.getLogger(__name__)
 
 ANILIST_GRAPHQL = "https://graphql.anilist.co"
 
+
+# ── MAL sync helper ─────────────────────────────────────────────
+
+def _try_mal_sync(user_id, mal_id, episode_number, status=None):
+    """Push episode progress to MAL if user has it connected. Non-blocking on failure."""
+    if not mal_id:
+        return
+    try:
+        import time as _time
+        from ...models.user import get_mal_tokens, update_mal_tokens
+        from ...utils.mal_service import update_mal_anime_status, refresh_mal_token
+
+        tokens = get_mal_tokens(user_id)
+        if not tokens:
+            return
+
+        access_token = tokens['access_token']
+
+        # Auto-refresh if expired
+        if tokens.get('expires_at', 0) < _time.time() and tokens.get('refresh_token'):
+            refreshed = refresh_mal_token(tokens['refresh_token'])
+            if refreshed:
+                update_mal_tokens(
+                    user_id, refreshed['access_token'],
+                    refreshed.get('refresh_token', tokens['refresh_token']),
+                    refreshed.get('expires_in', 3600)
+                )
+                access_token = refreshed['access_token']
+            else:
+                logger.warning(f"MAL token refresh failed for user {user_id}")
+                return
+
+        update_mal_anime_status(
+            access_token, int(mal_id),
+            num_watched_episodes=int(episode_number),
+            status=status,
+        )
+    except Exception as e:
+        logger.error(f"MAL sync error for user {user_id}: {e}")
+
 # ── viewer ID cache ─────────────────────────────────────────────
 # Viewer ID never changes for a given access token, so we cache it
 # to avoid a redundant API call on every request.
@@ -424,6 +464,10 @@ def update_watchlist():
 
     data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
     if data and data.get('data', {}).get('SaveMediaListEntry'):
+        # ── MAL sync ──
+        if action == 'episodes' and body.get('sync_mal') and body.get('mal_id'):
+            user_id = session.get('_id')
+            _try_mal_sync(user_id, body['mal_id'], new_progress)
         return jsonify({'success': True, 'message': 'Updated on AniList!'})
     return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
 
@@ -590,6 +634,10 @@ def save_progress():
         variables = {'mediaId': int(anime_id), 'progress': ep}
         data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
         if data and data.get('data', {}).get('SaveMediaListEntry'):
+            # ── MAL sync ──
+            if body.get('sync_mal') and body.get('mal_id'):
+                user_id = session.get('_id')
+                _try_mal_sync(user_id, body['mal_id'], ep)
             return jsonify({'success': True, 'message': 'Progress saved to AniList!'})
         return jsonify({'success': False, 'message': 'AniList update failed'}), 500
 

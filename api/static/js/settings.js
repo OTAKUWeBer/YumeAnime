@@ -61,6 +61,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Disconnect MyAnimeList
+    window.disconnectMAL = async function() {
+        if (!confirm('Are you sure you want to disconnect your MyAnimeList account?')) return;
+
+        try {
+            const response = await fetch('/auth/mal/disconnect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Failed to disconnect MyAnimeList');
+            }
+        } catch (e) {
+            console.error('MAL Disconnect error:', e);
+            alert('An error occurred');
+        }
+    };
+
     // Clear history
     const clearBtn = document.getElementById('clear-history');
     if (clearBtn) {

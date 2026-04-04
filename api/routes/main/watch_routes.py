@@ -551,6 +551,10 @@ def watch(anime_id, ep_number):
     if "username" in session and "_id" in session:
         is_logged_in = True
 
+    # ── Extract mal_id for frontend ──
+    mal_id = anime.get("malId") or anime.get("malID") if isinstance(anime, dict) else None
+
+
     # ── Fetch next episode schedule ──
     next_episode_schedule = anime.get("nextAiringEpisode")
 
@@ -678,6 +682,7 @@ def watch(anime_id, ep_number):
             server_progress=server_progress_dict,
             is_logged_in=is_logged_in,
             provider_capabilities=provider_capabilities,
+            mal_id=mal_id,
         )
     except Exception as e:
         print("watch error:", e)

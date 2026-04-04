@@ -29,6 +29,11 @@ class Config:
     ANILIST_CLIENT_SECRET = os.getenv("ANILIST_CLIENT_SECRET")
     ANILIST_REDIRECT_URI = os.getenv("ANILIST_REDIRECT_URI")
 
+    # MyAnimeList OAuth
+    MAL_CLIENT_ID = os.getenv("MAL_CLIENT_ID", "").strip()
+    MAL_CLIENT_SECRET = os.getenv("MAL_CLIENT_SECRET", "").strip()
+    MAL_REDIRECT_URI = os.getenv("MAL_REDIRECT_URI", "").strip()
+
     # Application settings
     DEBUG = os.getenv("FLASK_ENV") == "development"
 
