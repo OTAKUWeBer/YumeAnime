@@ -103,17 +103,15 @@
                 MyAnimeList
             </h2>
             {% if user.mal_authenticated %}
-            <div class="anilist-profile-card" style="background: rgba(46, 81, 162, 0.1); border-color: rgba(46, 81, 162, 0.3);">
-                <div class="anilist-card-header">
-                    <div class="anilist-card-avatar" style="background: #2e51a2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 5px;">
-                        MAL
-                    </div>
+            <div class="anilist-card" style="margin-bottom: var(--space-md);">
+                <div class="anilist-card-avatar" style="background: #2e51a2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                    MAL
                 </div>
                 <div class="anilist-card-info">
                     <div class="anilist-card-title">
                         <span style="color: var(--success);">●</span> Connected
                     </div>
-                    <div class="anilist-card-sub">{{ user.mal_username }}</div>
+                    <div class="anilist-card-sub">MyAnimeList: {{ user.mal_username }}</div>
                 </div>
             </div>
 
@@ -123,15 +121,15 @@
                         <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
                         <line x1="12" y1="2" x2="12" y2="12" />
                     </svg>
-                    Disconnect MyAnimeList
+                    Disconnect
                 </button>
             </div>
             {% else %}
-            <div class="anilist-connect-cta" style="background: rgba(46, 81, 162, 0.05); border-color: rgba(46, 81, 162, 0.2);">
-                <div class="cta-icon" style="color: #2e51a2; background: rgba(46, 81, 162, 0.1);">MAL</div>
+            <div class="anilist-connect-cta">
+                <div class="cta-icon" style="background: rgba(46, 81, 162, 0.1); color: #2e51a2;">MAL</div>
                 <h3>Connect MyAnimeList</h3>
                 <p class="text-muted">Sync your anime list with MyAnimeList to track progress across platforms.</p>
-                <a href="{{ url_for('auth.connect_mal_account') }}" class="btn btn-primary" style="background: #2e51a2; color: white;">
+                <a href="{{ url_for('auth.connect_mal_account') }}" class="btn btn-primary" style="background: #2e51a2; border-color: #2e51a2; color: white;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
