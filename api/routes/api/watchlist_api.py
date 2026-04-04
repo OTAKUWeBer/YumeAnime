@@ -16,8 +16,8 @@ ANILIST_GRAPHQL = "https://graphql.anilist.co"
 
 # ── MAL sync helper ─────────────────────────────────────────────
 
-def _try_mal_sync(user_id, mal_id, episode_number, status=None):
-    """Push episode progress to MAL if user has it connected. Non-blocking on failure."""
+def _try_mal_sync(user_id, mal_id, episode_number=None, status=None, score=None):
+    """Push episode progress or status to MAL if user has it connected. Non-blocking on failure."""
     if not mal_id:
         return
     try:
@@ -47,11 +47,45 @@ def _try_mal_sync(user_id, mal_id, episode_number, status=None):
 
         update_mal_anime_status(
             access_token, int(mal_id),
-            num_watched_episodes=int(episode_number),
+            num_watched_episodes=int(episode_number) if episode_number is not None else None,
             status=status,
+            score=score
         )
     except Exception as e:
         logger.error(f"MAL sync error for user {user_id}: {e}")
+
+def _sync_to_mal_via_anilist_id(user_id, anilist_id, anilist_access_token, progress=None, status=None, score=None):
+    from ...models.user import get_mal_tokens
+    if not get_mal_tokens(user_id):
+        return
+
+    query = """
+    query ($id: Int) {
+      Media(id: $id) {
+        idMal
+      }
+    }
+    """
+    data = _anilist_request(anilist_access_token, query, {'id': int(anilist_id)})
+    if not data or not data.get('data', {}).get('Media'):
+        return
+    mal_id = data['data']['Media'].get('idMal')
+    if not mal_id:
+        return
+
+    mal_status = None
+    if status:
+        mapping = {'CURRENT': 'watching', 'COMPLETED': 'completed', 'PAUSED': 'on_hold', 'DROPPED': 'dropped', 'PLANNING': 'plan_to_watch'}
+        mal_status = mapping.get(status)
+    
+    score_val = None
+    if score is not None:
+        try:
+            score_val = int(score) if float(score) <= 10 else int(float(score) / 10)
+        except (ValueError, TypeError):
+            pass
+
+    _try_mal_sync(user_id, mal_id, episode_number=progress, status=mal_status, score=score_val)
 
 # ── viewer ID cache ─────────────────────────────────────────────
 # Viewer ID never changes for a given access token, so we cache it
@@ -413,6 +447,7 @@ def add_to_watchlist_route():
 
     data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
     if data and data.get('data', {}).get('SaveMediaListEntry'):
+        _sync_to_mal_via_anilist_id(session.get('_id'), anime_id, access_token, progress=int(body.get('watched_episodes', 0)), status=al_status)
         return jsonify({'success': True, 'message': f'Added to {status} list on AniList!'})
     return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
 
@@ -465,9 +500,14 @@ def update_watchlist():
     data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
     if data and data.get('data', {}).get('SaveMediaListEntry'):
         # ── MAL sync ──
+        user_id = session.get('_id')
         if action == 'episodes' and body.get('sync_mal') and body.get('mal_id'):
-            user_id = session.get('_id')
+            # Triggered natively from player, no AniList lookup needed
             _try_mal_sync(user_id, body['mal_id'], new_progress)
+        else:
+            status_val = variables.get('status')
+            prog_val = variables.get('progress')
+            _sync_to_mal_via_anilist_id(user_id, anime_id, access_token, progress=prog_val, status=status_val)
         return jsonify({'success': True, 'message': 'Updated on AniList!'})
     return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
 
@@ -524,8 +564,12 @@ def advanced_update():
 
     data = _anilist_request(access_token, SAVE_ENTRY_MUTATION, variables)
     if data and data.get('data', {}).get('SaveMediaListEntry'):
-        return jsonify({'success': True, 'message': 'Saved to AniList!'})
-    return jsonify({'success': False, 'message': 'AniList mutation failed'}), 500
+        _sync_to_mal_via_anilist_id(
+            session.get('_id'), anime_id, access_token, 
+            progress=variables.get('progress'), status=variables.get('status'), score=body.get('score')
+        )
+        return jsonify({'success': True, 'message': 'Advanced update saved to AniList!'})
+    return jsonify({'success': False, 'message': 'AniList update failed'}), 500
 
 
 @watchlist_api_bp.route('/remove', methods=['POST'])
