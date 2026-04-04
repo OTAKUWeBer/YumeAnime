@@ -593,14 +593,19 @@ document.addEventListener('DOMContentLoaded', () => {
             function markWatched() {
                 if (markedWatched) return;
                 markedWatched = true;
+                const payload = {
+                    anime_id: animeIdForMark,
+                    action: 'episodes',
+                    watched_episodes: epNumForMark
+                };
+                if (window.WATCH_CONFIG && window.WATCH_CONFIG.malId && localStorage.getItem('yume_mal_sync') === 'true') {
+                    payload.sync_mal = true;
+                    payload.mal_id = window.WATCH_CONFIG.malId;
+                }
                 fetch('/api/watchlist/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        anime_id: animeIdForMark,
-                        action: 'episodes',
-                        watched_episodes: epNumForMark
-                    })
+                    body: JSON.stringify(payload)
                 }).then(r => {
                     if (r.ok) console.log('[Watchlist] Episode', epNumForMark, 'marked as watched');
                 }).catch(() => { });
@@ -686,8 +691,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window._forceEpisodeComplete && window._watchProgressState && window._watchProgressState.isLoggedIn) {
                     const epNumber = window._watchState && window._watchState.episodeNumber;
                     if (epNumber) {
+                        const payload = { anime_id: animeId, action: 'episodes', watched_episodes: epNumber };
+                        if (window.WATCH_CONFIG && window.WATCH_CONFIG.malId && localStorage.getItem('yume_mal_sync') === 'true') {
+                            payload.sync_mal = true;
+                            payload.mal_id = window.WATCH_CONFIG.malId;
+                        }
                         navigator.sendBeacon('/api/watchlist/update',
-                            new Blob([JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: epNumber })],
+                            new Blob([JSON.stringify(payload)],
                                 { type: 'application/json' }));
                     }
                 }
@@ -703,9 +713,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     stopEmbedTimer();
                     try { localStorage.removeItem(storageKey); } catch (e) { }
                     if (window._watchProgressState && window._watchProgressState.isLoggedIn) {
+                        const payload = { anime_id: animeId, action: 'episodes', watched_episodes: window._watchState && window._watchState.episodeNumber };
+                        if (window.WATCH_CONFIG && window.WATCH_CONFIG.malId && localStorage.getItem('yume_mal_sync') === 'true') {
+                            payload.sync_mal = true;
+                            payload.mal_id = window.WATCH_CONFIG.malId;
+                        }
                         fetch('/api/watchlist/update', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ anime_id: animeId, action: 'episodes', watched_episodes: window._watchState && window._watchState.episodeNumber })
+                            body: JSON.stringify(payload)
                         }).catch(() => { });
                     }
                 }
@@ -2051,14 +2066,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if(markBtn) {
         markBtn.addEventListener('click', () => {
+            const payload = {
+                anime_id: window.WATCH_CONFIG.animeId,
+                action: 'progress',
+                progress: window.WATCH_CONFIG.episodeNumber
+            };
+            if (window.WATCH_CONFIG && window.WATCH_CONFIG.malId && localStorage.getItem('yume_mal_sync') === 'true') {
+                payload.sync_mal = true;
+                payload.mal_id = window.WATCH_CONFIG.malId;
+            }
             fetch('/api/watchlist/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    anime_id: window.WATCH_CONFIG.animeId,
-                    action: 'progress',
-                    progress: window.WATCH_CONFIG.episodeNumber
-                })
+                body: JSON.stringify(payload)
             }).then(res => res.json()).then(data => {
                 if(data.success || data.message === 'Progress updated') {
                     showToast('Episode successfully marked as watched!', 'success');
