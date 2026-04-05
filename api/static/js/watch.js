@@ -1865,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         frame.allowFullscreen = true;
                         frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
                         frame.referrerPolicy = 'origin';
-                        frame.sandbox = 'allow-forms allow-scripts allow-same-origin allow-popups allow-presentation';
+                        frame.sandbox = 'allow-forms allow-scripts allow-same-origin allow-presentation';
                         if (masterWrapper) masterWrapper.insertBefore(frame, masterWrapper.firstChild);
                     }
                     frame.src = embedSources[0].url;
