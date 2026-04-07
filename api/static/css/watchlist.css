@@ -497,6 +497,11 @@
         background: #555;
     }
 
+    .status-dot-paused {
+        background: #f1c40f;
+        box-shadow: 0 0 8px rgba(241, 196, 15, 0.8);
+    }
+
     /* Cover / Title Cell */
     .row-cover {
         width: 42px;

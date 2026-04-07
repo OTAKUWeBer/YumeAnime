@@ -100,7 +100,7 @@ _VIEWER_CACHE_TTL = 6 * 3600   # 6 hours
 STATUS_MAP_TO_LOCAL = {
     'CURRENT': 'watching',
     'COMPLETED': 'completed',
-    'PAUSED': 'paused',
+    'PAUSED': 'on_hold',
     'DROPPED': 'dropped',
     'PLANNING': 'plan_to_watch',
     'REPEATING': 'watching',
@@ -375,7 +375,7 @@ def watchlist_stats():
     lists = data.get('data', {}).get('MediaListCollection', {}).get('lists', [])
 
     status_counts = {
-        'watching': 0, 'completed': 0, 'paused': 0,
+        'watching': 0, 'completed': 0, 'on_hold': 0,
         'dropped': 0, 'plan_to_watch': 0,
     }
     for lst in lists:

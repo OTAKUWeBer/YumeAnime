@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let isLoading = false;
         let hasMore = true;
 
+        // Abort controller to cancel stale fetches on rapid tab switches
+        let currentAbortController = null;
+        // Generation counter — every new fetch bumps this; stale responses are ignored
+        let fetchGeneration = 0;
+
         // Status labels mapping
         const statusLabels = {
             'watching': 'Watching',
@@ -65,8 +70,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function fetchWatchlist(status = '', page = 1, append = false, _retry = false) {
+            // For non-append (fresh) fetches, abort any in-flight request and force-reset state
+            if (!append) {
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                    currentAbortController = null;
+                }
+                isLoading = false; // force-reset so we don't get stuck
+            }
+
             if (isLoading) return;
             isLoading = true;
+
+            // Bump generation so stale responses are discarded
+            const thisGeneration = ++fetchGeneration;
+
+            // Create a new AbortController for this request
+            const abortController = new AbortController();
+            currentAbortController = abortController;
 
             if (!append) {
                 if (watchlistContent) {
@@ -90,7 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const params = new URLSearchParams({ page, limit: 30 });
                 if (status) params.append('status', status);
 
-                const response = await fetch(`/api/watchlist/paginated?${params}`);
+                const response = await fetch(`/api/watchlist/paginated?${params}`, {
+                    signal: abortController.signal
+                });
+
+                // If this response belongs to a stale generation, discard it
+                if (thisGeneration !== fetchGeneration) {
+                    isLoading = false;
+                    return;
+                }
 
                 // Handle 403 — page token missing/stale. Retry once with fresh token.
                 if (response.status === 403 && !_retry) {
@@ -107,6 +136,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const data = await response.json();
+
+                // Double-check generation after parsing (another tab click may have fired)
+                if (thisGeneration !== fetchGeneration) {
+                    isLoading = false;
+                    return;
+                }
 
                 if (data.error) {
                     throw new Error(data.error);
@@ -196,8 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
             } catch (e) {
+                // Silently ignore aborted requests (user switched tabs)
+                if (e.name === 'AbortError') {
+                    isLoading = false;
+                    return;
+                }
                 console.error('Watchlist error:', e);
-                if (!append && watchlistContent) {
+                if (thisGeneration === fetchGeneration && !append && watchlistContent) {
                     watchlistContent.innerHTML = `
                         <div class="watchlist-empty">
                             <div style="font-size: 4rem; margin-bottom: var(--space-md);">⚠️</div>
@@ -207,11 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
             } finally {
-                isLoading = false;
-                if (!hasMore && sentinel) {
-                    sentinel.style.display = 'none';
-                } else if (sentinel) {
-                    sentinel.style.opacity = '0';
+                if (thisGeneration === fetchGeneration) {
+                    isLoading = false;
+                    if (!hasMore && sentinel) {
+                        sentinel.style.display = 'none';
+                    } else if (sentinel) {
+                        sentinel.style.opacity = '0';
+                    }
                 }
             }
         }
