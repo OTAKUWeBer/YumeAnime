@@ -235,7 +235,8 @@ def update_comment(comment_id):
         return jsonify({"success": False, "message": "Comment not found"}), 404
 
     # Authorship check (fallback to username for legacy comments without author_id)
-    is_owner = (doc.get("author_id") == user_id) or (not doc.get("author_id") and doc.get("author") == username)
+    db_author_id = doc.get("author_id")
+    is_owner = (db_author_id is not None and str(db_author_id) == str(user_id)) or (not db_author_id and doc.get("author") == username)
     if not is_owner:
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
@@ -276,7 +277,8 @@ def remove_comment(comment_id):
         return jsonify({"success": False, "message": "Comment not found or already deleted"}), 404
 
     # Authorship check
-    is_owner = (doc.get("author_id") == user_id) or (not doc.get("author_id") and doc.get("author") == username)
+    db_author_id = doc.get("author_id")
+    is_owner = (db_author_id is not None and str(db_author_id) == str(user_id)) or (not db_author_id and doc.get("author") == username)
     if not is_owner:
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 

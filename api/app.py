@@ -94,6 +94,23 @@ def create_app():
             app.logger.warning(f"Blocked bot UA='{ua[:80]}' PATH={request.path} IP={request.remote_addr}")
             abort(403)
 
+    @app.before_request
+    def validate_session_version():
+        if request.path.startswith('/static/'):
+            return
+        if '_id' in session:
+            from api.models.user import get_user_by_id
+            user = get_user_by_id(session['_id'])
+            if user:
+                # If password_version in DB points to a newer login/password change,
+                # invalidate the current old session.
+                db_version = user.get('password_version', 0)
+                session_version = session.get('password_version', 0)
+                if db_version != session_version:
+                    session.clear()
+            else:
+                session.clear()
+
 
     @app.errorhandler(404)
     def page_not_found(e):

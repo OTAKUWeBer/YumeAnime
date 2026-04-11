@@ -175,12 +175,15 @@ def change_password(_id, old_password, new_password):
     # Hash new password
     new_hashed_password = hashpw(new_password.encode('utf-8'), gensalt())
     
+    current_version = user.get('password_version', 0)
+    
     # Update password
     users_collection.update_one(
         {"_id": _id},
         {
             "$set": {
                 "password": new_hashed_password,
+                "password_version": current_version + 1,
                 "updated_at": datetime.utcnow()
             }
         }
@@ -456,10 +459,17 @@ def clear_reset_code(email: str) -> None:
 def reset_password(email: str, new_password: str) -> bool:
     """Set a new password for the user identified by *email* (no old password needed)."""
     hashed = hashpw(new_password.encode("utf-8"), gensalt())
+    
+    user = users_collection.find_one({"email": email})
+    if not user:
+        return False
+    current_version = user.get('password_version', 0)
+        
     result = users_collection.update_one(
         {"email": email},
         {"$set": {
             "password": hashed,
+            "password_version": current_version + 1,
             "updated_at": datetime.utcnow()
         }}
     )
