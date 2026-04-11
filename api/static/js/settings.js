@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pwdErrorMsg) pwdErrorMsg.style.display = 'none';
 
             try {
-                const response = await fetch('/api/change-password', {
+                const response = await fetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
