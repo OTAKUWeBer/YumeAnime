@@ -9,6 +9,7 @@
 {% block extra_css %}
 <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -26,8 +27,10 @@
         <div class="watch-main">
             <div class="video-wrapper paused" id="video-wrapper" style="position: relative;">
                 <!-- Mark as Watched Button (Shows at 80%) -->
-                <button id="markWatchedBtn" class="btn btn-primary" style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-weight: bold; border-radius: var(--radius-md); padding: 8px 16px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right: 6px; vertical-align: text-bottom;">
+                <button id="markWatchedBtn" class="btn btn-primary"
+                    style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-weight: bold; border-radius: var(--radius-md); padding: 8px 16px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                        style="margin-right: 6px; vertical-align: text-bottom;">
                         <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
                     Mark as Watched
@@ -76,13 +79,17 @@
                         <!-- Double Tap Seek Zones (Mobile) -->
                         <div class="dt-zone dt-zone-left" id="dtLeft">
                             <div class="dt-indicator" id="dtIndLeft">
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M11 18V6l-8.5 6 8.5 6zm2-12v12l8.5-6L13 6z"/></svg>
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                                    <path d="M11 18V6l-8.5 6 8.5 6zm2-12v12l8.5-6L13 6z" />
+                                </svg>
                                 <span>10s</span>
                             </div>
                         </div>
                         <div class="dt-zone dt-zone-right" id="dtRight">
                             <div class="dt-indicator" id="dtIndRight">
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z"/></svg>
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                                    <path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" />
+                                </svg>
                                 <span>10s</span>
                             </div>
                         </div>
@@ -92,8 +99,7 @@
                             style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); cursor: pointer;">
                             <div class="center-play-pause-static"
                                 style="background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.15); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                                <svg viewBox="0 0 24 24" fill="currentColor"
-                                    style="margin-left: 5px;">
+                                <svg viewBox="0 0 24 24" fill="currentColor" style="margin-left: 5px;">
                                     <path
                                         d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
                                 </svg>
@@ -171,9 +177,12 @@
                                     <!-- Playback Settings Menu -->
                                     <div class="menu-btn-container" id="settingsContainer">
                                         <button class="control-btn" id="settingsBtn" title="Settings">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="3"></circle>
-                                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                                <path
+                                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                                </path>
                                             </svg>
                                         </button>
                                         <div class="player-menu" id="settingsMenu" style="display: none;">
@@ -193,8 +202,10 @@
                                     </div>
 
                                     <!-- Picture-in-Picture -->
-                                    <button class="control-btn" id="pipBtn" title="Picture-in-Picture (i)" style="display: none;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <button class="control-btn" id="pipBtn" title="Picture-in-Picture (i)"
+                                        style="display: none;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
                                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                                             <rect x="12" y="12" width="7" height="5" fill="currentColor"></rect>
                                         </svg>
@@ -234,8 +245,8 @@
                 <div class="watch-nav-bar">
                     <div class="watch-nav-left">
                         <a href="{% if prev_episode_url %}{{ prev_episode_url }}{% else %}javascript:void(0){% endif %}"
-                            class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
-                            not prev_episode_url %}onclick="return false;" aria-disabled="true" {% endif %}
+                            class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {%
+                            if not prev_episode_url %}onclick="return false;" aria-disabled="true" {% endif %}
                             style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -244,8 +255,8 @@
                             Prev
                         </a>
                         <a href="{% if next_episode_url %}{{ next_episode_url }}{% else %}javascript:void(0){% endif %}"
-                            class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {% if
-                            next_episode_url %}onclick="window._forceEpisodeComplete = true;" {% else
+                            class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {%
+                            if next_episode_url %}onclick="window._forceEpisodeComplete = true;" {% else
                             %}onclick="return false;" aria-disabled="true" {% endif %}
                             style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
                             Next
@@ -259,10 +270,10 @@
                     <div class="watch-nav-right">
                         <!-- Language Selection -->
                         <div class="lang-toggle">
-                            <button id="btnSub" class="lang-btn {% if lang == 'sub' %}active{% endif %}" 
+                            <button id="btnSub" class="lang-btn {% if lang == 'sub' %}active{% endif %}"
                                 onclick="switchLanguage('sub')">SUB</button>
                             {% if dub_available %}
-                            <button id="btnDub" class="lang-btn {% if lang == 'dub' %}active{% endif %}" 
+                            <button id="btnDub" class="lang-btn {% if lang == 'dub' %}active{% endif %}"
                                 onclick="switchLanguage('dub')">DUB</button>
                             {% else %}
                             <button class="lang-btn" disabled title="Dub not available">DUB</button>
@@ -271,8 +282,10 @@
 
                         <!-- Report Issue Button -->
                         <button id="openReportBtn" class="premium-action-btn">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                <line x1="4" y1="22" x2="4" y2="15"></line>
                             </svg>
                             <span class="report-label">Report</span>
                         </button>
@@ -297,14 +310,19 @@
                             <!-- INTERNAL (HLS) -->
                             <div class="server-section">
                                 <div class="server-section-label">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                    </svg>
                                     INTERNAL
                                 </div>
                                 <div class="server-section-pills" id="hlsServerPills">
                                     {% for p_name in episodes.providers_map %}
-                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {} %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
+                                    %}
                                     {% if caps.get('hls', false) %}
-                                    <button class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %}"
+                                    <button
+                                        class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %}"
                                         data-stream-type="hls" data-provider="{{ p_name }}">
                                         {{ p_name | title }}
                                         <span class="srv-badge badge-hls">HLS</span>
@@ -316,14 +334,21 @@
                             <!-- EXTERNAL (Embed) -->
                             <div class="server-section">
                                 <div class="server-section-label">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                                    </svg>
                                     EXTERNAL
                                 </div>
                                 <div class="server-section-pills" id="embedServerPills">
                                     {% for p_name in episodes.providers_map %}
-                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {} %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
+                                    %}
                                     {% if caps.get('embed', false) %}
-                                    <button class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %}"
+                                    <button
+                                        class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %}"
                                         data-stream-type="embed" data-provider="{{ p_name }}">
                                         {{ 'Megaplay' if p_name == 'zoro' else p_name | title }}
                                         <span class="srv-badge badge-embed">EMBED</span>
@@ -379,7 +404,7 @@
                     <span id="countdown-text">Loading...</span>
                 </p>
             </div>
-            
+
             {% endif %}
 
             <!-- Episodes Container -->
@@ -470,7 +495,8 @@
                                     points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                                 </polygon>
                             </svg>
-                            {{ ((anime.stats.rating|float) / 10) | round(1) if anime.stats and anime.stats.rating else 'N/A' }}
+                            {{ ((anime.stats.rating|float) / 10) | round(1) if anime.stats and anime.stats.rating else
+                            'N/A' }}
                         </span>
                     </div>
                     <div class="meta-item">
@@ -578,25 +604,153 @@
 </div>
 {% endif %}
 
+<!-- ========================================== -->
+<!-- EPISODE REACTIONS & COMMENTS               -->
+<!-- ========================================== -->
+<div class="container" style="max-width: 1400px; padding: 0 15px; margin-top: 16px;">
+
+    <!-- Episode Reaction Bar -->
+    <div class="episode-reaction-bar">
+        <span class="episode-reaction-label">Did you enjoy this episode?</span>
+        <div class="episode-reaction-btns">
+            <button class="reaction-btn" id="ep-like-btn" title="Like this episode">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z" />
+                    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                </svg>
+                <span class="reaction-count" id="ep-like-count">0</span>
+            </button>
+            <button class="reaction-btn" id="ep-dislike-btn" title="Dislike this episode">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z" />
+                    <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                </svg>
+                <span class="reaction-count" id="ep-dislike-count">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Comment Section -->
+    <div class="comment-section">
+        <div class="comment-section-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <h3>Comments</h3>
+            <span class="comment-total-badge" id="comment-total">0</span>
+        </div>
+
+        {% if session.get('username') %}
+        <!-- Input area (logged in) -->
+        <div class="comment-input-area">
+            <div class="comment-input-row">
+                {% if session.get('avatar') %}
+                <img class="comment-avatar" src="{{ session.get('avatar') }}" alt="{{ session.get('username') }}"
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                {% else %}
+                <div class="comment-avatar-placeholder">{{ session.get('username', 'U')[0]|upper }}</div>
+                {% endif %}
+
+                <div class="comment-input-wrapper">
+                    <textarea id="main-comment-textarea" class="comment-textarea"
+                        placeholder="Share your thoughts about this episode…"></textarea>
+                    <div id="main-gif-preview" class="comment-gif-preview" style="display:none;">
+                        <img id="main-gif-img" src="" alt="Selected GIF">
+                        <button class="comment-gif-remove" id="main-gif-remove" title="Remove GIF">✕</button>
+                    </div>
+                    <div class="comment-input-actions">
+                        <button type="button" class="comment-gif-btn" id="main-gif-btn" title="Add GIF">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <span>GIF</span>
+                        </button>
+                        <button class="comment-submit-btn" id="main-submit-btn" title="Post comment">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="22" y1="2" x2="11" y2="13" />
+                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
+                            <span>Post</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="comment-login-prompt">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="vertical-align:middle;margin-right:6px;">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <button class="inline-link" onclick="openLoginModal()">Sign in</button> to leave a comment.
+        </div>
+        {% endif %}
+
+        <!-- Comment list -->
+        <div class="comment-list" id="comment-list">
+            <div class="comment-list-loading">
+                <div class="comment-spinner"></div>
+                <span>Loading comments…</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- GIF Picker Modal -->
+<div class="gif-picker-overlay" id="gif-picker-overlay">
+    <div class="gif-picker-panel">
+        <div class="gif-picker-header">
+            <span>Choose a GIF</span>
+            <input type="text" class="gif-search-input" id="gif-search-input" placeholder="Search Tenor…"
+                autocomplete="off">
+            <button class="gif-picker-close" id="gif-close-btn" title="Close">✕</button>
+        </div>
+        <div class="gif-picker-body">
+            <div class="gif-picker-loading" id="gif-loading" style="display:flex;">
+                <div class="comment-spinner"></div>
+                <span>Loading GIFs…</span>
+            </div>
+            <div class="gif-grid" id="gif-grid"></div>
+        </div>
+        <div class="tenor-badge">Powered by <strong>Tenor</strong></div>
+    </div>
+</div>
+
 {% endblock %}
 
 
 <!-- Report Issue Modal -->
-<div id="reportModalOverlay" style="position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 9999; display: none; align-items: center; justify-content: center;">
-    <div style="background: var(--bg-surface); padding: 25px; border-radius: var(--radius-lg); width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color);">
+<div id="reportModalOverlay"
+    style="position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 9999; display: none; align-items: center; justify-content: center;">
+    <div
+        style="background: var(--bg-surface); padding: 25px; border-radius: var(--radius-lg); width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color);">
         <h3 style="margin-top: 0; margin-bottom: 5px;">Report Playback Issue</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Experiencing problems? Let us know so we can fix it.</p>
-        
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Experiencing problems? Let us know
+            so we can fix it.</p>
+
         <div style="margin-bottom: 15px;">
-            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Current Source Data:</label>
-            <input type="text" id="reportSourceData" disabled style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); cursor: not-allowed;">
+            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Current
+                Source Data:</label>
+            <input type="text" id="reportSourceData" disabled
+                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); cursor: not-allowed;">
         </div>
-        
+
         <div style="margin-bottom: 20px;">
-            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Issue Details:</label>
-            <textarea id="reportDetails" rows="4" placeholder="e.g. Video is buffering constantly, audio out of sync, subtitle error..." style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-sm); color: white; resize: vertical;"></textarea>
+            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Issue
+                Details:</label>
+            <textarea id="reportDetails" rows="4"
+                placeholder="e.g. Video is buffering constantly, audio out of sync, subtitle error..."
+                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-sm); color: white; resize: vertical;"></textarea>
         </div>
-        
+
         <div style="display: flex; justify-content: flex-end; gap: 10px;">
             <button id="closeReportBtn" class="btn btn-ghost">Cancel</button>
             <button id="submitReportBtn" class="btn btn-primary">Submit Report</button>
@@ -605,7 +759,9 @@
 </div>
 
 <!-- Toast Container -->
-<div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+<div id="toastContainer"
+    style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;">
+</div>
 
 
 <!-- Thumbnail tooltip & mobile control styles moved to watch.css -->
@@ -617,14 +773,25 @@
     window.WATCH_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
         episodeNumber: {{ episode_number or 1 }},
-        language: '{{ lang }}',
+    language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
-        providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}],
-        isLoggedIn: {% if is_logged_in %}true{% else %}false{% endif %},
-        serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }}
+            providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %} '{{ p }}'{% if not loop.last %}, {% endif %} {% endfor %} {% endif %}],
+    isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
+    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } }
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
+<script>
+    window.COMMENTS_CONFIG = {
+        animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        episodeNumber: {{ episode_number or 1 }},
+    isLoggedIn: {% if session.get('username') %} true{% else %} false{% endif %},
+    username: '{{ session.get("username") or "" }}',
+        avatar: '{{ session.get("avatar") or "" }}',
+            userId: '{{ session.get("_id") or "" }}',
+    };
+</script>
+<script src="{{ url_for('static', filename='js/comments.js') }}"></script>
 {% endblock %}
 
 <!-- // TODO: Add a "Mark as Watched" button that appears after 80% of the video is watched, allowing users to manually mark

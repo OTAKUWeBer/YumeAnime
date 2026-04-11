@@ -8,6 +8,8 @@ load_dotenv()
 db_name = os.getenv("db", "yumeanime")
 users_collection_name = os.getenv("users_collection", "users")
 watchlist_collection_name = os.getenv("watchlist_collection", "watchlist")
+comments_collection_name = os.getenv("comments_collection", "comments")
+episode_reactions_collection_name = os.getenv("episode_reactions_collection", "episode_reactions")
 
 # Centralized MongoDB connection with optimizations
 mongodb_uri = os.getenv("MONGODB_URI")
@@ -22,3 +24,5 @@ client = MongoClient(
 db = client[db_name]
 users_collection = db[users_collection_name]
 watchlist_collection = db[watchlist_collection_name]
+comments_collection = db[comments_collection_name]
+episode_reactions_collection = db[episode_reactions_collection_name]
