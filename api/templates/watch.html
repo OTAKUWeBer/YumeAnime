@@ -40,7 +40,7 @@
                 <!-- Embed iframe player (default) -->
                 <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
                     allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
-                    style="width: 100%; height: 100%; display: block;"
+                    style="display: block; border: none;"
                     sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"></iframe>
                 {% endif %}
 
@@ -777,7 +777,7 @@
         provider: '{{ selected_server or "" }}',
             providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %} '{{ p }}'{% if not loop.last %}, {% endif %} {% endfor %} {% endif %}],
     isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
-    serverProgress: { { server_progress | tojson | safe if server_progress else '{}' } }
+    serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }}
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>

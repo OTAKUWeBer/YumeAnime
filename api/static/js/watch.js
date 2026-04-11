@@ -340,7 +340,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Destroy any active HLS.js instance
         if (window.hls) {
-            try { window.hls.destroy(); } catch (e) { console.warn('[cleanup] hls destroy error:', e); }
+            try {
+                window.hls.stopLoad();
+                window.hls.detachMedia();
+                window.hls.destroy();
+            } catch (e) { console.warn('[cleanup] hls destroy error:', e); }
             window.hls = null;
         }
         // Pause and reset the native video element
@@ -349,9 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 video.pause();
                 video.removeAttribute('src');
+                // Remove all source elements to prevent stale playback
+                video.querySelectorAll('source').forEach(s => s.remove());
                 video.load();
             } catch (e) { console.warn('[cleanup] video reset error:', e); }
             video.style.display = 'none';
+            // Remove the progress tracking flag so new instances get re-tracked
+            video.removeAttribute('data-progress-tracked');
         }
         // Hide the video container and custom player UI
         const vc = document.getElementById('videoContainer');
@@ -361,9 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear any embed iframe so its audio/video stops, and hide it
         const embedFrame = document.getElementById('embedPlayer');
         if (embedFrame) {
-            embedFrame.src = '';
+            embedFrame.removeAttribute('src');
             embedFrame.style.display = 'none';
         }
+        // Always hide the error fallback during transitions
+        const fallback = document.getElementById('errorFallbackContainer');
+        if (fallback) fallback.style.display = 'none';
     }
 
     // ── Global Fullscreen & Orientation Helpers ──────────────────────────────────
@@ -1847,7 +1858,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hlsSources = data.hls_sources || [];
 
                 if (sourceType === 'embed' && embedSources.length > 0) {
-                    // Use first embed source — hide HLS elements first
+                    // ── EMBED MODE ─────────────────────────────────────────
+                    // Ensure ALL HLS/video elements are fully hidden
                     if (videoContainer) videoContainer.style.display = 'none';
                     const existingVid = document.getElementById('videoPlayer');
                     if (existingVid) existingVid.style.display = 'none';
@@ -1855,31 +1867,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (existingUI) existingUI.style.display = 'none';
                     const fallback = document.getElementById('errorFallbackContainer');
                     if (fallback) fallback.style.display = 'none';
+                    // Hide the mobile play overlay (it's for HLS only)
+                    const overlay = document.getElementById('mobilePlayOverlay');
+                    if (overlay) overlay.style.display = 'none';
 
                     let frame = masterWrapper ? masterWrapper.querySelector('#embedPlayer') : null;
                     if (!frame) {
                         frame = document.createElement('iframe');
                         frame.id = 'embedPlayer';
                         frame.className = 'embed-player-frame';
-                        frame.style.cssText = 'width:100%; height:100%; aspect-ratio:16/9; border:none;';
                         frame.allowFullscreen = true;
                         frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
                         frame.referrerPolicy = 'origin';
-                        frame.sandbox = 'allow-forms allow-scripts allow-same-origin allow-presentation';
+                        frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
                         if (masterWrapper) masterWrapper.insertBefore(frame, masterWrapper.firstChild);
                     }
+                    // Reset style to ensure proper display
+                    frame.style.cssText = 'width:100%; height:100%; border:none; display:block; position:absolute; top:0; left:0;';
+                    // Set src AFTER style is applied to avoid flash of empty frame
                     frame.src = embedSources[0].url;
-                    frame.style.display = 'block';
+                    console.log('[AJAX] Loaded embed source:', embedSources[0].url);
+
                 } else if (hlsSources && hlsSources.length > 0) {
-                    // HLS / direct video — hide embed first
+                    // ── HLS / DIRECT VIDEO MODE ───────────────────────────
                     const url = hlsSources[0].file || hlsSources[0].url;
                     if (!url) return;
 
+                    // Hide embed iframe completely
                     const existingEmbed = document.getElementById('embedPlayer');
-                    if (existingEmbed) existingEmbed.style.display = 'none';
-                    if (videoContainer) videoContainer.style.display = 'block';
+                    if (existingEmbed) {
+                        existingEmbed.removeAttribute('src');
+                        existingEmbed.style.display = 'none';
+                    }
                     const fallback = document.getElementById('errorFallbackContainer');
                     if (fallback) fallback.style.display = 'none';
+
+                    // Ensure video container is visible
+                    if (videoContainer) {
+                        videoContainer.style.display = 'block';
+                        videoContainer.style.width = '100%';
+                        videoContainer.style.aspectRatio = '16/9';
+                        videoContainer.style.position = 'relative';
+                        videoContainer.style.overflow = 'hidden';
+                    }
 
                     let vid = document.getElementById('videoPlayer');
                     if (!vid && videoContainer) {
@@ -1888,6 +1918,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         vid.className = 'raw-video-player';
                         vid.setAttribute('playsinline', '');
                         vid.setAttribute('webkit-playsinline', 'true');
+                        vid.setAttribute('preload', 'auto');
                         vid.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;object-fit:contain;';
                         videoContainer.insertBefore(vid, videoContainer.firstChild || null);
                     }
@@ -1899,14 +1930,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/proxy/'))) {
                             let ajaxSavedTime = 0;
                             try {
-                                const state = window._watchState;
-                                if (state && state.animeId && state.episodeNumber) {
-                                    const storKey = `yumeResume_${state.animeId}_ep${state.episodeNumber}`;
+                                const st = window._watchState;
+                                if (st && st.animeId && st.episodeNumber) {
+                                    const storKey = `yumeResume_${st.animeId}_ep${st.episodeNumber}`;
                                     ajaxSavedTime = parseFloat(localStorage.getItem(storKey)) || 0;
                                 }
                             } catch(e) {}
 
-                            window.hls = new Hls({
+                            const hlsInstance = new Hls({
                                 debug: false,
                                 startPosition: ajaxSavedTime > 5 ? ajaxSavedTime : -1,
                                 enableWorker: true,
@@ -1924,49 +1955,73 @@ document.addEventListener('DOMContentLoaded', () => {
                                 highBufferWatchdogPeriod: 2,
                                 xhrSetup: function (xhr) { xhr.withCredentials = false; }
                             });
+                            window.hls = hlsInstance;
+
                             let ajaxNetRetries = 0;
                             let ajaxMediaRetries = 0;
-                            window.hls.on(Hls.Events.ERROR, (e, d) => {
+                            hlsInstance.on(Hls.Events.ERROR, (e, d) => {
                                 console.error('[HLS Error]', d.type, d.details);
                                 if (d.fatal) {
                                     if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
                                         ajaxNetRetries++;
-                                        if (ajaxNetRetries <= 3) window.hls.startLoad();
+                                        if (ajaxNetRetries <= 3) hlsInstance.startLoad();
                                         else tryFallback('hls');
                                     } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
                                         ajaxMediaRetries++;
-                                        if (ajaxMediaRetries <= 2) window.hls.recoverMediaError();
+                                        if (ajaxMediaRetries <= 2) hlsInstance.recoverMediaError();
                                         else tryFallback('hls');
                                     } else {
                                         tryFallback('hls');
                                     }
                                 }
                             });
+
+                            // CRITICAL FIX: attachMedia FIRST, then loadSource on MEDIA_ATTACHED
+                            // This is the standard HLS.js initialization pattern.
+                            // Previously loadSource was called before attachMedia, causing
+                            // the player to silently fail or glitch.
+                            hlsInstance.attachMedia(vid);
+                            hlsInstance.on(Hls.Events.MEDIA_ATTACHED, function () {
+                                console.log('[Player] AJAX HLS media attached, loading source:', url);
+                                hlsInstance.loadSource(url);
+                            });
+
                             // Trigger play on manifest parsed
-                            window.hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                            hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
+                                console.log('[Player] AJAX HLS manifest parsed');
                                 vid.play().catch(function (e) {
                                     console.log('[Player] AJAX HLS auto-play blocked:', e.name);
+                                    // Show overlay for user to tap
+                                    const playOverlay = document.getElementById('mobilePlayOverlay');
+                                    if (playOverlay) playOverlay.style.display = 'flex';
                                 });
                             });
-                            window.hls.loadSource(url);
-                            window.hls.attachMedia(vid);
 
                             // Stall recovery for AJAX-loaded HLS
                             let ajaxStallStage = 0;
                             window._ajaxStallTimer = setTimeout(function ajaxStallCheck() {
-                                if (vid.readyState >= 3 && !vid.paused && vid.currentTime > 0) return;
+                                if (vid.readyState >= 3 && !vid.paused && vid.currentTime > 0) {
+                                    console.log('[Player] AJAX HLS playing successfully');
+                                    return;
+                                }
                                 ajaxStallStage++;
                                 if (ajaxStallStage <= 2) {
+                                    console.log('[HLS Recovery] AJAX stall stage', ajaxStallStage);
                                     if (window.hls) window.hls.recoverMediaError();
                                     vid.play().catch(function () { });
                                     window._ajaxStallTimer = setTimeout(ajaxStallCheck, 10000);
                                 } else {
                                     if (vid.readyState < 3 || (vid.paused && vid.currentTime === 0)) {
+                                        console.warn('[Fallback] AJAX HLS stall unrecoverable');
                                         tryFallback('hls');
                                     }
                                 }
                             }, 15000);
-                            vid.addEventListener('playing', function () { clearTimeout(window._ajaxStallTimer); window._ajaxStallTimer = null; }, { once: true });
+                            vid.addEventListener('playing', function () {
+                                clearTimeout(window._ajaxStallTimer);
+                                window._ajaxStallTimer = null;
+                            }, { once: true });
+
                         } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
                             vid.src = url;
                             vid.play().catch(err => console.log("Play rejected:", err));
@@ -1977,7 +2032,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Re-init subtitle tracks if available
                         if (data.subtitles && data.subtitles.length > 0) {
-                            // Remove existing tracks
                             vid.querySelectorAll('track').forEach(t => t.remove());
                             data.subtitles.forEach((track, i) => {
                                 if (track.file || track.src) {
@@ -1992,9 +2046,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         }
 
+                        // Show the custom player UI overlay
                         let ui = document.getElementById('customPlayerUI');
                         if (ui) ui.style.display = '';
+
+                        // Re-initialize player UI bindings for the new/reused video element
+                        setTimeout(initVanillaPlayerUI, 50);
                     }
+                } else {
+                    // No sources available — show error fallback
+                    console.warn('[AJAX] No valid sources found');
+                    const fallback = document.getElementById('errorFallbackContainer');
+                    if (fallback) fallback.style.display = 'flex';
                 }
             })
             .catch(err => {

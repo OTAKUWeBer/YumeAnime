@@ -946,6 +946,8 @@
         height: 100%;
         border: none;
         border-radius: var(--radius-lg);
+        z-index: 5;
+        background: #000;
     }
 
     /* Stream Selector — Premium Pill UI */
