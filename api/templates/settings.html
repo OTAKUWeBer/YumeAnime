@@ -288,9 +288,6 @@
                 
                 <div id="password-error-msg" class="text-error text-sm" style="display: none; margin-bottom: var(--space-md); text-align: center;"></div>
 
-                {% if config.CLOUDFLARE_SITE_KEY %}
-                <div class="cf-turnstile" data-sitekey="{{ config.CLOUDFLARE_SITE_KEY }}" data-theme="dark" data-appearance="always" style="margin-bottom: var(--space-md); display: flex; justify-content: center;"></div>
-                {% endif %}
 
                 <button type="submit" class="btn btn-primary w-full" id="submit-password-btn">
                     <span id="submit-password-btn-text">Update Password</span>

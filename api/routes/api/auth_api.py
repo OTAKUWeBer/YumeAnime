@@ -205,10 +205,6 @@ def change_password_route():
     data = request.get_json()
     current_password = data.get('current_password', '')
     new_password = data.get('new_password', '')
-    turnstile_token = data.get('cf_turnstile_response')
-    
-    if not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, request.remote_addr):
-        return jsonify({'success': False, 'message': 'Please verify you are not a robot.'}), 403
     
     if not current_password or not new_password:
         return jsonify({'success': False, 'message': 'Current and new passwords are required.'}), 400

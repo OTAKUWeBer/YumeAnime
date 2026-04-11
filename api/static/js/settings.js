@@ -119,12 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
             changePwdModal.style.display = 'none';
             document.body.style.overflow = '';
             changePwdForm.reset();
-            if (typeof turnstile !== 'undefined') {
-                const tsEl = changePwdForm.querySelector('.cf-turnstile');
-                if (tsEl && tsEl.dataset.turnstileId) {
-                    turnstile.reset(tsEl.dataset.turnstileId);
-                }
-            }
         };
 
         closePwdModal.addEventListener('click', closePwd);
@@ -138,14 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPassword = document.getElementById('new-password').value;
             
             const payload = { current_password: currentPassword, new_password: newPassword };
-            
-            if (typeof FormData !== 'undefined') {
-                const formData = new FormData(changePwdForm);
-                const tsToken = formData.get('cf-turnstile-response');
-                if (tsToken) {
-                    payload.cf_turnstile_response = tsToken;
-                }
-            }
 
             const btn = document.getElementById('submit-password-btn');
             const btnText = document.getElementById('submit-password-btn-text');
@@ -175,12 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (pwdErrorMsg) {
                         pwdErrorMsg.textContent = data.message || 'Failed to update password';
                         pwdErrorMsg.style.display = 'block';
-                    }
-                    if (typeof turnstile !== 'undefined') {
-                        const tsEl = changePwdForm.querySelector('.cf-turnstile');
-                        if (tsEl && tsEl.dataset.turnstileId) {
-                            turnstile.reset(tsEl.dataset.turnstileId);
-                        }
                     }
                 }
             } catch (err) {
