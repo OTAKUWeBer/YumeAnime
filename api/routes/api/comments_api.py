@@ -12,9 +12,60 @@ from ...models.comments import (
 from ...core.db_connector import comments_collection
 from bson import ObjectId
 from datetime import datetime, timezone
+import re
 
 comments_api_bp = Blueprint("comments_api", __name__)
 
+import re
+
+BANNED_WORDS = {
+    # English (strong)
+    "nigger", "nigga", "faggot", "fag", "retard",
+    "cunt", "slut", "whore", "fuck", "motherfucker",
+    "kys", "kill yourself", "go die", "end yourself",
+    # Hindi / Urdu
+    "madarchod", "bhenchod", "chutiya", "randi", "gandu", "lund",
+    # Bengali (Bangla)
+    "chod", "choda", "khanki", "bhoda", "chudi", "bainchod", "magir pola", "shuwor", "kuttar baccha",
+    # Arabic
+    "sharmuta", "ibn sharmuta", "ya kalb", "ya ibn al kalb",
+    # Spanish
+    "puta", "hijo de puta", "maricon", "cabron",
+    # French
+    "pute", "salope", "connard",
+    # German
+    "hurensohn", "fotze",
+    # Filipino
+    "putang ina", "gago",
+    # Indonesian / Malay
+    "anjing", "bangsat",
+    # Turkish
+    "orospu", "orospu cocugu",
+}
+
+# Words too short/ambiguous for word-boundary matching — require surrounding context
+_CONTEXT_BANNED = {"bc", "mc"}
+
+_PATTERN = re.compile(
+    r'\b(' + '|'.join(re.escape(w) for w in BANNED_WORDS) + r')\b',
+    re.IGNORECASE
+)
+
+# bc/mc only flagged when used as standalone insults, e.g. "bc teri" / "mc sala"
+# Matches: bc or mc followed or preceded by a Hindi/Urdu word or another slur
+_CONTEXT_PATTERN = re.compile(
+    r'\b(bc|mc)\b(?=\s+\w)|\b\w+\s+(bc|mc)\b',
+    re.IGNORECASE
+)
+
+def contains_banned_words(text: str) -> bool:
+    if not text:
+        return False
+    if _PATTERN.search(text):
+        return True
+    if _CONTEXT_PATTERN.search(text):
+        return True
+    return False
 
 def _require_auth():
     """Return (user_id, username, avatar) if logged in, else None."""
@@ -44,7 +95,7 @@ def list_comments():
 
 
 @comments_api_bp.route("/comments", methods=["POST"])
-@limiter.limit("10 per minute")
+@limiter.limit("4 per minute")
 def post_comment():
     """POST /api/comments — create a new top-level comment."""
     auth = _require_auth()
@@ -70,6 +121,8 @@ def post_comment():
         return jsonify({"success": False, "message": "Comment cannot be empty"}), 400
     if body and len(body) > 2000:
         return jsonify({"success": False, "message": "Comment too long (max 2000 chars)"}), 400
+    if contains_banned_words(body):
+        return jsonify({"success": False, "message": "Comment contains inappropriate language"}), 400
 
     comment = create_comment(
         anime_id=anime_id,
@@ -86,7 +139,7 @@ def post_comment():
 
 
 @comments_api_bp.route("/comments/<comment_id>/reply", methods=["POST"])
-@limiter.limit("10 per minute")
+@limiter.limit("4 per minute")
 def post_reply(comment_id):
     """POST /api/comments/<id>/reply — create a reply to an existing comment."""
     auth = _require_auth()
@@ -112,6 +165,8 @@ def post_reply(comment_id):
         return jsonify({"success": False, "message": "Reply cannot be empty"}), 400
     if body and len(body) > 2000:
         return jsonify({"success": False, "message": "Reply too long (max 2000 chars)"}), 400
+    if contains_banned_words(body):
+        return jsonify({"success": False, "message": "Reply contains inappropriate language"}), 400
 
     reply = create_comment(
         anime_id=anime_id,
@@ -149,7 +204,7 @@ def react_to_comment(comment_id):
 
 
 @comments_api_bp.route("/comments/<comment_id>", methods=["PUT"])
-@limiter.limit("10 per minute")
+@limiter.limit("4 per minute")
 def update_comment(comment_id):
     """PUT /api/comments/<id> — edit an existing comment body/gif."""
     auth = _require_auth()
@@ -163,6 +218,12 @@ def update_comment(comment_id):
 
     if new_body is None and new_gif_url is None:
         return jsonify({"success": False, "message": "Nothing to update"}), 400
+    
+    if new_body and len(new_body) > 2000:
+        return jsonify({"success": False, "message": "Comment too long (max 2000 chars)"}), 400
+        
+    if contains_banned_words(new_body):
+        return jsonify({"success": False, "message": "Comment contains inappropriate language"}), 400
 
     try:
         oid = ObjectId(comment_id)
