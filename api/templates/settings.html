@@ -39,6 +39,22 @@
                         'Unknown' }}</span>
                 </div>
             </div>
+
+            {% if user.auth_method == 'local' or not user.auth_method %}
+            <div class="settings-row">
+                <div class="settings-label">
+                    <span class="settings-label-text">Password</span>
+                    <span class="settings-label-desc">Update your account password</span>
+                </div>
+                <button class="btn btn-secondary" id="change-password-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Change Password
+                </button>
+            </div>
+            {% endif %}
         </div>
 
         <!-- AniList Integration -->
@@ -246,6 +262,44 @@
         </div>
     </div>
 </div>
+
+<!-- Change Password Modal -->
+<div class="modal" id="change-password-modal" style="display: none;">
+    <div class="modal-backdrop" id="close-password-backdrop"></div>
+    <div class="modal-content" style="max-width: 400px;">
+        <button type="button" class="modal-close" id="close-password-modal" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+
+        <div>
+            <h2 style="margin-bottom: var(--space-lg); text-align: center;">Change Password</h2>
+            <form id="change-password-form">
+                <div class="form-group">
+                    <label class="form-label" for="current-password">Current Password</label>
+                    <input type="password" id="current-password" class="form-input" placeholder="Current password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="new-password">New Password</label>
+                    <input type="password" id="new-password" class="form-input" placeholder="New password" required minlength="6">
+                </div>
+                
+                <div id="password-error-msg" class="text-error text-sm" style="display: none; margin-bottom: var(--space-md); text-align: center;"></div>
+
+                {% if config.CLOUDFLARE_SITE_KEY %}
+                <div class="cf-turnstile" data-sitekey="{{ config.CLOUDFLARE_SITE_KEY }}" data-theme="dark" data-appearance="always" style="margin-bottom: var(--space-md); display: flex; justify-content: center;"></div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary w-full" id="submit-password-btn">
+                    <span id="submit-password-btn-text">Update Password</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
