@@ -65,6 +65,7 @@ def signup():
         session['username'] = username
         session['_id'] = user_id
         session['avatar'] = None  # New users have no avatar yet
+        session['password_version'] = 0
         session.permanent = True
         
         current_app.logger.info(f"User {username} signed up successfully with ID {user_id}")
@@ -111,6 +112,7 @@ def login():
             session.clear()
             session['username'] = username
             session['_id'] = user['_id']
+            session['password_version'] = user.get('password_version', 0)
             session['avatar'] = user.get('avatar')  # Sync avatar to session
             session['anilist_authenticated'] = bool(user.get('anilist_id'))
             if user.get('anilist_id'):
@@ -220,6 +222,9 @@ def change_password_route():
         result = change_password(user_id, current_password, new_password)
         
         if result:
+            user = get_user_by_id(user_id)
+            if user:
+                session['password_version'] = user.get('password_version', 0)
             current_app.logger.info(f"Password changed successfully for user {session.get('username')}")
             return jsonify({'success': True, 'message': 'Password changed successfully!'}), 200
         else:

@@ -172,7 +172,7 @@ class CommentsManager {
             <button class="comment-reply-toggle" data-comment-id="${comment._id}">Reply</button>`;
 
         const isOwner = !comment.deleted && this.isLoggedIn && (
-            (comment.author_id && comment.author_id === this.userId) ||
+            (comment.author_id && String(comment.author_id) === String(this.userId)) ||
             (!comment.author_id && comment.author === this.username && comment.author !== 'Anonymous')
         );
 
