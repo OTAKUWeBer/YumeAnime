@@ -198,7 +198,10 @@ class CommentsManager {
             <div class="comment-header">
                 ${avatarHTML}
                 <span class="comment-author">${this._esc(comment.author)}</span>
-                <span class="comment-time">${this._relativeTime(comment.created_at)}${comment.edited_at ? ' (edited)' : ''}</span>
+                <span class="comment-time" title="${this._absoluteTime(comment.created_at)}">
+                    ${this._relativeTime(comment.created_at)}
+                    ${comment.edited_at ? `<span title="Edited at ${this._absoluteTime(comment.edited_at)}"> (edited)</span>` : ''}
+                </span>
                 ${menuHTML}
             </div>
             ${comment.deleted ? `<p class="comment-body" style="color:var(--text-muted);font-style:italic;">[This comment was deleted]</p>` : (comment.body ? `<p class="comment-body">${this._esc(comment.body)}</p>` : '')}
@@ -795,6 +798,21 @@ class CommentsManager {
         const months = Math.floor(days / 30);
         if (months < 12) return `${months}mo ago`;
         return `${Math.floor(months / 12)}y ago`;
+    }
+
+    _absoluteTime(isoStr) {
+        if (!isoStr) return '';
+        try {
+            return new Date(isoStr).toLocaleString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return '';
+        }
     }
 
     _esc(str) {
