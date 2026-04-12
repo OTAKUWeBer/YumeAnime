@@ -13,9 +13,9 @@
         content="{% block og_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}">
 
     <title>{% block title %}YumeAnime{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='images/logo-icon.png') }}?v=3">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -119,6 +119,22 @@
 </head>
 
 <body>
+    <!-- Global Website Preloader -->
+    <div id="global-preloader" style="position: fixed; inset: 0; background: var(--bg-primary); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease, visibility 0.4s ease;">
+        <img src="{{ url_for('static', filename='images/gifs/gojo_loading.gif') }}" alt="Site Loading" style="width: 100px; height: 100px; border-radius: 50%; box-shadow: 0 0 40px rgba(168, 85, 247, 0.3);">
+        <span style="color: white; margin-top: 20px; font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">Loading...</span>
+    </div>
+    <script>
+        window.addEventListener('load', function() {
+            const preloader = document.getElementById('global-preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                preloader.style.visibility = 'hidden';
+                setTimeout(() => { preloader.remove(); }, 400);
+            }
+        });
+    </script>
+
     <!-- Navbar -->
     <nav class="navbar" id="navbar">
         <div class="navbar-container">
@@ -135,7 +151,7 @@
 
                 <!-- Brand -->
                 <a href="{{ url_for('main.home_routes.home') }}" class="navbar-brand">
-                    <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                    <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo"
                         style="height: 40px;">
                     <span>YumeAnime</span>
                 </a>
@@ -293,7 +309,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{{ url_for('main.home_routes.home') }}" class="sidebar-brand">
-                <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo">
+                <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo">
                 <span>YumeAnime</span>
             </a>
             <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">
@@ -412,7 +428,7 @@
                 <div class="footer-section">
                     <div class="footer-brand">
                         <a href="{{ url_for('main.home_routes.home') }}" class="navbar-brand">
-                            <img src="{{ url_for('static', filename='images/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                            <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo"
                                 style="height: 40px;">
                             <span>YumeAnime</span>
                         </a>

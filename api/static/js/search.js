@@ -502,10 +502,10 @@ class SearchManager {
             .slice(0, 8)
             .map(s => `
                 <div class="suggestion-item group" data-id="${s.id}" data-name="${s.name}">
-                    <img src="${s.poster || '/static/images/placeholder.jpg'}" 
+                    <img src="${s.poster || '/static/images/misc/placeholder.jpg'}" 
                          alt="${s.name}" 
                          class="suggestion-poster" 
-                         onerror="this.src='/static/images/placeholder.jpg'" 
+                         onerror="this.src='/static/images/misc/placeholder.jpg'" 
                          loading="lazy" />
                     <div class="suggestion-info">
                         <h4 class="suggestion-title group-hover:text-blue-300 transition-colors duration-200">${s.name || s.title || 'Unknown'}</h4>
