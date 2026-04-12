@@ -120,8 +120,8 @@
             </h2>
             {% if user.mal_authenticated %}
             <div class="anilist-card" style="margin-bottom: var(--space-md);">
-                <div class="anilist-card-avatar" style="background: white; display: flex; align-items: center; justify-content: center;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" style="max-width: 80%; max-height: 80%; object-fit: contain;">
+                <div class="anilist-card-avatar" style="background: transparent; display: flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; padding: 0;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <div class="anilist-card-info">
                     <div class="anilist-card-title">
@@ -142,8 +142,8 @@
             </div>
             {% else %}
             <div class="anilist-connect-cta">
-                <div class="cta-icon" style="background: rgba(46, 81, 162, 0.1); display: flex; align-items: center; justify-content: center;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" style="max-width: 70%; max-height: 70%; object-fit: contain;">
+                <div class="cta-icon" style="background: transparent; display: flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; padding: 0;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <h3>Connect MyAnimeList</h3>
                 <p class="text-muted">Sync your anime list with MyAnimeList to track progress across platforms.</p>
