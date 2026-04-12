@@ -120,8 +120,8 @@
             </h2>
             {% if user.mal_authenticated %}
             <div class="anilist-card" style="margin-bottom: var(--space-md);">
-                <div class="anilist-card-avatar" style="background: #2e51a2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                    MAL
+                <div class="anilist-card-avatar" style="background: white; display: flex; align-items: center; justify-content: center;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" style="max-width: 80%; max-height: 80%; object-fit: contain;">
                 </div>
                 <div class="anilist-card-info">
                     <div class="anilist-card-title">
@@ -142,7 +142,9 @@
             </div>
             {% else %}
             <div class="anilist-connect-cta">
-                <div class="cta-icon" style="background: rgba(46, 81, 162, 0.1); color: #2e51a2;">MAL</div>
+                <div class="cta-icon" style="background: rgba(46, 81, 162, 0.1); display: flex; align-items: center; justify-content: center;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7a/MyAnimeList_Logo.png" alt="MAL" style="max-width: 70%; max-height: 70%; object-fit: contain;">
+                </div>
                 <h3>Connect MyAnimeList</h3>
                 <p class="text-muted">Sync your anime list with MyAnimeList to track progress across platforms.</p>
                 <a href="{{ url_for('auth.connect_mal_account') }}" class="btn btn-primary" style="background: #2e51a2; border-color: #2e51a2; color: white;">
