@@ -70,9 +70,10 @@
                             </div>
                         </div>
 
-                        <div class="custom-loader" id="playerLoader" style="display: none; flex-direction: column; align-items: center; gap: 10px; background: rgba(0,0,0,0.6); position: absolute; top:0; left:0; width: 100%; height: 100%; z-index: 50;">
-                            <img src="{{ url_for('static', filename='images/gifs/gojo_loading.gif') }}" alt="Loading Video" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                            <span style="color: white; font-size: 1rem; font-weight: 600; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Loading...</span>
+                        <div class="custom-loader" id="playerLoader" style="display: none;">
+                            <div class="loader-dot"></div>
+                            <div class="loader-dot"></div>
+                            <div class="loader-dot"></div>
                         </div>
 
                         <!-- Double Tap Seek Zones (Mobile) -->
