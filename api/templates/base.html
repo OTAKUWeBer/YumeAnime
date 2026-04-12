@@ -99,14 +99,19 @@
             }
             if (_ad()) { _kill(); }
             setInterval(function () { if (_ad()) _kill(); }, 1000);
-            // Block context menu, select, copy, cut, paste, drag, print, iframe escape
-            document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-            document.addEventListener('selectstart', function (e) { e.preventDefault(); });
-            document.addEventListener('copy', function (e) { e.preventDefault(); });
-            document.addEventListener('cut', function (e) { e.preventDefault(); });
-            document.addEventListener('paste', function (e) { e.preventDefault(); });
-            document.addEventListener('dragstart', function (e) { e.preventDefault(); });
-            document.addEventListener('drop', function (e) { e.preventDefault(); });
+            // Block context menu, select, copy, cut, paste, drag, print, iframe escape (except in inputs)
+            const blockIfNotInput = function (e) {
+                const tag = e.target.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+                e.preventDefault();
+            };
+            document.addEventListener('contextmenu', blockIfNotInput);
+            document.addEventListener('selectstart', blockIfNotInput);
+            document.addEventListener('copy', blockIfNotInput);
+            document.addEventListener('cut', blockIfNotInput);
+            // Paste is fully allowed to ensure OS emoji pickers and clipboard work flawlessly
+            document.addEventListener('dragstart', blockIfNotInput);
+            document.addEventListener('drop', blockIfNotInput);
             window.addEventListener('beforeprint', function () { _kill(); });
             if (window.self !== window.top) { try { window.top.location = window.location; } catch (e) { } }
             // Mute console
