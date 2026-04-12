@@ -4,6 +4,7 @@ No local database storage; every read/write hits AniList directly.
 """
 from flask import Blueprint, request, session, jsonify, current_app
 import logging
+import time as _time
 import requests
 
 from ...models.user import get_user_by_id
@@ -21,7 +22,6 @@ def _try_mal_sync(user_id, mal_id, episode_number=None, status=None, score=None)
     if not mal_id:
         return
     try:
-        import time as _time
         from ...models.user import get_mal_tokens, update_mal_tokens
         from ...utils.mal_service import update_mal_anime_status, refresh_mal_token
 
@@ -90,7 +90,6 @@ def _sync_to_mal_via_anilist_id(user_id, anilist_id, anilist_access_token, progr
 # ── viewer ID cache ─────────────────────────────────────────────
 # Viewer ID never changes for a given access token, so we cache it
 # to avoid a redundant API call on every request.
-import time as _time
 
 _viewer_id_cache = {}          # {access_token_hash: (viewer_id, expires_at)}
 _VIEWER_CACHE_TTL = 6 * 3600   # 6 hours

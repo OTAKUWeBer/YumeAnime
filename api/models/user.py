@@ -1,4 +1,5 @@
 import random
+import time as _time
 from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw
 import logging
@@ -490,7 +491,6 @@ def connect_mal_to_user(user_id: int, mal_user_info: dict, access_token: str,
                         refresh_token: str, expires_in: int) -> bool:
     """Store MAL credentials on an existing user document."""
     try:
-        import time as _time
         update_doc = {
             "$set": {
                 "mal_id": mal_user_info.get("id"),
@@ -560,7 +560,6 @@ def get_mal_tokens(user_id: int) -> dict | None:
 def update_mal_tokens(user_id: int, access_token: str, refresh_token: str, expires_in: int) -> bool:
     """Update MAL tokens after a refresh."""
     try:
-        import time as _time
         result = users_collection.update_one(
             {"_id": user_id},
             {"$set": {
