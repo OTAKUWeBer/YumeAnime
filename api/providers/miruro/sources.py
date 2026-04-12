@@ -60,7 +60,6 @@ class MiruroSourcesService:
             if provider == "zoro":
                 # The slug is like 'zoro-1' — extract the episode number
                 # then look up the actual ep ID from the episodes API
-                import re
                 ep_num_match = re.search(r"(\d+)$", slug)
                 ep_number = int(ep_num_match.group(1)) if ep_num_match else None
 

@@ -16,8 +16,6 @@ import re
 
 comments_api_bp = Blueprint("comments_api", __name__)
 
-import re
-
 BANNED_WORDS = {
     # English (strong)
     "nigger", "nigga", "faggot", "fag", "retard",
