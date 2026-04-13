@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="api/static/images/logo.png" alt="YumeAnime Logo" width="200">
+  <img src="api/static/images/logos/logo.png" alt="YumeAnime Logo" width="200">
   <h1>YumeAnime</h1>
   <p><strong>Your Ultimate Ad-Free Anime Streaming Experience</strong></p>
   
