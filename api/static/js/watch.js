@@ -1663,18 +1663,20 @@ document.addEventListener('DOMContentLoaded', () => {
     window._watchState = {
         animeId: window.WATCH_CONFIG.animeId,
         episodeNumber: _urlEpNum || window.WATCH_CONFIG.episodeNumber,
-    language: window.WATCH_CONFIG.language,
+        language: window.WATCH_CONFIG.language,
         provider: window.WATCH_CONFIG.provider,
-            providers: window.WATCH_CONFIG.providers,
-    failedProviders: new Set(),
+        providers: window.WATCH_CONFIG.providers,
+        _failedHls: new Set(),
+        _failedEmbed: new Set(),
         hlsRetries: 0,
-            embedRetries: 0,
-                _fallbackActive: false,
+        embedRetries: 0,
+        _fallbackActive: false,
         _desiredStreamType: 'hls'
     };
 
     // ── Auto-Fallback System ────────────────────────────────────────────────
-    // HLS fail → try Embed → Embed fail → try next provider → repeat
+    // Priority: try ALL providers' HLS first, then ALL providers' Embed.
+    // Flow: HLS(A) → HLS(B) → HLS(C) → Embed(A) → Embed(B) → Embed(C) → exhausted
     function tryFallback(failedType) {
         const state = window._watchState;
         if (state._fallbackActive) return; // prevent re-entry
@@ -1682,53 +1684,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('[Fallback] Triggered from:', failedType, '| Provider:', state.provider);
 
-        // 1) If HLS failed, try same provider's Embed pill
+        // Track which provider+type combos have failed
+        if (!state._failedHls) state._failedHls = new Set();
+        if (!state._failedEmbed) state._failedEmbed = new Set();
+
         if (failedType === 'hls') {
-            const embedPill = document.querySelector('#embedServerPills .server-pill[data-provider="' + state.provider + '"]');
-            if (embedPill) {
-                console.log('[Fallback] HLS failed → switching to Embed for', state.provider);
-                if(typeof showToast === 'function') showToast('HLS source failed, switching to Embed fallback...', 'warning');
+            state._failedHls.add(state.provider);
+        } else if (failedType === 'embed') {
+            state._failedEmbed.add(state.provider);
+        } else {
+            // 'provider' type = both failed
+            state._failedHls.add(state.provider);
+            state._failedEmbed.add(state.provider);
+        }
+
+        // ── Phase 1: Try HLS on the next untried provider ─────────────────
+        const nextHlsProvider = state.providers.find(p => !state._failedHls.has(p));
+        if (nextHlsProvider) {
+            // Check if there's an HLS pill for this provider (meaning it has HLS capability)
+            const hlsPill = document.querySelector('#hlsServerPills .server-pill[data-provider="' + nextHlsProvider + '"]');
+            if (hlsPill && !hlsPill.classList.contains('unavailable')) {
+                console.log('[Fallback] Trying HLS on next provider:', nextHlsProvider);
+                if (typeof showToast === 'function') showToast('Trying internal server ' + nextHlsProvider + '...', 'warning');
                 state._fallbackActive = false;
-                state._desiredStreamType = 'embed';
-                // Activate embed pill
+                state.hlsRetries = 0;
+                state._desiredStreamType = 'hls';
+                state.provider = nextHlsProvider;
+
+                // Update pill UI
+                const hlsSection = document.getElementById('hlsServerPills');
                 const embedSection = document.getElementById('embedServerPills');
-                if (embedSection) {
-                    embedSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
-                    embedPill.classList.add('active');
-                }
-                fetchAndLoadSources();
+                if (hlsSection) hlsSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                if (embedSection) embedSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                if (hlsPill) hlsPill.classList.add('active');
+
+                switchProvider(nextHlsProvider);
+                return;
+            } else {
+                // No HLS pill exists for this provider, mark it as failed HLS and continue
+                state._failedHls.add(nextHlsProvider);
+                // Recurse to check next provider
+                state._fallbackActive = false;
+                tryFallback(failedType);
                 return;
             }
         }
 
-        // 2) Both types failed on this provider → try next provider
-        state.failedProviders.add(state.provider);
-        const nextProvider = state.providers.find(p => !state.failedProviders.has(p));
+        // ── Phase 2: All HLS exhausted → try Embed on the next untried provider ──
+        const nextEmbedProvider = state.providers.find(p => !state._failedEmbed.has(p));
+        if (nextEmbedProvider) {
+            const embedPill = document.querySelector('#embedServerPills .server-pill[data-provider="' + nextEmbedProvider + '"]');
+            if (embedPill && !embedPill.classList.contains('unavailable')) {
+                console.log('[Fallback] All HLS exhausted → trying Embed for:', nextEmbedProvider);
+                if (typeof showToast === 'function') showToast('Internal servers exhausted, switching to external ' + nextEmbedProvider + '...', 'warning');
+                state._fallbackActive = false;
+                state.embedRetries = 0;
+                state._desiredStreamType = 'embed';
+                state.provider = nextEmbedProvider;
 
-        
-        if (nextProvider) {
-            console.log('[Fallback] Switching to provider:', nextProvider);
-            if(typeof showToast === 'function') showToast('Stream failed, auto-switching to server ' + nextProvider + '...', 'warning');
-            state._fallbackActive = false;
-            state.hlsRetries = 0;
-            state.embedRetries = 0;
-            state._desiredStreamType = 'hls'; // Try HLS first on new provider
-            state.provider = nextProvider;
+                // Update pill UI
+                const hlsSection = document.getElementById('hlsServerPills');
+                const embedSection = document.getElementById('embedServerPills');
+                if (hlsSection) hlsSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                if (embedSection) embedSection.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                if (embedPill) embedPill.classList.add('active');
 
-            // Update HLS pill UI for new provider
-            const hlsSection = document.getElementById('hlsServerPills');
-            if (hlsSection) {
-                hlsSection.querySelectorAll('.server-pill').forEach(p => {
-                    p.classList.toggle('active', p.dataset.provider === nextProvider);
-                });
+                switchProvider(nextEmbedProvider);
+                return;
+            } else {
+                // No embed pill exists for this provider, mark it and continue
+                state._failedEmbed.add(nextEmbedProvider);
+                state._fallbackActive = false;
+                tryFallback(failedType);
+                return;
             }
-
-            switchProvider(nextProvider);
-        } else {
-            console.warn('[Fallback] All providers exhausted, no more fallbacks available');
-            state._fallbackActive = false;
-            state.failedProviders.clear();
         }
+
+        // ── Phase 3: Everything exhausted ─────────────────────────────────
+        console.warn('[Fallback] All providers and types exhausted, no more fallbacks available');
+        state._fallbackActive = false;
+        state._failedHls.clear();
+        state._failedEmbed.clear();
     }
     window.tryFallback = tryFallback;
 

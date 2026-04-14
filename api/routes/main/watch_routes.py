@@ -527,6 +527,52 @@ def watch(anime_id, ep_number):
         full_slug, lang, selected_server, anilist_id, providers_map, ep_number
     )
 
+    # ── Prefer HLS on initial load ──────────────────────────────────────────
+    # If the chosen provider only returned embed (no HLS), but another provider
+    # has HLS capability, switch to the HLS-capable provider so the internal
+    # player opens first (user's preference: try ALL internal HLS first).
+    from api.providers.miruro.episodes import PROVIDER_PRIORITY as _PP
+    if video_data.get("source_type") != "hls" or not video_data.get("hls_sources"):
+        hls_provider = None
+        for p_name in _PP:
+            if p_name == provider_name:
+                continue  # already tried this one
+            caps = provider_capabilities.get(p_name, {})
+            if caps.get("hls"):
+                hls_provider = p_name
+                break
+        # Also check providers not in _PP
+        if not hls_provider:
+            for p_name, caps in provider_capabilities.items():
+                if p_name == provider_name:
+                    continue
+                if caps.get("hls"):
+                    hls_provider = p_name
+                    break
+
+        if hls_provider:
+            current_app.logger.info(
+                f"[Watch] Provider {provider_name} has no HLS, switching to {hls_provider} for initial HLS playback"
+            )
+            # Re-resolve episode ID for the HLS provider
+            hls_ep_id = _find_episode_id_for_provider(
+                providers_map, hls_provider, ep_number, lang
+            )
+            if hls_ep_id:
+                if hls_ep_id.startswith("watch/"):
+                    parts = hls_ep_id.split("/")
+                    if len(parts) >= 5:
+                        parts[3] = lang
+                    hls_slug = "/".join(parts)
+                else:
+                    hls_slug = hls_ep_id
+
+                hls_video = _fetch_video_data(hls_slug, lang, hls_provider, anilist_id)
+                if hls_video.get("hls_sources"):
+                    video_data = hls_video
+                    provider_name = hls_provider
+                    selected_server = hls_provider
+
     # Save last used server
     if selected_server:
         session["last_used_server"] = selected_server
@@ -682,6 +728,10 @@ def watch(anime_id, ep_number):
             server_progress=server_progress_dict,
             is_logged_in=is_logged_in,
             provider_capabilities=provider_capabilities,
+            sorted_providers=sorted(
+                (providers_map or {}).keys(),
+                key=lambda p: _PP.index(p) if p in _PP else len(_PP)
+            ),
             mal_id=mal_id,
         )
     except Exception as e:
