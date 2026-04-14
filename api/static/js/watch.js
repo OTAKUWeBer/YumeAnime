@@ -835,6 +835,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Custom Vanilla UI Driver
     function initVanillaPlayerUI() {
+        if (window._vanillaUiInitialized) return;
+
         const video = document.getElementById('videoPlayer');
         const wrapper = document.getElementById('videoContainer');
         const playBtn = document.getElementById('playPauseBtn');
@@ -867,6 +869,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const playerLoader = document.getElementById('playerLoader');
 
         if (!video || !wrapper || !playBtn) return;
+        
+        window._vanillaUiInitialized = true;
 
         const masterWrapper = document.getElementById('video-wrapper');
 
@@ -1043,6 +1047,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // from the same <video> element that is already playing the content.
         const THUMB_INTERVAL_S = 5;   // capture one frame every 5 s of video time
         const thumbFrames = new Map(); // key = bucketed time (s), value = ImageData
+        let _lastCaptureBucket = -1;
+
+        // Reset state when a new video is loaded
+        video.addEventListener('loadstart', () => {
+            thumbFrames.clear();
+            _lastCaptureBucket = -1;
+            if (progressFill) progressFill.style.width = '0%';
+            if (progressThumb) progressThumb.style.left = '0%';
+            if (progressBuffer) progressBuffer.style.width = '0%';
+            if (currTimeDisp) currTimeDisp.textContent = '00:00';
+            if (durDisp) durDisp.textContent = '00:00';
+            if (tooltipThumbCanvas) {
+                tooltipThumbCanvas.classList.remove('has-frame');
+                if (tooltipThumbCtx) tooltipThumbCtx.clearRect(0, 0, tooltipThumbCanvas.width, tooltipThumbCanvas.height);
+            }
+        });
 
         // Offscreen scratch canvas for capture (reused to avoid GC pressure)
         const captureCanvas = document.createElement('canvas');
@@ -1063,7 +1083,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Capture a frame every THUMB_INTERVAL_S of playback time
-        let _lastCaptureBucket = -1;
         video.addEventListener('timeupdate', () => {
             const bucket = Math.floor(video.currentTime / THUMB_INTERVAL_S) * THUMB_INTERVAL_S;
             if (bucket !== _lastCaptureBucket) {
