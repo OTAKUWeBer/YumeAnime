@@ -317,7 +317,7 @@
                                     INTERNAL
                                 </div>
                                 <div class="server-section-pills" id="hlsServerPills">
-                                    {% for p_name in episodes.providers_map %}
+                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map) %}
                                     {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
                                     %}
                                     {% if caps.get('hls', false) %}
@@ -343,7 +343,7 @@
                                     EXTERNAL
                                 </div>
                                 <div class="server-section-pills" id="embedServerPills">
-                                    {% for p_name in episodes.providers_map %}
+                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map) %}
                                     {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
                                     %}
                                     {% if caps.get('embed', false) %}
@@ -775,7 +775,7 @@
         episodeNumber: {{ episode_number or 1 }},
     language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
-            providers: [{% if episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %} '{{ p }}'{% if not loop.last %}, {% endif %} {% endfor %} {% endif %}],
+        providers: [{% if sorted_providers %}{% for p in sorted_providers %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% elif episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}],
     isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
     serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }}
     };

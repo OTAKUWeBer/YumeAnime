@@ -9,7 +9,7 @@ from .base import MiruroBaseClient
 logger = logging.getLogger(__name__)
 
 # Provider preference order (best quality/reliability first)
-PROVIDER_PRIORITY = ["kiwi", "arc", "zoro", "bee", "jet", "wco"]
+PROVIDER_PRIORITY = ["jet", "kiwi", "zoro", "arc", "bee", "wco"]
 
 
 class MiruroEpisodesService:
