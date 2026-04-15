@@ -833,8 +833,10 @@ def get_watch_sources():
     except Exception:
         pass
 
-    # Fetch video data
-    video_data = _fetch_video_data(full_slug, lang, selected_server, anilist_id)
+    # Fetch video data and scan all provider capabilities in ONE async batch
+    video_data, provider_capabilities = _fetch_video_and_scan(
+        full_slug, lang, selected_server, anilist_id, providers_map, ep_number
+    )
 
     # Save preferences
     if selected_server:
@@ -853,6 +855,7 @@ def get_watch_sources():
         "provider": provider_name,
         "language": lang,
         "available_servers": available_servers,
+        "provider_capabilities": provider_capabilities,
     }
 
     resp = make_response(jsonify(response_data))
