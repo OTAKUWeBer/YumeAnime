@@ -1877,28 +1877,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (pill) pill.classList.add('active');
                 }
 
-                // Disable/enable pills for this provider based on available sources
-                if (hlsSection) {
-                    const hlsPill = hlsSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
-                    if (hlsPill) {
-                        if (hlsSrcs.length === 0) {
-                            hlsPill.disabled = true;
-                            hlsPill.classList.add('unavailable');
-                        } else {
-                            hlsPill.disabled = false;
-                            hlsPill.classList.remove('unavailable');
+                // Disable/enable pills for all providers based on capabilities if present, else just update current
+                if (data.provider_capabilities) {
+                    const caps = data.provider_capabilities;
+                    if (hlsSection) {
+                        hlsSection.querySelectorAll('.server-pill').forEach(pill => {
+                            const pName = pill.dataset.provider;
+                            const hasHls = caps[pName] && caps[pName].hls;
+                            pill.disabled = !hasHls;
+                            if (!hasHls) {
+                                pill.classList.add('unavailable');
+                                pill.style.display = 'none';
+                            } else {
+                                pill.classList.remove('unavailable');
+                                pill.style.display = '';
+                            }
+                        });
+                    }
+                    if (embedSection) {
+                        embedSection.querySelectorAll('.server-pill').forEach(pill => {
+                            const pName = pill.dataset.provider;
+                            const hasEmbed = caps[pName] && caps[pName].embed;
+                            pill.disabled = !hasEmbed;
+                            if (!hasEmbed) {
+                                pill.classList.add('unavailable');
+                                pill.style.display = 'none';
+                            } else {
+                                pill.classList.remove('unavailable');
+                                pill.style.display = '';
+                            }
+                        });
+                    }
+                } else {
+                    if (hlsSection) {
+                        const hlsPill = hlsSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
+                        if (hlsPill) {
+                            if (hlsSrcs.length === 0) {
+                                hlsPill.disabled = true;
+                                hlsPill.classList.add('unavailable');
+                            } else {
+                                hlsPill.disabled = false;
+                                hlsPill.classList.remove('unavailable');
+                            }
                         }
                     }
-                }
-                if (embedSection) {
-                    const embedPill = embedSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
-                    if (embedPill) {
-                        if (embedSrcs.length === 0) {
-                            embedPill.disabled = true;
-                            embedPill.classList.add('unavailable');
-                        } else {
-                            embedPill.disabled = false;
-                            embedPill.classList.remove('unavailable');
+                    if (embedSection) {
+                        const embedPill = embedSection.querySelector('.server-pill[data-provider="' + currentProvider + '"]');
+                        if (embedPill) {
+                            if (embedSrcs.length === 0) {
+                                embedPill.disabled = true;
+                                embedPill.classList.add('unavailable');
+                            } else {
+                                embedPill.disabled = false;
+                                embedPill.classList.remove('unavailable');
+                            }
                         }
                     }
                 }
