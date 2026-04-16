@@ -56,10 +56,14 @@
                         type="application/x-mpegurl"
                         crossorigin
                         playsinline
+                        title="{{ episode_title or anime_title or 'Episode' }} · Episode {{ Episode }}"
                         data-video-url="{{ video_link }}"
                         style="width: 100%; height: 100%;">
                         <media-provider></media-provider>
-                        <media-video-layout color-scheme="dark"></media-video-layout>
+                        <media-video-layout
+                            color-scheme="dark"
+                            no-seek-button>
+                        </media-video-layout>
                     </media-player>
                 </div>
                 {% endif %}
@@ -636,6 +640,87 @@
                 };
             }
         });
+
+        // ── Add intro/outro as chapters on the timeline ──
+        function addChaptersTrack() {
+            const cfg = window.WATCH_CONFIG;
+            if (!cfg) return;
+            const intro = cfg.intro;
+            const outro = cfg.outro;
+            if (!intro && !outro) return;
+
+            // Wait for duration to be available
+            const duration = player.duration;
+            if (!duration || duration <= 0) {
+                player.addEventListener('duration-change', () => addChaptersTrack(), { once: true });
+                return;
+            }
+
+            // Remove any existing chapters track we added
+            const existing = player.textTracks.toArray().filter(t => t.kind === 'chapters' && t.label === 'Sections');
+            existing.forEach(t => player.textTracks.remove(t));
+
+            // Build VTT cues for chapter segments
+            function fmtVTT(sec) {
+                const h = Math.floor(sec / 3600);
+                const m = Math.floor((sec % 3600) / 60);
+                const s = Math.floor(sec % 60);
+                const ms = Math.floor((sec % 1) * 1000);
+                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+            }
+
+            // Build chapter segments that cover the full duration
+            const segments = [];
+            let cursor = 0;
+
+            if (intro && intro.start != null && intro.end != null) {
+                if (intro.start > cursor) {
+                    segments.push({ start: cursor, end: intro.start, text: 'Episode' });
+                }
+                segments.push({ start: intro.start, end: intro.end, text: '🎵 Opening' });
+                cursor = intro.end;
+            }
+
+            if (outro && outro.start != null) {
+                const outroEnd = outro.end || duration;
+                if (outro.start > cursor) {
+                    segments.push({ start: cursor, end: outro.start, text: 'Episode' });
+                }
+                segments.push({ start: outro.start, end: outroEnd, text: '🎵 Ending' });
+                cursor = outroEnd;
+            }
+
+            if (cursor < duration) {
+                segments.push({ start: cursor, end: duration, text: 'Episode' });
+            }
+
+            // If no segments, skip
+            if (segments.length === 0) return;
+
+            // Build VTT content string
+            let vtt = 'WEBVTT\n\n';
+            segments.forEach((seg, i) => {
+                vtt += `${i + 1}\n${fmtVTT(seg.start)} --> ${fmtVTT(seg.end)}\n${seg.text}\n\n`;
+            });
+
+            // Create a blob URL and add as text track
+            const blob = new Blob([vtt], { type: 'text/vtt' });
+            const url = URL.createObjectURL(blob);
+
+            player.textTracks.add({
+                src: url,
+                kind: 'chapters',
+                label: 'Sections',
+                language: 'en',
+                default: true,
+                type: 'vtt'
+            });
+
+            console.log('[Chapters] Added intro/outro chapter markers to timeline');
+        }
+
+        // Try adding chapters once player can play
+        player.addEventListener('can-play', () => addChaptersTrack(), { once: true });
     });
 </script>
 <script>
