@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function onPlayerReady() {
         console.log('[Player] Vidstack can-play fired');
         setupSkipButtons();
+        setupResumeAndTracking(player);
     }
 
     player.addEventListener('can-play', onPlayerReady, { once: true });
@@ -92,7 +93,7 @@ function setupSkipButtons() {
         const btn = document.createElement('button');
         btn.id = 'skipIntroBtn';
         btn.className = 'skip-btn';
-        btn.innerHTML = 'Skip Intro <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Opening`;
         btn.addEventListener('click', () => {
             if (intro.end != null) {
                 player.currentTime = intro.end;
@@ -106,7 +107,7 @@ function setupSkipButtons() {
         const btn = document.createElement('button');
         btn.id = 'skipOutroBtn';
         btn.className = 'skip-btn';
-        btn.innerHTML = 'Skip Outro <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Ending`;
         btn.addEventListener('click', () => {
             const targetTime = outro.end || (player.duration - 10);
             player.currentTime = targetTime;
@@ -145,6 +146,90 @@ function setupSkipButtons() {
         }
     }, { signal });
 }
+
+// ── Build chapter markers on the timeline for intro/outro ──────────
+function rebuildChaptersTrack() {
+    const player = window.player;
+    if (!player) return;
+
+    const cfg = window.WATCH_CONFIG;
+    if (!cfg) return;
+
+    const intro = cfg.intro;
+    const outro = cfg.outro;
+    if (!intro && !outro) return;
+
+    const duration = player.duration;
+    if (!duration || duration <= 0) {
+        // Wait for duration, then retry
+        player.addEventListener('duration-change', () => rebuildChaptersTrack(), { once: true });
+        return;
+    }
+
+    // Remove existing chapter tracks
+    try {
+        const tracks = player.textTracks.toArray();
+        tracks.filter(t => t.kind === 'chapters' && t.label === 'Sections')
+              .forEach(t => player.textTracks.remove(t));
+    } catch(e) {}
+
+    // VTT timestamp formatter
+    function fmtVTT(sec) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = Math.floor(sec % 60);
+        const ms = Math.floor((sec % 1) * 1000);
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+    }
+
+    // Build chapter segments spanning the full duration
+    const segments = [];
+    let cursor = 0;
+
+    if (intro && intro.start != null && intro.end != null) {
+        if (intro.start > cursor) {
+            segments.push({ start: cursor, end: intro.start, text: 'Episode' });
+        }
+        segments.push({ start: intro.start, end: intro.end, text: '\ud83c\udfb5 Opening' });
+        cursor = intro.end;
+    }
+
+    if (outro && outro.start != null) {
+        const outroEnd = outro.end || duration;
+        if (outro.start > cursor) {
+            segments.push({ start: cursor, end: outro.start, text: 'Episode' });
+        }
+        segments.push({ start: outro.start, end: outroEnd, text: '\ud83c\udfb5 Ending' });
+        cursor = outroEnd;
+    }
+
+    if (cursor < duration) {
+        segments.push({ start: cursor, end: duration, text: 'Episode' });
+    }
+
+    if (segments.length === 0) return;
+
+    // Generate VTT content
+    let vtt = 'WEBVTT\n\n';
+    segments.forEach((seg, i) => {
+        vtt += `${i + 1}\n${fmtVTT(seg.start)} --> ${fmtVTT(seg.end)}\n${seg.text}\n\n`;
+    });
+
+    const blob = new Blob([vtt], { type: 'text/vtt' });
+    const url = URL.createObjectURL(blob);
+
+    player.textTracks.add({
+        src: url,
+        kind: 'chapters',
+        label: 'Sections',
+        language: 'en',
+        default: true,
+        type: 'vtt'
+    });
+
+    console.log('[Chapters] Rebuilt chapter markers — segments:', segments.length);
+}
+window.rebuildChaptersTrack = rebuildChaptersTrack;
 
 // ── Resume & watched tracking — runs ONCE, never re-registered ──
 let _trackingSetup = false;
@@ -277,6 +362,8 @@ function fetchAndLoadSources() {
 
         if (window.player) {
             setupSkipButtons();
+            // Rebuild chapters track with new intro/outro data
+            rebuildChaptersTrack();
         }
 
         // Update video source
