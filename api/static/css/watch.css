@@ -221,6 +221,47 @@
         word-break: break-word;
     }
 
+    /* List View Filler Marks */
+    .filler-badge {
+        font-size: 0.65rem;
+        background: rgba(243, 156, 18, 0.15);
+        color: #90887a;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        font-weight: 700;
+        vertical-align: middle;
+        text-transform: uppercase;
+        border: 1px solid rgba(243, 156, 18, 0.3);
+        display: inline-block;
+        margin-top: -2px;
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.is-filler {
+        background: rgba(243, 156, 18, 0.05);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.is-filler:hover {
+        background: rgba(243, 156, 18, 0.1);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.is-filler .episode-sidebar-num {
+        background: rgba(243, 156, 18, 0.15);
+        color: #90887a;
+    }
+
+    /* Keep 'current' styling dominant for filler episodes */
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current.is-filler {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+    }
+
+    .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current.is-filler .episode-sidebar-num {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
     /* Grid View */
     .episode-sidebar-list[data-view="grid"] {
         display: grid;
@@ -268,6 +309,25 @@
         background: transparent;
         font-size: 0.95rem;
         display: block;
+    }
+
+    /* Grid View Filler Marks */
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.is-filler {
+        border-color: rgba(243, 156, 18, 0.4);
+        background: rgba(243, 156, 18, 0.05);
+        color: #90887a;
+    }
+
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.is-filler:hover {
+        border-color: #90887a;
+        background: rgba(243, 156, 18, 0.15);
+    }
+
+    /* Keep 'current' styling dominant */
+    .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.current.is-filler {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        border-color: transparent;
     }
 
     @media (max-width: 768px) {

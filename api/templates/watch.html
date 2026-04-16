@@ -289,11 +289,16 @@
                     {% for ep in episodes.episodes %}
                     {% set is_current = (ep.number|string == episode_number|string) or (ep.number|int == Episode|int) %}
                     <a href="/watch/{{ anime_id or eps_title.split('?')[0] }}/ep-{{ ep.number }}"
-                        class="episode-sidebar-item {% if is_current %}current{% endif %}"
+                        class="episode-sidebar-item {% if is_current %}current{% endif %} {% if ep.isFiller %}is-filler{% endif %}"
                         data-number="{{ ep.number }}">
                         <div class="episode-sidebar-num">{{ ep.number }}</div>
                         <div class="episode-info">
-                            <div class="episode-title">{{ ep.title }}</div>
+                            <div class="episode-title">
+                                {{ ep.title }}
+                                {% if ep.isFiller %}
+                                <span class="filler-badge">Filler</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </a>
                     {% endfor %}
@@ -677,7 +682,7 @@
                 if (intro.start > cursor) {
                     segments.push({ start: cursor, end: intro.start, text: 'Episode' });
                 }
-                segments.push({ start: intro.start, end: intro.end, text: '🎵 Opening' });
+                segments.push({ start: intro.start, end: intro.end, text: 'Opening' });
                 cursor = intro.end;
             }
 
