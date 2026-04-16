@@ -266,8 +266,10 @@ def _fetch_video_and_scan(full_slug, lang, server, anilist_id, providers_map, ep
     else:
         video_data = _parse_video_raw(main_raw)
 
-    # Parse scan results
+    # Parse scan results + collect intro/outro from any provider that has it
     capabilities = {}
+    skip_data_candidates = {}  # provider_name -> {"intro": ..., "outro": ...}
+
     for i, p_name in enumerate(scan_names):
         raw = all_results[i + 1]  # +1 because index 0 is main_task
         if isinstance(raw, Exception):
@@ -289,6 +291,17 @@ def _fetch_video_and_scan(full_slug, lang, server, anilist_id, providers_map, ep
                 "hls": bool(hls and len(hls) > 0),
                 "embed": has_embed,
             }
+
+            # ── Collect intro/outro skip data from this provider ──
+            raw_intro = raw.get("intro")
+            raw_outro = raw.get("outro")
+            has_intro = isinstance(raw_intro, dict) and raw_intro.get("start") is not None
+            has_outro = isinstance(raw_outro, dict) and raw_outro.get("start") is not None
+            if has_intro or has_outro:
+                skip_data_candidates[p_name] = {
+                    "intro": raw_intro if has_intro else None,
+                    "outro": raw_outro if has_outro else None,
+                }
         else:
             capabilities[p_name] = {"hls": False, "embed": False}
 
@@ -297,6 +310,30 @@ def _fetch_video_and_scan(full_slug, lang, server, anilist_id, providers_map, ep
         for p_name in providers_map:
             if p_name not in capabilities:
                 capabilities[p_name] = {"hls": False, "embed": False}
+
+    # ── Inject intro/outro from other providers if main provider lacks it ──
+    # Priority: zoro > kai > arc > any other provider that has skip data
+    SKIP_PRIORITY = ["zoro", "kai", "arc"]
+    main_has_intro = video_data.get("intro") and isinstance(video_data["intro"], dict) and video_data["intro"].get("start") is not None
+    main_has_outro = video_data.get("outro") and isinstance(video_data["outro"], dict) and video_data["outro"].get("start") is not None
+
+    if (not main_has_intro or not main_has_outro) and skip_data_candidates:
+        # Pick best skip data source
+        best_skip_provider = None
+        for pref in SKIP_PRIORITY:
+            if pref in skip_data_candidates:
+                best_skip_provider = pref
+                break
+        if not best_skip_provider:
+            best_skip_provider = next(iter(skip_data_candidates))
+
+        skip_data = skip_data_candidates[best_skip_provider]
+        if not main_has_intro and skip_data.get("intro"):
+            video_data["intro"] = skip_data["intro"]
+            print(f"[SkipData] Injected intro from '{best_skip_provider}': {skip_data['intro']}")
+        if not main_has_outro and skip_data.get("outro"):
+            video_data["outro"] = skip_data["outro"]
+            print(f"[SkipData] Injected outro from '{best_skip_provider}': {skip_data['outro']}")
 
     print(f"[ProviderScan] capabilities: {capabilities}")
     return video_data, capabilities
