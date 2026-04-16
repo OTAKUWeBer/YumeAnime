@@ -7,9 +7,11 @@
 {% block og_image %}{% if anime %}{{ anime.banner or anime.poster or anime.image }}{% endif %}{% endblock %}
 
 {% block extra_css %}
-<link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/theme.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/layouts/video.min.css" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/cdn/with-layouts/vidstack.js" type="module"></script>
 {% endblock %}
 
 {% block content %}
@@ -45,199 +47,20 @@
                 {% endif %}
 
                 {% if video_link %}
-                <!-- Minimalist Custom UI handled by clean backend integration -->
+                <!-- Vidstack Player -->
                 <div id="videoContainer"
-                    style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden;">
-                    <video id="videoPlayer" class="raw-video-player" playsinline webkit-playsinline="true"
-                        preload="auto" x-webkit-airplay="allow" data-video-url="{{ video_link }}"
-                        style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; object-fit: contain;">
-                        <source src="{{ video_link }}" type="application/x-mpegURL">
-                        Your browser does not support the video tag.
-                    </video>
-
-                    <!-- Premium Custom UI Overlay -->
-                    <div class="player-container" id="customPlayerUI">
-                        <div class="player-bottom-gradient"></div>
-
-                        <div class="player-top-bar">
-                            <div class="player-title" style="display: flex; align-items: center; gap: 10px;">
-                                <span class="player-ep-badge"
-                                    style="background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: bold;">EP
-                                    {{ Episode }}</span>
-                                <span style="font-size: 1.1rem; font-weight: 500;">{{ episode_title if episode_title
-                                    else (anime_title if anime_title else
-                                    'Unknown') }}</span>
-                            </div>
-                        </div>
-
-                        <div class="custom-loader" id="playerLoader" style="display: none;">
-                            <div class="loader-dot"></div>
-                            <div class="loader-dot"></div>
-                            <div class="loader-dot"></div>
-                        </div>
-
-                        <!-- Double Tap Seek Zones (Mobile) -->
-                        <div class="dt-zone dt-zone-left" id="dtLeft">
-                            <div class="dt-indicator" id="dtIndLeft">
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                                    <path d="M11 18V6l-8.5 6 8.5 6zm2-12v12l8.5-6L13 6z" />
-                                </svg>
-                                <span>10s</span>
-                            </div>
-                        </div>
-                        <div class="dt-zone dt-zone-right" id="dtRight">
-                            <div class="dt-indicator" id="dtIndRight">
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                                    <path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" />
-                                </svg>
-                                <span>10s</span>
-                            </div>
-                        </div>
-
-                        <!-- Big Mobile Play Overlay -->
-                        <div id="mobilePlayOverlay"
-                            style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); cursor: pointer;">
-                            <div class="center-play-pause-static"
-                                style="background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.15); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                                <svg viewBox="0 0 24 24" fill="currentColor" style="margin-left: 5px;">
-                                    <path
-                                        d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        <div class="center-play-pause" id="centerPlayBtn" style="display: none;">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                                <path
-                                    d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
-                            </svg>
-                        </div>
-
-                        <!-- Skip Intro / Skip Outro Buttons -->
-                        <button class="skip-btn" id="skipIntroBtn" style="display: none;">
-                            Skip Intro
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                            </svg>
-                        </button>
-                        <button class="skip-btn" id="skipOutroBtn" style="display: none;">
-                            Skip Outro
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                            </svg>
-                        </button>
-
-                        <div class="controls-bar">
-                            <div class="progress-container" id="progressBar">
-                                <div class="progress-buffer" id="progressBuffer"></div>
-                                <div class="progress-fill" id="progressFill"></div>
-                                <div class="progress-thumb" id="progressThumb"></div>
-                                <div class="progress-tooltip" id="progressTooltip">
-                                    <canvas id="tooltipThumbCanvas" width="160" height="90"></canvas>
-                                    <span id="tooltipTimeText">00:00</span>
-                                </div>
-                            </div>
-
-                            <div class="controls-main">
-                                <div class="controls-left">
-                                    <button class="control-btn" id="playPauseBtn" title="Play (k)">
-                                        <svg viewBox="0 0 24 24" fill="currentColor">
-                                            <path
-                                                d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
-                                        </svg>
-                                    </button>
-
-                                    <button class="control-btn" id="prevEpBtn" title="Previous Episode (p)" {% if not
-                                        prev_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif
-                                        %}
-                                        onclick="{% if prev_episode_url %}window.location.href='{{ prev_episode_url }}'{% endif %}">
-                                        <svg viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M18 6l-8.5 6 8.5 6V6zM8 6v12h-2V6h2z" />
-                                        </svg>
-                                    </button>
-
-                                    <button class="control-btn" id="nextEpBtn" title="Next Episode (n)" {% if not
-                                        next_episode_url %}style="opacity: 0.3; cursor: not-allowed;" disabled{% endif
-                                        %}
-                                        onclick="{% if next_episode_url %}window._forceEpisodeComplete = true; window.location.href='{{ next_episode_url }}'{% endif %}">
-                                        <svg viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-                                        </svg>
-                                    </button>
-
-                                    <div class="volume-container">
-                                        <button class="control-btn" id="muteBtn" title="Mute (m)">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round">
-                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07">
-                                                </path>
-                                            </svg>
-                                        </button>
-                                        <div class="volume-slider-container">
-                                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1"
-                                                step="0.05" value="1">
-                                        </div>
-                                    </div>
-
-                                    <div class="time-display">
-                                        <span id="currentTimeDisplay">00:00</span> <span
-                                            style="opacity:0.5;margin:0 4px;">/</span> <span
-                                            id="durationDisplay">00:00</span>
-                                    </div>
-                                </div>
-
-                                <div class="controls-right">
-                                    <!-- Playback Settings Menu -->
-                                    <div class="menu-btn-container" id="settingsContainer">
-                                        <button class="control-btn" id="settingsBtn" title="Settings">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="3"></circle>
-                                                <path
-                                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                                </path>
-                                            </svg>
-                                        </button>
-                                        <div class="player-menu" id="settingsMenu" style="display: none;">
-                                            <div class="player-menu-header">Quality</div>
-                                            <div id="qualityOptions">
-                                                <div class="player-menu-item active" data-quality="-1">Auto</div>
-                                            </div>
-                                            <div class="player-menu-divider"></div>
-                                            <div class="player-menu-header">Speed</div>
-                                            <div class="settings-row" id="speedOptions">
-                                                <button class="settings-opt-btn" data-speed="0.5">0.5x</button>
-                                                <button class="settings-opt-btn active" data-speed="1">1x</button>
-                                                <button class="settings-opt-btn" data-speed="1.5">1.5x</button>
-                                                <button class="settings-opt-btn" data-speed="2">2x</button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Picture-in-Picture -->
-                                    <button class="control-btn" id="pipBtn" title="Picture-in-Picture (i)"
-                                        style="display: none;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                            <rect x="12" y="12" width="7" height="5" fill="currentColor"></rect>
-                                        </svg>
-                                    </button>
-
-                                    <!-- Fullscreen Toggle -->
-                                    <button class="control-btn" id="fullscreenBtn" title="Fullscreen (f)">
-                                        <svg class="fs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path
-                                                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
-                                            </path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000;">
+                    <media-player
+                        id="vidstackPlayer"
+                        src="{{ video_link }}"
+                        type="application/x-mpegurl"
+                        crossorigin
+                        playsinline
+                        data-video-url="{{ video_link }}"
+                        style="width: 100%; height: 100%;">
+                        <media-provider></media-provider>
+                        <media-video-layout color-scheme="dark"></media-video-layout>
+                    </media-player>
                 </div>
                 {% endif %}
 
@@ -777,23 +600,44 @@
 <!-- Thumbnail tooltip & mobile control styles moved to watch.css -->
 
 {% block extra_js %}
-<!-- Simple Clean Player Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
     window.WATCH_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
         episodeNumber: {{ episode_number or 1 }},
-    language: '{{ lang }}',
+        language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
         providers: [{% if sorted_providers %}{% for p in sorted_providers %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% elif episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}],
-    isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
-    serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
-    malId: {{ mal_id | tojson | safe if mal_id else 'null' }},
-    intro: {{ intro | tojson | safe if intro else 'null' }},
-    outro: {{ outro | tojson | safe if outro else 'null' }}
+        isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
+        serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
+        malId: {{ mal_id | tojson | safe if mal_id else 'null' }},
+        intro: {{ intro | tojson | safe if intro else 'null' }},
+        outro: {{ outro | tojson | safe if outro else 'null' }},
+        videoLink: '{{ video_link or "" }}'
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const player = document.querySelector('#vidstackPlayer');
+        if (!player) return;
+        
+        player.addEventListener('provider-change', (event) => {
+            const provider = event.detail;
+            if (provider?.type === 'hls') {
+                provider.config = {
+                    ...provider.config,
+                    xhrSetup(xhr, url) {
+                        // Force GET method for all HLS requests to avoid 405 from proxy
+                        const originalOpen = xhr.open.bind(xhr);
+                        xhr.open = function(method, url, async, user, password) {
+                            return originalOpen.call(this, 'GET', url, async, user, password);
+                        };
+                    }
+                };
+            }
+        });
+    });
+</script>
 <script>
     window.COMMENTS_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
