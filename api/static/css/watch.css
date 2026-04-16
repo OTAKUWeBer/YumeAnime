@@ -1925,5 +1925,54 @@
     .video-wrapper:not(.vjs-fullscreen) .center-play-pause-static svg {
         width: 26px !important;
         height: 26px !important;
+}
+
+/* ── Skip Intro / Outro Buttons ── */
+.skip-btn {
+    position: absolute;
+    bottom: 80px; /* Right above controls */
+    right: 20px;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+}
+
+.skip-btn.show {
+    display: flex !important;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.skip-btn:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(var(--accent-rgb, 128, 90, 213), 0.4);
+}
+
+/* On mobile, controls are tighter, push skip slightly higher if needed */
+@media (max-width: 768px) {
+    .skip-btn {
+        bottom: 70px;
+        right: 15px;
+        padding: 6px 12px;
+        font-size: 12px;
     }
 }

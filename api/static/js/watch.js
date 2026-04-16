@@ -2203,12 +2203,73 @@ document.addEventListener('DOMContentLoaded', () => {
         if(video && !video.hasAttribute('data-progress-tracked')) {
             video.setAttribute('data-progress-tracked', 'true');
             video.addEventListener('timeupdate', () => {
-                if(video.duration > 0 && (video.currentTime / video.duration) >= 0.8) {
+                const ct = video.currentTime;
+                // Watched button
+                if(video.duration > 0 && (ct / video.duration) >= 0.8) {
                     if(markBtn && markBtn.style.display === 'none') {
                         markBtn.style.display = 'block';
                     }
                 }
+
+                // Intro/Outro Skip UI logic
+                const intro = window.WATCH_CONFIG?.intro;
+                const outro = window.WATCH_CONFIG?.outro;
+                const autoSkip = localStorage.getItem('yume_skip_intro') === 'true';
+
+                const skipIntroBtn = document.getElementById('skipIntroBtn');
+                const skipOutroBtn = document.getElementById('skipOutroBtn');
+                
+                if (skipIntroBtn && intro && intro.start !== undefined && intro.end !== undefined) {
+                    if (ct >= intro.start && ct <= intro.end) {
+                        if (!skipIntroBtn.classList.contains('show')) skipIntroBtn.classList.add('show');
+                        
+                        // Auto skip logic
+                        if (autoSkip && !video.dataset.introSkipped) {
+                            video.currentTime = intro.end;
+                            video.dataset.introSkipped = 'true';
+                        }
+                    } else {
+                        if (skipIntroBtn.classList.contains('show')) skipIntroBtn.classList.remove('show');
+                    }
+                }
+
+                if (skipOutroBtn && outro && outro.start !== undefined) {
+                    // Start showing from outro.start until near end
+                    if (ct >= outro.start && ct <= (outro.end || video.duration - 5)) {
+                        if (!skipOutroBtn.classList.contains('show')) skipOutroBtn.classList.add('show');
+                        
+                        // Auto skip logic
+                        if (autoSkip && !video.dataset.outroSkipped) {
+                            const end = outro.end; 
+                            video.currentTime = end || (video.duration - 1);
+                            video.dataset.outroSkipped = 'true';
+                        }
+                    } else {
+                        if (skipOutroBtn.classList.contains('show')) skipOutroBtn.classList.remove('show');
+                    }
+                }
             });
+
+            // Action handlers
+            const skipIntroBtn = document.getElementById('skipIntroBtn');
+            const skipOutroBtn = document.getElementById('skipOutroBtn');
+            if (skipIntroBtn) {
+                skipIntroBtn.addEventListener('click', () => {
+                    const intro = window.WATCH_CONFIG?.intro;
+                    if (intro && intro.end) {
+                        video.currentTime = intro.end;
+                        skipIntroBtn.classList.remove('show');
+                    }
+                });
+            }
+            if (skipOutroBtn) {
+                skipOutroBtn.addEventListener('click', () => {
+                    const outro = window.WATCH_CONFIG?.outro;
+                    const end = window.WATCH_CONFIG?.outro?.end; 
+                    video.currentTime = end || (video.duration - 1); // skip to next ep/end if no explicitly defined end
+                    skipOutroBtn.classList.remove('show');
+                });
+            }
         }
     });
     const wrapper = document.getElementById('videoContainer');
