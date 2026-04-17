@@ -1157,6 +1157,7 @@
     .server-sections.loading {
         pointer-events: none;
         position: relative;
+        overflow: hidden;
     }
 
     .server-sections.loading .server-section-pills {
@@ -2019,6 +2020,9 @@ media-player [data-media-buffering] media-buffering-indicator svg {
     width: 56px !important;
     height: 56px !important;
     overflow: visible !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* 3. Freeze the arc at a fixed length — stops the "crawling" stroke-dashoffset change */
