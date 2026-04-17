@@ -93,7 +93,7 @@ function setupSkipButtons() {
         const btn = document.createElement('button');
         btn.id = 'skipIntroBtn';
         btn.className = 'skip-btn';
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Opening`;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Intro`;
         btn.addEventListener('click', () => {
             if (intro.end != null) {
                 player.currentTime = intro.end;
@@ -107,7 +107,7 @@ function setupSkipButtons() {
         const btn = document.createElement('button');
         btn.id = 'skipOutroBtn';
         btn.className = 'skip-btn';
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Ending`;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Outro`;
         btn.addEventListener('click', () => {
             const targetTime = outro.end || (player.duration - 10);
             player.currentTime = targetTime;
@@ -190,7 +190,7 @@ function rebuildChaptersTrack() {
         if (intro.start > cursor) {
             segments.push({ start: cursor, end: intro.start, text: 'Episode' });
         }
-        segments.push({ start: intro.start, end: intro.end, text: '\ud83c\udfb5 Opening' });
+        segments.push({ start: intro.start, end: intro.end, text: '\ud83c\udfb5 Intro' });
         cursor = intro.end;
     }
 
@@ -199,7 +199,7 @@ function rebuildChaptersTrack() {
         if (outro.start > cursor) {
             segments.push({ start: cursor, end: outro.start, text: 'Episode' });
         }
-        segments.push({ start: outro.start, end: outroEnd, text: '\ud83c\udfb5 Ending' });
+        segments.push({ start: outro.start, end: outroEnd, text: '\ud83c\udfb5 Outro' });
         cursor = outroEnd;
     }
 

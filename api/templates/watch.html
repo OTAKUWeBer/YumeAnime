@@ -682,7 +682,7 @@
                 if (intro.start > cursor) {
                     segments.push({ start: cursor, end: intro.start, text: 'Episode' });
                 }
-                segments.push({ start: intro.start, end: intro.end, text: 'Opening' });
+                segments.push({ start: intro.start, end: intro.end, text: 'Intro' });
                 cursor = intro.end;
             }
 
@@ -691,7 +691,7 @@
                 if (outro.start > cursor) {
                     segments.push({ start: cursor, end: outro.start, text: 'Episode' });
                 }
-                segments.push({ start: outro.start, end: outroEnd, text: '🎵 Ending' });
+                segments.push({ start: outro.start, end: outroEnd, text: 'Outro' });
                 cursor = outroEnd;
             }
 
