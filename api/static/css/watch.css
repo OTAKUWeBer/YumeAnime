@@ -1932,7 +1932,8 @@
     .video-wrapper:not(.vjs-fullscreen) .center-play-pause-static svg {
         width: 26px !important;
         height: 26px !important;
-}
+    }
+} /* ── closes @media (max-width: 768px) ── */
 
 /* ── Skip Intro / Outro Buttons ── */
 .skip-btn {
@@ -1996,7 +1997,39 @@ media-time-slider [data-part="chapter-track"] {
     overflow: hidden;
 }
 
-/* ── Vidstack Buffering Indicator Override — Clean Stable Spinner ── */
+/* ── Vidstack Buffering Indicator — Full Clean Override ── */
+
+/* 1. Pin the indicator dead-center inside the video wrapper — no drift, no translate animation */
 media-player [data-media-buffering] media-buffering-indicator {
     animation: none !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 56px !important;
+    height: 56px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* 2. Kill Vidstack's internal arc-crawl animation on the SVG wrapper */
+media-player [data-media-buffering] media-buffering-indicator svg {
+    animation: yume-spin 0.9s linear infinite !important;
+    width: 56px !important;
+    height: 56px !important;
+    overflow: visible !important;
+}
+
+/* 3. Freeze the arc at a fixed length — stops the "crawling" stroke-dashoffset change */
+media-player [data-media-buffering] media-buffering-indicator circle {
+    animation: none !important;
+    stroke-dasharray: 120 200 !important;  /* fixed arc: ~3/4 of circumference */
+    stroke-dashoffset: -20 !important;
+}
+
+/* 4. The keyframe — pure rotation only */
+@keyframes yume-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
