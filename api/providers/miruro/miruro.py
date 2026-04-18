@@ -75,9 +75,9 @@ class MiruroScraper:
         """Fetch episodes and basic info"""
         return await self.episodes_service.get_episodes(anilist_id)
 
-    async def episodes(self, anilist_id) -> Dict[str, Any]:
-        """Get episodes list"""
-        return await self.episodes_service.episodes(anilist_id)
+    async def episodes(self, anilist_id, anime_slug: Optional[str] = None) -> Dict[str, Any]:
+        """Get episodes list, optionally with anime_slug for anidap provider discovery"""
+        return await self.episodes_service.episodes(anilist_id, anime_slug)
 
     async def is_dub_available(self, anilist_id, episode_id: str = None) -> bool:
         """Check if dub is available"""

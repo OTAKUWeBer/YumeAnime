@@ -111,13 +111,13 @@ class UnifiedScraper:
             "total_episodes": 0,
         }
 
-    async def episodes(self, anime_id: str) -> Dict[str, Any]:
-        """Get episodes list — Miruro for numeric IDs, or resolve slug first"""
-        print(f"[UnifiedScraper] episodes() called with: {anime_id}")
+    async def episodes(self, anime_id: str, anime_slug: str = None) -> Dict[str, Any]:
+        """Get episodes list — Miruro for numeric IDs, optionally with anime_slug for anidap discovery"""
+        print(f"[UnifiedScraper] episodes() called with: {anime_id}, slug: {anime_slug}")
 
         if str(anime_id).isdigit():
             try:
-                result = await self.miruro.episodes(anime_id)
+                result = await self.miruro.episodes(anime_id, anime_slug)
                 if result and result.get("episodes"):
                     return result
             except Exception:

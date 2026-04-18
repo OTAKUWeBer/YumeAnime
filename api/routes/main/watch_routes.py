@@ -227,20 +227,35 @@ def _fetch_video_and_scan(
     Fetch default provider video data AND scan all providers' capabilities
     in a SINGLE asyncio.run() call to avoid event loop conflicts.
     Returns (video_data_dict, provider_capabilities_dict).
+    
+    Handles both regular providers (watch/ format) and anidap providers (anidap: format).
+    Anidap providers are NOT scanned here - they're marked as always available since
+    they're discovered on-demand via the /sources endpoint.
     """
-    # Build scan tasks for all providers
+    # Build scan tasks for all providers (excluding anidap)
     scan_slugs = {}  # provider_name -> full_slug
+    anidap_providers = set()  # Track anidap providers for special handling
+    
     if providers_map:
         for p_name in providers_map:
+            provider_data = providers_map.get(p_name, {})
+            is_anidap = provider_data.get("_anidap", False)
+            
+            # Track anidap providers but don't scan them
+            if is_anidap:
+                anidap_providers.add(p_name)
+                continue
+            
             ep_id = _find_episode_id_for_provider(
                 providers_map, p_name, ep_number, lang
             )
             if ep_id:
-                slug = (
-                    ep_id
-                    if ep_id.startswith("watch/")
-                    else f"watch/{p_name}/{anilist_id}/{lang}/{ep_id}"
-                )
+                # For watch/ format, use as-is
+                if ep_id.startswith("watch/"):
+                    slug = ep_id
+                # For other formats, wrap in watch/
+                else:
+                    slug = f"watch/{p_name}/{anilist_id}/{lang}/{ep_id}"
             else:
                 # Fallback: construct slug from provider name + episode number
                 # This works for providers like Zoro whose source handler extracts ep number from slug
@@ -274,8 +289,16 @@ def _fetch_video_and_scan(
             video_data = _parse_video_raw(raw)
         except Exception:
             video_data = _parse_video_raw(None)
-        # Mark all providers as available so pills show
-        capabilities = {p: {"hls": True, "embed": True} for p in (providers_map or {})}
+        # Mark all providers as available, with special handling for anidap
+        capabilities = {}
+        if providers_map:
+            for p_name in providers_map:
+                provider_data = providers_map.get(p_name, {})
+                is_anidap = provider_data.get("_anidap", False)
+                if is_anidap:
+                    capabilities[p_name] = {"hls": True, "embed": False}  # Anidap is HLS-only
+                else:
+                    capabilities[p_name] = {"hls": True, "embed": False}
         return video_data, capabilities
 
     # Parse main video result
@@ -337,10 +360,17 @@ def _fetch_video_and_scan(
             capabilities[p_name] = {"hls": False, "embed": False}
 
     # Providers not in scan_slugs (no episode ID found)
+    # For anidap providers, mark as available since they're handled by /sources endpoint
     if providers_map:
         for p_name in providers_map:
             if p_name not in capabilities:
-                capabilities[p_name] = {"hls": False, "embed": False}
+                provider_data = providers_map.get(p_name, {})
+                is_anidap = provider_data.get("_anidap", False)
+                if is_anidap:
+                    # Mark anidap as available (HLS-only) - actual fetching happens in /sources endpoint
+                    capabilities[p_name] = {"hls": True, "embed": False}
+                else:
+                    capabilities[p_name] = {"hls": False, "embed": False}
 
     # ── Inject intro/outro from other providers if main provider lacks it ──
     # Priority: zoro > kai > arc > any other provider that has skip data
@@ -531,7 +561,21 @@ def watch(anime_id, ep_number):
             if anime_id_clean.isdigit()
             else (str(anilist_id) if anilist_id else anime_id_clean)
         )
-        all_episodes = asyncio.run(current_app.ha_scraper.episodes(fetch_id))
+        
+        # Try to get anime_slug for anidap provider discovery
+        # Use anime_id_clean if it looks like a slug (non-numeric), otherwise construct from title
+        anime_slug = None
+        if not anime_id_clean.isdigit():
+            anime_slug = anime_id_clean
+        elif anime and isinstance(anime, dict):
+            # Try to use title to construct slug
+            title = anime.get("title") or anime.get("name")
+            if title:
+                # Simple slug: lowercase, replace spaces with hyphens, remove non-alphanumeric
+                import re as regex
+                anime_slug = regex.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
+        
+        all_episodes = asyncio.run(current_app.ha_scraper.episodes(fetch_id, anime_slug))
     except Exception:
         all_episodes = None
 
@@ -884,14 +928,16 @@ def get_watch_sources():
     ep_number = data.get("episode_number")
     lang = data.get("language", "sub")
     provider = data.get("provider")
+    anime_slug = data.get("anime_slug")  # May be passed from frontend
 
     if not anime_id or ep_number is None:
         return jsonify({"error": "Missing anime_id or episode_number"}), 400
 
     anime_id_clean = str(anime_id).split("?", 1)[0]
 
-    # Resolve anilist_id
+    # Resolve anilist_id and construct anime_slug for anidap discovery
     anilist_id = None
+    anime_info = None
     try:
         anime_info = asyncio.run(current_app.ha_scraper.get_anime_info(anime_id_clean))
         if isinstance(anime_info, dict):
@@ -903,12 +949,24 @@ def get_watch_sources():
     except Exception:
         pass
 
-    # Fetch episodes
+    # Construct anime_slug if not provided
+    if not anime_slug:
+        if not anime_id_clean.isdigit():
+            anime_slug = anime_id_clean
+        elif anime_info and isinstance(anime_info, dict):
+            info = anime_info.get("info", anime_info)
+            if isinstance(info, dict):
+                title = info.get("title") or info.get("name")
+                if title:
+                    import re as regex
+                    anime_slug = regex.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
+
+    # Fetch episodes with anime_slug for anidap provider discovery
     try:
         if anilist_id:
-            all_episodes = asyncio.run(current_app.ha_scraper.episodes(str(anilist_id)))
+            all_episodes = asyncio.run(current_app.ha_scraper.episodes(str(anilist_id), anime_slug))
         else:
-            all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean))
+            all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean, anime_slug))
     except Exception:
         return jsonify({"error": "Failed to fetch episodes"}), 500
 
