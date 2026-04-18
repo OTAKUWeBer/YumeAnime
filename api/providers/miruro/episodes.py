@@ -9,7 +9,14 @@ from .base import MiruroBaseClient
 logger = logging.getLogger(__name__)
 
 # Provider preference order (best quality/reliability first)
-PROVIDER_PRIORITY = ["jet", "kiwi", "zoro", "arc", "bee", "wco"]
+# Standard Miruro providers first, then anidap providers
+PROVIDER_PRIORITY = [
+    # Standard Miruro providers (best quality/reliability)
+    "jet", "kiwi", "zoro", "arc", "bee", "wco",
+    # Anidap providers (HLS-only, discovered on-demand)
+    "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
+    "gogo", "vee", "hop", "dune"
+]
 
 
 class MiruroEpisodesService:
@@ -73,12 +80,20 @@ class MiruroEpisodesService:
             "dub_episode_ids": dub_episode_ids,
         }
 
-    async def get_episodes(self, anilist_id) -> Dict[str, Any]:
+    async def get_episodes(self, anilist_id, anime_slug: Optional[str] = None) -> Dict[str, Any]:
         """
         Fetch episodes for an anime via Miruro /episodes/{anilist_id}
         Picks the best provider and normalizes episode data
+        
+        Args:
+            anilist_id: AniList anime ID
+            anime_slug: Optional anime slug for anidap provider discovery
         """
-        resp = await self.client._get(f"episodes/{anilist_id}")
+        params = {}
+        if anime_slug:
+            params["anime_slug"] = anime_slug
+        
+        resp = await self.client._get(f"episodes/{anilist_id}", params=params if params else None)
         if not resp:
             return {
                 "anime_id": str(anilist_id),
@@ -119,9 +134,9 @@ class MiruroEpisodesService:
         )
         return result
 
-    async def episodes(self, anilist_id) -> Dict[str, Any]:
+    async def episodes(self, anilist_id, anime_slug: Optional[str] = None) -> Dict[str, Any]:
         """Alias that returns just episode list data (standard compat) plus provider maps"""
-        result = await self.get_episodes(anilist_id)
+        result = await self.get_episodes(anilist_id, anime_slug)
         return {
             "episodes": result.get("episodes", []),
             "totalEpisodes": result.get("total_episodes", 0),
