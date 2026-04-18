@@ -322,11 +322,11 @@ window.switchProvider = switchProvider;
 function switchLanguage(lang) {
     window._watchState.language = lang;
 
-    // Update SUB/DUB button active state immediately
-    const btnSub = document.getElementById('btnSub');
-    const btnDub = document.getElementById('btnDub');
-    if (btnSub) btnSub.classList.toggle('active', lang === 'sub');
-    if (btnDub) btnDub.classList.toggle('active', lang === 'dub');
+    // Update active state on language buttons
+    document.querySelectorAll('.lang-btn, .language-btn, [data-lang]').forEach(btn => {
+        const btnLang = btn.dataset.lang || btn.textContent.trim().toLowerCase();
+        btn.classList.toggle('active', btnLang === lang.toLowerCase());
+    });
 
     fetchAndLoadSources();
 }
@@ -425,8 +425,6 @@ function fetchAndLoadSources() {
 }
 
 function updateProviderPills(caps) {
-    const currentProvider = window._watchState?.provider;
-
     ['hlsServerPills', 'embedServerPills'].forEach(id => {
         const section = document.getElementById(id);
         if (!section) return;
@@ -443,11 +441,6 @@ function updateProviderPills(caps) {
             } else {
                 pill.classList.remove('unavailable');
                 pill.style.display = '';
-            }
-
-            // Re-apply active state for the currently selected provider
-            if (currentProvider) {
-                pill.classList.toggle('active', pName === currentProvider);
             }
         });
     });
@@ -508,10 +501,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.cookie = `preferred_server=${provider}; path=/; max-age=31536000`;
         } catch(e) {}
 
-        // Update active state: clear all pills in both sections, then re-mark by provider
-        sections.querySelectorAll('.server-pill').forEach(p => {
-            p.classList.toggle('active', p.dataset.provider === provider);
-        });
+        // Update active states
+        sections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
 
         fetchAndLoadSources();
     });
