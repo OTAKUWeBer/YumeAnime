@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Standard Miruro providers first, then anidap providers
 PROVIDER_PRIORITY = [
     # Standard Miruro providers (best quality/reliability)
-    "jet", "kiwi", "zoro", "arc", "bee", "wco",
+    "jet", "arc", "kiwi", "zoro", "bee", "wco",
     # Anidap providers (HLS-only, discovered on-demand)
     "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
     "gogo", "vee", "hop", "dune"
