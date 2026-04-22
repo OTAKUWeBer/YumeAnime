@@ -39,9 +39,9 @@ class MiruroBaseClient:
         params = params or {}
         headers = {**self.default_headers, **(headers or {})}
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        tries = 3
+        tries = 1
         backoff = 0.5
-        timeout = aiohttp.ClientTimeout(total=12)
+        timeout = aiohttp.ClientTimeout(total=8)
 
         for attempt in range(1, tries + 1):
             try:
