@@ -23,6 +23,7 @@ class Config:
 
     # Cloudflare
     CLOUDFLARE_SECRET = os.getenv("CLOUDFLARE_SECRET")
+    CF_SITE_KEY = os.getenv("CF_SITE_KEY")
 
     # AniList OAuth
     ANILIST_CLIENT_ID = os.getenv("ANILIST_CLIENT_ID")

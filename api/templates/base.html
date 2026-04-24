@@ -520,7 +520,7 @@
                     <div id="login-error" class="text-error text-sm"
                         style="display: none; margin-bottom: var(--space-md);"></div>
                     <!-- Cloudflare Turnstile Widget -->
-                    <div class="cf-turnstile" data-sitekey="0x4AAAAAABu3fPLT_Y5VwGsZ" data-theme="dark"
+                    <div class="cf-turnstile" data-sitekey="{{ config.CF_SITE_KEY }}" data-theme="dark"
                         data-appearance="always" style="margin-bottom: var(--space-md);"></div>
                     <button type="submit" class="btn btn-primary w-full" id="login-btn">
                         <span id="login-btn-text">Sign In</span>
@@ -566,7 +566,7 @@
                     <div id="signup-error" class="text-error text-sm"
                         style="display: none; margin-bottom: var(--space-md);"></div>
                     <!-- Cloudflare Turnstile Widget -->
-                    <div class="cf-turnstile" data-sitekey="0x4AAAAAABu3fPLT_Y5VwGsZ" data-theme="dark"
+                    <div class="cf-turnstile" data-sitekey="{{ config.CF_SITE_KEY }}" data-theme="dark"
                         data-appearance="always" style="margin-bottom: var(--space-md);"></div>
                     <button type="submit" class="btn btn-primary w-full" id="signup-btn">
                         <span id="signup-btn-text">Create Account</span>
