@@ -8,7 +8,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/theme.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/layouts/video.min.css" />
+<link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/layouts/video.min.css" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/cdn/with-layouts/vidstack.js" type="module"></script>
@@ -44,25 +45,35 @@
                     allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
                     style="display: block; border: none;"
                     sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"></iframe>
+                <!-- Fullscreen toggle (sandbox blocks embed's native fullscreen, so we fullscreen the wrapper) -->
+                <button id="embedFullscreenBtn" class="embed-fullscreen-btn" title="Toggle Fullscreen (F)">
+                    <svg class="embed-fs-enter" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <polyline points="9 21 3 21 3 15"></polyline>
+                        <line x1="21" y1="3" x2="14" y2="10"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                    <svg class="embed-fs-exit" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        style="display:none;">
+                        <polyline points="4 14 10 14 10 20"></polyline>
+                        <polyline points="20 10 14 10 14 4"></polyline>
+                        <line x1="14" y1="10" x2="21" y2="3"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                </button>
                 {% endif %}
 
                 {% if video_link %}
                 <!-- Vidstack Player -->
                 <div id="videoContainer"
                     style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000;">
-                    <media-player
-                        id="vidstackPlayer"
-                        src="{{ video_link }}"
-                        type="application/x-mpegurl"
-                        crossorigin
-                        playsinline
-                        title="{{ episode_title or anime_title or 'Episode' }} · Episode {{ Episode }}"
-                        data-video-url="{{ video_link }}"
-                        style="width: 100%; height: 100%;">
+                    <media-player id="vidstackPlayer" src="{{ video_link }}" type="application/x-mpegurl" crossorigin
+                        playsinline title="{{ episode_title or anime_title or 'Episode' }} · Episode {{ Episode }}"
+                        data-video-url="{{ video_link }}" style="width: 100%; height: 100%;">
                         <media-provider></media-provider>
-                        <media-video-layout
-                            color-scheme="dark"
-                            no-seek-button>
+                        <media-video-layout color-scheme="dark" no-seek-button>
                         </media-video-layout>
                     </media-player>
                 </div>
@@ -158,12 +169,14 @@
                                     INTERNAL
                                 </div>
                                 <div class="server-section-pills" id="hlsServerPills">
-                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map) %}
-                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {} %}
+                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
+                                    %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
+                                    %}
                                     <button
                                         class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %} {% if not caps.get('hls', false) %}unavailable{% endif %}"
-                                        data-stream-type="hls" data-provider="{{ p_name }}"
-                                        {% if not caps.get('hls', false) %}disabled style="display: none;"{% endif %}>
+                                        data-stream-type="hls" data-provider="{{ p_name }}" {% if not caps.get('hls',
+                                        false) %}disabled style="display: none;" {% endif %}>
                                         {{ p_name | title }}
                                         <span class="srv-badge badge-hls">HLS</span>
                                     </button>
@@ -182,12 +195,14 @@
                                     EXTERNAL
                                 </div>
                                 <div class="server-section-pills" id="embedServerPills">
-                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map) %}
-                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {} %}
+                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
+                                    %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
+                                    %}
                                     <button
                                         class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %} {% if not caps.get('embed', false) %}unavailable{% endif %}"
-                                        data-stream-type="embed" data-provider="{{ p_name }}"
-                                        {% if not caps.get('embed', false) %}disabled style="display: none;"{% endif %}>
+                                        data-stream-type="embed" data-provider="{{ p_name }}" {% if not
+                                        caps.get('embed', false) %}disabled style="display: none;" {% endif %}>
                                         {{ 'Megaplay' if p_name == 'zoro' else p_name | title }}
                                         <span class="srv-badge badge-embed">EMBED</span>
                                     </button>
@@ -629,7 +644,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const player = document.querySelector('#vidstackPlayer');
         if (!player) return;
-        
+
         player.addEventListener('provider-change', (event) => {
             const provider = event.detail;
             if (provider?.type === 'hls') {
@@ -638,7 +653,7 @@
                     xhrSetup(xhr, url) {
                         // Force GET method for all HLS requests to avoid 405 from proxy
                         const originalOpen = xhr.open.bind(xhr);
-                        xhr.open = function(method, url, async, user, password) {
+                        xhr.open = function (method, url, async, user, password) {
                             return originalOpen.call(this, 'GET', url, async, user, password);
                         };
                     }
@@ -671,7 +686,7 @@
                 const m = Math.floor((sec % 3600) / 60);
                 const s = Math.floor(sec % 60);
                 const ms = Math.floor((sec % 1) * 1000);
-                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
             }
 
             // Build chapter segments that cover the full duration
