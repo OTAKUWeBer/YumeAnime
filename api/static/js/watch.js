@@ -373,12 +373,26 @@ function fetchAndLoadSources() {
                 rebuildChaptersTrack();
             }
 
-            // Update video source
+            // Update video source — respect user's desired stream type
             const hlsSources = data.hls_sources || [];
             const embedSources = data.embed_sources || [];
             const videoContainer = document.getElementById('videoContainer');
+            const desired = window._watchState._desiredStreamType;
 
-            if (hlsSources.length > 0) {
+            // Decide which source type to use:
+            // If user explicitly picked a stream type, prefer it (fall back if unavailable)
+            let useEmbed = false;
+            if (desired === 'embed' && embedSources.length > 0) {
+                useEmbed = true;
+            } else if (desired === 'hls' && hlsSources.length > 0) {
+                useEmbed = false;
+            } else if (hlsSources.length > 0) {
+                useEmbed = false;
+            } else if (embedSources.length > 0) {
+                useEmbed = true;
+            }
+
+            if (!useEmbed && hlsSources.length > 0) {
                 const videoUrl = hlsSources[0].file || hlsSources[0].url;
                 const player = window.player;
 
@@ -398,6 +412,10 @@ function fetchAndLoadSources() {
                     embedFrame.removeAttribute('src');
                     embedFrame.style.display = 'none';
                 }
+
+                // Hide fullscreen button (only for embed)
+                const fsBtn = document.getElementById('embedFullscreenBtn');
+                if (fsBtn) fsBtn.style.display = 'none';
             } else if (embedSources.length > 0) {
                 if (videoContainer) videoContainer.style.display = 'none';
 
@@ -414,9 +432,14 @@ function fetchAndLoadSources() {
                 frame.style.cssText = 'width:100%; height:100%; border:none; display:block; position:absolute; top:0; left:0;';
                 frame.src = embedSources[0].url;
 
-                // Ensure fullscreen button exists for embed mode
+                // Ensure fullscreen button exists and is visible for embed mode
                 ensureEmbedFullscreenBtn();
+                const fsBtn = document.getElementById('embedFullscreenBtn');
+                if (fsBtn) fsBtn.style.display = '';
             }
+
+            // Clear desired stream type after use
+            delete window._watchState._desiredStreamType;
 
             if (serverSections) serverSections.classList.remove('loading');
 
