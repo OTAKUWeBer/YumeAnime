@@ -170,8 +170,8 @@ function rebuildChaptersTrack() {
     try {
         const tracks = player.textTracks.toArray();
         tracks.filter(t => t.kind === 'chapters' && t.label === 'Sections')
-              .forEach(t => player.textTracks.remove(t));
-    } catch(e) {}
+            .forEach(t => player.textTracks.remove(t));
+    } catch (e) { }
 
     // VTT timestamp formatter
     function fmtVTT(sec) {
@@ -179,7 +179,7 @@ function rebuildChaptersTrack() {
         const m = Math.floor((sec % 3600) / 60);
         const s = Math.floor(sec % 60);
         const ms = Math.floor((sec % 1) * 1000);
-        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
     }
 
     // Build chapter segments spanning the full duration
@@ -249,7 +249,7 @@ function setupResumeAndTracking(player) {
 
         const key = `yumeResume_${pathMatch[1]}_ep${pathMatch[2]}`;
         let savedTime = 0;
-        try { savedTime = parseFloat(localStorage.getItem(key)) || 0; } catch(e) {}
+        try { savedTime = parseFloat(localStorage.getItem(key)) || 0; } catch (e) { }
 
         if (savedTime > 10 && player.currentTime < 5) {
             console.log('[AutoResume] Resuming from:', savedTime);
@@ -263,7 +263,7 @@ function setupResumeAndTracking(player) {
             const pathMatch = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
             if (!pathMatch) return;
             const key = `yumeResume_${pathMatch[1]}_ep${pathMatch[2]}`;
-            try { localStorage.setItem(key, String(cur)); } catch(e) {}
+            try { localStorage.setItem(key, String(cur)); } catch (e) { }
         }
     });
 
@@ -292,7 +292,7 @@ function markEpisodeWatched() {
             action: 'episodes',
             watched_episodes: epNum
         })
-    }).then(() => console.log('[Watchlist] Marked watched')).catch(() => {});
+    }).then(() => console.log('[Watchlist] Marked watched')).catch(() => { });
 }
 
 // ── URL Episode Number Fix ──────────────────────────────────────
@@ -348,80 +348,83 @@ function fetchAndLoadSources() {
             provider: state.provider
         })
     })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            console.error('[AJAX] Error:', data.error);
-            return;
-        }
-
-        console.log('[AJAX] Got sources:', data);
-
-        // Update intro/outro
-        if (data.intro) window.WATCH_CONFIG.intro = data.intro;
-        if (data.outro) window.WATCH_CONFIG.outro = data.outro;
-
-        // Re-create skip buttons with new data
-        const oldIntro = document.getElementById('skipIntroBtn');
-        const oldOutro = document.getElementById('skipOutroBtn');
-        if (oldIntro) oldIntro.remove();
-        if (oldOutro) oldOutro.remove();
-
-        if (window.player) {
-            setupSkipButtons();
-            // Rebuild chapters track with new intro/outro data
-            rebuildChaptersTrack();
-        }
-
-        // Update video source
-        const hlsSources = data.hls_sources || [];
-        const embedSources = data.embed_sources || [];
-        const videoContainer = document.getElementById('videoContainer');
-
-        if (hlsSources.length > 0) {
-            const videoUrl = hlsSources[0].file || hlsSources[0].url;
-            const player = window.player;
-
-            if (player && videoUrl) {
-                // Vidstack web component: set src with type for HLS
-                player.src = {
-                    src: videoUrl,
-                    type: 'application/x-mpegurl'
-                };
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                console.error('[AJAX] Error:', data.error);
+                return;
             }
 
-            if (videoContainer) videoContainer.style.display = '';
+            console.log('[AJAX] Got sources:', data);
 
-            // Hide embed
-            const embedFrame = document.getElementById('embedPlayer');
-            if (embedFrame) {
-                embedFrame.removeAttribute('src');
-                embedFrame.style.display = 'none';
+            // Update intro/outro
+            if (data.intro) window.WATCH_CONFIG.intro = data.intro;
+            if (data.outro) window.WATCH_CONFIG.outro = data.outro;
+
+            // Re-create skip buttons with new data
+            const oldIntro = document.getElementById('skipIntroBtn');
+            const oldOutro = document.getElementById('skipOutroBtn');
+            if (oldIntro) oldIntro.remove();
+            if (oldOutro) oldOutro.remove();
+
+            if (window.player) {
+                setupSkipButtons();
+                // Rebuild chapters track with new intro/outro data
+                rebuildChaptersTrack();
             }
-        } else if (embedSources.length > 0) {
-            if (videoContainer) videoContainer.style.display = 'none';
 
-            let frame = document.getElementById('embedPlayer');
-            if (!frame) {
-                frame = document.createElement('iframe');
-                frame.id = 'embedPlayer';
-                frame.className = 'embed-player-frame';
-                frame.allowFullscreen = true;
-                frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-                frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
-                document.getElementById('video-wrapper').insertBefore(frame, document.getElementById('videoContainer'));
+            // Update video source
+            const hlsSources = data.hls_sources || [];
+            const embedSources = data.embed_sources || [];
+            const videoContainer = document.getElementById('videoContainer');
+
+            if (hlsSources.length > 0) {
+                const videoUrl = hlsSources[0].file || hlsSources[0].url;
+                const player = window.player;
+
+                if (player && videoUrl) {
+                    // Vidstack web component: set src with type for HLS
+                    player.src = {
+                        src: videoUrl,
+                        type: 'application/x-mpegurl'
+                    };
+                }
+
+                if (videoContainer) videoContainer.style.display = '';
+
+                // Hide embed
+                const embedFrame = document.getElementById('embedPlayer');
+                if (embedFrame) {
+                    embedFrame.removeAttribute('src');
+                    embedFrame.style.display = 'none';
+                }
+            } else if (embedSources.length > 0) {
+                if (videoContainer) videoContainer.style.display = 'none';
+
+                let frame = document.getElementById('embedPlayer');
+                if (!frame) {
+                    frame = document.createElement('iframe');
+                    frame.id = 'embedPlayer';
+                    frame.className = 'embed-player-frame';
+                    frame.allowFullscreen = true;
+                    frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+                    frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
+                    document.getElementById('video-wrapper').insertBefore(frame, document.getElementById('videoContainer'));
+                }
+                frame.style.cssText = 'width:100%; height:100%; border:none; display:block; position:absolute; top:0; left:0;';
+                frame.src = embedSources[0].url;
+
+                // Ensure fullscreen button exists for embed mode
+                ensureEmbedFullscreenBtn();
             }
-            frame.style.cssText = 'width:100%; height:100%; border:none; display:block; position:absolute; top:0; left:0;';
-            frame.src = embedSources[0].url;
-        }
 
-        if (serverSections) serverSections.classList.remove('loading');
+            if (serverSections) serverSections.classList.remove('loading');
 
-        // Update provider capabilities
-        if (data.provider_capabilities) {
-            updateProviderPills(data.provider_capabilities);
-        }
-    });
+            // Update provider capabilities
+            if (data.provider_capabilities) {
+                updateProviderPills(data.provider_capabilities);
+            }
+        });
 }
 
 function updateProviderPills(caps) {
@@ -461,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         setView(localStorage.getItem('episodeView') || 'grid');
-    } catch(e) {}
+    } catch (e) { }
 
     viewList?.addEventListener('click', () => setView('list'));
     viewGrid?.addEventListener('click', () => setView('grid'));
@@ -473,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const term = e.target.value.toLowerCase();
             list.querySelectorAll('.episode-sidebar-item').forEach(item => {
                 const match = item.dataset.number.includes(term) ||
-                             item.textContent.toLowerCase().includes(term);
+                    item.textContent.toLowerCase().includes(term);
                 item.style.display = match ? '' : 'none';
             });
         });
@@ -499,12 +502,111 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             localStorage.setItem('yumePreferredServer', provider);
             document.cookie = `preferred_server=${provider}; path=/; max-age=31536000`;
-        } catch(e) {}
+        } catch (e) { }
 
         // Update active states
         sections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
 
         fetchAndLoadSources();
+    });
+});
+
+// ── Embed Fullscreen (wrapper-based, bypasses iframe sandbox) ──
+function ensureEmbedFullscreenBtn() {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper || document.getElementById('embedFullscreenBtn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'embedFullscreenBtn';
+    btn.className = 'embed-fullscreen-btn';
+    btn.title = 'Toggle Fullscreen (F)';
+    btn.innerHTML = `
+        <svg class="embed-fs-enter" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+        <svg class="embed-fs-exit" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <polyline points="4 14 10 14 10 20"></polyline>
+            <polyline points="20 10 14 10 14 4"></polyline>
+            <line x1="14" y1="10" x2="21" y2="3"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>`;
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleEmbedFullscreen();
+    });
+    wrapper.appendChild(btn);
+}
+window.ensureEmbedFullscreenBtn = ensureEmbedFullscreenBtn;
+
+function isEmbedVisible() {
+    const frame = document.getElementById('embedPlayer');
+    return frame && frame.style.display !== 'none' && frame.offsetParent !== null;
+}
+
+function toggleEmbedFullscreen() {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) return;
+
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
+
+    if (fsEl) {
+        // Currently in fullscreen — exit
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => { });
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
+    } else {
+        // Not in fullscreen — enter
+        if (wrapper.requestFullscreen) {
+            wrapper.requestFullscreen().catch(() => { });
+        } else if (wrapper.webkitRequestFullscreen) {
+            wrapper.webkitRequestFullscreen();
+        }
+    }
+}
+
+// Swap fullscreen icons on state change
+document.addEventListener('fullscreenchange', updateEmbedFsIcons);
+document.addEventListener('webkitfullscreenchange', updateEmbedFsIcons);
+
+function updateEmbedFsIcons() {
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
+    const isFs = !!fsEl;
+    // Use class-based selectors (works for both template and JS-created buttons)
+    document.querySelectorAll('.embed-fs-enter').forEach(el => el.style.display = isFs ? 'none' : '');
+    document.querySelectorAll('.embed-fs-exit').forEach(el => el.style.display = isFs ? '' : 'none');
+}
+
+// "F" key shortcut + double-click for embed fullscreen
+document.addEventListener('DOMContentLoaded', () => {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) return;
+
+    // Double-click on wrapper to toggle fullscreen
+    wrapper.addEventListener('dblclick', (e) => {
+        if (e.target === wrapper || e.target.closest('.embed-fullscreen-btn')) {
+            toggleEmbedFullscreen();
+        }
+    });
+
+    // "F" key to toggle fullscreen when embed is visible
+    document.addEventListener('keydown', (e) => {
+        // Don't trigger if typing in an input
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (document.activeElement?.isContentEditable) return;
+
+        if (e.key === 'f' || e.key === 'F') {
+            if (isEmbedVisible()) {
+                e.preventDefault();
+                toggleEmbedFullscreen();
+            }
+        }
     });
 });
