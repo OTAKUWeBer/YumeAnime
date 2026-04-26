@@ -8,156 +8,340 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/manga.css') }}">
 <style>
-    /* Reader-specific overrides */
-    .main-content { padding-top: 0; }
-    .footer { display: none; }
+    /* ── Immersive Reader ── */
+    .main-content { padding-top: 0 !important; }
+    .footer, .navbar { transition: transform 0.3s ease, opacity 0.3s ease; }
+    body.reader-immersive .navbar { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+    body.reader-immersive .footer { display: none; }
 
-    /* Reading progress bar */
-    .reader-progress-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 3px;
+    /* Progress bar */
+    .reader-progress {
+        position: fixed; top: 0; left: 0; height: 3px;
         background: linear-gradient(90deg, var(--primary), #ec4899);
-        z-index: 9999;
-        transition: width 0.15s ease-out;
+        z-index: 10000; transition: width 0.1s linear;
         border-radius: 0 2px 2px 0;
     }
+
+    /* Floating header — auto-hides on scroll */
+    .reader-bar {
+        position: fixed; top: 0; left: 0; right: 0;
+        z-index: 9998;
+        background: rgba(10, 10, 14, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 10px 16px;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .reader-bar.hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+
+    .reader-bar-title {
+        flex: 1; min-width: 0;
+        font-size: 0.85rem; font-weight: 600;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        color: var(--text-primary);
+    }
+    .reader-bar-title a { color: var(--text-muted); text-decoration: none; }
+    .reader-bar-title a:hover { color: var(--primary-light); }
+
+    .reader-bar-nav { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .reader-bar-nav .nav-pill {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 6px 12px; border-radius: 8px;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+        color: var(--text-secondary); font-size: 0.75rem; font-weight: 600;
+        text-decoration: none; transition: all 0.2s ease; cursor: pointer;
+    }
+    .reader-bar-nav .nav-pill:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+    .reader-bar-nav .nav-pill:disabled, .reader-bar-nav .nav-pill[disabled] {
+        opacity: 0.3; pointer-events: none;
+    }
+
+    /* Page counter pill (floating) */
+    .reader-page-counter {
+        position: fixed; bottom: 20px; right: 20px;
+        z-index: 9997;
+        background: rgba(10, 10, 14, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 0.75rem; font-weight: 700;
+        color: var(--text-secondary);
+        letter-spacing: 0.02em;
+        transition: opacity 0.3s ease;
+        user-select: none;
+    }
+    .reader-page-counter span { color: var(--text-primary); }
+
+    /* Image container */
+    .reader-images {
+        display: flex; flex-direction: column; align-items: center;
+        background: #000; min-height: 100vh;
+        padding: 0;
+    }
+    .reader-images img {
+        display: block; width: 100%; max-width: 900px;
+        height: auto;
+        object-fit: contain;
+    }
+    .reader-images img[data-src] {
+        min-height: 300px;
+        background: #111;
+    }
+
+    /* Bottom nav */
+    .reader-end-nav {
+        display: flex; gap: 12px; justify-content: center; align-items: center;
+        flex-wrap: wrap;
+        padding: 32px 16px 48px;
+        background: var(--surface-1);
+    }
+    .reader-end-nav .nav-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 10px 20px; border-radius: 10px;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+        color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;
+        text-decoration: none; transition: all 0.2s ease;
+    }
+    .reader-end-nav .nav-pill:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Mobile full-screen tweaks */
+    @media (max-width: 768px) {
+        .reader-bar { padding: 8px 12px; }
+        .reader-bar-title { font-size: 0.78rem; }
+        .reader-page-counter { bottom: 14px; right: 14px; padding: 5px 12px; font-size: 0.7rem; }
+        .reader-images img { max-width: 100%; }
+        .reader-end-nav { padding: 24px 12px 40px; }
+    }
+
+    /* Tap zones for showing/hiding header */
+    .reader-images { cursor: pointer; }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Reading Progress Bar -->
-<div class="reader-progress-bar" id="reader-progress" style="width: 0%;"></div>
+<!-- Progress bar -->
+<div class="reader-progress" id="reader-progress" style="width:0%"></div>
 
-<div class="manga-reader">
-    <!-- Reader Header -->
-    <div class="manga-reader-header">
-        <div class="manga-reader-title">
-            {% if manga %}
-            <a href="/manga/{{ source }}/{{ manga_id }}">{{ manga.title }}</a>
-            <span style="color: var(--text-muted);">›</span>
-            {% endif %}
-            <span>{{ chapter_title }}</span>
-        </div>
-
-        <div class="manga-reader-nav">
-            {% if prev_chapter %}
-            <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ prev_chapter.id }}"
-               class="nav-btn" id="reader-prev" title="Previous Chapter (←)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Prev
-            </a>
-            {% else %}
-            <button class="nav-btn" disabled id="reader-prev">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Prev
-            </button>
-            {% endif %}
-
-            {% if manga %}
-            <a href="/manga/{{ source }}/{{ manga_id }}#chapters" class="nav-btn" title="Chapter List">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="8" y1="6" x2="21" y2="6"/>
-                    <line x1="8" y1="12" x2="21" y2="12"/>
-                    <line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/>
-                    <line x1="3" y1="12" x2="3.01" y2="12"/>
-                    <line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
-            </a>
-            {% endif %}
-
-            {% if next_chapter %}
-            <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ next_chapter.id }}"
-               class="nav-btn" id="reader-next" title="Next Chapter (→)">
-                Next
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="9 18 15 12 9 6"/>
-                </svg>
-            </a>
-            {% else %}
-            <button class="nav-btn" disabled id="reader-next">
-                Next
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="9 18 15 12 9 6"/>
-                </svg>
-            </button>
-            {% endif %}
-        </div>
+<!-- Floating header bar -->
+<div class="reader-bar" id="reader-bar">
+    <div class="reader-bar-title">
+        {% if manga %}<a href="/manga/{{ source }}/{{ manga_id }}">{{ manga.title }}</a> › {% endif %}
+        {{ chapter_title }}
     </div>
-
-    <!-- Chapter Images -->
-    {% if images %}
-    <div class="manga-reader-images">
-        {% for img_url in images %}
-        <img data-src="/api/manga/image-proxy?url={{ img_url | urlencode }}&referer={{ referer | urlencode }}"
-             alt="Page {{ loop.index }}"
-             loading="lazy"
-             style="min-height: 200px; background: var(--surface-2);"
-             onerror="this.style.minHeight='60px'; this.alt='Failed to load page {{ loop.index }}';">
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="manga-empty" style="margin-top: 60px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-        </svg>
-        <h3>No images available</h3>
-        <p>This chapter may not have images yet, or the source might be temporarily unavailable.</p>
-        {% if manga %}
-        <a href="/manga/{{ source }}/{{ manga_id }}" class="btn btn-primary" style="margin-top: 16px;">
-            Back to Manga
-        </a>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Bottom Navigation -->
-    {% if images %}
-    <div class="manga-reader-bottom-nav">
+    <div class="reader-bar-nav">
         {% if prev_chapter %}
-        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ prev_chapter.id }}" class="nav-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
-            Previous Chapter
+        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ prev_chapter.id }}" class="nav-pill" title="Previous (←)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg>
         </a>
+        {% else %}
+        <button class="nav-pill" disabled>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         {% endif %}
 
         {% if manga %}
-        <a href="/manga/{{ source }}/{{ manga_id }}#chapters" class="nav-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="8" y1="6" x2="21" y2="6"/>
-                <line x1="8" y1="12" x2="21" y2="12"/>
-                <line x1="8" y1="18" x2="21" y2="18"/>
-                <line x1="3" y1="6" x2="3.01" y2="6"/>
-                <line x1="3" y1="12" x2="3.01" y2="12"/>
-                <line x1="3" y1="18" x2="3.01" y2="18"/>
+        <a href="/manga/{{ source }}/{{ manga_id }}#chapters" class="nav-pill" title="Chapters">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                <circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>
             </svg>
-            All Chapters
         </a>
         {% endif %}
 
         {% if next_chapter %}
-        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ next_chapter.id }}" class="nav-btn">
-            Next Chapter
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="9 18 15 12 9 6"/>
-            </svg>
+        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ next_chapter.id }}" class="nav-pill" title="Next (→)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
+        {% else %}
+        <button class="nav-pill" disabled>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
         {% endif %}
     </div>
+</div>
+
+<!-- Page counter -->
+{% if images %}
+<div class="reader-page-counter" id="reader-page-counter">
+    <span id="current-page">1</span> / {{ images|length }}
+</div>
+{% endif %}
+
+<!-- Chapter images -->
+{% if images %}
+<div class="reader-images" id="reader-images">
+    {% for img_url in images %}
+    <img data-src="/api/manga/image-proxy?url={{ img_url | urlencode }}&referer={{ referer | urlencode }}"
+         alt="Page {{ loop.index }}"
+         data-page="{{ loop.index }}"
+         loading="lazy"
+         onerror="this.style.minHeight='60px'; this.alt='Failed to load page {{ loop.index }}';">
+    {% endfor %}
+</div>
+{% else %}
+<div class="manga-empty" style="margin-top: 100px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;margin-bottom:16px;opacity:0.4;">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+    </svg>
+    <h3>No images available</h3>
+    <p>This chapter may not have images yet, or the source might be temporarily unavailable.</p>
+    {% if manga %}
+    <a href="/manga/{{ source }}/{{ manga_id }}" class="btn btn-primary" style="margin-top: 16px;">Back to Manga</a>
     {% endif %}
 </div>
+{% endif %}
+
+<!-- Bottom navigation -->
+{% if images %}
+<div class="reader-end-nav">
+    {% if prev_chapter %}
+    <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ prev_chapter.id }}" class="nav-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Previous Chapter
+    </a>
+    {% endif %}
+    {% if manga %}
+    <a href="/manga/{{ source }}/{{ manga_id }}#chapters" class="nav-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        </svg>
+        All Chapters
+    </a>
+    {% endif %}
+    {% if next_chapter %}
+    <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ next_chapter.id }}" class="nav-pill">
+        Next Chapter
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/manga.js') }}"></script>
+<script>
+(function() {
+    const bar = document.getElementById('reader-bar');
+    const progress = document.getElementById('reader-progress');
+    const counter = document.getElementById('reader-page-counter');
+    const currentPageEl = document.getElementById('current-page');
+    const imagesContainer = document.getElementById('reader-images');
+    const allPages = imagesContainer ? imagesContainer.querySelectorAll('img[data-page]') : [];
+    const totalPages = allPages.length;
+    let lastScrollY = 0;
+    let barVisible = true;
+    let scrollTicking = false;
+
+    // Lazy-load images with IntersectionObserver
+    if (allPages.length) {
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting && e.target.dataset.src) {
+                    e.target.src = e.target.dataset.src;
+                    delete e.target.dataset.src;
+                    io.unobserve(e.target);
+                }
+            });
+        }, { rootMargin: '600px' });
+        allPages.forEach(img => io.observe(img));
+    }
+
+    // Page tracking observer
+    if (totalPages && currentPageEl) {
+        const pageIO = new IntersectionObserver((entries) => {
+            let maxPage = 1;
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    const p = parseInt(e.target.dataset.page);
+                    if (p > maxPage) maxPage = p;
+                }
+            });
+            // Find the topmost visible page
+            for (let i = 0; i < allPages.length; i++) {
+                const rect = allPages[i].getBoundingClientRect();
+                if (rect.bottom > 100) {
+                    currentPageEl.textContent = allPages[i].dataset.page;
+                    break;
+                }
+            }
+        }, { threshold: 0.1 });
+        allPages.forEach(img => pageIO.observe(img));
+    }
+
+    // Scroll handler: auto-hide bar + update progress + immersive mode
+    function onScroll() {
+        const scrollY = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const pct = docHeight > 0 ? Math.min((scrollY / docHeight) * 100, 100) : 0;
+
+        // Progress bar
+        if (progress) progress.style.width = pct + '%';
+
+        // Update current page on scroll
+        if (currentPageEl && allPages.length) {
+            for (let i = 0; i < allPages.length; i++) {
+                const rect = allPages[i].getBoundingClientRect();
+                if (rect.bottom > 80) {
+                    currentPageEl.textContent = allPages[i].dataset.page;
+                    break;
+                }
+            }
+        }
+
+        // Auto-hide header after scrolling 60px
+        if (scrollY > 60) {
+            document.body.classList.add('reader-immersive');
+            if (scrollY > lastScrollY && barVisible) {
+                bar.classList.add('hidden');
+                barVisible = false;
+            } else if (scrollY < lastScrollY - 30 && !barVisible) {
+                bar.classList.remove('hidden');
+                barVisible = true;
+            }
+        } else {
+            document.body.classList.remove('reader-immersive');
+            bar.classList.remove('hidden');
+            barVisible = true;
+        }
+
+        lastScrollY = scrollY;
+        scrollTicking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+        if (!scrollTicking) {
+            requestAnimationFrame(onScroll);
+            scrollTicking = true;
+        }
+    }, { passive: true });
+
+    // Tap image area to toggle bar
+    if (imagesContainer) {
+        imagesContainer.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') return;
+            bar.classList.toggle('hidden');
+            barVisible = !bar.classList.contains('hidden');
+        });
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            const prev = document.querySelector('#reader-bar a[title*="Previous"]');
+            if (prev) prev.click();
+        } else if (e.key === 'ArrowRight') {
+            const next = document.querySelector('#reader-bar a[title*="Next"]');
+            if (next) next.click();
+        }
+    });
+})();
+</script>
 {% endblock %}
