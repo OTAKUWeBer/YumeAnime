@@ -69,6 +69,15 @@ def create_app():
         lambda s: _RE_STRIP_ANIME_ID.sub('', str(s)) if s is not None else ''
     )
 
+    def _manga_cover_proxy(url, referer=''):
+        """Proxy manga cover images through the image proxy to bypass referer restrictions."""
+        if not url:
+            return ''
+        from urllib.parse import quote
+        return f'/api/manga/image-proxy?url={quote(url, safe="")}&referer={quote(referer, safe="")}'
+
+    app.jinja_env.filters['manga_cover'] = _manga_cover_proxy
+
     app.ha_scraper = UnifiedScraper()
     limiter.init_app(app)
 

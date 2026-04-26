@@ -9,8 +9,8 @@ home_routes_bp = Blueprint('home_routes', __name__)
 
 @home_routes_bp.route('/', methods=["GET"])
 def index():
-    """Redirect to home page"""
-    return redirect("/home")
+    """Landing page with Watch Anime / Read Manga"""
+    return render_template("landing.html", info="Welcome")
 
 
 @home_routes_bp.route("/home", methods=["GET"])

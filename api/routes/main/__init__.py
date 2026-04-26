@@ -9,6 +9,7 @@ from .search_routes import search_routes_bp
 from .anime_routes import anime_routes_bp
 from .watch_routes import watch_routes_bp
 from .catalog_routes import catalog_routes_bp
+from .manga_routes import manga_routes_bp
 
 main_bp = Blueprint('main', __name__)
 
@@ -17,6 +18,7 @@ main_bp.register_blueprint(search_routes_bp)
 main_bp.register_blueprint(anime_routes_bp)
 main_bp.register_blueprint(watch_routes_bp)
 main_bp.register_blueprint(catalog_routes_bp)
+main_bp.register_blueprint(manga_routes_bp)
 
 __all__ = [
     'main_bp',
@@ -24,5 +26,6 @@ __all__ = [
     'search_routes_bp',
     'anime_routes_bp',
     'watch_routes_bp',
-    'catalog_routes_bp'
+    'catalog_routes_bp',
+    'manga_routes_bp'
 ]
