@@ -10,10 +10,9 @@ load_dotenv(override=False)
 
 from api.core.config import Config
 from api.providers import UnifiedScraper
-from api.routes.main import main_bp
-from api.routes.auth import auth_bp
-from api.routes.watchlist import watchlist_bp
-from api.routes.api import api_bp
+from api.routes.anime import anime_routes_bp, watch_routes_bp, catalog_routes_bp, anilist_api_bp
+from api.routes.manga import manga_routes_bp, manga_api_bp
+from api.routes.shared import auth_bp, watchlist_bp, api_bp, home_routes_bp, search_routes_bp
 from api.core.extensions import limiter
 
 _RE_STRIP_ANIME_ID = re.compile(r'-\d+$')
@@ -81,7 +80,13 @@ def create_app():
     app.ha_scraper = UnifiedScraper()
     limiter.init_app(app)
 
-    app.register_blueprint(main_bp)
+    # Register blueprints
+    app.register_blueprint(home_routes_bp)
+    app.register_blueprint(search_routes_bp)
+    app.register_blueprint(anime_routes_bp)
+    app.register_blueprint(watch_routes_bp)
+    app.register_blueprint(catalog_routes_bp)
+    app.register_blueprint(manga_routes_bp)
     app.register_blueprint(auth_bp,      url_prefix='/auth')
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp,       url_prefix='/api')
@@ -92,7 +97,7 @@ def create_app():
             return
         if request.path.startswith('/static/'):
             return
-        return render_template('announcement.html'), 503
+        return render_template('shared/announcement.html'), 503
 
     @app.before_request
     def block_obvious_bots():
@@ -124,12 +129,12 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(e):
         app.logger.warning(f"404: {request.url}")
-        return render_template('404.html', error_message="Page not found"), 404
+        return render_template('shared/404.html', error_message="Page not found"), 404
 
     @app.errorhandler(500)
     def internal_server_error(e):
         app.logger.error(f"500: {e}")
-        return render_template('404.html', error_message="Internal server error"), 500
+        return render_template('shared/404.html', error_message="Internal server error"), 500
 
     @app.errorhandler(429)
     def ratelimit_handler(e):

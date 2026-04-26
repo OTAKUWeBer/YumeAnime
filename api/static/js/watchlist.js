@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p class="text-muted" style="margin-bottom: var(--space-lg);">
                                     ${searchQuery ? 'No results match your search.' : 'Start adding anime to track your progress!'}
                                 </p>
-                                <a href="{{ url_for('main.home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
+                                <a href="{{ url_for('home_routes.home') }}" class="btn btn-primary">Browse Anime</a>
                             </div>
                         `;
                     }

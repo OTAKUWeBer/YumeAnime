@@ -108,7 +108,7 @@ async def anime_info(anime_id: str):
 
     current_app.logger.debug("Rendering anime page for id=%s, anime keys=%s", anime.get("id"), list(anime.keys()))
     return render_template(
-        "info.html",
+        "anime/info.html",
         anime=anime,
         suggestions=suggestions,
         next_episode_schedule=next_episode_schedule,

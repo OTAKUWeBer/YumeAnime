@@ -10,7 +10,7 @@ home_routes_bp = Blueprint('home_routes', __name__)
 @home_routes_bp.route('/', methods=["GET"])
 def index():
     """Landing page with Watch Anime / Read Manga"""
-    return render_template("landing.html", info="Welcome")
+    return render_template("shared/landing.html", info="Welcome")
 
 
 @home_routes_bp.route("/home", methods=["GET"])
@@ -38,7 +38,7 @@ def home():
 
         movies = (movie_data or {}).get("animes", [])
         current_app.logger.debug("home counts: %s", data.get("counts"))
-        return render_template("index.html", suggestions=data, movies=movies, info=info)
+        return render_template("shared/index.html", suggestions=data, movies=movies, info=info)
     except Exception as e:
         current_app.logger.exception("Unhandled error in /home")
         empty = {
@@ -50,7 +50,7 @@ def home():
             ]
         }
         return render_template(
-            "index.html",
+            "shared/index.html",
             suggestions={"success": False, "data": empty, "counts": {}},
             movies=[],
             error=f"Error fetching home page data: {e}",

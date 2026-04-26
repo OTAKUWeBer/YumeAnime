@@ -4,15 +4,15 @@ import secrets
 import requests
 import logging
 
-from ..utils.helpers import verify_turnstile, get_anilist_user_info
-from ..core.caching import clear_user_cache
-from ..models.user import (
+from ...utils.helpers import verify_turnstile, get_anilist_user_info
+from ...core.caching import clear_user_cache
+from ...models.user import (
     get_user, user_exists, email_exists, create_user, get_user_by_id,
     get_user_by_anilist_id, create_anilist_user, update_anilist_user,
     link_anilist_to_existing_user, unlink_anilist_from_user, delete_anilist_data,
     connect_anilist_to_user
 )
-from ..core.config import Config
+from ...core.config import Config
 
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def link_anilist_account():
     # Check if user is already logged in
     if 'username' not in session or '_id' not in session:
         flash('Please log in first to link your AniList account.', 'warning')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
     
     # Generate a random state parameter for security
     state = secrets.token_urlsafe(32)
@@ -58,7 +58,7 @@ def anilist_callback():
     if error:
         current_app.logger.error(f"AniList OAuth error: {error}")
         flash('Login failed. Please try again.', 'error')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
 
     # Check if we're linking to existing account (only if user is logged in)
     is_linking = 'username' in session and '_id' in session
@@ -70,14 +70,14 @@ def anilist_callback():
     if not code:
         current_app.logger.error("No authorization code received from AniList")
         flash('Login cancelled or failed.', 'error')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
     
     try:
         # Validate configuration
         if not Config.ANILIST_CLIENT_ID or not Config.ANILIST_CLIENT_SECRET:
             current_app.logger.error("AniList OAuth credentials not configured")
             flash('AniList integration is not properly configured. Please contact the administrator.', 'error')
-            return redirect(url_for('main.home_routes.home'))
+            return redirect(url_for('home_routes.home'))
 
         # Exchange code for access token
         token_data = {
@@ -94,14 +94,14 @@ def anilist_callback():
         if token_response.status_code != 200:
             current_app.logger.error(f"Token exchange failed with status {token_response.status_code}: {token_response.text}")
             flash('Login failed. Unable to get access token.', 'error')
-            return redirect(url_for('main.home_routes.home'))
+            return redirect(url_for('home_routes.home'))
         
         token_info = token_response.json()
         access_token = token_info.get('access_token')
         
         if not access_token:
             flash('Login failed. No access token received.', 'error')
-            return redirect(url_for('main.home_routes.home'))
+            return redirect(url_for('home_routes.home'))
         
         # Get user info from AniList
         current_app.logger.info("Fetching user info from AniList")
@@ -110,7 +110,7 @@ def anilist_callback():
         if not user_info:
             current_app.logger.error("Failed to get user info from AniList")
             flash('Login failed. Unable to get user information.', 'error')
-            return redirect(url_for('main.home_routes.home'))
+            return redirect(url_for('home_routes.home'))
 
         current_app.logger.info(f"AniList user info retrieved: {user_info.get('name')} (ID: {user_info.get('id')})")
         
@@ -125,10 +125,10 @@ def anilist_callback():
             if current_user and current_user.get('anilist_id'):
                 if current_user.get('anilist_id') == user_info['id']:
                     flash('This AniList account is already linked to your account.', 'info')
-                    return redirect(url_for('main.catalog_routes.settings'))
+                    return redirect(url_for('catalog_routes.settings'))
                 else:
                     flash('You already have a different AniList account connected. Please disconnect it first.', 'error')
-                    return redirect(url_for('main.catalog_routes.settings'))
+                    return redirect(url_for('catalog_routes.settings'))
             
             # Check if this AniList account is linked to another user
             if existing_anilist_user:
@@ -136,7 +136,7 @@ def anilist_callback():
                     flash('This AniList account is already linked to your account.', 'info')
                 else:
                     flash('This AniList account is already linked to another user account.', 'error')
-                return redirect(url_for('main.catalog_routes.settings'))
+                return redirect(url_for('catalog_routes.settings'))
             
             # Connect the AniList account
             current_app.logger.info(f"Connecting AniList account {user_info['id']} to user {current_user_id}")
@@ -154,7 +154,7 @@ def anilist_callback():
                 current_app.logger.error(f"Failed to connect AniList account to user {current_user_id}")
                 flash('Failed to connect AniList account. Please try again.', 'error')
 
-            return redirect(url_for('main.catalog_routes.settings'))
+            return redirect(url_for('catalog_routes.settings'))
         
         else:
             # NORMAL LOGIN/SIGNUP MODE (user is not logged in)
@@ -183,12 +183,12 @@ def anilist_callback():
             current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")
             flash(f'Welcome, {username}!', 'success')
 
-            return redirect(url_for('main.home_routes.home'))
+            return redirect(url_for('home_routes.home'))
         
     except Exception as e:
         current_app.logger.error(f"AniList OAuth error: {e}")
         flash('Login failed. Please try again.', 'error')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
 
 @auth_bp.route('/anilist/unlink', methods=['POST'])
 def unlink_anilist_account():
@@ -237,14 +237,14 @@ def connect_anilist_account():
     # Check if user is already logged in
     if 'username' not in session or '_id' not in session:
         flash('Please log in first to connect your AniList account.', 'warning')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
     
     # Check if already connected
     user_id = session.get('_id')
     user = get_user_by_id(user_id)
     if user and user.get('anilist_id'):
         flash('Your AniList account is already connected.', 'info')
-        return redirect(url_for('main.catalog_routes.settings'))
+        return redirect(url_for('catalog_routes.settings'))
     
     # Generate a random state parameter for security
     state = secrets.token_urlsafe(32)
@@ -311,14 +311,14 @@ def connect_mal_account():
     """Redirect user to MAL OAuth authorization page (with PKCE)."""
     if 'username' not in session or '_id' not in session:
         flash('Please log in first to connect your MyAnimeList account.', 'warning')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
 
     # Check if already connected
     user_id = session.get('_id')
     user = get_user_by_id(user_id)
     if user and user.get('mal_id'):
         flash('Your MyAnimeList account is already connected.', 'info')
-        return redirect(url_for('main.catalog_routes.settings'))
+        return redirect(url_for('catalog_routes.settings'))
 
     from ..utils.mal_service import get_mal_auth_url, _generate_code_verifier
 
@@ -341,21 +341,21 @@ def mal_callback():
     if error:
         logger.error(f"MAL OAuth error: {error}")
         flash('MyAnimeList login failed. Please try again.', 'error')
-        return redirect(url_for('main.catalog_routes.settings'))
+        return redirect(url_for('catalog_routes.settings'))
 
     if not code:
         flash('No authorization code received from MyAnimeList.', 'error')
-        return redirect(url_for('main.catalog_routes.settings'))
+        return redirect(url_for('catalog_routes.settings'))
 
     # Must be logged in
     if 'username' not in session or '_id' not in session:
         flash('Please log in first.', 'warning')
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
 
     code_verifier = session.pop('mal_code_verifier', None)
     if not code_verifier:
         flash('Session expired. Please try connecting again.', 'error')
-        return redirect(url_for('main.catalog_routes.settings'))
+        return redirect(url_for('catalog_routes.settings'))
 
     from ..utils.mal_service import exchange_mal_code, get_mal_user_info
     from ..models.user import connect_mal_to_user
@@ -365,13 +365,13 @@ def mal_callback():
         tokens = exchange_mal_code(code, code_verifier)
         if not tokens:
             flash('Failed to get access token from MyAnimeList.', 'error')
-            return redirect(url_for('main.catalog_routes.settings'))
+            return redirect(url_for('catalog_routes.settings'))
 
         # Fetch user info
         mal_user = get_mal_user_info(tokens['access_token'])
         if not mal_user:
             flash('Failed to get user info from MyAnimeList.', 'error')
-            return redirect(url_for('main.catalog_routes.settings'))
+            return redirect(url_for('catalog_routes.settings'))
 
         # Store in DB
         user_id = session['_id']
@@ -391,7 +391,7 @@ def mal_callback():
         logger.error(f"MAL callback error: {e}")
         flash('An error occurred connecting MyAnimeList.', 'error')
 
-    return redirect(url_for('main.catalog_routes.settings'))
+    return redirect(url_for('catalog_routes.settings'))
 
 
 @auth_bp.route('/mal/disconnect', methods=['POST'])

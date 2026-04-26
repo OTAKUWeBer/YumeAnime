@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "shared/base.html" %}
 
 {% block title %}Profile & Watchlist - {{ username }} - YumeAnime{% endblock %}
 {% block meta_description %}Manage your anime watchlist and view your profile{% endblock %}
@@ -29,7 +29,7 @@
 
         <!-- Action Buttons -->
         <div style="position: absolute; bottom: 24px; right: 24px; z-index: 2; display: flex; gap: 12px;">
-            <a href="{{ url_for('main.catalog_routes.settings') }}" class="btn btn-secondary"
+            <a href="{{ url_for('catalog_routes.settings') }}" class="btn btn-secondary"
                 style="background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border-color: rgba(255,255,255,0.1);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"></circle>

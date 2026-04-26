@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "shared/base.html" %}
 
 {% block title %}{{ manga.title }} - Read Manga | YumeAnime{% endblock %}
 {% block meta_description %}Read {{ manga.title }} manga online. {{ manga.description[:150] if manga.description else 'Browse chapters and read for free.' }}{% endblock %}
