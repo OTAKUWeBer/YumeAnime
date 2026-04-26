@@ -28,6 +28,9 @@ class SearchManager {
         // Click outside handler state
         this.isClickOutsideEnabled = true;
 
+        // Detect if we're on a manga page (disable anime suggestions)
+        this.isMangaPage = window.location.pathname.startsWith('/manga');
+
         // Initialize all event listeners
         this.initializeEventListeners();
     }
@@ -95,9 +98,15 @@ class SearchManager {
                 this.showSearchError('Please enter a search query.', 'desktop');
                 return false;
             }
-            this.elements.desktop.suggestionBox.classList.add('hidden');
-            const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
-            window.location.href = `/search/${searchPath}`;
+            this.elements.desktop.suggestionBox?.classList.add('hidden');
+            if (this.isMangaPage) {
+                const form = this.elements.desktop.form;
+                const source = form.querySelector('input[name="source"]')?.value || 'manganato';
+                window.location.href = `/manga/search?q=${encodeURIComponent(value)}&source=${source}`;
+            } else {
+                const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
+                window.location.href = `/search/${searchPath}`;
+            }
         });
 
         // Mobile form handler
@@ -109,8 +118,14 @@ class SearchManager {
                 return false;
             }
             this.elements.mobile.suggestionBox?.classList.add('hidden');
-            const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
-            window.location.href = `/search/${searchPath}`;
+            if (this.isMangaPage) {
+                const form = this.elements.mobile.form;
+                const source = form.querySelector('input[name="source"]')?.value || 'manganato';
+                window.location.href = `/manga/search?q=${encodeURIComponent(value)}&source=${source}`;
+            } else {
+                const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
+                window.location.href = `/search/${searchPath}`;
+            }
         });
 
         // Dropdown form handler
@@ -182,7 +197,8 @@ class SearchManager {
             return;
         }
 
-        // Debounce the API call
+        // Debounce the API call (skip suggestions on manga pages)
+        if (this.isMangaPage) return;
         this.debounceTimeouts[searchType] = setTimeout(() => {
             this.fetchSuggestions(query, searchType);
         }, 200);

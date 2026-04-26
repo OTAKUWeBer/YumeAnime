@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}YumeAnime - Watch Anime & Read Manga{% endblock %}
+{% block meta_description %}Your gateway to anime and manga. Stream anime episodes and read manga chapters for free.{% endblock %}
+
+{% block extra_css %}
+<style>
+    .landing-hero {
+        min-height: calc(100vh - 70px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-xl) var(--space-lg);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .landing-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 50% at 20% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 50% at 80% 80%, rgba(14, 165, 233, 0.08) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .landing-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        max-width: 800px;
+        width: 100%;
+    }
+
+    .landing-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        margin: 0 auto var(--space-lg);
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+        animation: logoFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes logoFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+
+    .landing-title {
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin-bottom: var(--space-md);
+        background: linear-gradient(135deg, #fff 0%, #c7d2fe 50%, #818cf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .landing-subtitle {
+        font-size: clamp(1rem, 2.5vw, 1.25rem);
+        color: var(--text-muted);
+        margin-bottom: var(--space-2xl);
+        max-width: 550px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+    }
+
+    .landing-cards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-lg);
+        max-width: 640px;
+        margin: 0 auto var(--space-2xl);
+    }
+
+    .landing-card {
+        position: relative;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 20px;
+        padding: var(--space-xl) var(--space-lg);
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-md);
+    }
+
+    .landing-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 20px;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .landing-card--anime::before {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.08));
+    }
+
+    .landing-card--manga::before {
+        background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(244, 114, 182, 0.08));
+    }
+
+    .landing-card:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .landing-card:hover::before {
+        opacity: 1;
+    }
+
+    .landing-card-icon {
+        position: relative;
+        z-index: 1;
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease;
+    }
+
+    .landing-card:hover .landing-card-icon {
+        transform: scale(1.1);
+    }
+
+    .landing-card--anime .landing-card-icon {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15));
+        color: #a78bfa;
+    }
+
+    .landing-card--manga .landing-card-icon {
+        background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(244, 114, 182, 0.15));
+        color: #f472b6;
+    }
+
+    .landing-card-title {
+        position: relative;
+        z-index: 1;
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    .landing-card-desc {
+        position: relative;
+        z-index: 1;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    .landing-card-arrow {
+        position: relative;
+        z-index: 1;
+        margin-top: auto;
+        padding-top: var(--space-sm);
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+
+    .landing-card:hover .landing-card-arrow {
+        transform: translateX(4px);
+    }
+
+    .landing-card--anime:hover .landing-card-arrow { color: #a78bfa; }
+    .landing-card--manga:hover .landing-card-arrow { color: #f472b6; }
+
+    /* Stats strip */
+    .landing-stats {
+        display: flex;
+        gap: var(--space-xl);
+        justify-content: center;
+        flex-wrap: wrap;
+        opacity: 0.6;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .landing-stats span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    @media (max-width: 640px) {
+        .landing-cards {
+            grid-template-columns: 1fr;
+            max-width: 360px;
+        }
+
+        .landing-card {
+            padding: var(--space-lg);
+        }
+
+        .landing-stats {
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="landing-hero">
+    <div class="landing-content">
+        <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}"
+             alt="YumeAnime" class="landing-logo">
+
+        <h1 class="landing-title">Your Anime & Manga Hub</h1>
+        <p class="landing-subtitle">
+            Stream the latest anime episodes or dive into thousands of manga chapters — all in one place, completely free.
+        </p>
+
+        <div class="landing-cards">
+            <!-- Watch Anime Card -->
+            <a href="/home" class="landing-card landing-card--anime" id="landing-anime">
+                <div class="landing-card-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                </div>
+                <h2 class="landing-card-title">Watch Anime</h2>
+                <p class="landing-card-desc">Stream episodes from a vast library of anime series and movies.</p>
+                <div class="landing-card-arrow">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                    </svg>
+                </div>
+            </a>
+
+            <!-- Read Manga Card -->
+            <a href="/manga" class="landing-card landing-card--manga" id="landing-manga">
+                <div class="landing-card-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        <path d="M8 7h8" /><path d="M8 11h6" />
+                    </svg>
+                </div>
+                <h2 class="landing-card-title">Read Manga</h2>
+                <p class="landing-card-desc">Browse and read manga from multiple sources with a built-in reader.</p>
+                <div class="landing-card-arrow">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                    </svg>
+                </div>
+            </a>
+        </div>
+
+        <div class="landing-stats">
+            <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Anime Streaming
+            </span>
+            <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                Multi-Source Manga
+            </span>
+            <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" /><path d="m8 12 3 3 5-5" />
+                </svg>
+                Always Free
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
