@@ -20,7 +20,7 @@ def genre(genre_name):
         data = asyncio.run(current_app.ha_scraper.genre(genre_name))
         animes = data.get("animes", [])
         if not animes:
-            return render_template('404.html', error_message=f"No animes found for genre: {genre_name}"), 404
+            return render_template('shared/404.html', error_message=f"No animes found for genre: {genre_name}"), 404
         
         genre_data = {
             'genreName': f"{genre_name.title()} Anime",
@@ -60,11 +60,11 @@ def genre(genre_name):
             }
             genre_data['animes'].append(mapped_anime)
         
-        return render_template('genre.html', **genre_data)
+        return render_template('anime/genre.html', **genre_data)
     
     except Exception as e:
         current_app.logger.exception(f"Error fetching genre {genre_name}")
-        return render_template('404.html', error_message=f"Error fetching genre: {e}"), 500
+        return render_template('shared/404.html', error_message=f"Error fetching genre: {e}"), 500
 
 
 
@@ -77,7 +77,7 @@ def category(category_name):
         data = asyncio.run(current_app.ha_scraper.category(category_name_escaped))
         animes = data.get("animes", [])
         if not animes:
-            return render_template('404.html', error_message=f"No animes found for category: {category_name}"), 404
+            return render_template('shared/404.html', error_message=f"No animes found for category: {category_name}"), 404
         
         category_data = {
             'genreName': f"{category_name.replace('-', ' ').title()} Anime",
@@ -117,11 +117,11 @@ def category(category_name):
             }
             category_data['animes'].append(mapped_anime)
         
-        return render_template('genre.html', **category_data)
+        return render_template('anime/genre.html', **category_data)
     
     except Exception as e:
         current_app.logger.exception(f"Error fetching category {category_name}")
-        return render_template('404.html', error_message=f"Error fetching category: {e}"), 500
+        return render_template('shared/404.html', error_message=f"Error fetching category: {e}"), 500
 
 
 @catalog_routes_bp.route('/profile', methods=['GET'])
@@ -163,7 +163,7 @@ def settings():
             'mal_username': user.get('mal_username'),
         }
         
-        return render_template('settings.html', user=user_data)
+        return render_template('shared/settings.html', user=user_data)
         
     except Exception as e:
         current_app.logger.error(f"Error loading settings for user {username}: {e}")

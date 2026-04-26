@@ -591,10 +591,10 @@ def watch(anime_id, ep_number):
         raw_eps = (all_episodes or {}).get("episodes", [])
         if not raw_eps:
             return render_template(
-                "404.html", error_message="No episodes found for this anime."
+                "shared/404.html", error_message="No episodes found for this anime."
             ), 404
         return render_template(
-            "404.html", error_message=f"Episode {ep_number} not found."
+            "shared/404.html", error_message=f"Episode {ep_number} not found."
         ), 404
 
     current_item = resolved["episode_item"]
@@ -864,7 +864,7 @@ def watch(anime_id, ep_number):
     # ── Render ──
     try:
         return render_template(
-            "watch.html",
+            "anime/watch.html",
             back_to_ep=anime_id_clean,
             anime_id=anime_id_clean,
             video_link=video_data["video_link"],
@@ -904,7 +904,7 @@ def watch(anime_id, ep_number):
     except Exception as e:
         print("watch error:", e)
         return render_template(
-            "404.html", error_message="An error occurred while fetching the episode."
+            "shared/404.html", error_message="An error occurred while fetching the episode."
         )
 
 

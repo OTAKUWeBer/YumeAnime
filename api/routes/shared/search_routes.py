@@ -17,7 +17,7 @@ def search(query=None):
         search_query = request.args.get('q', '').strip()
         
     if not search_query:
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
     
     try:
         results = asyncio.run(current_app.ha_scraper.search(search_query))
@@ -43,13 +43,13 @@ def search(query=None):
             mapped.append(anime)
 
         if not mapped:
-            return render_template('results.html', query=search_query, animes=[])
+            return render_template('anime/results.html', query=search_query, animes=[])
         
-        return render_template('results.html', query=search_query, animes=mapped)
+        return render_template('anime/results.html', query=search_query, animes=mapped)
     
     except Exception as e:
         print("Search error:", e)
-        return redirect(url_for('main.home_routes.home'))
+        return redirect(url_for('home_routes.home'))
 
 
 @search_routes_bp.route('/search/suggestions', methods=['GET'])

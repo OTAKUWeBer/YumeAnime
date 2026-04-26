@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "shared/base.html" %}
 
 {% block title %}{{ anime.name or anime.title or 'Anime' }} - YumeAnime{% endblock %}
 {% block meta_description %}Watch {{ anime.name or anime.title }} online. {{ (anime.description or anime.synopsis or
