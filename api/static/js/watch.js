@@ -633,3 +633,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// ── Next Episode Countdown ───────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const countdownEl = document.getElementById('countdown-text');
+    const container = document.getElementById('watch-countdown');
+    if (!countdownEl || !container) return;
+
+    const timestamp = parseInt(container.getAttribute('data-timestamp'), 10);
+    if (!timestamp) {
+        countdownEl.textContent = 'Unknown';
+        return;
+    }
+
+    function updateTimer() {
+        const now = Date.now();
+        const jsTimestamp = timestamp > 9999999999 ? timestamp : timestamp * 1000;
+        const diff = jsTimestamp - now;
+
+        if (diff <= 0) {
+            countdownEl.textContent = "Aired";
+            return;
+        }
+
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+
+        let timeStr = '';
+        if (d > 0) timeStr += `${d}d `;
+        if (h > 0 || d > 0) timeStr += `${h}h `;
+        timeStr += `${m}m ${s}s`;
+
+        countdownEl.textContent = timeStr;
+    }
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+});
