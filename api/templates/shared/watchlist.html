@@ -1,0 +1,260 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Profile & Watchlist - {{ username }} - YumeAnime{% endblock %}
+{% block meta_description %}Manage your anime watchlist and view your profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/watchlist.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1300px;">
+
+    <!-- Profile Hero -->
+    <div class="profile-hero">
+        <div class="profile-hero-bg" {% if user.banner_image %}style="background: url('{{ user.banner_image }}') center/cover;"{% endif %}></div>
+        <div class="profile-hero-content">
+            {% if user.avatar %}
+            <img src="{{ user.avatar }}" alt="{{ username }}" class="hero-avatar">
+            {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ username }}&size=200&background=1a1a1a&color=fff&bold=true"
+                alt="{{ username }}" class="hero-avatar">
+            {% endif %}
+
+            <div class="hero-info">
+                <h1 class="hero-username">{{ username }}</h1>
+                <div class="hero-email">{{ user.email or 'No email set' }}</div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="position: absolute; bottom: 24px; right: 24px; z-index: 2; display: flex; gap: 12px;">
+            <a href="{{ url_for('catalog_routes.settings') }}" class="btn btn-secondary"
+                style="background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border-color: rgba(255,255,255,0.1);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+            </a>
+
+
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="watchlist-layout">
+
+        <!-- Left Sidebar -->
+        <aside class="watchlist-sidebar">
+            <!-- Stats Box -->
+            <div class="sidebar-stats">
+                <div class="sidebar-stat-item">
+                    <span class="sidebar-stat-value" id="stat-total">-</span>
+                    <span class="sidebar-stat-label">Total Anime</span>
+                </div>
+                <div class="sidebar-stat-item">
+                    <span class="sidebar-stat-value" id="stat-days">{{ (user.anilist_stats.minutes_watched / 1440) |
+                        round(1) if user.anilist_stats and user.anilist_stats.minutes_watched else '0.0' }}</span>
+                    <span class="sidebar-stat-label">Days</span>
+                </div>
+                <div class="sidebar-stat-item">
+                    <span class="sidebar-stat-value" id="stat-watching">-</span>
+                    <span class="sidebar-stat-label">Watching</span>
+                </div>
+            </div>
+
+            <div class="sidebar-nav-container">
+                <input type="text" class="sidebar-search" id="local-search-input" placeholder="Search my list...">
+
+                <div class="sidebar-filters" id="watchlist-tabs">
+                    <button class="filter-btn active" data-status="">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                            </svg>
+                        </span> All
+                    </button>
+                    <button class="filter-btn" data-status="watching">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                        </span> Watching
+                    </button>
+                    <button class="filter-btn" data-status="plan_to_watch">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </span> Planning
+                    </button>
+                    <button class="filter-btn" data-status="completed">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </span> Completed
+                    </button>
+                    <button class="filter-btn" data-status="on_hold">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="6" y="4" width="4" height="16" rx="1" />
+                                <rect x="14" y="4" width="4" height="16" rx="1" />
+                            </svg>
+                        </span> On Hold
+                    </button>
+                    <button class="filter-btn" data-status="dropped">
+                        <span class="filter-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </span> Dropped
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Watchlist View -->
+        <section class="watchlist-main">
+            <!-- Headers -->
+            <div class="list-header">
+                <div></div>
+                <div style="padding-left: 20px;">POSTER &amp; TITLE</div>
+                <div style="text-align: center;">SCORE</div>
+                <div style="text-align: center;">PROGRESS</div>
+            </div>
+
+            <!-- Content Area -->
+            <div id="watchlist-content">
+                <div class="watchlist-loading">
+                    <div class="loading-spinner" style="margin: 0 auto;"></div>
+                    <p class="text-muted" style="margin-top: var(--space-md);">Loading watchlist...</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<!-- ===== Watchlist Editor Modal ===== -->
+<div class="wl-modal-overlay" id="edit-modal-overlay"> <!-- Keep ID to match watchlist JS -->
+    <div class="wl-modal">
+        <div class="wl-modal-body">
+
+            <div class="edit-modal-header" style="margin-bottom: var(--space-lg);">
+                <h2 class="wl-modal-title" id="edit-modal-title" style="margin-bottom: 4px;">Anime Title</h2>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;"
+                    class="wl-modal-subtitle">
+                    <a href="#" id="edit-modal-link"
+                        style="color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; text-decoration: none; transition: color 0.2s;"
+                        onmouseover="this.style.color='var(--text-primary)'"
+                        onmouseout="this.style.color='var(--text-muted)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="2" y1="12" x2="22" y2="12" />
+                            <path
+                                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                        Anime Page
+                    </a>
+                    <a href="#" id="edit-modal-watch"
+                        style="color: #8dc149; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 600; transition: opacity 0.2s;"
+                        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Continue Watching
+                    </a>
+                </div>
+            </div>
+
+            <div class="wl-form-grid">
+                <!-- Status -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Status</label>
+                    <select class="wl-input" id="edit-status">
+                        <option value="CURRENT">Watching</option>
+                        <option value="PLANNING">Plan to Watch</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="DROPPED">Dropped</option>
+                        <option value="PAUSED">On Hold</option>
+                    </select>
+                </div>
+
+                <!-- Score -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Score (0–10)</label>
+                    <input type="number" class="wl-input" id="edit-score" min="0" max="10" step="1" placeholder="—">
+                </div>
+
+                <!-- Episode Progress -->
+                <div class="wl-form-group full">
+                    <label class="wl-label" id="edit-episode-label">Episode Progress</label>
+                    <div class="wl-progress-row">
+                        <button type="button" class="wl-step-btn" onclick="adjustEditProgress(-1)">−</button>
+                        <input type="number" class="wl-input" id="edit-progress" min="0" style="text-align:center;">
+                        <button type="button" class="wl-step-btn" onclick="adjustEditProgress(1)">+</button>
+                    </div>
+                </div>
+
+                <!-- Start Date -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Start Date</label>
+                    <input type="date" class="wl-input" id="edit-start-date">
+                </div>
+
+                <!-- End Date -->
+                <div class="wl-form-group">
+                    <label class="wl-label">End Date</label>
+                    <input type="date" class="wl-input" id="edit-end-date">
+                </div>
+
+                <!-- Rewatches -->
+                <div class="wl-form-group">
+                    <label class="wl-label">Total Rewatches</label>
+                    <input type="number" class="wl-input" id="edit-rewatches" min="0" placeholder="0">
+                </div>
+
+                <!-- Notes -->
+                <div class="wl-form-group full">
+                    <label class="wl-label">Notes</label>
+                    <textarea class="wl-input" id="edit-notes" rows="3" placeholder="Add your notes here..."></textarea>
+                </div>
+            </div>
+
+            <div class="wl-actions">
+                <button class="wl-btn-delete" id="edit-delete-btn" aria-label="Delete Entry" onclick="deleteEntry()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                </button>
+                <div style="display:flex; gap:10px; margin-left:auto;">
+                    <button class="wl-btn-cancel" onclick="closeEditModal()">Cancel</button>
+                    <!-- Make sure btn-save class is retained so JS matches btn.textContent="Saving..." properly -->
+                    <button class="wl-btn-save btn-save" onclick="saveEntry()">Save Changes</button>
+                </div>
+            </div>
+
+        </div>
+        <img src="" alt="Anime Cover" class="wl-modal-poster" id="edit-modal-poster">
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/watchlist.js') }}"></script>
+{% endblock %}

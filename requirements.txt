@@ -1,0 +1,12 @@
+Flask[async]
+aiohttp
+beautifulsoup4
+bcrypt
+pymongo
+cryptography
+python-dotenv
+requests
+httpx
+python-snappy
+curl-cffi
+Flask-Limiter

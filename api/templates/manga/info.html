@@ -1,0 +1,168 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ manga.title }} - Read Manga | YumeAnime{% endblock %}
+{% block meta_description %}Read {{ manga.title }} manga online. {{ manga.description[:150] if manga.description else 'Browse chapters and read for free.' }}{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/manga.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- Breadcrumb -->
+    <div style="margin-bottom: var(--space-lg); display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+        <a href="/manga?source={{ source }}" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Manga
+        </a>
+        <span style="color: var(--text-muted);">›</span>
+        <span style="color: var(--text-muted);">{{ source_name }}</span>
+        <span style="color: var(--text-muted);">›</span>
+        <span style="color: var(--text-primary); font-weight: 500;">{{ manga.title }}</span>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="manga-detail-hero">
+        <div class="manga-detail-cover">
+            <img src="{{ manga.cover|manga_cover(manga_referer) }}"
+                 alt="{{ manga.title }}"
+                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIwIiBoZWlnaHQ9IjMzMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjIwIiBoZWlnaHQ9IjMzMCIgZmlsbD0iIzFhMWEyZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE2Ij5ObyBDb3ZlcjwvdGV4dD48L3N2Zz4='">
+        </div>
+        <div class="manga-detail-info">
+            <h1 class="manga-detail-title">{{ manga.title }}</h1>
+
+            <div class="manga-detail-meta">
+                {% if manga.authors and manga.authors != 'Unknown' %}
+                <span class="meta-tag">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ manga.authors }}
+                </span>
+                {% endif %}
+
+                {% if manga.status and manga.status != 'Unknown' %}
+                <span class="meta-tag">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    {{ manga.status }}
+                </span>
+                {% endif %}
+
+                {% if manga.views %}
+                <span class="meta-tag">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    {{ manga.views }} views
+                </span>
+                {% endif %}
+
+                {% if manga.type %}
+                <span class="meta-tag">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="18" rx="2" ry="2"/>
+                    </svg>
+                    {{ manga.type }}
+                </span>
+                {% endif %}
+
+                <span class="meta-tag" style="background: rgba(168, 85, 247, 0.15); color: var(--primary); border-color: rgba(168, 85, 247, 0.2);">
+                    {{ source_name }}
+                </span>
+            </div>
+
+            {% if manga.genres %}
+            <div class="manga-detail-genres">
+                {% for genre in manga.genres %}
+                <span class="genre-tag">{{ genre }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if manga.description %}
+            <div class="manga-detail-description">
+                {{ manga.description }}
+            </div>
+            {% endif %}
+
+            {% if manga.chapters %}
+            <div style="margin-top: var(--space-lg);">
+                <a href="#chapters" class="btn btn-primary btn-lg" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Start Reading
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Chapters Section -->
+    {% if manga.chapters %}
+    <div class="manga-chapters-section" id="chapters">
+        <div class="manga-chapters-header">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                Chapters
+                <span class="chapter-count">{{ manga.chapters|length }} chapters</span>
+            </h2>
+        </div>
+
+        <div class="manga-chapter-list">
+            {% for chapter in manga.chapters %}
+            <a href="/manga/{{ source }}/{{ manga.slug or manga.id }}/read/{{ chapter.id }}"
+               class="manga-chapter-item">
+                <span class="chapter-title">
+                    {{ chapter.title or ('Chapter ' ~ chapter.number if chapter.number else chapter.id) }}
+                </span>
+                {% if chapter.updated %}
+                <span class="chapter-date">{{ chapter.updated }}</span>
+                {% endif %}
+                {% if chapter.pageCount %}
+                <span class="chapter-date">{{ chapter.pageCount }} pages</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="manga-empty" style="margin-top: var(--space-xl);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        <h3>No chapters available</h3>
+        <p>Chapters may not be available for this manga yet.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/manga.js') }}"></script>
+{% endblock %}

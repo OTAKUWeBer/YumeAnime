@@ -1,0 +1,964 @@
+{% extends "shared/base.html" %}
+
+{% block title %}YumeAnime - Watch Anime & Read Manga{% endblock %}
+{% block meta_description %}Your gateway to anime and manga. Stream anime episodes and read manga chapters for free.{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+
+/* ══════════════════════════════════════════
+   LANDING — SCOPED RESET & BASE
+══════════════════════════════════════════ */
+.lp *, .lp *::before, .lp *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.lp {
+    font-family: 'DM Sans', sans-serif;
+    background: #080808;
+    color: #fff;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+.lp a { color: inherit; text-decoration: none; }
+
+/* ══════════════════════════════════════════
+   SIGN-IN BAR (top)
+══════════════════════════════════════════ */
+.lp-topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 56px;
+    background: rgba(8, 8, 8, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.lp-topbar-brand {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.45rem;
+    letter-spacing: 0.08em;
+    background: linear-gradient(120deg, #fff 40%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.lp-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lp-topbar-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.07);
+    transition: color .2s, border-color .2s, background .2s;
+}
+.lp-topbar-github:hover {
+    color: #fff;
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+}
+
+.lp-topbar-signin {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: #6d28d9;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background .2s, transform .15s, box-shadow .2s;
+    box-shadow: 0 0 0 0 rgba(109,40,217,0);
+    text-decoration: none;
+}
+.lp-topbar-signin:hover {
+    background: #7c3aed;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(109,40,217,0.45);
+}
+
+/* ══════════════════════════════════════════
+   AMBIENT GLOWS
+══════════════════════════════════════════ */
+.lp-glow {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(110px);
+    pointer-events: none;
+    z-index: 0;
+}
+.lp-glow--l {
+    width: 580px; height: 580px;
+    background: radial-gradient(circle, rgba(88,28,235,.35) 0%, transparent 70%);
+    top: -120px; left: -180px;
+    animation: glowDrift 10s ease-in-out infinite alternate;
+}
+.lp-glow--r {
+    width: 480px; height: 480px;
+    background: radial-gradient(circle, rgba(124,58,237,.22) 0%, transparent 70%);
+    bottom: -60px; right: -140px;
+    animation: glowDrift 13s ease-in-out infinite alternate-reverse;
+}
+@keyframes glowDrift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(25px,18px) scale(1.06); }
+}
+
+/* ══════════════════════════════════════════
+   HERO
+══════════════════════════════════════════ */
+.lp-hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 24px 80px;
+    text-align: center;
+}
+
+/* Badges */
+.lp-badges {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 34px;
+    animation: fuUp .55s ease both;
+}
+.lp-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .7rem; font-weight: 600;
+    padding: 5px 13px; border-radius: 999px;
+    letter-spacing: .07em; text-transform: uppercase;
+    text-decoration: none;
+    transition: opacity .2s;
+}
+.lp-badge:hover { opacity: .75; }
+.lp-badge--oss {
+    border: 1px solid rgba(34,197,94,.28);
+    background: rgba(34,197,94,.06);
+    color: #4ade80;
+}
+.lp-badge--free {
+    border: 1px solid rgba(139,92,246,.32);
+    background: rgba(139,92,246,.07);
+    color: #a78bfa;
+}
+.lp-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    animation: dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+/* Wordmark */
+.lp-wordmark {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 16vw, 10.5rem);
+    font-weight: 400;
+    letter-spacing: .05em;
+    line-height: .9;
+    margin-bottom: 26px;
+    background: linear-gradient(155deg, #ffffff 30%, rgba(167,139,250,.75) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fuUp .6s .08s ease both;
+    user-select: none;
+}
+.lp-wordmark em {
+    font-style: normal;
+    -webkit-text-fill-color: #7c3aed;
+}
+
+/* Sub */
+.lp-sub {
+    font-size: clamp(.9rem, 2vw, 1.05rem);
+    color: rgba(255,255,255,.5);
+    max-width: 490px;
+    line-height: 1.75;
+    margin-bottom: 40px;
+    animation: fuUp .6s .16s ease both;
+}
+.lp-sub strong { color: rgba(255,255,255,.92); font-weight: 600; }
+
+/* Search */
+.lp-search-wrap {
+    width: 100%; max-width: 540px;
+    position: relative; margin-bottom: 18px;
+    animation: fuUp .6s .22s ease both;
+}
+.lp-search {
+    width: 100%;
+    padding: 14px 56px 14px 22px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 999px;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    backdrop-filter: blur(10px);
+}
+.lp-search::placeholder { color: rgba(255,255,255,.28); }
+.lp-search:focus {
+    border-color: rgba(124,58,237,.55);
+    background: rgba(255,255,255,.07);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.14), 0 0 30px rgba(124,58,237,.08);
+}
+.lp-search-btn {
+    position: absolute; right: 6px; top: 50%;
+    transform: translateY(-50%);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #6d28d9; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    transition: background .2s, transform .15s;
+}
+.lp-search-btn:hover {
+    background: #7c3aed;
+    transform: translateY(-50%) scale(1.08);
+}
+
+/* Tags */
+.lp-tags {
+    display: flex;
+    gap: 7px; flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 42px;
+    animation: fuUp .6s .27s ease both;
+}
+.lp-tags-label {
+    font-size: .68rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: rgba(255,255,255,.28);
+    width: 100%; text-align: center; margin-bottom: 4px;
+}
+.lp-tag {
+    padding: 6px 16px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.6);
+    font-size: .82rem; font-weight: 500;
+    cursor: pointer; transition: all .18s;
+    white-space: nowrap;
+}
+.lp-tag:hover {
+    border-color: rgba(124,58,237,.5);
+    background: rgba(124,58,237,.1);
+    color: #c4b5fd;
+    transform: translateY(-1px);
+}
+
+/* CTA buttons */
+.lp-ctas {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    justify-content: center; margin-bottom: 60px;
+    animation: fuUp .6s .32s ease both;
+}
+.lp-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 26px; border-radius: 999px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .92rem; font-weight: 700;
+    text-decoration: none; white-space: nowrap;
+    transition: transform .2s, box-shadow .2s, background .2s;
+    cursor: pointer; border: none;
+}
+.lp-btn:hover { transform: translateY(-2px); }
+.lp-btn--anime {
+    background: #6d28d9; color: #fff;
+    box-shadow: 0 4px 20px rgba(109,40,217,.4);
+}
+.lp-btn--anime:hover {
+    background: #7c3aed;
+    box-shadow: 0 8px 30px rgba(109,40,217,.55);
+}
+.lp-btn--manga {
+    background: rgba(255,255,255,.07); color: #fff;
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(8px);
+}
+.lp-btn--manga:hover {
+    background: rgba(255,255,255,.12);
+    border-color: rgba(255,255,255,.2);
+}
+
+/* Stats */
+.lp-stats {
+    display: flex; gap: 44px; flex-wrap: wrap;
+    justify-content: center;
+    animation: fuUp .6s .38s ease both;
+}
+.lp-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lp-stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.1rem; letter-spacing: .05em; line-height: 1;
+}
+.lp-stat-lbl {
+    font-size: .67rem; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(255,255,255,.32);
+}
+
+/* ══════════════════════════════════════════
+   SECTION SHARED
+══════════════════════════════════════════ */
+.lp-section {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 1080px;
+    margin: 0 auto;
+    padding: 100px 28px;
+}
+
+.lp-section-eyebrow {
+    display: inline-block;
+    font-size: .7rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: #a78bfa;
+    margin-bottom: 16px;
+    background: rgba(139,92,246,.1);
+    border: 1px solid rgba(139,92,246,.2);
+    padding: 4px 12px; border-radius: 999px;
+}
+
+.lp-section-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800; letter-spacing: -.02em;
+    line-height: 1.15;
+    margin-bottom: 14px;
+    color: #fff;
+}
+
+.lp-section-desc {
+    font-size: 1rem;
+    color: rgba(255,255,255,.42);
+    max-width: 520px; line-height: 1.7;
+    margin-bottom: 56px;
+}
+
+.lp-rule {
+    position: relative; z-index: 1;
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
+}
+
+/* ══════════════════════════════════════════
+   FEATURES GRID
+══════════════════════════════════════════ */
+.lp-features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+}
+
+.lp-feat {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px;
+    padding: 28px 24px;
+    transition: border-color .25s, transform .25s, background .25s;
+}
+.lp-feat:hover {
+    border-color: rgba(139,92,246,.3);
+    background: rgba(139,92,246,.05);
+    transform: translateY(-4px);
+}
+.lp-feat-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: rgba(109,40,217,.15);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px; color: #a78bfa;
+}
+.lp-feat-title {
+    font-size: 1rem; font-weight: 700;
+    margin-bottom: 8px; color: #fff;
+}
+.lp-feat-desc {
+    font-size: .875rem;
+    color: rgba(255,255,255,.4);
+    line-height: 1.65;
+}
+
+/* ══════════════════════════════════════════
+   QUALITY GRID (2x2)
+══════════════════════════════════════════ */
+.lp-quality-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: rgba(255,255,255,.06);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.06);
+}
+.lp-quality-cell {
+    background: rgba(255,255,255,.025);
+    padding: 32px 28px;
+    transition: background .2s;
+}
+.lp-quality-cell:hover { background: rgba(139,92,246,.06); }
+.lp-quality-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.6rem; letter-spacing: .05em;
+    color: #7c3aed; margin-bottom: 6px;
+}
+.lp-quality-title {
+    font-size: .95rem; font-weight: 700;
+    margin-bottom: 8px; color: #fff;
+}
+.lp-quality-desc {
+    font-size: .85rem;
+    color: rgba(255,255,255,.38);
+    line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════
+   FAQ
+══════════════════════════════════════════ */
+.lp-faq-list { display: flex; flex-direction: column; gap: 6px; }
+.lp-faq-item {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color .2s;
+}
+.lp-faq-item:hover { border-color: rgba(139,92,246,.25); }
+.lp-faq-q {
+    width: 100%; text-align: left;
+    padding: 20px 22px; background: none;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem; font-weight: 600;
+    transition: color .2s;
+}
+.lp-faq-q:hover { color: #c4b5fd; }
+.lp-faq-chevron {
+    flex-shrink: 0; color: rgba(255,255,255,.35);
+    transition: transform .3s ease, color .2s;
+}
+.lp-faq-item.open .lp-faq-chevron { transform: rotate(180deg); color: #a78bfa; }
+.lp-faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height .35s ease, padding .3s ease;
+    font-size: .9rem;
+    color: rgba(255,255,255,.45);
+    line-height: 1.7;
+    padding: 0 22px;
+}
+.lp-faq-item.open .lp-faq-a {
+    max-height: 300px;
+    padding: 0 22px 20px;
+}
+
+/* ══════════════════════════════════════════
+   CTA BAND
+══════════════════════════════════════════ */
+.lp-ctaband {
+    position: relative; z-index: 1;
+    padding: 100px 28px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,.05);
+    border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.lp-ctaband-inner { max-width: 640px; margin: 0 auto; }
+.lp-ctaband-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800; letter-spacing: -.03em;
+    line-height: 1.15; margin-bottom: 16px;
+}
+.lp-ctaband-sub {
+    font-size: 1rem;
+    color: rgba(255,255,255,.42);
+    line-height: 1.7; margin-bottom: 40px;
+}
+.lp-ctaband-btns {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    justify-content: center; margin-bottom: 36px;
+}
+.lp-ctaband-legal {
+    font-size: .78rem;
+    color: rgba(255,255,255,.2);
+    max-width: 440px; margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════ */
+.lp-footer {
+    position: relative; z-index: 1;
+    padding: 60px 28px 40px;
+    background: #050505;
+    border-top: 1px solid rgba(255,255,255,.05);
+}
+.lp-footer-inner {
+    max-width: 1080px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 48px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.lp-footer-brand-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem; letter-spacing: .08em;
+    background: linear-gradient(120deg, #fff 40%, #a78bfa 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+.lp-footer-brand-desc {
+    font-size: .85rem;
+    color: rgba(255,255,255,.33);
+    line-height: 1.7; max-width: 280px;
+    margin-bottom: 20px;
+}
+.lp-footer-gh {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: .8rem; font-weight: 500;
+    color: rgba(255,255,255,.38);
+    border: 1px solid rgba(255,255,255,.08);
+    padding: 7px 14px; border-radius: 8px;
+    transition: color .2s, border-color .2s, background .2s;
+}
+.lp-footer-gh:hover {
+    color: #fff;
+    border-color: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.05);
+}
+.lp-footer-col-title {
+    font-size: .68rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(255,255,255,.28);
+    margin-bottom: 18px;
+}
+.lp-footer-links {
+    display: flex; flex-direction: column; gap: 11px;
+}
+.lp-footer-link {
+    font-size: .875rem;
+    color: rgba(255,255,255,.42);
+    transition: color .18s;
+}
+.lp-footer-link:hover { color: #fff; }
+
+.lp-footer-bottom {
+    max-width: 1080px; margin: 0 auto;
+    padding-top: 28px;
+    display: flex; align-items: center;
+    justify-content: space-between; flex-wrap: wrap;
+    gap: 12px;
+}
+.lp-footer-copy {
+    font-size: .78rem;
+    color: rgba(255,255,255,.2);
+    line-height: 1.65;
+}
+.lp-footer-dev {
+    font-size: .78rem; color: rgba(255,255,255,.26);
+}
+.lp-footer-dev a {
+    color: rgba(167,139,250,.6);
+    transition: color .2s;
+}
+.lp-footer-dev a:hover { color: #a78bfa; }
+
+/* ══════════════════════════════════════════
+   KEYFRAMES & RESPONSIVE
+══════════════════════════════════════════ */
+@keyframes fuUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 700px) {
+    .lp-quality-grid { grid-template-columns: 1fr; }
+    .lp-footer-inner { grid-template-columns: 1fr; gap: 32px; }
+    .lp-footer-brand-desc { max-width: 100%; }
+    .lp-footer-bottom { flex-direction: column; align-items: flex-start; }
+    .lp-ctas, .lp-ctaband-btns { flex-direction: column; align-items: center; }
+    .lp-btn { width: 260px; justify-content: center; }
+    .lp-stats { gap: 28px; }
+    .lp-topbar-github { display: none; }
+    .lp-features-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lp">
+
+    <!-- Glows -->
+    <div class="lp-glow lp-glow--l"></div>
+    <div class="lp-glow lp-glow--r"></div>
+
+    <!-- ════════════════════════════════
+         TOP BAR / SIGN-IN
+    ════════════════════════════════ -->
+    <header class="lp-topbar">
+        <span class="lp-topbar-brand">YumeAnime</span>
+        <div class="lp-topbar-right">
+            <a href="https://github.com/OTAKUWeBer/YumeAnime"
+               class="lp-topbar-github" target="_blank" rel="noopener">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+                </svg>
+                GitHub
+            </a>
+            <a href="/login" class="lp-topbar-signin">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                Sign in
+            </a>
+        </div>
+    </header>
+
+    <!-- ════════════════════════════════
+         HERO
+    ════════════════════════════════ -->
+    <section class="lp-hero">
+
+        <div class="lp-badges">
+            <a href="https://github.com/OTAKUWeBer/YumeAnime"
+               class="lp-badge lp-badge--oss" target="_blank" rel="noopener">
+                <span class="lp-dot"></span>Open source
+            </a>
+            <span class="lp-badge lp-badge--free">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Always free
+            </span>
+        </div>
+
+        <h1 class="lp-wordmark">Yume<em>Anime</em></h1>
+
+        <p class="lp-sub">
+            The next-gen anime hub. <strong>Sync your AniList</strong>, pick up where you left off, and stream thousands of titles in HD — completely free, forever.
+        </p>
+
+        <div class="lp-search-wrap">
+            <form action="/search" method="GET">
+                <input class="lp-search" type="text" name="q"
+                    placeholder="Search anime, e.g. Frieren, Solo Leveling…"
+                    autocomplete="off"/>
+                <button type="submit" class="lp-search-btn" aria-label="Search">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+        <div class="lp-tags">
+            <span class="lp-tags-label">Most searched</span>
+            <a href="/search?q=One+Piece"       class="lp-tag">One Piece</a>
+            <a href="/search?q=Solo+Leveling"   class="lp-tag">Solo Leveling</a>
+            <a href="/search?q=Demon+Slayer"    class="lp-tag">Demon Slayer</a>
+            <a href="/search?q=Jujutsu+Kaisen"  class="lp-tag">Jujutsu Kaisen</a>
+            <a href="/search?q=Frieren"         class="lp-tag">Frieren</a>
+            <a href="/search?q=Attack+on+Titan" class="lp-tag">Attack on Titan</a>
+        </div>
+
+        <div class="lp-ctas">
+            <a href="/home" class="lp-btn lp-btn--anime">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Watch Anime
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                </svg>
+            </a>
+            <a href="/manga" class="lp-btn lp-btn--manga">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                Read Manga
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+
+        <div class="lp-stats">
+            <div class="lp-stat">
+                <span class="lp-stat-val">10K+</span>
+                <span class="lp-stat-lbl">Titles</span>
+            </div>
+            <div class="lp-stat">
+                <span class="lp-stat-val">SUB</span>
+                <span class="lp-stat-lbl">&amp; Dub</span>
+            </div>
+            <div class="lp-stat">
+                <span class="lp-stat-val">1080P</span>
+                <span class="lp-stat-lbl">HD Streams</span>
+            </div>
+            <div class="lp-stat">
+                <span class="lp-stat-val">$0</span>
+                <span class="lp-stat-lbl">Forever</span>
+            </div>
+        </div>
+
+    </section>
+
+    <div class="lp-rule"></div>
+
+    <!-- ════════════════════════════════
+         FEATURES
+    ════════════════════════════════ -->
+    <section class="lp-section">
+        <span class="lp-section-eyebrow">Built for fans</span>
+        <h2 class="lp-section-title">More than just streaming.</h2>
+        <p class="lp-section-desc">The features power users actually want — sync your lists, organise your library, and never lose your place again.</p>
+
+        <div class="lp-features-grid">
+            <div class="lp-feat">
+                <div class="lp-feat-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div class="lp-feat-title">AniList Sync</div>
+                <div class="lp-feat-desc">Connect your AniList once. Progress, scores and lists update automatically as you watch — no manual tracking ever.</div>
+            </div>
+            <div class="lp-feat">
+                <div class="lp-feat-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                </div>
+                <div class="lp-feat-title">Smart Resume</div>
+                <div class="lp-feat-desc">Pause on your phone, finish on your laptop. Every episode and timestamp travels with you across devices.</div>
+            </div>
+            <div class="lp-feat">
+                <div class="lp-feat-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                </div>
+                <div class="lp-feat-title">Spoiler-Safe Talk</div>
+                <div class="lp-feat-desc">React to every episode with comments and GIFs. Built-in spoiler tags keep the conversation safe for everyone.</div>
+            </div>
+            <div class="lp-feat">
+                <div class="lp-feat-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                </div>
+                <div class="lp-feat-title">Synced with AniList</div>
+                <div class="lp-feat-desc">Pull your anime identity straight from AniList — avatars, banners, everything that defines your profile.</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lp-rule"></div>
+
+    <!-- ════════════════════════════════
+         QUALITY
+    ════════════════════════════════ -->
+    <section class="lp-section">
+        <span class="lp-section-eyebrow">The standard</span>
+        <h2 class="lp-section-title">The way streaming should feel.</h2>
+        <p class="lp-section-desc">A premium, high-performance player paired with the cleanest UI in the space — none of the ads, pop-ups or paywalls you're used to.</p>
+
+        <div class="lp-quality-grid">
+            <div class="lp-quality-cell">
+                <div class="lp-quality-num">0ms</div>
+                <div class="lp-quality-title">Zero Buffer</div>
+                <div class="lp-quality-desc">Adaptive playback up to 1080p, optimised for instant start even on slower connections.</div>
+            </div>
+            <div class="lp-quality-cell">
+                <div class="lp-quality-num">SUB+DUB</div>
+                <div class="lp-quality-title">Both Available</div>
+                <div class="lp-quality-desc">English subtitles and dubs on every supported title — switch in one tap from the player.</div>
+            </div>
+            <div class="lp-quality-cell">
+                <div class="lp-quality-num">$0</div>
+                <div class="lp-quality-title">Free, Forever</div>
+                <div class="lp-quality-desc">No subscriptions, no hidden fees, no card required. Not even an email to start watching.</div>
+            </div>
+            <div class="lp-quality-cell">
+                <div class="lp-quality-num">ALL</div>
+                <div class="lp-quality-title">Every Device</div>
+                <div class="lp-quality-desc">Looks and works the same on mobile, tablet and desktop — no app required, just open the site.</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lp-rule"></div>
+
+    <!-- ════════════════════════════════
+         FAQ
+    ════════════════════════════════ -->
+    <section class="lp-section">
+        <span class="lp-section-eyebrow">FAQ</span>
+        <h2 class="lp-section-title">Common questions.</h2>
+        <p class="lp-section-desc">Everything you need to know before you hit play.</p>
+
+        <div class="lp-faq-list">
+            <div class="lp-faq-item">
+                <button class="lp-faq-q" onclick="toggleFaq(this)">
+                    Is YumeAnime really free?
+                    <svg class="lp-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="lp-faq-a">Yes — completely. No subscriptions, no hidden fees, no credit card required. We don't even ask for an email if you just want to watch.</div>
+            </div>
+            <div class="lp-faq-item">
+                <button class="lp-faq-q" onclick="toggleFaq(this)">
+                    Do I need to create an account?
+                    <svg class="lp-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="lp-faq-a">No. You can browse and stream anonymously. An account unlocks AniList sync, watch history across devices, episode comments and a custom profile.</div>
+            </div>
+            <div class="lp-faq-item">
+                <button class="lp-faq-q" onclick="toggleFaq(this)">
+                    How does AniList Sync work?
+                    <svg class="lp-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="lp-faq-a">Connect your AniList from the profile page. Every episode you finish on YumeAnime updates your AniList progress, scores and status automatically — no manual updates ever.</div>
+            </div>
+            <div class="lp-faq-item">
+                <button class="lp-faq-q" onclick="toggleFaq(this)">
+                    What video quality is available?
+                    <svg class="lp-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="lp-faq-a">Adaptive quality from 360p up to full HD 1080p. The player picks the right one for your connection automatically, and you can override it anytime from player settings.</div>
+            </div>
+            <div class="lp-faq-item">
+                <button class="lp-faq-q" onclick="toggleFaq(this)">
+                    Is YumeAnime safe to use?
+                    <svg class="lp-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="lp-faq-a">Yes. No pop-ups, no redirects, no shady ads. The site itself is clean — we recommend keeping a basic ad-blocker on for any embedded player layer, just to be safe.</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lp-rule"></div>
+
+    <!-- ════════════════════════════════
+         CTA BAND
+    ════════════════════════════════ -->
+    <div class="lp-ctaband">
+        <div class="lp-ctaband-inner">
+            <h2 class="lp-ctaband-title">Ready to dive in?</h2>
+            <p class="lp-ctaband-sub">Pick up your next show or chapter — sync your AniList, swipe through panels, and stream thousands of titles. It's free, and it always will be.</p>
+            <div class="lp-ctaband-btns">
+                <a href="/home" class="lp-btn lp-btn--anime">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Watch Anime
+                </a>
+                <a href="/manga" class="lp-btn lp-btn--manga">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Read Manga
+                </a>
+            </div>
+            <p class="lp-ctaband-legal">YumeAnime does not host any video files. All content is sourced from third-party providers. Legal issues should be directed to the respective providers.</p>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════
+         FOOTER
+    ════════════════════════════════ -->
+    <footer class="lp-footer">
+        <div class="lp-footer-inner">
+
+            <div>
+                <a href="/" class="lp-footer-brand-logo">YumeAnime</a>
+                <p class="lp-footer-brand-desc">Your premium destination for anime streaming. Watch thousands of titles subbed and dubbed in crystal-clear HD — free, always.</p>
+                <a href="https://github.com/OTAKUWeBer/YumeAnime"
+                   class="lp-footer-gh" target="_blank" rel="noopener">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+                    </svg>
+                    OTAKUWeBer / YumeAnime
+                </a>
+            </div>
+
+            <div>
+                <div class="lp-footer-col-title">Navigate</div>
+                <nav class="lp-footer-links">
+                    <a href="/home"     class="lp-footer-link">Home</a>
+                    <a href="/home"     class="lp-footer-link">Browse</a>
+                    <a href="/schedule" class="lp-footer-link">Schedule</a>
+                    <a href="/manga"    class="lp-footer-link">Manga</a>
+                </nav>
+            </div>
+
+            <div>
+                <div class="lp-footer-col-title">Legal</div>
+                <nav class="lp-footer-links">
+                    <a href="/terms"   class="lp-footer-link">Terms of Use</a>
+                    <a href="/privacy" class="lp-footer-link">Privacy Policy</a>
+                    <a href="/dmca"    class="lp-footer-link">DMCA</a>
+                </nav>
+            </div>
+
+        </div>
+
+        <div class="lp-footer-bottom">
+            <p class="lp-footer-copy">
+                © 2026 YumeAnime. All rights reserved.<br>
+                YumeAnime does not store any video files. All content is sourced from third-party providers.
+            </p>
+            <p class="lp-footer-dev">
+                Developer: <a href="https://github.com/OTAKUWeBer" target="_blank" rel="noopener">OTAKUWeBer</a>
+            </p>
+        </div>
+    </footer>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFaq(btn) {
+    const item = btn.closest('.lp-faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.lp-faq-item.open').forEach(el => el.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+}
+</script>
+{% endblock %}

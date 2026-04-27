@@ -1,0 +1,763 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ anime_title }}, Episode {{ Episode }} - YumeAnime{% endblock %}
+{% block meta_description %}Watch {{ anime_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{% if anime %}{{ anime.banner or anime.poster or anime.image }}{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/theme.min.css" />
+<link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/layouts/video.min.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/cdn/with-layouts/vidstack.js" type="module"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="/anime/{{ back_to_ep }}" class="btn btn-ghost" style="margin-bottom: var(--space-md);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back to Details
+    </a>
+
+    <div class="watch-layout">
+
+        <!-- Main -->
+        <div class="watch-main">
+            <div class="video-wrapper paused" id="video-wrapper" style="position: relative;">
+                <!-- Mark as Watched Button (Shows at 80%) -->
+                <button id="markWatchedBtn" class="btn btn-primary"
+                    style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-weight: bold; border-radius: var(--radius-md); padding: 8px 16px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                        style="margin-right: 6px; vertical-align: text-bottom;">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Mark as Watched
+                </button>
+
+                {% if source_type == 'embed' and embed_sources %}
+                <!-- Embed iframe player (default) -->
+                <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
+                    style="display: block; border: none;"
+                    sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"></iframe>
+                <!-- Fullscreen toggle (sandbox blocks embed's native fullscreen, so we fullscreen the wrapper) -->
+                <button id="embedFullscreenBtn" class="embed-fullscreen-btn" title="Toggle Fullscreen (F)">
+                    <svg class="embed-fs-enter" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <polyline points="9 21 3 21 3 15"></polyline>
+                        <line x1="21" y1="3" x2="14" y2="10"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                    <svg class="embed-fs-exit" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        style="display:none;">
+                        <polyline points="4 14 10 14 10 20"></polyline>
+                        <polyline points="20 10 14 10 14 4"></polyline>
+                        <line x1="14" y1="10" x2="21" y2="3"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                </button>
+                {% endif %}
+
+                {% if video_link %}
+                <!-- Vidstack Player -->
+                <div id="videoContainer"
+                    style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000;">
+                    <media-player id="vidstackPlayer" src="{{ video_link }}" type="application/x-mpegurl" crossorigin
+                        playsinline title="{{ episode_title or anime_title or 'Episode' }} · Episode {{ Episode }}"
+                        data-video-url="{{ video_link }}" style="width: 100%; height: 100%;">
+                        <media-provider></media-provider>
+                        <media-video-layout color-scheme="dark" no-seek-button>
+                        </media-video-layout>
+                    </media-player>
+                </div>
+                {% endif %}
+
+                <!-- Fallback container -->
+                <div id="errorFallbackContainer"
+                    style="aspect-ratio:16/9; align-items:center; justify-content:center; background:var(--bg-surface); {% if video_link or (source_type == 'embed' and embed_sources) or source_type == 'hls' %}display:none;{% else %}display:flex;{% endif %}">
+                    <div class="text-center">
+                        <div class="no-results-icon">🎬</div>
+                        <p class="text-muted">Video not available</p>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Episode Controls & Info Section -->
+            <div id="watch-navigation" style="margin-top: 15px;">
+                <!-- Navigation + Language Row -->
+                <div class="watch-nav-bar">
+                    <div class="watch-nav-left">
+                        <a href="{% if prev_episode_url %}{{ prev_episode_url }}{% else %}javascript:void(0){% endif %}"
+                            class="btn btn-sm {% if not prev_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {%
+                            if not prev_episode_url %}onclick="return false;" aria-disabled="true" {% endif %}
+                            style="{% if not prev_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Prev
+                        </a>
+                        <a href="{% if next_episode_url %}{{ next_episode_url }}{% else %}javascript:void(0){% endif %}"
+                            class="btn btn-sm {% if not next_episode_url %}btn-ghost{% else %}btn-primary{% endif %}" {%
+                            if next_episode_url %}onclick="window._forceEpisodeComplete = true;" {% else
+                            %}onclick="return false;" aria-disabled="true" {% endif %}
+                            style="{% if not next_episode_url %}opacity: 0.5; cursor: not-allowed;{% endif %} display: flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.85rem;">
+                            Next
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+
+                    <div class="watch-nav-right">
+                        <!-- Language Selection -->
+                        <div class="lang-toggle">
+                            <button id="btnSub" class="lang-btn {% if lang == 'sub' %}active{% endif %}"
+                                onclick="switchLanguage('sub')">SUB</button>
+                            {% if dub_available %}
+                            <button id="btnDub" class="lang-btn {% if lang == 'dub' %}active{% endif %}"
+                                onclick="switchLanguage('dub')">DUB</button>
+                            {% else %}
+                            <button class="lang-btn" disabled title="Dub not available">DUB</button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Report Issue Button -->
+                        <button id="openReportBtn" class="premium-action-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                <line x1="4" y1="22" x2="4" y2="15"></line>
+                            </svg>
+                            <span class="report-label">Report</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Episode Info Bar - Responsive -->
+                <div
+                    style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-surface); padding: 12px 15px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                    <!-- Episode Title -->
+                    <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary); line-height: 1.4;">
+                        {{ Episode }}. {{ episode_title if episode_title else (anime_title if anime_title else
+                        'Episode') }}
+                    </h3>
+
+                    <!-- Controls Row -->
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 5px;">
+                        <!-- Server Sections: INTERNAL (HLS) & EXTERNAL (Embed) -->
+                        {% if episodes and episodes.providers_map %}
+                        {% set default_p = selected_server or episodes.default_provider %}
+                        <div class="server-sections" id="serverSections">
+                            <!-- INTERNAL (HLS) -->
+                            <div class="server-section">
+                                <div class="server-section-label">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                    </svg>
+                                    INTERNAL
+                                </div>
+                                <div class="server-section-pills" id="hlsServerPills">
+                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
+                                    %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
+                                    %}
+                                    <button
+                                        class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %} {% if not caps.get('hls', false) %}unavailable{% endif %}"
+                                        data-stream-type="hls" data-provider="{{ p_name }}" {% if not caps.get('hls',
+                                        false) %}disabled style="display: none;" {% endif %}>
+                                        {{ p_name | title }}
+                                        <span class="srv-badge badge-hls">HLS</span>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- EXTERNAL (Embed) -->
+                            <div class="server-section">
+                                <div class="server-section-label">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                                    </svg>
+                                    EXTERNAL
+                                </div>
+                                <div class="server-section-pills" id="embedServerPills">
+                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
+                                    %}
+                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
+                                    %}
+                                    <button
+                                        class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %} {% if not caps.get('embed', false) %}unavailable{% endif %}"
+                                        data-stream-type="embed" data-provider="{{ p_name }}" {% if not
+                                        caps.get('embed', false) %}disabled style="display: none;" {% endif %}>
+                                        {{ 'Megaplay' if p_name == 'zoro' else p_name | title }}
+                                        <span class="srv-badge badge-embed">EMBED</span>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+
+                    </div>
+                </div>
+
+                <!-- Next Episode Air Time (if available) -->
+                {% if next_air_time %}
+                <div
+                    style="background: rgba(var(--warning-rgb, 245, 158, 11), 0.1); border-left: 3px solid var(--warning); padding: 10px 12px; border-radius: var(--radius-md); margin-bottom: 15px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                        <strong>Episode {{ Episode|int + 1 }} will air on:</strong> {{ next_air_time }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Next Episode Countdown -->
+            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+            {% set next_ep = next_episode_schedule.episode %}
+            <div id="watch-countdown" data-timestamp="{{ next_episode_schedule.airingTimestamp }}" style="background: rgba(var(--info-rgb, 59, 130, 246), 0.1);
+                        border-left: 3px solid var(--info);
+                        padding: 10px 12px;
+                        border-radius: var(--radius-md);
+                        margin-bottom: 15px;">
+
+                <p style="margin: 0;
+                        font-size: 0.9rem;
+                        color: var(--text-secondary);
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;">
+
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="14" height="14"
+                        fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M224 512c35.32 0 63.97-28.65 63.97-64H160.03c0 35.35 28.65 64 63.97 64zm215.39-149.71c-19.32-20.76-55.47-51.99-55.47-154.29 0-77.7-54.48-139.9-127.94-155.16V32c0-17.67-14.32-32-31.98-32s-31.98 14.33-31.98 32v20.84C118.56 68.1 64.08 130.3 64.08 208c0 102.3-36.15 133.53-55.47 154.29-6 6.45-8.66 14.16-8.61 21.71.11 16.4 12.98 32 32.1 32h383.8c19.12 0 32-15.6 32.1-32 .05-7.55-2.61-15.27-8.61-21.71z" />
+                    </svg>
+
+                    <strong>
+                        Episode {{ next_ep if next_ep else '??' }} will air on:
+                    </strong>
+
+                    <span id="countdown-text">Loading...</span>
+                </p>
+            </div>
+
+            {% endif %}
+
+            <!-- Episodes Container -->
+            <div class="episode-sidebar"
+                style="position: relative; top: 0; height: auto; max-height: none; margin-top: 15px;">
+                <div class="episode-sidebar-header">
+                    <div class="episode-sidebar-header-top">
+                        <span>Episodes</span>
+                        <div class="view-toggle">
+                            <button class="view-btn active" id="view-grid-btn" title="Grid View">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                            </button>
+                            <button class="view-btn" id="view-list-btn" title="List View">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="episode-search-wrapper">
+                        <svg class="episode-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="episodeSearch" class="episode-search-input"
+                            placeholder="Search episode...">
+                    </div>
+                </div>
+
+                <div class="episode-sidebar-list" id="episodeList" data-view="grid">
+                    {% if episodes and episodes.episodes %}
+                    {% for ep in episodes.episodes %}
+                    {% set is_current = (ep.number|string == episode_number|string) or (ep.number|int == Episode|int) %}
+                    <a href="/watch/{{ anime_id or eps_title.split('?')[0] }}/ep-{{ ep.number }}"
+                        class="episode-sidebar-item {% if is_current %}current{% endif %} {% if ep.isFiller %}is-filler{% endif %}"
+                        data-number="{{ ep.number }}">
+                        <div class="episode-sidebar-num">{{ ep.number }}</div>
+                        <div class="episode-info">
+                            <div class="episode-title">
+                                {{ ep.title }}
+                                {% if ep.isFiller %}
+                                <span class="filler-badge">Filler</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center p-lg text-muted">No episodes found</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ========================================== -->
+<!-- ANIME INFO SECTION -->
+<!-- ========================================== -->
+{% if anime %}
+
+
+<div class="container" style="max-width: 1400px; padding: 0 15px;">
+    <div class="anime-details-section">
+        <div class="anime-details-grid">
+
+            <!-- Left Column: Poster & Quick Meta -->
+            <div class="anime-side">
+                <img src="{{ anime.get('coverImage') or anime.get('poster') }}" alt="Poster" class="anime-poster">
+
+                <div class="anime-meta-grid"
+                    style="margin-top: 15px; padding: 12px; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="meta-item">
+                        <span class="meta-label">Score</span>
+                        <span class="meta-value" style="color: #fbbf24; font-weight: bold;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"
+                                style="vertical-align: text-top;">
+                                <polygon
+                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                                </polygon>
+                            </svg>
+                            {{ ((anime.stats.rating|float) / 10) | round(1) if anime.stats and anime.stats.rating else
+                            'N/A' }}
+                        </span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Format</span>
+                        <span class="meta-value">{{ anime.stats.type if anime.stats and anime.stats.type else 'TV'
+                            }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Status</span>
+                        <span class="meta-value">{{ anime.status | default('Unknown') | replace('_', ' ') | title
+                            }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Duration</span>
+                        <span class="meta-value">{{ anime.stats.duration if anime.stats and anime.stats.duration else
+                            'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Details -->
+            <div class="anime-main" style="min-width: 0;">
+                <div class="anime-title-block">
+                    <h1 class="anime-title-main">{{ anime.name or anime.title }}</h1>
+                    {% if anime.jname or anime.japanese_title %}
+                    <p class="anime-title-sub">
+                        {{ anime.jname or anime.japanese_title }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="tag-list">
+                    {% for genre in anime.get('genres', []) %}
+                    <span class="tag-pill">{{ genre }}</span>
+                    {% endfor %}
+                    {% if anime.get('studios') and anime.get('studios')|length > 0 %}
+                    <span class="tag-pill" style="background: rgba(255,255,255,0.1); color: var(--text-secondary);">
+                        Studio: {{ anime.get('studios')[0] }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Synopsis with basic clean up -->
+                <div class="anime-synopsis">
+                    {{ (anime.get('description') or anime.get('synopsis') or 'No description available for this anime.')
+                    | striptags }}
+                </div>
+
+                <!-- Relations Section -->
+                {% set all_seasons = [] %}
+                {% set seen_season_ids = [] %}
+
+                {% for p in anime.prequels %}
+                {% if (p.id|string) not in seen_season_ids %}
+                {% set _ = all_seasons.append(p) %}
+                {% set _ = seen_season_ids.append(p.id|string) %}
+                {% endif %}
+                {% endfor %}
+
+                {% for s in anime.sequels %}
+                {% if (s.id|string) not in seen_season_ids %}
+                {% set _ = all_seasons.append(s) %}
+                {% set _ = seen_season_ids.append(s.id|string) %}
+                {% endif %}
+                {% endfor %}
+
+                {% if all_seasons|length > 0 %}
+                <div class="section-heading">Relations</div>
+                <div class="relations-grid">
+                    {% for rel in all_seasons %}
+                    <a href="/anime/{{ rel.id }}" class="relation-card" title="{{ rel.name or rel.title }}">
+                        <span class="relation-type">{{ (rel.relation or "Related") | upper }}</span>
+                        <img src="{{ rel.image or rel.poster or 'https://via.placeholder.com/200x300?text=No+Image' }}"
+                            alt="{{ rel.name or rel.title }}" loading="lazy">
+                        <div class="relation-title-wrap">
+                            <span class="relation-title">{{ rel.name or rel.title }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Characters Section -->
+                {% set characters = anime.characters %}
+                {% if characters and characters|length > 0 %}
+                <div class="section-heading">Characters</div>
+                <div class="character-scroll">
+                    {% for char_data in characters %}
+                    {% if loop.index <= 20 %} {# Limit to first 20 characters mostly #} <div class="character-card">
+                        <img src="{{ char_data.character.poster or char_data.character.image }}"
+                            alt="{{ char_data.character.name }}" class="character-img" loading="lazy">
+                        <span class="character-name" title="{{ char_data.character.name }}">{{ char_data.character.name
+                            }}</span>
+                        <span class="character-role">{{ char_data.character.cast or 'Main' }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+</div>
+</div>
+{% endif %}
+
+<!-- ========================================== -->
+<!-- EPISODE REACTIONS & COMMENTS               -->
+<!-- ========================================== -->
+<div class="container" style="max-width: 1400px; padding: 0 15px; margin-top: 16px;">
+
+    <!-- Episode Reaction Bar -->
+    <div class="episode-reaction-bar">
+        <span class="episode-reaction-label">Did you enjoy this episode?</span>
+        <div class="episode-reaction-btns">
+            <button class="reaction-btn" id="ep-like-btn" title="Like this episode">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z" />
+                    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                </svg>
+                <span class="reaction-count" id="ep-like-count">0</span>
+            </button>
+            <button class="reaction-btn" id="ep-dislike-btn" title="Dislike this episode">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z" />
+                    <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                </svg>
+                <span class="reaction-count" id="ep-dislike-count">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Comment Section -->
+    <div class="comment-section">
+        <div class="comment-section-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <h3>Comments</h3>
+            <span class="comment-total-badge" id="comment-total">0</span>
+        </div>
+
+        {% if session.get('username') %}
+        <!-- Input area (logged in) -->
+        <div class="comment-input-area">
+            <div class="comment-input-row">
+                {% if session.get('avatar') %}
+                <img class="comment-avatar" src="{{ session.get('avatar') }}" alt="{{ session.get('username') }}"
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                {% else %}
+                <div class="comment-avatar-placeholder">{{ session.get('username', 'U')[0]|upper }}</div>
+                {% endif %}
+
+                <div class="comment-input-wrapper">
+                    <textarea id="main-comment-textarea" class="comment-textarea"
+                        placeholder="Share your thoughts about this episode…"></textarea>
+                    <div id="main-gif-preview" class="comment-gif-preview" style="display:none;">
+                        <img id="main-gif-img" src="" alt="Selected GIF">
+                        <button class="comment-gif-remove" id="main-gif-remove" title="Remove GIF">✕</button>
+                    </div>
+                    <div class="comment-input-actions">
+                        <button type="button" class="comment-gif-btn" id="main-gif-btn" title="Add GIF">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <span>GIF</span>
+                        </button>
+                        <button class="comment-submit-btn" id="main-submit-btn" title="Post comment">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="22" y1="2" x2="11" y2="13" />
+                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
+                            <span>Post</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="comment-login-prompt">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="vertical-align:middle;margin-right:6px;">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <button class="inline-link" onclick="openLoginModal()">Sign in</button> to leave a comment.
+        </div>
+        {% endif %}
+
+        <!-- Comment list -->
+        <div class="comment-list" id="comment-list">
+            <div class="comment-list-loading">
+                <div class="comment-spinner"></div>
+                <span>Loading comments…</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- GIF Picker Modal -->
+<div class="gif-picker-overlay" id="gif-picker-overlay">
+    <div class="gif-picker-panel">
+        <div class="gif-picker-header">
+            <span>Choose a GIF</span>
+            <input type="text" class="gif-search-input" id="gif-search-input" placeholder="Search Tenor…"
+                autocomplete="off">
+            <button class="gif-picker-close" id="gif-close-btn" title="Close">✕</button>
+        </div>
+        <div class="gif-picker-body">
+            <div class="gif-picker-loading" id="gif-loading" style="display:flex;">
+                <div class="comment-spinner"></div>
+                <span>Loading GIFs…</span>
+            </div>
+            <div class="gif-grid" id="gif-grid"></div>
+        </div>
+        <div class="tenor-badge">Powered by <strong>Tenor</strong></div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+<!-- Report Issue Modal -->
+<div id="reportModalOverlay"
+    style="position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 9999; display: none; align-items: center; justify-content: center;">
+    <div
+        style="background: var(--bg-surface); padding: 25px; border-radius: var(--radius-lg); width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color);">
+        <h3 style="margin-top: 0; margin-bottom: 5px;">Report Playback Issue</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Experiencing problems? Let us know
+            so we can fix it.</p>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Current
+                Source Data:</label>
+            <input type="text" id="reportSourceData" disabled
+                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); cursor: not-allowed;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Issue
+                Details:</label>
+            <textarea id="reportDetails" rows="4"
+                placeholder="e.g. Video is buffering constantly, audio out of sync, subtitle error..."
+                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-sm); color: white; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="closeReportBtn" class="btn btn-ghost">Cancel</button>
+            <button id="submitReportBtn" class="btn btn-primary">Submit Report</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer"
+    style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;">
+</div>
+
+
+<!-- Thumbnail tooltip & mobile control styles moved to watch.css -->
+
+{% block extra_js %}
+<script>
+    window.WATCH_CONFIG = {
+        animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        episodeNumber: {{ episode_number or 1 }},
+        language: '{{ lang }}',
+        provider: '{{ selected_server or "" }}',
+        providers: [{% if sorted_providers %}{% for p in sorted_providers %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% elif episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}],
+        isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
+        serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
+        malId: {{ mal_id | tojson | safe if mal_id else 'null' }},
+        intro: {{ intro | tojson | safe if intro else 'null' }},
+        outro: {{ outro | tojson | safe if outro else 'null' }},
+        videoLink: '{{ video_link or "" }}'
+    };
+</script>
+<script src="{{ url_for('static', filename='js/watch.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const player = document.querySelector('#vidstackPlayer');
+        if (!player) return;
+
+        player.addEventListener('provider-change', (event) => {
+            const provider = event.detail;
+            if (provider?.type === 'hls') {
+                provider.config = {
+                    ...provider.config,
+                    xhrSetup(xhr, url) {
+                        // Force GET method for all HLS requests to avoid 405 from proxy
+                        const originalOpen = xhr.open.bind(xhr);
+                        xhr.open = function (method, url, async, user, password) {
+                            return originalOpen.call(this, 'GET', url, async, user, password);
+                        };
+                    }
+                };
+            }
+        });
+
+        // ── Add intro/outro as chapters on the timeline ──
+        function addChaptersTrack() {
+            const cfg = window.WATCH_CONFIG;
+            if (!cfg) return;
+            const intro = cfg.intro;
+            const outro = cfg.outro;
+            if (!intro && !outro) return;
+
+            // Wait for duration to be available
+            const duration = player.duration;
+            if (!duration || duration <= 0) {
+                player.addEventListener('duration-change', () => addChaptersTrack(), { once: true });
+                return;
+            }
+
+            // Remove any existing chapters track we added
+            const existing = player.textTracks.toArray().filter(t => t.kind === 'chapters' && t.label === 'Sections');
+            existing.forEach(t => player.textTracks.remove(t));
+
+            // Build VTT cues for chapter segments
+            function fmtVTT(sec) {
+                const h = Math.floor(sec / 3600);
+                const m = Math.floor((sec % 3600) / 60);
+                const s = Math.floor(sec % 60);
+                const ms = Math.floor((sec % 1) * 1000);
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+            }
+
+            // Build chapter segments that cover the full duration
+            const segments = [];
+            let cursor = 0;
+
+            if (intro && intro.start != null && intro.end != null) {
+                if (intro.start > cursor) {
+                    segments.push({ start: cursor, end: intro.start, text: 'Episode' });
+                }
+                segments.push({ start: intro.start, end: intro.end, text: 'Intro' });
+                cursor = intro.end;
+            }
+
+            if (outro && outro.start != null) {
+                const outroEnd = outro.end || duration;
+                if (outro.start > cursor) {
+                    segments.push({ start: cursor, end: outro.start, text: 'Episode' });
+                }
+                segments.push({ start: outro.start, end: outroEnd, text: 'Outro' });
+                cursor = outroEnd;
+            }
+
+            if (cursor < duration) {
+                segments.push({ start: cursor, end: duration, text: 'Episode' });
+            }
+
+            // If no segments, skip
+            if (segments.length === 0) return;
+
+            // Build VTT content string
+            let vtt = 'WEBVTT\n\n';
+            segments.forEach((seg, i) => {
+                vtt += `${i + 1}\n${fmtVTT(seg.start)} --> ${fmtVTT(seg.end)}\n${seg.text}\n\n`;
+            });
+
+            // Create a blob URL and add as text track
+            const blob = new Blob([vtt], { type: 'text/vtt' });
+            const url = URL.createObjectURL(blob);
+
+            player.textTracks.add({
+                src: url,
+                kind: 'chapters',
+                label: 'Sections',
+                language: 'en',
+                default: true,
+                type: 'vtt'
+            });
+
+            console.log('[Chapters] Added intro/outro chapter markers to timeline');
+        }
+
+        // Try adding chapters once player can play
+        player.addEventListener('can-play', () => addChaptersTrack(), { once: true });
+    });
+</script>
+<script>
+    window.COMMENTS_CONFIG = {
+        animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        episodeNumber: {{ episode_number or 1 }},
+    isLoggedIn: {% if session.get('username') %} true{% else %} false{% endif %},
+    username: '{{ session.get("username") or "" }}',
+        avatar: '{{ session.get("avatar") or "" }}',
+            userId: '{{ session.get("_id") or "" }}',
+    };
+</script>
+<script src="{{ url_for('static', filename='js/comments.js') }}"></script>
+{% endblock %}
+
+<!-- // TODO: Add a "Mark as Watched" button that appears after 80% of the video is watched, allowing users to manually mark
+the episode as watched if auto-detection fails. + Maybe also a "Report Playback Issue" button that opens a feedback form
+with the current provider/source pre-filled, so users can easily report issues which can help improve the fallback
+system. + UI improvements: Show a small toast notification when auto-fallback occurs, e.g. "HLS source failed, switching
+to Embed..." so users are aware of what's happening.

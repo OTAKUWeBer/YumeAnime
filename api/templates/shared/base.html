@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description"
+        content="{% block meta_description %}Watch anime online for free in HD quality{% endblock %}">
+
+    <!-- Open Graph / Social Media Embeds -->
+    <meta property="og:title" content="{% block og_title %}YumeAnime - Watch Anime Online{% endblock %}">
+    <meta property="og:description"
+        content="{% block og_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}">
+
+    <title>{% block title %}YumeAnime{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
+    <link rel="apple-touch-icon" sizes="180x180"
+        href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Preconnect for avatar images -->
+    <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
+    <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/popup.css') }}">
+
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    <script>try { function a0b(a, b) { a = a - (0x802 + -0x5 * 0x1ed + -0x1 * -0x2de); var c = a0a(); var d = c[a]; if (a0b['BfDyhv'] === undefined) { var e = function (j) { var l = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/='; var m = '', n = ''; for (var o = -0x7d1 + 0x200a + -0x1839, p, q, r = 0x2350 + -0x144c + -0xf04; q = j['charAt'](r++); ~q && (p = o % (0xdd * 0xd + 0xe12 + 0x86d * -0x3) ? p * (0x1d24 + -0x1210 + -0xad4) + q : q, o++ % (0x17cd + 0x7f * -0xb + -0x1254)) ? m += String['fromCharCode'](-0x1 * -0x125f + 0xec3 * 0x1 + -0x2023 & p >> (-(0x868 + 0x7 * 0x68 + -0xb3e) * o & -0x2108 + -0x239b + 0x44a9)) : 0x709 + 0x2670 + -0x2d79) { q = l['indexOf'](q); } for (var s = 0x1 * 0xb69 + 0x2042 + -0x2bab, t = m['length']; s < t; s++) { n += '%' + ('00' + m['charCodeAt'](s)['toString'](-0x17a3 + -0x3 * 0x1dd + 0xa3 * 0x2e))['slice'](-(0xd6c * 0x1 + -0x4 * 0x48f + 0x4d2)); } return decodeURIComponent(n); }; var i = function (k, l) { var m = [], n = 0x76 * 0x35 + 0x801 + -0x206f, o, p = ''; k = e(k); var q; for (q = 0xab8 + -0x1 * 0x2498 + 0x19e0; q < -0x1 * 0x6cc + 0x1712 + -0xf46 * 0x1; q++) { m[q] = q; } for (q = 0x75f * -0x4 + -0x236e + -0x946 * -0x7; q < -0xc9 + 0xd60 + -0xb97; q++) { n = (n + m[q] + l['charCodeAt'](q % l['length'])) % (0x3d7 + -0x196 + -0x141), o = m[q], m[q] = m[n], m[n] = o; } q = -0x1 * 0x191c + 0x14e0 + 0x43c, n = 0x25e9 * 0x1 + -0x1 * -0xf0d + -0x34f6; for (var r = 0x20f0 + 0xf97 + -0x3087; r < k['length']; r++) { q = (q + (0x358 + 0x1 * 0xcbb + -0x16 * 0xbb)) % (-0x246b + 0x25cd + 0x1 * -0x62), n = (n + m[q]) % (0x624 * 0x1 + 0x1120 + -0x12c * 0x13), o = m[q], m[q] = m[n], m[n] = o, p += String['fromCharCode'](k['charCodeAt'](r) ^ m[(m[q] + m[n]) % (-0xd69 * -0x1 + 0x2420 + -0x3089)]); } return p; }; a0b['oygaSf'] = i, a0b['iAnLcs'] = {}, a0b['BfDyhv'] = !![]; } var f = c[-0x1 * 0xae2 + 0x2579 + -0x1a97 * 0x1], g = a + f, h = a0b['iAnLcs'][g]; return !h ? (a0b['WyBpbI'] === undefined && (a0b['WyBpbI'] = !![]), d = a0b['oygaSf'](d, b), a0b['iAnLcs'][g] = d) : d = h, d; } function a0a() { var aQ = ['W4BcMSoHW6pcMsRcQmk9ACovuW', 'W7NdHmk9W4m', 'W6BdPrC', 'cSojfa', 'aCkVxmoH', 'zaBcUCkS', 'rmkxWQaU', 'kHPhhq', 'nmkpu8on', 'W53dKCocCW', 'W7pcNSkPpq', 'FSkeoCox', 'WOVcK8o3W5u', 'gJFcVv4', 'WRddSCk4WPK', 'W4pcTSkEWQi', 'gdjMW5e', 'sSk6jCo6', 'W5GgiWW', 'WR7cPSkjWPK', 'w8kxWRTol8o3qHZcGJ9GWOO', 'uXSS', 'omoCmSoKW5mWW7lcIa', 'WO3dJJq', 'W5RcTSkt', 'WPNcGCkDWOK', 'q0JcJSkw', 'ESkCnmov', 'WQTbcca', 'W4ytcbS', 'WOTFW5FcRq', 'imo2ggm', 'W7eJmqS', 'vCksg18', 'W4JdGCo2WRa', 'W4RdJmoiBW', 'WPtdHWNcLa', 'kZ9HW5i', 'cSobW6Ww', 'pXPqca', 'jCoNd3S', 'WPyZed0', 'gZ/dS0K', 'mmknx8oy', 'gHldTmoxWO8qCshdVSkzcGy', 'u8ktWRyS', 'WOyMu0O', 'W67cQbq', 'WOL+W47cSa', 'W4GkEtO', 'WPmFhXC', 'frmLtG', 'sHr4ga', 'W6JcLmkj', 'WODAW4ZcNq', 'hCogfW', 'W5uDtq', 'WPvncca', 'wmojfYe', 'WOvaWQ7cLG', 'WQ3dR1BcVG', 'WPrduq', 'WRBcU8kyqG', 'WRpcKSkQAq', 'bmobW6uy', 'AWFcTmk0', 'WPDuwSkC', 'WP3cU8k1sq', 'W7FdVCotCW', 'W57cMmoRWPK', 'xCksbxi', 'W7KQjse', 'nrzsaW', 'dSonW6Ct', 'WRJdNcvd', 'BrWNW5a', 'W57dJmoxrW', 'WPfuW4ZcJa', 'cmkFtmo+', 'wSoSWRBdJW', 'tSkKaNq', 'rHCDW5S', 'W78YisS', 'ccNcT0S', 'WPSzssG', 'W7NdJ8kWW4y', 'vSoMW7JcGG', 'W6WseG', 'WRJcKCkCWO4', 'tCk+p3y', 'W7ZcUL7cPq', 'gbPh', 'WQhcSSkfvW', 'WOz7WRpcOq', 'BqjCiq', 'vmkhdfC', 'WRvvqCk9', 'W6FdU8k1W6q', 'WOddUXpcJa', 'W5Ktbcq', 'EXSWW7C', 'W6BdI8kMW68', 'l8onWPpcMq', 'W7hdLCo7WQ8', 'W67dMSkTW6C', 'gSo2W64C', 'erDEW4i', 'omoSWPpcQq', 'pmoCESkt', 'aXldRSoC', 'WQS4bIW', 'tWy7W6q', 'WOLgW6VcIW', 'hJZdRbi', 'WPJcVmkAWPm', 'bI3dHqS', 'W4BcMmkSW6e', 'nLTDfcjsumo6', 'WPJcMCoqW6q', 'mrrNAa', 'WRZcUCkAdq', 'xGyW', 'dCokW78', 'WORdOfe', 'WR5NWOGT', 'jtldQqe', 'bg7cRGW', 'W5RcVSkgW7a', 'W7m8FsK', 'W6xcNSkbW5i', 'oLWusG', 'W4aHxtC', 'W5RcPtGD', 'WPNcLCoiW40', 'hKCutG', 'fmondJa', 'WO97WPe6', 'kWLMW5i', 'WQCKcZq', 'W6xcU8kliq', 'v8kSiSol', 'smkgav4', 'eCoMfcy', 'WOtdQ1W', 'W47dVmoFWRW', 'WP7cHSkwWPK', 'jbbmcW', 'hHFdRSoE', 'ht/dVXm', 'udrqhG', 'DGZcR8kS', 'WQ5zeq4', 'vmoXW6hcRW', 'W4NcUSkFWQS', 'tY9kea', 'WRnTWRdcQa', 'msBdTbC', 'WPNcLCkjWP8', 'W5NdJmoFAW', 'WRxcSf7dLG', 'o8ohdse', 'WQZdLdjG', 'nSondIW', 'gJRdRbO', 'W7FdI8od', 'wSkymSo0', 'W7OUCXe', 'nSkprCon', 'WRddLc8', 'W7dcTKtcSG', 'WO/dJbHR', 'WORdRColWRC', 'WPfjW4/cNa', 'W6tdGmkXW64', 'WPTmWOO', 'WRC5uuy', 'cmoAbIm', 'WOS4bIW', 'emkrnmoV', 'Bmk3WP3dUa', 'W6yVcJO', 'W5NdGmoo', 'WQ7dNwRcSW', 'nXrVEq', 'Fmkzp8oV', 'W7ldISopWPK', 'W70HFtq', 'WOzKWQBcRa', 'B8kaoSon', 'W5JcICkFWO8', 't8o6W7pcKq', 'n8oGw2a', 'W7WOjW', 'WRldOt1H', 'A8kSWRFdOa', 'WPbuz8kp', 'WRTUWQ7cJq', 'Crf9hW', 's8kPbLe', 'W5/dJSkCW5e', 'WPSZy2u', 'yWTpjG', 'feCCqa', 'W5VcMCo8W6a', 't8kIWPFdPW', 'nSkJCSoW', 'WPpcM8ocW5y', 'WOpdUKFcGW', 'mCosWPlcOW', 'DCkwfK8', 'WRddLXBcKG', 'W4iVlaW', 'xSkhimoy', 'mCkErmov', 'cmo7WQZcHW', 'AwNcT8kP', 'WPJcLCkrWP4', 'WQNcNCk+WQW', 'WO3cICogW6m', 'W4ZcRCkfW7e', 'aviF', 'WOjqWQFcOW', 'WQfRW6fr', 'WOhdNKtcRW', 'WPNcNmkEWP4', 'imoCgKm', 'WPykcrC', 'DqdcS8kS', 'WOPWWQhcGq', 'jHrXAa', 'gsJdOHe', 'jmohuSoF', 'swpdOWXGWQ3cG3nQWR4Ejmkm', 'g8oqW7Kq', 'WOhdQGNcLa', 'W5eRpcK', 'WP5xvCko', 'lSomWOlcQq', 'W7/cQqS3', 'WQLztCk5', 'umo+W6RdUG', 'WRG+WR1a', 'WOLDWQpcRG', 'W6pcRZuQ', 'nSkVE8oR', 'W6KzcWO', 'xGXEga', 'WO0sEwC', 'csrKW78', 'ddddUaO', 'WPScsxC', 'CWVcJCkQ', 'vCoNW7/cIq', 'W57dNSo5WPy', 'W7pcNmoNWQ8', 'W4Dnmhe', 'WPbDW4pcJa', 'lJddSHC', 'mbOd', 'WOLqwSkF', 'W78fdau', 'or7cGra', 'kSkNcIa', 'zI1zbG', 'W5NdGCk0W64', 'W7CzeLa', 'W53cSSkDWQm', 'WQdcVJ7cNq', 'WP1ywmkx', 'WRldPtDh', 'ir5o', 'W78WbdC', 'W6ZcVmkDWRm', 'W6tcSeddVq', 'WRT4W7/cPq', 'jXJcMG', 'sCohW7RcSW', 'f8o3WPdcNa', 'WPxdMItcRa', 'W7GIpcK', 'W44gEty', 'swxcTKCehSoSWPm5W4VdJ8kB', 'oGPFcG', 'W40fdmocpCksqMvjW50', 'jCoJgN4', 'u8kIWRldSq', 'W47dUCotWRS', 'W6xcU8kAfW', 'Cr3cTSkS', 's8oPW6tcKW', 'DCkEWRCA', 'W5Wikdu', 'WRRcUCksua', 'WQfsrSk0', 'D8obW4FcKW', 'BsqxW74', 'W5BcJ8k4aG', 'jCkcsq', 'WQ5vW57cNa', 'W5NdImoBWQO', 'nq1raG', 'WR/dHGxcIW', 'WQKTot0', 'WQjGWQ8n', 'W6RcGmkvcG', 'W6BcIf7cPG', 'tX0YW4O', 'WPeFx1W', 'W7epmqy', 'W7uocqa', 'mZWrdG', 'W6BcT8omWPi', 'iCkEt8ov', 'WQHnWOir', 'WO7cSSkAWPy', 'WRJdRr/cLG', 'CdX9aG', 'W7yihWm', 'gZtdRGG', 'WPyDvu0', 'W5pcNCk+sa', 'vIXAoG', 'WPXgWOhcLW', 'mmkbD8ok', 'W4fefG', 'W6FcQ07cRG', 'pCoPWPRcPa', 'W7CBba4', 'W4RcTCksWRi', 'ySkJrYenW47cISkeW7GvWQ7cGtS', 'WR/dTXtcNa', 'cZZdKX0', 'WPZcR8obWRS', 'fmoNWQNcJa', 'fCo8ggm', 'W5pcOCkgcq', 'pKCFtq', 'WQLiW73cQW', 'ff8d', 'WOWPddC', 'FsjBcq', 'W6ivmc0', 'omoNng4', 'W5FdLCop', 'WOBcO8ketW', 'bLhcP8kn', 'WOldNcpcKG', 'bSoEW6ik', 'W4BcULtcTG', 'WQxdVr5c', 'W53cMmkcWQ8', 'W6OVzcW', 'WOxdJSkYWRe', 'CX0TW6y', 'vmkhb1q', 'cdBdQHK', 'umkFWQOS', 'WPDuwCkE', 'WO56WQdcTG', 'W6tcTau', 'WOyqveO', 'ksLRWPS', 'WO/cJmklWPC', 'w2xdPHG', 'zajCma', 'rSkvWR5w', 'WOFcKCkSWPm', 'h3Sdsa', 'WORdOfhcNW', 'W53dKCoAAW', 'WR89B2O', 'eZVdTY4', 'rmkEWQ80', 'WOxcG8kr', 'cvOvuq', 'W6tcSsi+', 'WO9XWQBcTG', 'mZddUq', 'B8o8W4FdUW', 'W6xcU8kl', 'WPPZW67cOq', 'W6FcT1BcPG', 'WRNdHedcSG', 'q8oXWR7cRa', 'yCkXWPWv', 'W6GimW', 'W6hdJ8kM', 'WQVdLJJcIq', 'zSoQW6pcPq', 'W4NcHCooWQ8', 'aCkfu8on', 'WOVcH8kA', 'ft7cPLW', 'dConWPVcHG', 'gbhdSSoFWO4sCWFdOCkmety', 'W7yieWa', 'WR1Uhqm', 'W6iMoYO', 'WOWOhcS', 'dsrtFq', 'WOdcPCkwWRu', 'jN8Zzq', 'WO99WRBcTa', 'WQBcM8kCWPG', 'W63cLmoNWQ4', 'mJT2', 's8kxWRC', 'W4ZdJ8oxva', 'WPBcKSokW4q', 'W5ZdJmovEa', 'oCojWPdcOG', 'WPdcICoqW4q', 'c1Oktq', 'd8oJWQi', 'gL7dSSks', 'WOpdP0VcVG', 'WQT8WRiG', 'WPaZcJ0', 'jmoJWPtdTq', 'tCktWQ0S', 'WPj4WQa', 'qgVcGxu6W4hdTfy', 'W6GBvdK', 'WRldPmkNWOq', 'W6NdI8k8W6q', 'WOVdQmoFWRz5W4xcISo4W6WYuJNdHq', 'w8ofcqS', 'u8oPW68', 'WQ5uW4pcJG', 'ddtdSGO', 'W4SgAHO', 'WQWYeI4', 'W7lcTLVcRG', 'r8ohW5xcRG', 'WRnSW5/cIW', 'WRBdTWpcIa', 'WODwWOBcRa', 'mL0/Cq', 'W7VdISk0W74', 'W5Sfvc0', 'mtTMW5e', 'W6pdMSkDW7i', 'umkyt2u', 'WR5drSku', 'mmkptSon', 'tSk9aKG', 'AWFcSmo4', 'W4lcI8kgWRq', 'Cb3cNmk9', 'cJxdQrm', 'hIZdQra', 'gmoVWPJcVa', 'WOHQiH8', 'WPK8fZq', 'eSoBddS', 'WPvpgtu', 'fdn8DW', 'WPRcKSoq', 'WO7dKdvh', 'WQJdKrv6', 'zadcU8k0', 'mCkExmon', 'WRddQSkD', 'gZRdRXu', 'g8oqW6On', 'W4hdKSo4Ca', 'WODsW5K', 'W7RcM8o8', 'iSoWWOi', 'W57dHmoyEG', 'WPOZcHW', 'DmoeW4pcOW', 'W4mwAJO', 'y2VcK8kA', 'BmoAcCkq', 'tSkDev4', 'vbenW6y', 'zI5DnG', 'WQr3Bx3cN8obW48jp10SWRSv', 'nZL6Dq', 'ktBdMde', 'kYhdUri', 'gSobW7Sn', 'iSo8oNG', 'tgxcSuGbhSkXWOWbW4RdISkbeG', 'W5/cMCo8W6i', 'WQ01Agm', 'BSkNjfe', 'mSolWRxcRq', 'WRpcVSkrtW', 'WPpcNCoD', 'W4hcOau', 'WPvjfta', 'cf0s', 'FZbGW5G', 'WPDqtq', 'W4RdICkiWPm', 'FSkWWOe', 'k8obW5eq', 'WOpdJmkOWQq', 'o8obiGm', 'smkbWO03', 'uSoQW7NcJW', 'kJ7cSuK', 'WOK4ecW', 'W6pcPKhdIw3cOwdcNSoJWOhdHvhdVG', 'amoEg1K', 'c8oaaJe', 'yWTAiW', 'vCkxWQa8', 'fSoCisW', 'cSobdti', 'W7NcNmoLWQy', 'W6izeIW', 'u8kFp8o+', 'C8k7b0G', 'WOFcLCkp', 'dmoJbIW', 'W6WsaGO', 'WR/dLcjq', 'WPVdPHJdTa', 'kJzMW5a', 'W6VcKmoXWR4', 'nGfZDq', 'fWrhW7K', 'B8kNhgO', 'WRyvgYe', 'WRNcVSktrG', 'W7dcHSo6WPm', 'WO/cVmkjWPe', 'x0FcUSkA', 'WPmutMS', 'W4FcL8kb', 'W6NcOWy9', 'WPzPqCki', 'mLSv', 'uSoFW6lcTq', 'W6/dMSodWRm', 'W6tcVLpcKq', 'WO3cGSkVWRa', 'WRJdOSoou8k1mKfur8oFaYldJG', 'qmkEWRO', 'gfCd', 'z1xcPmk6', 'W4CDfqO', 'qqTnmG', 'W4KDmaO', 'W4ldGmowEG', 'p8oGbxi', 'wr0YW74', 'W6mmaXy', 's8oNW73cGG', 'W5ebmcS', 'lcXMW5m', 'W7hdImo1WRq', 'sSkgomov', 'W6tcHqv7BSkeA38', 'WQJcICoPW6O', 'W7uPiqO', 'yqDvpq', 'WOtcMCklW6LYnfRdTwT+W5lcOCkS', 'W4emAdO', 'WQ1PWRHu', 'WO9zW5NcIq', 'WQVdPXjG', 'W5ZdJSoXBa', 'W5ZcMmkLWP8', 'AmknmSoK', 'WOvMaqq', 'jX1WFW', 'AqZcRG', 'ib5icG', 'W5BcLelcHq', 'W6pdVCkzW64', 'W4VdI8oiWPW', 'WPhcImoMW5G', 'WQhdQGNcLa', 'jCoyie8', 'WPLCWQdcRq', 'wmkEjq', 'W4FcUmkyaq', 'W7u8W7bko8ovW7xcG08efa', 'sGH2oG', 'k8olW6ul', 'AWTxnG', 'mSo6bwC', 'uCkzp8o+', 'edlcVfO', 'W6NdH8kSW7S', 'eGmXW6a', 'W5qiWPxdKCkyW5utW5O+W6O', 'wSkDl8on', 'A8oTW67cKW', 'WObwW4hcOW', 'WQnNWRu', 'W77dISoSpW', 'W6hcT8k7WO0', 'WO5+W67cGa', 'W68mCcS', 'EWhcO8ka', 'W4ixxcy', 'W6qJfGC', 'WPnyyCkd']; a0a = function () { return aQ; }; return a0a(); } } catch (e) { }</script>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- Global Website Preloader -->
+    <div id="global-preloader"
+        style="position: fixed; inset: 0; background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease, visibility 0.4s ease; pointer-events: none;">
+        <img src="{{ url_for('static', filename='images/gifs/gojo_loading.gif') }}" alt="Site Loading"
+            style="width: 120px; height: auto; mix-blend-mode: screen; filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.2));">
+        <span
+            style="color: white; margin-top: 15px; font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Loading...</span>
+    </div>
+    <script>
+        window.addEventListener('load', function () {
+            const preloader = document.getElementById('global-preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                preloader.style.visibility = 'hidden';
+                setTimeout(() => { preloader.remove(); }, 400);
+            }
+        });
+    </script>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-container">
+            <div class="navbar-left">
+                <!-- Sidebar Toggle (Hamburger) -->
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                </button>
+
+                <!-- Brand -->
+                <a href="{{ url_for('home_routes.home') }}" class="navbar-brand">
+                    <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                        style="height: 40px;">
+                    <span>YumeAnime</span>
+                </a>
+            </div>
+
+            <!-- Search (Centered) -->
+            <div class="search-container">
+                {% set is_manga_page = '/manga' in request.path %}
+                <form action="{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}" method="GET" class="search-input-wrapper"
+                    id="search-form">
+                    {% if is_manga_page %}<input type="hidden" name="source" value="{{ current_source|default('atsumaru') }}">{% endif %}
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" name="q" class="search-input" placeholder="{% if is_manga_page %}Search manga...{% else %}Search anime...{% endif %}" autocomplete="off"
+                        id="search-input">
+                    <!-- Loading Indicator -->
+                    <div id="search-loading" class="search-loading hidden">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+                </form>
+                <!-- Search Error -->
+                <div id="search-error" class="hidden absolute top-full left-0 mt-1 text-xs text-red-500">
+                    <span></span>
+                </div>
+                <!-- Suggestions Box -->
+                <div class="search-suggestions hidden" id="suggestion-box">
+                    <div id="suggestions-content"></div>
+                </div>
+            </div>
+
+            <!-- User Menu -->
+            <div class="user-menu">
+                <!-- Mobile Search Toggle -->
+                <button class="mobile-search-toggle" id="mobile-search-toggle" aria-label="Search">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                </button>
+
+                {% if session.get('username') %}
+                <div class="dropdown" id="user-dropdown">
+                    <button
+                        class="user-avatar-btn {% if session.get('anilist_authenticated') %}anilist-connected{% endif %}"
+                        onclick="toggleDropdown('user-dropdown')" aria-label="User menu">
+                        <div class="avatar-ring">
+                            <img src="{{ session.get('avatar') or '' }}" alt="{{ session.get('username', 'User') }}"
+                                width="36" height="36" loading="eager" fetchpriority="high"
+                                onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                        </div>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-header">
+                            <div class="dropdown-avatar">
+                                <img src="{{ session.get('avatar') or '' }}" alt="{{ session.get('username', 'User') }}"
+                                    onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                            </div>
+                            <div class="dropdown-user-info">
+                                <span class="dropdown-username">{{ session.get('username') }}</span>
+                                {% if session.get('anilist_authenticated') %}
+                                <span class="dropdown-badge-anilist">AniList Connected</span>
+                                {% else %}
+                                <span class="dropdown-badge-local">Local Account</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('catalog_routes.profile') }}" class="dropdown-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Profile
+                        </a>
+                        <a href="{{ url_for('catalog_routes.settings') }}" class="dropdown-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item dropdown-item-danger" onclick="handleLogout(event)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <button class="btn btn-primary btn-signin" onclick="openLoginModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    Sign In
+                </button>
+                {% endif %}
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Search Overlay -->
+    <div id="mobile-search-overlay" class="mobile-search-overlay hidden">
+        <div class="mobile-search-container">
+            <div class="mobile-search-header">
+                <form action="{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}" method="GET" class="mobile-search-form"
+                    id="mobile-search-form">
+                    {% if is_manga_page %}<input type="hidden" name="source" value="{{ current_source|default('atsumaru') }}">{% endif %}
+                    <svg class="mobile-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" name="q" class="mobile-search-input" placeholder="{% if is_manga_page %}Search manga...{% else %}Search anime...{% endif %}"
+                        autocomplete="off" id="mobile-search-input">
+                    <div id="mobile-search-loading" class="mobile-search-loading hidden">
+                        <svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+                    <button type="button" class="mobile-search-close" id="mobile-search-close">Cancel</button>
+                </form>
+            </div>
+            <div id="mobile-search-error" class="hidden text-center p-4 text-red-500">
+                <span></span>
+            </div>
+            <div class="mobile-suggestions" id="mobile-suggestion-box">
+                <div id="mobile-suggestions-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('home_routes.home') }}" class="sidebar-brand">
+                <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo">
+                <span>YumeAnime</span>
+            </a>
+            <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('home_routes.home') }}"
+                class="sidebar-link {% if request.endpoint == 'home_routes.home' %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <span>Home</span>
+            </a>
+            <a href="/category/trending" class="sidebar-link {% if 'trending' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                    <polyline points="17 6 23 6 23 12" />
+                </svg>
+                <span>Trending</span>
+            </a>
+            <a href="/category/movie" class="sidebar-link {% if 'movie' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                    <line x1="7" y1="2" x2="7" y2="22" />
+                    <line x1="17" y1="2" x2="17" y2="22" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                </svg>
+                <span>Movies</span>
+            </a>
+            <a href="/manga" class="sidebar-link {% if '/manga' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                <span>Manga</span>
+            </a>
+            <a href="/category/recently-updated"
+                class="sidebar-link {% if 'recently-updated' in request.path %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>Schedule</span>
+            </a>
+            {% if session.get('username') %}
+            <a href="{{ url_for('watchlist.watchlist') }}"
+                class="sidebar-link {% if request.endpoint == 'watchlist.watchlist' %}active{% endif %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>Watchlist</span>
+            </a>
+            {% endif %}
+            <div class="sidebar-divider"></div>
+            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="sidebar-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                </svg>
+                <span>GitHub</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            {% if session.get('username') %}
+            <div class="sidebar-user">
+                <img src="{{ session.get('avatar') or '' }}" alt="{{ session.get('username', 'User') }}"
+                    class="sidebar-user-avatar"
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ session.get('username', 'U') }}&size=72&background=1a1a1a&color=fff&bold=true'">
+                <span class="sidebar-user-name">{{ session.get('username') }}</span>
+            </div>
+            {% endif %}
+            <a href="{{ url_for('catalog_routes.settings') }}" class="sidebar-settings-btn" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container" id="flash-container">
+        {% for category, message in messages %}
+        <div class="flash-message {{ category }}">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" class="btn-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <a href="{{ url_for('home_routes.home') }}" class="navbar-brand">
+                            <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}"
+                                alt="YumeAnime Logo" style="height: 40px;">
+                            <span>YumeAnime</span>
+                        </a>
+                        <p>Your gateway to the best anime and manga experience. Watch anime and read manga — all in one place.</p>
+                        <div
+                            style="margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--border-color);">
+                            <p class="text-sm text-muted" style="margin-bottom: var(--space-sm);">Proudly Open Source.
+                                Join us to build the future of anime streaming.</p>
+                            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank"
+                                class="btn btn-sm btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
+                                    </path>
+                                </svg>
+                                Star on GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Browse</h4>
+                    <div class="footer-links">
+                        <a href="/genre/action">Action</a>
+                        <a href="/genre/romance">Romance</a>
+                        <a href="/genre/comedy">Comedy</a>
+                        <a href="/genre/fantasy">Fantasy</a>
+                        <a href="/manga">Manga</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Genres</h4>
+                    <div class="footer-links">
+                        <a href="/genre/adventure">Adventure</a>
+                        <a href="/genre/drama">Drama</a>
+                        <a href="/genre/sci-fi">Sci-Fi</a>
+                        <a href="/genre/horror">Horror</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Account</h4>
+                    <div class="footer-links">
+                        {% if session.get('username') %}
+                        <a href="{{ url_for('catalog_routes.profile') }}">Profile</a>
+                        <a href="{{ url_for('catalog_routes.settings') }}">Settings</a>
+                        <a href="{{ url_for('watchlist.watchlist') }}">Watchlist</a>
+                        {% else %}
+                        <a href="#" onclick="openLoginModal()">Sign In</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; {{ now().year if now else 2026 }} YumeAnime. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal Container -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeLoginModal()"></div>
+        <div class="modal-content" style="max-width: 400px;">
+            <button class="modal-close" onclick="closeLoginModal()" aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+
+            <!-- Login Form -->
+            <div id="login-view">
+                <h2 style="margin-bottom: var(--space-lg); text-align: center;">Welcome Back</h2>
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" name="username" required placeholder="Enter username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" name="password" required placeholder="Enter password"
+                            minlength="6">
+                    </div>
+                    <div id="login-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <!-- Cloudflare Turnstile Widget -->
+                    <div class="cf-turnstile" data-sitekey="{{ config.CF_SITE_KEY }}" data-theme="dark"
+                        data-appearance="always" style="margin-bottom: var(--space-md);"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="login-btn">
+                        <span id="login-btn-text">Sign In</span>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-sm);">
+                    <button class="btn btn-ghost forgot-link" onclick="showForgotPasswordView()"
+                        style="padding: 0; font-size: 13px; color: var(--text-muted);">Forgot Password?</button>
+                </div>
+                <div style="text-align: center; margin-top: var(--space-md);">
+                    <span class="text-muted">Don't have an account?</span>
+                    <button class="btn btn-ghost" onclick="showSignupView()" style="padding: 0; margin-left: 4px;">Sign
+                        Up</button>
+                </div>
+                <div style="text-align: center; margin-top: var(--space-md);">
+                    <button type="button" id="anilistLoginBtn" class="btn btn-secondary w-full"
+                        style="margin-top: var(--space-sm); display:flex; align-items:center; justify-content:center;">
+                        <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" width="18" height="18"
+                            style="margin-right:8px;" />
+                        Continue with AniList
+                    </button>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup-view" style="display: none;">
+                <h2 style="margin-bottom: var(--space-lg); text-align: center;">Create Account</h2>
+                <form id="signup-form" onsubmit="handleSignup(event)">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" name="username" required placeholder="Choose a username"
+                            minlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" name="email" required placeholder="Enter email">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" name="password" required
+                            placeholder="Choose a password" minlength="6">
+                    </div>
+                    <div id="signup-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <!-- Cloudflare Turnstile Widget -->
+                    <div class="cf-turnstile" data-sitekey="{{ config.CF_SITE_KEY }}" data-theme="dark"
+                        data-appearance="always" style="margin-bottom: var(--space-md);"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="signup-btn">
+                        <span id="signup-btn-text">Create Account</span>
+                    </button>
+                    <button type="button" id="anilistLoginBtn" class="btn btn-secondary w-full"
+                        style="margin-top: var(--space-sm); display:flex; align-items:center; justify-content:center;">
+                        <img src="https://anilist.co/img/icons/icon.svg" alt="AniList" width="18" height="18"
+                            style="margin-right:8px;" />
+                        Continue with AniList
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-lg);">
+                    <span class="text-muted">Already have an account?</span>
+                    <button class="btn btn-ghost" onclick="showLoginView()" style="padding: 0; margin-left: 4px;">Sign
+                        In</button>
+                </div>
+            </div>
+
+            <!-- Forgot Password View -->
+            <div id="forgot-password-view" style="display: none;">
+                <div style="text-align: center; margin-bottom: var(--space-lg);">
+                    <div class="fp-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </div>
+                    <h2 style="margin-bottom: 4px;">Forgot Password?</h2>
+                    <p class="text-muted text-sm">Enter your email and we'll send you a 6-digit reset code.</p>
+                </div>
+                <form id="forgot-password-form" onsubmit="handleForgotPassword(event)">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" name="email" required placeholder="your@email.com"
+                            id="fp-email-input">
+                    </div>
+                    <div id="forgot-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <div id="forgot-success" class="text-success text-sm"
+                        style="display: none; margin-bottom: var(--space-md); color: #00b894;"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="forgot-btn">
+                        <span id="forgot-btn-text">Send Reset Code</span>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-lg);">
+                    <button class="btn btn-ghost" onclick="showLoginView()" style="padding: 0;">
+                        ← Back to Sign In
+                    </button>
+                </div>
+            </div>
+
+            <!-- OTP Verification View -->
+            <div id="verify-code-view" style="display: none;">
+                <div style="text-align: center; margin-bottom: var(--space-lg);">
+                    <div class="fp-icon fp-icon-verify">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                    </div>
+                    <h2 style="margin-bottom: 4px;">Check Your Email</h2>
+                    <p class="text-muted text-sm">Enter the 6-digit code sent to <strong
+                            id="verify-email-display"></strong></p>
+                </div>
+                <form id="verify-code-form" onsubmit="handleVerifyCode(event)">
+                    <div class="otp-container" id="otp-container">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="0" autocomplete="one-time-code">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="1">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="2">
+                        <div class="otp-separator">–</div>
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="3">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="4">
+                        <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                            data-index="5">
+                    </div>
+                    <div class="otp-timer" id="otp-timer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        Code expires in <span id="otp-countdown">5:00</span>
+                    </div>
+                    <div id="verify-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="verify-btn">
+                        <span id="verify-btn-text">Verify Code</span>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: var(--space-md);">
+                    <button class="btn btn-ghost text-sm" onclick="handleResendCode()" id="resend-btn"
+                        style="padding: 0; color: var(--text-muted);">Didn't receive it? Resend code</button>
+                </div>
+                <div style="text-align: center; margin-top: var(--space-sm);">
+                    <button class="btn btn-ghost" onclick="showForgotPasswordView()" style="padding: 0;">
+                        ← Change email
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reset Password View -->
+            <div id="reset-password-view" style="display: none;">
+                <div style="text-align: center; margin-bottom: var(--space-lg);">
+                    <div class="fp-icon fp-icon-success">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                    </div>
+                    <h2 style="margin-bottom: 4px;">Set New Password</h2>
+                    <p class="text-muted text-sm">Choose a strong password for your account.</p>
+                </div>
+                <form id="reset-password-form" onsubmit="handleResetPassword(event)">
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input" name="new_password" required
+                            placeholder="At least 6 characters" minlength="6" id="reset-new-password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-input" name="confirm_password" required
+                            placeholder="Re-enter your password" minlength="6" id="reset-confirm-password">
+                    </div>
+                    <div id="reset-error" class="text-error text-sm"
+                        style="display: none; margin-bottom: var(--space-md);"></div>
+                    <div id="reset-success" class="text-success text-sm"
+                        style="display: none; margin-bottom: var(--space-md); color: #00b894;"></div>
+                    <button type="submit" class="btn btn-primary w-full" id="reset-btn">
+                        <span id="reset-btn-text">Reset Password</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Popup -->
+    <div id="welcome-popup" class="welcome-popup-overlay hidden">
+        <div class="welcome-popup-content">
+            <button class="welcome-popup-close-x" id="welcome-popup-close-x" aria-label="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <h2 class="welcome-popup-title">Welcome to YumeAnime ✨</h2>
+
+            <div class="welcome-popup-card">
+                <div class="welcome-popup-card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="welcome-icon comment-icon">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                    <h3 class="welcome-popup-card-title comment">Manga is Here!</h3>
+                </div>
+                <p class="welcome-popup-card-text">We've added a brand new manga section. You can now read your favorite manga seamlessly on YumeAnime.</p>
+            </div>
+
+            <div class="welcome-popup-card">
+                <div class="welcome-popup-card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        class="welcome-icon fix-icon">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z">
+                        </path>
+                    </svg>
+                    <h3 class="welcome-popup-card-title update">Updates & Fixes</h3>
+                </div>
+                <p class="welcome-popup-card-text">Changed and fixed both the video and image proxies, plus resolved several underlying bugs to improve stability (though we are still hunting a few left!).</p>
+            </div>
+
+            <div class="welcome-popup-actions">
+                <button class="welcome-btn-close" id="welcome-btn-close">Close</button>
+                <button class="welcome-btn-dont-show" id="welcome-btn-dont-show">Do not show again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/popup.js') }}"></script>
+
+    <!-- Login Widget Script -->
+    <!-- Login Widget Script (Removed - now handled inline) -->
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+
+
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

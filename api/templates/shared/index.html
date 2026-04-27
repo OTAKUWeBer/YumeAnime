@@ -1,0 +1,364 @@
+{% extends "shared/base.html" %}
+
+{% block title %}YumeAnime - Watch Anime Online{% endblock %}
+{% block meta_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime
+series.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if error %}
+    <div class="flash-message error" style="margin-bottom: var(--space-lg);">
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Spotlight Carousel -->
+    {% if suggestions and suggestions.data and suggestions.data.spotlightAnimes %}
+    <section class="spotlight-section">
+        <div class="spotlight-carousel" id="spotlight-carousel">
+            {% for anime in suggestions.data.spotlightAnimes[:20] %}
+            <div class="spotlight-slide {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}">
+                <div class="spotlight-backdrop">
+                    <img src="{{ anime.banner or anime.poster }}" alt="{{ anime.name or anime.title }}"
+                        loading="{% if loop.first %}eager{% else %}lazy{% endif %}">
+                </div>
+                <div class="spotlight-gradient"></div>
+                <div class="spotlight-content">
+                    <div class="spotlight-info">
+                        <div class="spotlight-rank">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon
+                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                            <span>#{{ loop.index }} Spotlight</span>
+                        </div>
+                        <h1 class="spotlight-title">{{ anime.name or anime.title }}</h1>
+
+                        {# Genre Tags #}
+                        {% if anime.genres %}
+                        <div class="spotlight-genres">
+                            {% for genre in anime.genres[:4] %}
+                            <span class="spotlight-genre-tag">{{ genre }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <p class="spotlight-description">{{ anime.description or anime.synopsis or '' }}</p>
+
+                        {# Info Badges Row #}
+                        <div class="spotlight-meta">
+                            {% if anime.type %}<span class="spotlight-badge"><svg width="14" height="14"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
+                                    <line x1="7" y1="2" x2="7" y2="22" />
+                                    <line x1="17" y1="2" x2="17" y2="22" />
+                                </svg> {{ anime.type }}</span>{% endif %}
+                            {% if anime.totalEpisodes %}<span class="spotlight-badge"><svg width="14" height="14"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="18" rx="2" ry="2" />
+                                    <line x1="8" y1="21" x2="8" y2="3" />
+                                    <line x1="16" y1="21" x2="16" y2="3" />
+                                </svg> {% if anime.releasedEpisodes is not none and anime.releasedEpisodes !=
+                                anime.totalEpisodes
+                                %}{{ anime.releasedEpisodes }}/{{ anime.totalEpisodes }}{% else %}{{ anime.totalEpisodes
+                                }}{% endif %} Episodes</span>{% endif %}
+                            {% if anime.rating %}
+                            <span class="spotlight-badge spotlight-badge-rating">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--warning)"
+                                    stroke="var(--warning)" stroke-width="2">
+                                    <polygon
+                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                                {{ (anime.rating / 10) | round(1) }}
+                            </span>
+                            {% endif %}
+                            {% if anime.duration %}<span class="spotlight-badge"><svg width="14" height="14"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg> {{ anime.duration }}</span>{% endif %}
+                            {% if anime.studio %}<span class="spotlight-badge"><svg width="14" height="14"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                    <path d="M2 17l10 5 10-5" />
+                                    <path d="M2 12l10 5 10-5" />
+                                </svg> {{ anime.studio }}</span>{% endif %}
+                            {% if anime.isAdult %}
+                            <span class="spotlight-badge" style="background:var(--error);color:white;">18+</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="spotlight-actions">
+                            <a href="/watch/{{ anime.id }}" class="btn btn-primary btn-lg">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                                Watch Now
+                            </a>
+                            <a href="/anime/{{ anime.id }}" class="btn btn-secondary btn-lg">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="16" x2="12" y2="12" />
+                                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                                </svg>
+                                Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Carousel Navigation -->
+        <div class="spotlight-nav">
+            <button class="spotlight-nav-btn" id="spotlight-prev" aria-label="Previous">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="15 18 9 12 15 6" />
+                </svg>
+            </button>
+            <div class="spotlight-fraction" id="spotlight-fraction">
+                <span class="spotlight-current">1</span> / <span class="spotlight-total">{{
+                    suggestions.data.spotlightAnimes[:20]|length }}</span>
+            </div>
+            <button class="spotlight-nav-btn" id="spotlight-next" aria-label="Next">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+            </button>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Continue Watching Section (populated by JS from localStorage) -->
+    <section class="cw-section" id="continue-watching-section" style="display: none;">
+        <div class="section-header">
+            <div>
+                <div class="section-subtitle">Your Watchlist</div>
+                <h2 class="section-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Continue Watching
+                </h2>
+            </div>
+            <button class="cw-clear-btn" id="cw-clear-btn" title="Clear all">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Clear All
+            </button>
+        </div>
+        <div class="cw-scroll-wrapper">
+            <div class="cw-scroll" id="cw-scroll-container"></div>
+        </div>
+    </section>
+
+
+
+    <!-- Main Home Layout -->
+    <div class="home-layout">
+        <!-- Main Content (Left) -->
+        <div class="home-main">
+            <!-- Share Banner -->
+            <div class="share-banner">
+                <div class="share-banner-text">
+                    <img src="https://creator.nightcafe.studio/jobs/k7xk0gbBkN7kiRpucGh8/k7xk0gbBkN7kiRpucGh8--1--w8kcg.jpg"
+                        alt="Share">
+                    <div>
+                        <div class="share-title">Love the Site?</div>
+                        <div class="share-subtitle">Share it With your friends!</div>
+                    </div>
+                </div>
+                <div class="share-socials">
+                    <a href="https://discord.gg/uPyEB7tDEM" target="_blank" class="social-btn"
+                        aria-label="Join Discord">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Content Tabs -->
+            <div class="content-tabs">
+                <button class="tab-btn active" data-tab="tab-trending">TOP AIRING</button>
+                <button class="tab-btn" data-tab="tab-popular">POPULAR</button>
+                <button class="tab-btn" data-tab="tab-movies">MOVIES</button>
+            </div>
+
+            <!-- Trending Section (Top Airing) -->
+            <div id="tab-trending" class="tab-content active">
+                {% if suggestions and suggestions.data and suggestions.data.trendingAnimes %}
+                <div class="anime-grid">
+                    {% for anime in suggestions.data.trendingAnimes[:14] %}
+                    <a href="/watch/{{ anime.id }}" class="anime-card">
+                        <div class="anime-card-poster">
+                            <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}"
+                                loading="lazy">
+                            <div class="anime-card-badges">
+                                {% if anime.isAdult %}<span class="badge"
+                                    style="background:var(--error);color:white;">18+</span>{% endif %}
+                                {% if anime.rating %}<span class="badge badge-rating">⭐ {{ (anime.rating / 10) |
+                                    round(1) }}</span>{% endif %}
+                                {% if anime.episodes and anime.episodes.sub %}<span class="badge badge-sub">{% if
+                                    anime.episodes.released and anime.episodes.released != anime.episodes.sub %}{{
+                                    anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{ anime.episodes.sub
+                                    }}{% endif %}</span>{% endif %}
+                                {% if anime.episodes and anime.episodes.dub %}<span class="badge badge-dub">{{
+                                    anime.episodes.dub }}</span>{% endif %}
+                            </div>
+                            <div class="anime-card-overlay">
+                                <span class="btn btn-primary btn-sm">Watch Now</span>
+                            </div>
+                        </div>
+                        <div class="anime-card-info">
+                            <h3 class="anime-card-title">{{ anime.name or anime.title }}</h3>
+                            <div class="anime-card-meta">
+                                {% if anime.type %}<span>{{ anime.type }}</span>{% endif %}
+                                {% if anime.duration %}<span>{{ anime.duration }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Most Popular Section -->
+            <div id="tab-popular" class="tab-content">
+                {% if suggestions and suggestions.data and suggestions.data.mostPopularAnimes %}
+                <div class="anime-grid">
+                    {% for anime in suggestions.data.mostPopularAnimes[:12] %}
+                    <a href="/watch/{{ anime.id }}" class="anime-card">
+                        <div class="anime-card-poster">
+                            <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}"
+                                loading="lazy">
+                            <div class="anime-card-badges">
+                                {% if anime.isAdult %}<span class="badge"
+                                    style="background:var(--error);color:white;">18+</span>{% endif %}
+                                {% if anime.rating %}<span class="badge badge-rating">⭐ {{ (anime.rating / 10) |
+                                    round(1) }}</span>{% endif %}
+                                {% if anime.episodes and anime.episodes.sub %}<span class="badge badge-sub">{% if
+                                    anime.episodes.released and anime.episodes.released != anime.episodes.sub %}{{
+                                    anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{ anime.episodes.sub
+                                    }}{% endif %}</span>{% endif %}
+                                {% if anime.episodes and anime.episodes.dub %}<span class="badge badge-dub">{{
+                                    anime.episodes.dub }}</span>{% endif %}
+                            </div>
+                            <div class="anime-card-overlay">
+                                <span class="btn btn-primary btn-sm">Watch Now</span>
+                            </div>
+                        </div>
+                        <div class="anime-card-info">
+                            <h3 class="anime-card-title">{{ anime.name or anime.title }}</h3>
+                            <div class="anime-card-meta">
+                                {% if anime.type %}<span>{{ anime.type }}</span>{% endif %}
+                                {% if anime.duration %}<span>{{ anime.duration }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Movies Section -->
+            <div id="tab-movies" class="tab-content">
+                {% if movies %}
+                <div class="anime-grid">
+                    {% for anime in movies[:12] %}
+                    <a href="/watch/{{ anime.id }}" class="anime-card">
+                        <div class="anime-card-poster">
+                            <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}"
+                                loading="lazy">
+                            <div class="anime-card-badges">
+                                {% if anime.isAdult %}<span class="badge"
+                                    style="background:var(--error);color:white;">18+</span>{% endif %}
+                                {% if anime.rating %}<span class="badge badge-rating">⭐ {{ (anime.rating / 10) |
+                                    round(1) }}</span>{% endif %}
+                                {% if anime.episodes and anime.episodes.sub %}<span class="badge badge-sub">{% if
+                                    anime.episodes.released and anime.episodes.released != anime.episodes.sub %}{{
+                                    anime.episodes.released }}/{{ anime.episodes.sub }}{% else %}{{ anime.episodes.sub
+                                    }}{% endif %}</span>{% endif %}
+                                {% if anime.episodes and anime.episodes.dub %}<span class="badge badge-dub">{{
+                                    anime.episodes.dub }}</span>{% endif %}
+                            </div>
+                            <div class="anime-card-overlay">
+                                <span class="btn btn-primary btn-sm">Watch Now</span>
+                            </div>
+                        </div>
+                        <div class="anime-card-info">
+                            <h3 class="anime-card-title">{{ anime.name or anime.title }}</h3>
+                            <div class="anime-card-meta">
+                                {% if anime.type %}<span>{{ anime.type }}</span>{% endif %}
+                                {% if anime.duration %}<span>{{ anime.duration }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- Sidebar Content (Right) -->
+        <div class="home-sidebar">
+            <!-- Newest / Latest Episodes Section -->
+            {% if suggestions and suggestions.data and suggestions.data.latestEpisodeAnimes %}
+            <div class="sidebar-section">
+                <h2 class="sidebar-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Newest
+                </h2>
+                <div class="sidebar-list">
+                    {% for anime in suggestions.data.latestEpisodeAnimes[:10] %}
+                    <a href="/watch/{{ anime.id }}" class="sidebar-anime-card">
+                        <div class="sidebar-anime-poster">
+                            <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}"
+                                loading="lazy">
+                        </div>
+                        <div class="sidebar-anime-info">
+                            <div class="sidebar-anime-title" title="{{ anime.name or anime.title }}">{{ anime.name or
+                                anime.title }}</div>
+                            <div class="sidebar-anime-meta">
+                                {% if anime.episodes and anime.episodes.sub %}
+                                <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="3" width="20" height="18" rx="2" ry="2" />
+                                        <line x1="8" y1="21" x2="8" y2="3" />
+                                        <line x1="16" y1="21" x2="16" y2="3" />
+                                    </svg> {{ anime.episodes.sub }}</span>
+                                {% endif %}
+                                {% if anime.type %}
+                                <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
+                                        <line x1="7" y1="2" x2="7" y2="22" />
+                                        <line x1="17" y1="2" x2="17" y2="22" />
+                                    </svg> {{ anime.type }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}
