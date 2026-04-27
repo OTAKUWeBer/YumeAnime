@@ -10,9 +10,9 @@
 <style>
     /* ── Immersive Reader ── */
     .main-content { padding-top: 0 !important; }
-    .footer, .navbar { transition: transform 0.3s ease, opacity 0.3s ease; }
-    body.reader-immersive .navbar { transform: translateY(-100%); opacity: 0; pointer-events: none; }
-    body.reader-immersive .footer { display: none; }
+    /* Hide navbar entirely on reader page — the reader-bar replaces it */
+    .navbar { display: none !important; }
+    .footer { display: none; }
 
     /* Progress bar */
     .reader-progress {
@@ -296,9 +296,8 @@
             }
         }
 
-        // Auto-hide header after scrolling 60px
+        // Auto-hide reader-bar after scrolling 60px
         if (scrollY > 60) {
-            document.body.classList.add('reader-immersive');
             if (scrollY > lastScrollY && barVisible) {
                 bar.classList.add('hidden');
                 barVisible = false;
@@ -307,7 +306,6 @@
                 barVisible = true;
             }
         } else {
-            document.body.classList.remove('reader-immersive');
             bar.classList.remove('hidden');
             barVisible = true;
         }
