@@ -8,6 +8,10 @@ from urllib.parse import parse_qs
 
 from .miruro import MiruroScraper
 
+
+from .animex import AnimexScraper
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +22,11 @@ class UnifiedScraper:
 
     def __init__(self):
         self.miruro = MiruroScraper()
+
         logger.info("[UnifiedScraper] Initialized with Miruro only")
+
+        self.animex = AnimexScraper()
+
 
     # =========================================================================
     # HOME
@@ -202,13 +210,79 @@ class UnifiedScraper:
         anilist_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
+<<<<<<< HEAD
         Get video streaming data using Miruro only.
+=======
+        Get video streaming data — routes to AnimeX or Miruro based on provider.
+>>>>>>> master
         """
         ep_id_str = str(ep_id)
         miruro_ep_id, parsed_anilist_id = self._parse_miruro_ep(ep_id_str)
 
         if parsed_anilist_id:
             anilist_id = parsed_anilist_id
+
+
+        # Detect AnimeX-routed episodes by the `watch/ax/...` slug pattern.
+        import re
+        is_ax = "/ax/" in f"/{ep_id_str}/"
+
+        if is_ax:
+            ax_anilist_id = anilist_id
+            ax_server_id = None
+            ax_ep_num = None
+
+            m = re.search(r"/ax/(\d+)/(sub|dub)/([^/]+)$", f"/{ep_id_str}")
+            if m:
+                try:
+                    ax_anilist_id = int(m.group(1))
+                except ValueError:
+                    pass
+                language = m.group(2) or language
+                tail = m.group(3)
+                # tail is "<server_id>-<ep_num>" (server id may itself contain
+                # dashes; episode number is the trailing numeric chunk).
+                num_match = re.search(r"(\d+(?:\.\d+)?)\s*$", tail)
+                if num_match:
+                    try:
+                        raw_num = float(num_match.group(1))
+                        ax_ep_num = int(raw_num) if raw_num.is_integer() else raw_num
+                    except ValueError:
+                        ax_ep_num = None
+                    ax_server_id = tail[: num_match.start()].rstrip("-") or None
+
+            # If the explicit `server` param looks like an AnimeX sub-server, prefer it.
+            if server and server not in ("kiwi", "jet", "arc", "zoro", "bee", "wco"):
+                ax_server_id = ax_server_id or server
+
+            if not ax_anilist_id or ax_ep_num is None:
+                return {
+                    "error": "no_sources",
+                    "message": "AnimeX: missing anilist_id or episode number.",
+                }
+
+            try:
+                result = await self.animex.get_sources(
+                    ax_anilist_id, ax_ep_num, language, preferred_server=ax_server_id
+                )
+                if result and not result.get("error"):
+                    logger.info(
+                        f"[UnifiedScraper] Video (AnimeX): OK anilist_id={ax_anilist_id} "
+                        f"ep={ax_ep_num} server={ax_server_id}"
+                    )
+                    result["source_provider"] = ax_server_id or result.get("source_provider")
+                    return result
+                logger.warning(
+                    f"[UnifiedScraper] AnimeX returned no sources for anilist_id={ax_anilist_id} "
+                    f"ep={ax_ep_num} server={ax_server_id}: "
+                    f"{result.get('message') if isinstance(result, dict) else result}"
+                )
+            except Exception as e:
+                logger.warning(f"[UnifiedScraper] AnimeX video failed: {e}")
+            return {
+                "error": "no_sources",
+                "message": "AnimeX has no playable streams for this episode.",
+            }
 
         if miruro_ep_id:
             try:
