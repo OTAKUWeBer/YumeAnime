@@ -209,7 +209,7 @@ h6 {
     width: 100%;
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 0 var(--space-lg);
+    padding: var(--space-lg);
 }
 
 .main-content {
@@ -3253,7 +3253,7 @@ h6 {
 /* Mobile Container Padding */
 @media (max-width: 768px) {
     .container {
-        padding: 0 var(--space-md);
+        padding: var(--space-md);
     }
 
     .main-content {

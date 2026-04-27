@@ -232,6 +232,7 @@
 .manga-detail-hero {
     display: flex;
     gap: 30px;
+    margin-top: var(--space-lg);
     margin-bottom: var(--space-2xl);
     padding: 24px;
     background: var(--surface-2);
@@ -263,6 +264,8 @@
     width: 100%;
     height: auto;
     display: block;
+    image-rendering: high-quality;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .manga-detail-info {
