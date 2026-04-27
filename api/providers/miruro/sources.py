@@ -182,9 +182,13 @@ class MiruroSourcesService:
             stream_type = stream.get("type", "").lower()
             quality = stream.get("quality") or "default"
             resolution = stream.get("resolution") or {}
+            
+            # Extract referer from stream if available
+            referer = stream.get("referer")
+            headers = {"referer": referer} if referer else None
 
             if stream_type == "hls" or url.endswith(".m3u8"):
-                proxied_url = encode_proxy(url)
+                proxied_url = encode_proxy(url, headers)
                 hls_sources.append(
                     {
                         "url": proxied_url,
