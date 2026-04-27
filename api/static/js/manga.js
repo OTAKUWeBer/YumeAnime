@@ -7,7 +7,7 @@
     'use strict';
 
     // ── NSFW Filter ──────────────────────────────────────────────────
-    const NSFW_KEY = 'manga_hide_nsfw';
+    const NSFW_KEY = 'yume_manga_hide_nsfw';
 
     function isNsfwHidden() {
         return localStorage.getItem(NSFW_KEY) === 'true';
