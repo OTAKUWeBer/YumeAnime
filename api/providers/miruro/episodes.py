@@ -6,7 +6,6 @@ Handles episode lists via the /episodes/{anilist_id} endpoint
 import logging
 from typing import Dict, Any, Optional, List
 from .base import MiruroBaseClient
-=======
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List
@@ -31,11 +30,11 @@ logger = logging.getLogger(__name__)
 PROVIDER_PRIORITY = [
     # Standard Miruro providers (best quality/reliability)
     "jet", "arc", "kiwi", "zoro", "bee", "wco",
-<<<<<<< HEAD
+    
     # Anidap providers (HLS-only, discovered on-demand)
     "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
     "gogo", "vee", "hop", "dune"
-=======
+    
     # Anidap / AnimeX shared HLS provider names
     "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
     "gogo", "vee", "hop", "dune",

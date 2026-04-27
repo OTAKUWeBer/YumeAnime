@@ -209,13 +209,7 @@ class UnifiedScraper:
         server: Optional[str] = None,
         anilist_id: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """
-<<<<<<< HEAD
-        Get video streaming data using Miruro only.
-=======
-        Get video streaming data — routes to AnimeX or Miruro based on provider.
->>>>>>> master
-        """
+
         ep_id_str = str(ep_id)
         miruro_ep_id, parsed_anilist_id = self._parse_miruro_ep(ep_id_str)
 

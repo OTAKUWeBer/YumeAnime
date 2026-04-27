@@ -58,46 +58,21 @@ class AnimexScraper:
         except Exception as e:
             logger.warning(f"[AnimeX] POST {url} failed: {e}")
             return None
-
+        
     async def _get_json(
         self,
         session: aiohttp.ClientSession,
         url: str,
         params: Optional[Dict[str, Any]] = None,
-        retries: int = 3,
     ) -> Optional[Any]:
-        backoff = 0.7
-        for attempt in range(retries):
-            try:
-                async with session.get(url, params=params, headers=UPSTREAM_HEADERS) as r:
-                    if r.status == 429:
-                        # Honour Retry-After if provided, otherwise back off.
-                        retry_after = r.headers.get("Retry-After")
-                        delay = backoff
-                        if retry_after:
-                            try:
-                                delay = max(delay, float(retry_after))
-                            except ValueError:
-                                pass
-                        logger.warning(
-                            f"[AnimeX] GET {url} -> 429, retry {attempt + 1}/{retries} in {delay:.1f}s"
-                        )
-                        if attempt + 1 < retries:
-                            await asyncio.sleep(delay)
-                            backoff *= 2
-                            continue
-                        return None
-                    if r.status != 200:
-                        logger.warning(f"[AnimeX] GET {url} -> {r.status}")
-                        return None
-                    return await r.json(content_type=None)
-            except Exception as e:
-                logger.warning(f"[AnimeX] GET {url} failed (attempt {attempt + 1}): {e}")
-                if attempt + 1 < retries:
-                    await asyncio.sleep(backoff)
-                    backoff *= 2
-                    continue
-                return None
+        try:
+            async with session.get(url, params=params, headers=UPSTREAM_HEADERS) as r:
+                if r.status != 200:
+                    logger.warning(f"[AnimeX] GET {url} -> {r.status}")
+                    return None
+                return await r.json(content_type=None)
+        except Exception as e:
+            logger.warning(f"[AnimeX] GET {url} failed: {e}")
         return None
 
     # ──────────────────────────────────────────────────────────
