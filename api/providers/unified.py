@@ -7,9 +7,8 @@ from typing import Optional, Dict, Any, Union
 from urllib.parse import parse_qs
 
 from .miruro import MiruroScraper
-
-
 from .animex import AnimexScraper
+from .kuudere import KuudereScraper
 
 
 logger = logging.getLogger(__name__)
@@ -22,10 +21,10 @@ class UnifiedScraper:
 
     def __init__(self):
         self.miruro = MiruroScraper()
-
-        logger.info("[UnifiedScraper] Initialized with Miruro only")
-
         self.animex = AnimexScraper()
+        self.kuudere = KuudereScraper()
+
+        logger.info("[UnifiedScraper] Initialized with Miruro + AnimeX + Kuudere")
 
 
     # =========================================================================
@@ -276,6 +275,80 @@ class UnifiedScraper:
             return {
                 "error": "no_sources",
                 "message": "AnimeX has no playable streams for this episode.",
+            }
+
+        # ── Kuudere-routed episodes: watch/KUUDERE/{anilist_id}/{category}/{slug} ──
+        is_kuudere = "/KUUDERE/" in f"/{ep_id_str}/"
+
+        if is_kuudere:
+            kd_anilist_id = anilist_id
+            kd_ep_num = None
+
+            m = re.search(r"/KUUDERE/(\d+)/(sub|dub)/([^/]+)$", f"/{ep_id_str}")
+            if m:
+                try:
+                    kd_anilist_id = int(m.group(1))
+                except ValueError:
+                    pass
+                language = m.group(2) or language
+                tail = m.group(3)
+                # slug is "kuudere-{ep_num}"
+                num_match = re.search(r"(\d+(?:\.\d+)?)\s*$", tail)
+                if num_match:
+                    try:
+                        raw_num = float(num_match.group(1))
+                        kd_ep_num = int(raw_num) if raw_num.is_integer() else raw_num
+                    except ValueError:
+                        kd_ep_num = None
+
+            if not kd_anilist_id or kd_ep_num is None:
+                return {
+                    "error": "no_sources",
+                    "message": "Kuudere: missing anilist_id or episode number.",
+                }
+
+            # Resolve kuudere anime ID from Miruro episodes API
+            kuudere_id = self.kuudere.get_cached_id(kd_anilist_id)
+            if not kuudere_id:
+                try:
+                    ep_resp = await self.miruro.client._get(f"episodes/{kd_anilist_id}")
+                    if ep_resp:
+                        kd_provider = (ep_resp.get("providers") or {}).get("KUUDERE", {})
+                        pids = kd_provider.get("provider_id", [])
+                        if isinstance(pids, list) and pids:
+                            kuudere_id = pids[0]
+                        elif isinstance(pids, str) and pids:
+                            kuudere_id = pids
+                    if kuudere_id:
+                        self.kuudere.cache_kuudere_id(kd_anilist_id, kuudere_id)
+                except Exception as e:
+                    logger.warning(f"[UnifiedScraper] Failed to resolve Kuudere ID: {e}")
+
+            if not kuudere_id:
+                return {
+                    "error": "no_sources",
+                    "message": "Could not resolve Kuudere anime ID from Miruro.",
+                }
+
+            try:
+                result = await self.kuudere.get_sources(
+                    kuudere_id, kd_ep_num, language
+                )
+                if result and not result.get("error"):
+                    logger.info(
+                        f"[UnifiedScraper] Video (Kuudere): OK anilist_id={kd_anilist_id} "
+                        f"ep={kd_ep_num} kuudere_id={kuudere_id}"
+                    )
+                    return result
+                logger.warning(
+                    f"[UnifiedScraper] Kuudere returned no sources for ep={kd_ep_num}: "
+                    f"{result.get('message') if isinstance(result, dict) else result}"
+                )
+            except Exception as e:
+                logger.warning(f"[UnifiedScraper] Kuudere video failed: {e}")
+            return {
+                "error": "no_sources",
+                "message": "Kuudere has no playable streams for this episode.",
             }
 
         if miruro_ep_id:
