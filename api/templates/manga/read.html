@@ -10,8 +10,6 @@
 <style>
     /* ── Immersive Reader ── */
     .main-content { padding-top: 0 !important; }
-    /* Hide navbar entirely on reader page — the reader-bar replaces it */
-    .navbar { display: none !important; }
     .footer { display: none; }
 
     /* Progress bar */
@@ -134,8 +132,8 @@
         {{ chapter_title }}
     </div>
     <div class="reader-bar-nav">
-        {% if prev_chapter %}
-        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ prev_chapter.id }}" class="nav-pill" title="Previous (←)">
+        {% if next_chapter %}
+        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ next_chapter.id }}" class="nav-pill" title="Previous (←)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg>
         </a>
         {% else %}
@@ -153,8 +151,8 @@
         </a>
         {% endif %}
 
-        {% if next_chapter %}
-        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ next_chapter.id }}" class="nav-pill" title="Next (→)">
+        {% if prev_chapter %}
+        <a href="/manga/{{ source }}/{{ manga_id }}/read/{{ prev_chapter.id }}" class="nav-pill" title="Next (→)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
         {% else %}
@@ -330,14 +328,14 @@
         });
     }
 
-    // Keyboard navigation
+    // Keyboard navigation (reversed: left=next, right=previous)
     document.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') {
-            const prev = document.querySelector('#reader-bar a[title*="Previous"]');
-            if (prev) prev.click();
-        } else if (e.key === 'ArrowRight') {
             const next = document.querySelector('#reader-bar a[title*="Next"]');
             if (next) next.click();
+        } else if (e.key === 'ArrowRight') {
+            const prev = document.querySelector('#reader-bar a[title*="Previous"]');
+            if (prev) prev.click();
         }
     });
 })();
