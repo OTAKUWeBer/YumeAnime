@@ -3,17 +3,16 @@ Episode fetching for Miruro API
 Handles episode lists via the /episodes/{anilist_id} endpoint
 """
 
-import logging
-from typing import Dict, Any, Optional, List
-from .base import MiruroBaseClient
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List
 from .base import MiruroBaseClient
 from ..animex import AnimexScraper
+from ..kuudere import KuudereScraper
 
-# Module-level singleton so the slug/episode caches survive across calls.
+# Module-level singletons so caches survive across calls.
 _animex_scraper: Optional[AnimexScraper] = None
+_kuudere_scraper: Optional[KuudereScraper] = None
 
 
 def _get_animex() -> AnimexScraper:
@@ -23,24 +22,26 @@ def _get_animex() -> AnimexScraper:
     return _animex_scraper
 
 
+def _get_kuudere() -> KuudereScraper:
+    global _kuudere_scraper
+    if _kuudere_scraper is None:
+        _kuudere_scraper = KuudereScraper()
+    return _kuudere_scraper
+
+
 logger = logging.getLogger(__name__)
 
 # Provider preference order (best quality/reliability first)
 # Standard Miruro providers first, then anidap providers
 PROVIDER_PRIORITY = [
     # Standard Miruro providers (best quality/reliability)
-    "jet", "arc", "kiwi", "zoro", "bee", "wco",
-    
-    # Anidap providers (HLS-only, discovered on-demand)
-    "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
-    "gogo", "vee", "hop", "dune"
+    "jet", "arc", "kiwi", "zoro", "bee", "wco", "KUUDERE",
     
     # Anidap / AnimeX shared HLS provider names
     "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
     "gogo", "vee", "hop", "dune",
     # AnimeX-only sub-servers
     "uwu", "mimi", "zaza",
-
 ]
 
 
@@ -130,6 +131,7 @@ class MiruroEpisodesService:
             }
 
         providers = resp.get("providers", {}) or {}
+        mappings = resp.get("mappings", {}) or {}
 
 
 
@@ -157,6 +159,37 @@ class MiruroEpisodesService:
                 logger.info(f"[MiruroEpisodes] Injected AnimeX servers: {added}")
         except Exception as e:
             logger.warning(f"[MiruroEpisodes] AnimeX injection failed for {anilist_id}: {e}")
+
+        # Inject Kuudere episodes if KUUDERE provider is present but has no episodes.
+        # Miruro returns KUUDERE with only provider_id — we fetch actual episodes from kuudere.to.
+        try:
+            kd_provider = mappings.get("providers", {}).get("KUUDERE", {})
+            kd_pids = kd_provider.get("provider_id", []) if isinstance(kd_provider, dict) else []
+            
+            # Check if KUUDERE is already in the main providers dict with valid episodes
+            kd_existing = providers.get("KUUDERE", {})
+            kd_has_episodes = (
+                isinstance(kd_existing, dict)
+                and isinstance(kd_existing.get("episodes"), dict)
+                and (kd_existing["episodes"].get("sub") or kd_existing["episodes"].get("dub"))
+            )
+            
+            if kd_pids and not kd_has_episodes:
+                kuudere_id = kd_pids[0] if isinstance(kd_pids, list) else kd_pids
+                anime_title = ""
+                for _p in providers.values():
+                    if isinstance(_p, dict):
+                        anime_title = (_p.get("meta", {}) or {}).get("title", "") or ""
+                        if anime_title:
+                            break
+                kd_block = await _get_kuudere().build_provider_block(
+                    kuudere_id, anilist_id, anime_title
+                )
+                if kd_block:
+                    providers["KUUDERE"] = kd_block
+                    logger.info(f"[MiruroEpisodes] Injected Kuudere episodes for {anilist_id}")
+        except Exception as e:
+            logger.warning(f"[MiruroEpisodes] Kuudere injection failed for {anilist_id}: {e}")
 
 
         best_provider = self._pick_best_provider(providers)

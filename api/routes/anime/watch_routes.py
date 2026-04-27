@@ -758,20 +758,24 @@ def watch(anime_id, ep_number):
 
     # ── Fetch next episode schedule ──
     next_episode_schedule = anime.get("nextAiringEpisode")
+    print(f"[Watch DEBUG] anime type: {type(anime)}, keys: {list(anime.keys()) if isinstance(anime, dict) else 'N/A'}")
+    print(f"[Watch DEBUG] nextAiringEpisode from anime: {next_episode_schedule}")
+    print(f"[Watch DEBUG] anime_info type: {type(anime_info)}, has 'info' key: {'info' in anime_info if isinstance(anime_info, dict) else 'N/A'}")
 
     needs_fallback = False
     if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
         needs_fallback = True
     else:
-        time_until = next_episode_schedule.get(
-            "secondsUntilAiring"
-        ) or next_episode_schedule.get("timeUntilAiring")
-        if time_until is not None:
-            try:
-                if int(time_until) < 0:
-                    needs_fallback = True
-            except ValueError:
+        import time as _time
+        airing_ts = next_episode_schedule.get("airingTimestamp")
+        try:
+            ts_secs = int(airing_ts)
+            if ts_secs > 9_999_999_999:  # milliseconds → seconds
+                ts_secs //= 1000
+            if ts_secs < int(_time.time()):
                 needs_fallback = True
+        except (ValueError, TypeError):
+            needs_fallback = True
 
     if needs_fallback:
         al_id = (
