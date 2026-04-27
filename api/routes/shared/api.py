@@ -11,11 +11,11 @@ from .comments_api import comments_api_bp
 
 api_bp = Blueprint('api', __name__)
 
-api_bp.register_blueprint(auth_api_bp, url_prefix='')
+api_bp.register_blueprint(auth_api_bp, url_prefix='/auth')
 api_bp.register_blueprint(anilist_api_bp, url_prefix='/anilist')
 api_bp.register_blueprint(watchlist_api_bp, url_prefix='/watchlist')
 api_bp.register_blueprint(manga_api_bp, url_prefix='/manga')
-api_bp.register_blueprint(comments_api_bp, url_prefix='/comments')
+api_bp.register_blueprint(comments_api_bp, url_prefix='')
 
 @api_bp.route('/set-server', methods=['POST'])
 def set_server():
