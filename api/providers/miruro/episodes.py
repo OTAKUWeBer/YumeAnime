@@ -2,9 +2,27 @@
 Episode fetching for Miruro API
 Handles episode lists via the /episodes/{anilist_id} endpoint
 """
+
 import logging
 from typing import Dict, Any, Optional, List
 from .base import MiruroBaseClient
+=======
+import asyncio
+import logging
+from typing import Dict, Any, Optional, List
+from .base import MiruroBaseClient
+from ..animex import AnimexScraper
+
+# Module-level singleton so the slug/episode caches survive across calls.
+_animex_scraper: Optional[AnimexScraper] = None
+
+
+def _get_animex() -> AnimexScraper:
+    global _animex_scraper
+    if _animex_scraper is None:
+        _animex_scraper = AnimexScraper()
+    return _animex_scraper
+
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +31,17 @@ logger = logging.getLogger(__name__)
 PROVIDER_PRIORITY = [
     # Standard Miruro providers (best quality/reliability)
     "jet", "arc", "kiwi", "zoro", "bee", "wco",
+<<<<<<< HEAD
     # Anidap providers (HLS-only, discovered on-demand)
     "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
     "gogo", "vee", "hop", "dune"
+=======
+    # Anidap / AnimeX shared HLS provider names
+    "miru", "mochi", "nuri", "yuki", "kami", "wave", "shiro", "koto", "pahe", "maze",
+    "gogo", "vee", "hop", "dune",
+    # AnimeX-only sub-servers
+    "uwu", "mimi", "zaza",
+
 ]
 
 
@@ -105,6 +131,35 @@ class MiruroEpisodesService:
             }
 
         providers = resp.get("providers", {}) or {}
+
+
+
+        # Inject AnimeX sub-servers as additional providers (independent HLS source).
+        # Each AnimeX sub-server (uwu, mochi, kami, ...) appears as its own pill,
+        # but we skip any name Miruro already owns to avoid clobbering it.
+        try:
+            anime_title = ""
+            for _p in providers.values():
+                if isinstance(_p, dict):
+                    anime_title = (_p.get("meta", {}) or {}).get("title", "") or ""
+                    if anime_title:
+                        break
+            ax_blocks = await _get_animex().build_provider_blocks(anilist_id, anime_title)
+            added = []
+            for srv_id, block in ax_blocks.items():
+                if srv_id in providers:
+                    # Miruro already exposes this server name — leave it alone.
+                    continue
+                if not block.get("episodes", {}).get("sub") and not block.get("episodes", {}).get("dub"):
+                    continue
+                providers[srv_id] = block
+                added.append(srv_id)
+            if added:
+                logger.info(f"[MiruroEpisodes] Injected AnimeX servers: {added}")
+        except Exception as e:
+            logger.warning(f"[MiruroEpisodes] AnimeX injection failed for {anilist_id}: {e}")
+
+
         best_provider = self._pick_best_provider(providers)
 
         if not best_provider:
