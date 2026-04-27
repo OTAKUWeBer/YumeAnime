@@ -7,22 +7,23 @@ from flask import Blueprint, request, redirect, url_for, render_template, jsonif
 search_routes_bp = Blueprint('search_routes', __name__)
 
 
-@search_routes_bp.route('/search/<query>', methods=['GET'])
-@search_routes_bp.route('/search', methods=['GET'])
-def search(query=None):
-    """Handle search request and display results"""
-    if query:
-        search_query = query.replace('-', ' ').strip()
-    else:
-        search_query = request.args.get('q', '').strip()
-        
+@search_routes_bp.route('/search', methods=['GET'], strict_slashes=False)
+def search():
+    """Handle search request"""
+
+    search_query = request.args.get('q', '').strip()
+
     if not search_query:
         return redirect(url_for('home_routes.home'))
-    
-    try:
-        results = asyncio.run(current_app.ha_scraper.search(search_query))
 
-        # Extract anime list
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        results = loop.run_until_complete(
+            current_app.ha_scraper.search(search_query)
+        )
+        loop.close()
+
         animes = results.get("animes") or results.get("data") or []
 
         mapped = []
@@ -36,31 +37,40 @@ def search(query=None):
             sub = episodes.get("sub") if episodes else None
             dub = episodes.get("dub") if episodes else None
 
-            # Skip entries with no poster and no episodes (empty/useless entries)
             if not poster and not sub and not dub:
                 continue
 
             mapped.append(anime)
 
-        if not mapped:
-            return render_template('anime/results.html', query=search_query, animes=[])
-        
-        return render_template('anime/results.html', query=search_query, animes=mapped)
-    
+        return render_template(
+            'anime/results.html',
+            query=search_query,
+            animes=mapped
+        )
+
     except Exception as e:
         print("Search error:", e)
         return redirect(url_for('home_routes.home'))
 
 
-@search_routes_bp.route('/search/suggestions', methods=['GET'])
-@search_routes_bp.route('/suggestions', methods=['GET'])
+# Suggestions
+@search_routes_bp.route('/search/suggestions', methods=['GET'], strict_slashes=False)
 def search_suggestions_route():
-    """Return JSON suggestions for the query.
-    Accepts either ?q=... or ?query=... for compatibility.
-    """
-    query = request.args.get('q', '').strip() or request.args.get('query', '').strip()
+    query = request.args.get('q', '').strip()
+
     if not query:
         return jsonify({"suggestions": []})
 
-    suggestions = asyncio.run(current_app.ha_scraper.search_suggestions(query))
-    return jsonify(suggestions)
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        suggestions = loop.run_until_complete(
+            current_app.ha_scraper.search_suggestions(query)
+        )
+        loop.close()
+
+        return jsonify(suggestions)
+
+    except Exception as e:
+        print("Suggestion error:", e)
+        return jsonify({"suggestions": []})

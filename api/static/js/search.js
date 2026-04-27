@@ -102,10 +102,9 @@ class SearchManager {
             if (this.isMangaPage) {
                 const form = this.elements.desktop.form;
                 const source = form.querySelector('input[name="source"]')?.value || 'manganato';
-                window.location.href = `/manga/search?q=${encodeURIComponent(value)}&source=${source}`;
+                window.location.href = `/manga/search?q=${encodeURIComponent(value).replace(/%20/g, '+')}&source=${source}`;
             } else {
-                const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
-                window.location.href = `/search/${searchPath}`;
+                window.location.href = `/search?q=${encodeURIComponent(value).replace(/%20/g, '+')}`;
             }
         });
 
@@ -121,10 +120,9 @@ class SearchManager {
             if (this.isMangaPage) {
                 const form = this.elements.mobile.form;
                 const source = form.querySelector('input[name="source"]')?.value || 'manganato';
-                window.location.href = `/manga/search?q=${encodeURIComponent(value)}&source=${source}`;
+                window.location.href = `/manga/search?q=${encodeURIComponent(value).replace(/%20/g, '+')}&source=${source}`;
             } else {
-                const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
-                window.location.href = `/search/${searchPath}`;
+                window.location.href = `/search?q=${encodeURIComponent(value).replace(/%20/g, '+')}`;
             }
         });
 
@@ -138,8 +136,7 @@ class SearchManager {
             }
             this.elements.dropdown.suggestionBox?.classList.add('hidden');
             this.elements.dropdown.container?.classList.add('hidden');
-            const searchPath = encodeURIComponent(value.toLowerCase().replace(/\s+/g, '-'));
-            window.location.href = `/search/${searchPath}`;
+            window.location.href = `/search?q=${encodeURIComponent(value).replace(/%20/g, '+')}`;
         });
     }
 

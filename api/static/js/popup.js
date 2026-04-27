@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dontShowBtn = document.getElementById('welcome-btn-dont-show');
     
     // Change this version string when you want to show a NEW update to users!
-    const currentUpdateVersion = 'v1'; 
+    const currentUpdateVersion = 'v2'; 
     
     // Check user preferences
     const neverShowAgain = localStorage.getItem('yumeanime_popup_never_show') === 'true';
