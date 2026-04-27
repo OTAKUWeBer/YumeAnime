@@ -2,31 +2,42 @@
 Video scraper utility functions
 Handles URL encoding, episode ID extraction, subtitle sorting, and proxying.
 """
-import base64
 import re
 from typing import Optional, List, Dict, Any, Union
 import os
+import json
+from urllib.parse import quote
 import dotenv
 from bs4 import BeautifulSoup
 
 dotenv.load_dotenv()
-proxy_url = os.getenv("PROXY_URL")
+proxy_url = os.getenv("PROXY_URL", "https://cdn-eu.1ani.me/proxy/m3u8")
 
 # Enforce HTTPS on proxy URL to prevent mixed content blocking
 if proxy_url and proxy_url.startswith("http://"):
     proxy_url = proxy_url.replace("http://", "https://", 1)
 
-def encode_proxy(url: Optional[str]) -> Optional[str]:
+def encode_proxy(url: Optional[str], headers: Optional[Dict[str, str]] = None) -> Optional[str]:
     """
-    Return proxied URL through proxy (urlsafe base64-encoded, no padding).
-    Matches the proxy server's b64_decode which uses urlsafe_b64decode.
+    Return proxied URL through proxy using query parameters format.
+    Format: {proxy_url}?url={url_encoded}&headers={headers_encoded}
     """
     if not url:
         return url
     try:
-        # Use urlsafe_b64encode and strip padding — must match server's b64_decode
-        encoded = base64.urlsafe_b64encode(url.encode()).decode().rstrip("=")
-        result = f'{proxy_url}{encoded}'
+        # URL-encode the target URL (keeping slashes safe for readability)
+        encoded_url = quote(url, safe='')
+        
+        # Build query parameters
+        query_params = f"?url={encoded_url}"
+        
+        # Add headers if provided
+        if headers:
+            headers_json = json.dumps(headers)
+            encoded_headers = quote(headers_json, safe='')
+            query_params += f"&headers={encoded_headers}"
+        
+        result = f'{proxy_url}{query_params}'
         if result.startswith("http://"):
             result = result.replace("http://", "https://", 1)
         return result
@@ -169,27 +180,35 @@ def sort_subtitle_priority(track: Dict[str, Any]) -> int:
     return 10
 
 
-def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
+def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Patch all file/url links in video data to go through proxy.
     Handles both 'file' and 'url' keys for sources and tracks.
     Also sorts subtitle tracks by priority.
+    
+    Args:
+        data: The video data dictionary containing sources and tracks
+        headers: Optional headers to pass to the proxy (e.g., referer)
     """
     if not isinstance(data, dict):
         return data
+
+    # Set default headers if none provided
+    if headers is None:
+        headers = {"referer": "https://kwik.cx/"}
 
     # Proxy sources (dict or list)
     sources = data.get("sources")
     if isinstance(sources, dict):
         for k in ("file", "url"):
             if sources.get(k):
-                sources[k] = encode_proxy(sources[k])
+                sources[k] = encode_proxy(sources[k], headers)
     elif isinstance(sources, list):
         for s in sources:
             if isinstance(s, dict):
                 for k in ("file", "url"):
                     if s.get(k):
-                        s[k] = encode_proxy(s[k])
+                        s[k] = encode_proxy(s[k], headers)
 
 # Proxy tracks
     if "tracks" in data and isinstance(data["tracks"], list):
@@ -218,7 +237,7 @@ def proxy_video_sources(data: Dict[str, Any]) -> Dict[str, Any]:
 
             for k in ("file", "url"):
                 if track.get(k):
-                    proxied = encode_proxy(track[k])
+                    proxied = encode_proxy(track[k], headers)
                     track[k] = proxied
                     print(f"[Proxy] Track {idx} ({track.get('label', 'unknown')}): {k} proxied")
 
