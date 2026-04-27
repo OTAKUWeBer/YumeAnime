@@ -10,7 +10,28 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container" style="position: relative;">
+    <!-- Skeleton Overlay -->
+    <div class="skeleton-container" style="padding-top: var(--space-lg); background: var(--bg-primary);">
+        <div style="display: flex; gap: 12px; margin-bottom: 24px; justify-content: center;">
+            <div class="skeleton" style="width: 100px; height: 36px; border-radius: var(--radius-full);"></div>
+            <div class="skeleton" style="width: 100px; height: 36px; border-radius: var(--radius-full);"></div>
+            <div class="skeleton" style="width: 100px; height: 36px; border-radius: var(--radius-full);"></div>
+        </div>
+        <div class="skeleton" style="width: 100%; max-width: 600px; height: 48px; border-radius: var(--radius-md); margin: 0 auto 32px auto;"></div>
+        
+        <div class="skeleton skeleton-title" style="width: 25%; height: 28px; margin-bottom: 24px;"></div>
+        
+        <div class="manga-grid">
+            {% for _ in range(18) %}
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-poster"></div>
+                <div class="skeleton skeleton-text" style="margin-top: 8px;"></div>
+                <div class="skeleton skeleton-text" style="width: 60%;"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 
     <!-- Source Tabs -->
     <div class="manga-source-tabs" id="manga-source-tabs">
