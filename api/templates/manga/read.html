@@ -12,9 +12,18 @@
     .main-content { padding-top: 0 !important; }
     .footer { display: none; }
 
+    /* Navbar auto-hide on scroll */
+    .navbar {
+        position: sticky;
+        top: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        z-index: 9999;
+    }
+    .navbar.hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+
     /* Progress bar */
     .reader-progress {
-        position: fixed; top: 0; left: 0; height: 3px;
+        position: fixed; top: 56px; left: 0; height: 3px;
         background: linear-gradient(90deg, var(--primary), #ec4899);
         z-index: 10000; transition: width 0.1s linear;
         border-radius: 0 2px 2px 0;
@@ -22,7 +31,7 @@
 
     /* Floating header — auto-hides on scroll */
     .reader-bar {
-        position: fixed; top: 0; left: 0; right: 0;
+        position: fixed; top: 56px; left: 0; right: 0;
         z-index: 9998;
         background: rgba(10, 10, 14, 0.92);
         backdrop-filter: blur(12px);
@@ -80,6 +89,7 @@
         display: flex; flex-direction: column; align-items: center;
         background: #000; min-height: 100vh;
         padding: 0;
+        margin-top: 100px;
     }
     .reader-images img {
         display: block; width: 100%; max-width: 900px;
@@ -228,6 +238,7 @@
 <script>
 (function() {
     const bar = document.getElementById('reader-bar');
+    const navbar = document.querySelector('.navbar');
     const progress = document.getElementById('reader-progress');
     const counter = document.getElementById('reader-page-counter');
     const currentPageEl = document.getElementById('current-page');
@@ -235,7 +246,7 @@
     const allPages = imagesContainer ? imagesContainer.querySelectorAll('img[data-page]') : [];
     const totalPages = allPages.length;
     let lastScrollY = 0;
-    let barVisible = true;
+    let barsVisible = true;
     let scrollTicking = false;
 
     // Lazy-load images with IntersectionObserver
@@ -294,18 +305,21 @@
             }
         }
 
-        // Auto-hide reader-bar after scrolling 60px
+        // Auto-hide reader-bar and navbar after scrolling 60px
         if (scrollY > 60) {
-            if (scrollY > lastScrollY && barVisible) {
+            if (scrollY > lastScrollY && barsVisible) {
                 bar.classList.add('hidden');
-                barVisible = false;
-            } else if (scrollY < lastScrollY - 30 && !barVisible) {
+                if (navbar) navbar.classList.add('hidden');
+                barsVisible = false;
+            } else if (scrollY < lastScrollY - 30 && !barsVisible) {
                 bar.classList.remove('hidden');
-                barVisible = true;
+                if (navbar) navbar.classList.remove('hidden');
+                barsVisible = true;
             }
         } else {
             bar.classList.remove('hidden');
-            barVisible = true;
+            if (navbar) navbar.classList.remove('hidden');
+            barsVisible = true;
         }
 
         lastScrollY = scrollY;
@@ -319,12 +333,13 @@
         }
     }, { passive: true });
 
-    // Tap image area to toggle bar
+    // Tap image area to toggle bar and navbar
     if (imagesContainer) {
         imagesContainer.addEventListener('click', (e) => {
             if (e.target.tagName === 'A') return;
             bar.classList.toggle('hidden');
-            barVisible = !bar.classList.contains('hidden');
+            if (navbar) navbar.classList.toggle('hidden');
+            barsVisible = !bar.classList.contains('hidden');
         });
     }
 
