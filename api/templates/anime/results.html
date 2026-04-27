@@ -6,7 +6,23 @@
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container" style="position: relative;">
+    <!-- Skeleton Overlay -->
+    <div class="skeleton-container" style="padding-top: var(--space-lg); background: var(--bg-primary);">
+        <div class="skeleton skeleton-title" style="width: 30%; height: 32px; margin-bottom: 8px;"></div>
+        <div class="skeleton skeleton-text" style="width: 40%; margin-bottom: 32px;"></div>
+        
+        <div class="anime-grid">
+            {% for _ in range(12) %}
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-poster"></div>
+                <div class="skeleton skeleton-text" style="margin-top: 8px;"></div>
+                <div class="skeleton skeleton-text" style="width: 70%;"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
     <div class="search-results-header">
         <h1>Search Results</h1>
         <p class="search-query text-secondary">

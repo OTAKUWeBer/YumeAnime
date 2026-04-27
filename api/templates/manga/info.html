@@ -10,7 +10,34 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container" style="position: relative;">
+    <!-- Skeleton Overlay -->
+    <div class="skeleton-container" style="padding-top: var(--space-lg); background: var(--bg-primary);">
+        <div class="skeleton skeleton-text" style="width: 200px; margin-bottom: var(--space-lg);"></div>
+        <div class="manga-detail-hero" style="margin-bottom: var(--space-xl);">
+            <div class="skeleton" style="width: 220px; height: 330px; border-radius: var(--radius-lg); flex-shrink: 0;"></div>
+            <div style="flex: 1;">
+                <div class="skeleton skeleton-title" style="width: 70%; height: 40px; margin-bottom: var(--space-lg);"></div>
+                <div style="display: flex; gap: 12px; margin-bottom: var(--space-lg);">
+                    <div class="skeleton" style="width: 80px; height: 24px; border-radius: 20px;"></div>
+                    <div class="skeleton" style="width: 80px; height: 24px; border-radius: 20px;"></div>
+                    <div class="skeleton" style="width: 80px; height: 24px; border-radius: 20px;"></div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: var(--space-lg);">
+                    <div class="skeleton" style="width: 60px; height: 28px; border-radius: 20px;"></div>
+                    <div class="skeleton" style="width: 60px; height: 28px; border-radius: 20px;"></div>
+                </div>
+                <div class="skeleton skeleton-text" style="width: 100%; height: 80px; border-radius: var(--radius-md);"></div>
+                <div class="skeleton" style="width: 160px; height: 48px; border-radius: var(--radius-md); margin-top: var(--space-lg);"></div>
+            </div>
+        </div>
+        <div class="skeleton skeleton-title" style="width: 150px; height: 32px; margin-bottom: var(--space-lg);"></div>
+        <div style="display: grid; gap: 12px;">
+            {% for _ in range(5) %}
+            <div class="skeleton" style="width: 100%; height: 50px; border-radius: var(--radius-md);"></div>
+            {% endfor %}
+        </div>
+    </div>
 
     <!-- Breadcrumb -->
     <div style="margin-bottom: var(--space-lg); display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">

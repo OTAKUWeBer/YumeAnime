@@ -11,7 +11,37 @@
 {% endblock %}
 
 {% block content %}
-<div class="anime-hero">
+<div class="anime-hero" style="position: relative;">
+    <!-- Skeleton Overlay -->
+    <div class="skeleton-container" style="background: var(--bg-primary);">
+        <div class="skeleton skeleton-info-hero"></div>
+        <div class="container" style="position: relative; margin-top: -150px; z-index: 2;">
+            <div class="anime-info-grid">
+                <div class="skeleton" style="width: 100%; aspect-ratio: 2/3; border-radius: var(--radius-lg);"></div>
+                <div style="padding-top: var(--space-md);">
+                    <div class="skeleton skeleton-title" style="width: 60%; height: 40px; margin-bottom: 16px;"></div>
+                    <div class="skeleton skeleton-text" style="width: 40%; height: 20px; margin-bottom: 32px;"></div>
+                    
+                    <div style="display: flex; gap: 24px; margin-bottom: 32px; padding: 16px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+                        <div class="skeleton skeleton-text" style="width: 60px; height: 40px;"></div>
+                        <div class="skeleton skeleton-text" style="width: 60px; height: 40px;"></div>
+                        <div class="skeleton skeleton-text" style="width: 60px; height: 40px;"></div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; margin-bottom: 32px;">
+                        <div class="skeleton" style="width: 80px; height: 32px; border-radius: 20px;"></div>
+                        <div class="skeleton" style="width: 80px; height: 32px; border-radius: 20px;"></div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px;">
+                        <div class="skeleton" style="width: 180px; height: 50px; border-radius: var(--radius-md);"></div>
+                        <div class="skeleton" style="width: 180px; height: 50px; border-radius: var(--radius-md);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Banner Background -->
     <div class="anime-banner">
         <img src="{{ anime.banner or anime.poster }}" alt="{{ anime.name or anime.title }}">
