@@ -1,6 +1,6 @@
 {% extends "shared/base.html" %}
 
-{% block title %}{{ anime.name or anime.title or 'Anime' }} - YumeAnime{% endblock %}
+{% block title %}{{ anime.name or anime.title or 'Anime' }} - YumeZone{% endblock %}
 {% block meta_description %}Watch {{ anime.name or anime.title }} online. {{ (anime.description or anime.synopsis or
 '')[:150] }}{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-db_name = os.getenv("db", "yumeanime")
+db_name = os.getenv("db", "yume-userdata")
 users_collection_name = os.getenv("users_collection", "users")
 watchlist_collection_name = os.getenv("watchlist_collection", "watchlist")
 comments_collection_name = os.getenv("comments_collection", "comments")
