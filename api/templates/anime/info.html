@@ -8,6 +8,7 @@
 {% block og_image %}{{ anime.poster or anime.image or anime.banner }}{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/info.css') }}">
+<script src="{{ url_for('static', filename='js/music.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -361,6 +362,15 @@
             Characters
         </button>
         {% endif %}
+        <button class="info-tab-btn" data-tab="music">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="vertical-align: -2px; margin-right: 4px;">
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+            </svg>
+            Music
+        </button>
     </div>
 
     <!-- ===== Tab: Overview ===== -->
@@ -548,6 +558,59 @@
         </section>
     </div>
     {% endif %}
+
+    <!-- ===== Tab: Music (OP/ED Themes) ===== -->
+    <div class="info-tab-content" id="tab-music" data-anime-title="{{ anime.name or anime.title }}">
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13" />
+                        <circle cx="6" cy="18" r="3" />
+                        <circle cx="18" cy="16" r="3" />
+                    </svg>
+                    Music
+                </h2>
+            </div>
+
+            <!-- Loading State -->
+            <div id="music-loading" class="music-loading">
+                <div class="music-loading-spinner"></div>
+                <p>Loading themes...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="music-empty" class="music-empty" style="display: none;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+                    <path d="M9 18V5l12-2v13" />
+                    <circle cx="6" cy="18" r="3" />
+                    <circle cx="18" cy="16" r="3" />
+                </svg>
+                <p>No theme songs found for this anime.</p>
+            </div>
+
+            <!-- Themes Container -->
+            <div id="music-themes" style="display: none;">
+                <!-- Openings -->
+                <div id="music-openings" class="music-theme-group" style="display: none;">
+                    <h3 class="music-group-title">
+                        <span class="music-group-badge op">OP</span>
+                        Openings
+                    </h3>
+                    <div id="music-openings-list" class="music-list"></div>
+                </div>
+
+                <!-- Endings -->
+                <div id="music-endings" class="music-theme-group" style="display: none;">
+                    <h3 class="music-group-title">
+                        <span class="music-group-badge ed">ED</span>
+                        Endings
+                    </h3>
+                    <div id="music-endings-list" class="music-list"></div>
+                </div>
+            </div>
+        </section>
+    </div>
 
 </div>
 
