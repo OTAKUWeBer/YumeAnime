@@ -661,25 +661,124 @@
     }
 
     .music-sequence-badge {
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-width: 44px;
-        height: 44px;
+        min-width: 48px;
+        height: 48px;
         border-radius: var(--radius-md);
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.5px;
-        color: #fff;
         flex-shrink: 0;
+        overflow: hidden;
+        background: #1a1a2e;
     }
 
-    .music-sequence-badge.op {
+    .music-sequence-badge:not(.has-image).op {
         background: linear-gradient(135deg, #6366f1, #a855f7);
     }
 
-    .music-sequence-badge.ed {
+    .music-sequence-badge:not(.has-image).ed {
         background: linear-gradient(135deg, #ec4899, #f43f5e);
+    }
+
+    .music-badge-img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: opacity 0.2s ease, transform 0.3s ease;
+    }
+
+    .music-card:hover .music-badge-img {
+        transform: scale(1.08);
+    }
+
+    .music-badge-num {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        font-size: 0.6rem;
+        font-weight: 800;
+        color: #fff;
+        min-width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        line-height: 1;
+        z-index: 2;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .music-badge-num.op {
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+    }
+
+    .music-badge-num.ed {
+        background: linear-gradient(135deg, #ec4899, #f43f5e);
+    }
+
+    .music-badge-num.no-img {
+        position: static;
+        font-size: 1.1rem;
+        min-width: auto;
+        height: auto;
+        background: none;
+        box-shadow: none;
+    }
+
+    /* Cover Banner */
+    .music-cover-banner {
+        position: relative;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        height: 100px;
+        margin-bottom: var(--space-lg);
+    }
+
+    .music-cover-banner-img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: blur(2px) brightness(0.5);
+    }
+
+    .music-cover-banner-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(236, 72, 153, 0.3));
+    }
+
+    .music-cover-banner-info {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        height: 100%;
+        padding: 0 var(--space-lg);
+        color: #fff;
+    }
+
+    .music-cover-banner-info svg {
+        opacity: 0.9;
+        flex-shrink: 0;
+    }
+
+    .music-cover-banner-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+
+    .music-cover-banner-count {
+        font-size: 0.82rem;
+        opacity: 0.8;
+        margin-top: 2px;
     }
 
     .music-card-info {
@@ -809,8 +908,8 @@
         }
 
         .music-sequence-badge {
-            min-width: 36px;
-            height: 36px;
+            min-width: 42px;
+            height: 42px;
             font-size: 0.65rem;
         }
 
