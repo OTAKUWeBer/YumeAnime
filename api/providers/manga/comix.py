@@ -1,5 +1,8 @@
 """
 Comix (comix.to) manga scraper.
+NOTE: The website has been restructured to a Next.js client-side rendered app.
+The old SSR HTML scraping method no longer works. This provider attempts to use
+available API endpoints with basic fallback handling.
 """
 import html as html_module
 import requests as std_requests
@@ -74,18 +77,75 @@ def home():
     return result
 
 def details(id_or_slug):
+    """
+    Get manga details. Tries HTML scraping first, then falls back to API search,
+    then to a minimal object created from the slug.
+    """
     html_text = _fetch(f"/title/{id_or_slug}")
     data = find_json_object(html_text, "manga")
+    
+    # Helper function to extract cover URL from poster field
+    def _get_cover_url(poster):
+        """Extract cover URL from poster field which can be a dict or string"""
+        if not poster:
+            return ""
+        if isinstance(poster, dict):
+            # API returns {'small': '...', 'medium': '...', 'large': '...'}
+            return poster.get("large", poster.get("medium", poster.get("small", "")))
+        # If it's already a string, return as-is
+        return str(poster) if poster else ""
+    
+    # If HTML scraping didn't work, try API search
     if not data:
-        return None
-    result = {
-        "title": data.get("title", ""), "slug": id_or_slug,
-        "cover": data.get("poster", ""), "description": data.get("description", ""),
-        "authors": ", ".join(data.get("authors", [])) if isinstance(data.get("authors"), list) else data.get("authors", "Unknown"),
-        "status": data.get("status", "Unknown"), "genres": data.get("genres", []),
-        "source": "comix", "chapters": [],
-    }
-    hash_id = data.get("hashId") or id_or_slug.split("-")[0]
+        try:
+            from curl_cffi import requests as cffi_requests
+            # Extract potential search term from slug
+            # e.g., "nr83-the-flower-with-a-sword" -> "the flower with a sword"
+            search_term = "-".join(id_or_slug.split("-")[1:]) if "-" in id_or_slug else id_or_slug
+            search_term = search_term.replace("-", " ")
+            
+            resp = cffi_requests.get(f"{BASE_URL}/api/v2/manga", 
+                                     params={"keyword": search_term, "limit": 10, "page": 1},
+                                     headers=HEADERS, impersonate="chrome124", timeout=30)
+            if resp.status_code == 200:
+                api_data = resp.json()
+                # Find the best match - try to match by slug or title
+                for item in api_data.get('result', {}).get('items', []):
+                    if (item.get('slug', '').lower() == id_or_slug.lower() or 
+                        item.get('hash_id', '').lower() == id_or_slug.split('-')[0].lower()):
+                        data = item
+                        break
+                # If no exact match, use the first result
+                if not data and api_data.get('result', {}).get('items'):
+                    data = api_data['result']['items'][0]
+        except Exception as e:
+            logger.warning(f"Comix API search failed for {id_or_slug}: {e}")
+    
+    # Create result with whatever data we can get
+    if data:
+        result = {
+            "title": data.get("title", ""), "slug": id_or_slug,
+            "cover": _get_cover_url(data.get("poster", "")), 
+            "description": data.get("synopsis", data.get("description", "")),
+            "authors": "Unknown",  # API doesn't have author info
+            "status": data.get("status", "Unknown"), 
+            "genres": [],  # API doesn't have genre field
+            "source": "comix", "chapters": [],
+        }
+    else:
+        # Fallback: create minimal object from slug
+        # Convert slug like "nr83-the-flower-with-a-sword" to title "The Flower With A Sword"
+        title_parts = id_or_slug.split("-")[1:] if "-" in id_or_slug else [id_or_slug]
+        title = " ".join(title_parts).title() if title_parts else "Unknown Manga"
+        result = {
+            "title": title, "slug": id_or_slug,
+            "cover": "", "description": "",
+            "authors": "Unknown", "status": "Unknown",
+            "genres": [], "source": "comix", "chapters": [],
+        }
+    
+    # Try to fetch chapters (likely to fail but worth trying)
+    hash_id = data.get("hash_id") if data else id_or_slug.split("-")[0]
     try:
         from curl_cffi import requests as cffi_requests
         resp = cffi_requests.get(f"{BASE_URL}/api/v2/manga/{hash_id}/chapters?limit=100&page=1&order[number]=desc",
@@ -98,13 +158,19 @@ def details(id_or_slug):
                 })
     except Exception:
         pass
+    
     return result
 
 def chapter_images(manga_slug, chapter_slug):
-    html_text = _fetch(f"/title/{manga_slug}/{chapter_slug}")
-    data = find_json_object(html_text, "images")
-    if data and isinstance(data, list):
-        return data, REFERER
+    """
+    Fetch chapter images. Returns empty list as comix.to now requires JavaScript
+    rendering which is not supported by this scraper.
+    """
+    # Note: The old SSR HTML scraping method no longer works as the website
+    # is now a client-side rendered Next.js app. The API endpoints that might
+    # work require special headers or authentication that we don't have access to.
+    # For now, return an empty list to prevent errors on the read page.
+    logger.warning(f"Comix chapter_images called for {manga_slug}/{chapter_slug} but is not supported")
     return [], REFERER
 
 def search(keyword, limit=20):

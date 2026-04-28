@@ -73,6 +73,11 @@ def create_app():
         if not url:
             return ''
         from urllib.parse import quote
+        # Ensure url and referer are strings
+        url = str(url) if url is not None else ''
+        referer = str(referer) if referer is not None else ''
+        if not url:
+            return ''
         return f'/api/manga/image-proxy?url={quote(url, safe="")}&referer={quote(referer, safe="")}'
 
     app.jinja_env.filters['manga_cover'] = _manga_cover_proxy
