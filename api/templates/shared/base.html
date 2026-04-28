@@ -8,11 +8,11 @@
         content="{% block meta_description %}Watch anime online for free in HD quality{% endblock %}">
 
     <!-- Open Graph / Social Media Embeds -->
-    <meta property="og:title" content="{% block og_title %}YumeAnime - Watch Anime Online{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}YumeZone - Watch Anime Online{% endblock %}">
     <meta property="og:description"
         content="{% block og_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}">
 
-    <title>{% block title %}YumeAnime{% endblock %}</title>
+    <title>{% block title %}YumeZone{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
     <link rel="apple-touch-icon" sizes="180x180"
         href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
@@ -152,9 +152,9 @@
 
                 <!-- Brand -->
                 <a href="{{ url_for('home_routes.home') }}" class="navbar-brand">
-                    <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo"
+                    <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeZone Logo"
                         style="height: 40px;">
-                    <span>YumeAnime</span>
+                    <span>YumeZone</span>
                 </a>
             </div>
 
@@ -313,8 +313,8 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{{ url_for('home_routes.home') }}" class="sidebar-brand">
-                <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeAnime Logo">
-                <span>YumeAnime</span>
+                <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeZone Logo">
+                <span>YumeZone</span>
             </a>
             <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -380,7 +380,7 @@
             </a>
             {% endif %}
             <div class="sidebar-divider"></div>
-            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank" class="sidebar-link">
+            <a href="https://github.com/OTAKUWeBer/YumeZone" target="_blank" class="sidebar-link">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <path
@@ -441,15 +441,15 @@
                     <div class="footer-brand">
                         <a href="{{ url_for('home_routes.home') }}" class="navbar-brand">
                             <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}"
-                                alt="YumeAnime Logo" style="height: 40px;">
-                            <span>YumeAnime</span>
+                                alt="YumeZone Logo" style="height: 40px;">
+                            <span>YumeZone</span>
                         </a>
                         <p>Your gateway to the best anime and manga experience. Watch anime and read manga — all in one place.</p>
                         <div
                             style="margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--border-color);">
                             <p class="text-sm text-muted" style="margin-bottom: var(--space-sm);">Proudly Open Source.
                                 Join us to build the future of anime streaming.</p>
-                            <a href="https://github.com/OTAKUWeBer/YumeAnime" target="_blank"
+                            <a href="https://github.com/OTAKUWeBer/YumeZone" target="_blank"
                                 class="btn btn-sm btn-secondary">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -495,7 +495,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; {{ now().year if now else 2026 }} YumeAnime. All rights reserved.</p>
+                <p>&copy; {{ now().year if now else 2026 }} YumeZone. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -725,7 +725,7 @@
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
-            <h2 class="welcome-popup-title">Welcome to YumeAnime ✨</h2>
+            <h2 class="welcome-popup-title">Welcome to YumeZone ✨</h2>
 
             <div class="welcome-popup-card">
                 <div class="welcome-popup-card-header">
@@ -735,7 +735,7 @@
                     </svg>
                     <h3 class="welcome-popup-card-title comment">Manga is Here!</h3>
                 </div>
-                <p class="welcome-popup-card-text">We've added a brand new manga section. You can now read your favorite manga seamlessly on YumeAnime.</p>
+                <p class="welcome-popup-card-text">We've added a brand new manga section. You can now read your favorite manga seamlessly on YumeZone.</p>
             </div>
 
             <div class="welcome-popup-card">

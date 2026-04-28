@@ -33,7 +33,7 @@ def send_reset_code_email(to_email: str, code: str) -> bool:
         logger.error("Gmail credentials not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.")
         return False
 
-    subject = "YumeAnime — Password Reset Code"
+    subject = "YumeZone — Password Reset Code"
 
     html_body = f"""\
 <!DOCTYPE html>
@@ -49,7 +49,7 @@ def send_reset_code_email(to_email: str, code: str) -> bool:
                style="background:#141414;border-radius:16px;border:1px solid #222;padding:40px;">
           <tr>
             <td align="center" style="padding-bottom:24px;">
-              <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">YumeAnime</h1>
+              <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">YumeZone</h1>
             </td>
           </tr>
           <tr>
@@ -90,7 +90,7 @@ def send_reset_code_email(to_email: str, code: str) -> bool:
 
     # Plain-text fallback
     text_body = (
-        f"YumeAnime — Password Reset\n\n"
+        f"YumeZone — Password Reset\n\n"
         f"Your reset code is: {code}\n\n"
         f"This code expires in 5 minutes.\n"
         f"If you didn't request this, ignore this email."

@@ -289,7 +289,7 @@ async def sync_anilist_watchlist_to_local(user_id: str, access_token: str,
             
         merged_watchlist = list(existing_map.values())
         
-        _send_phase(f"Saving {updates_count} anime to your YumeAnime watchlist...", total=total, pct=80)
+        _send_phase(f"Saving {updates_count} anime to your YumeZone watchlist...", total=total, pct=80)
         
         try:
             watchlist_collection.update_one(
