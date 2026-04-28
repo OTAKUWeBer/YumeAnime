@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 themes_api_bp = Blueprint('themes_api', __name__)
 
 ANIMETHEMES_BASE = "https://api.animethemes.moe"
-ANIMETHEMES_INCLUDES = "animethemes.song.artists,animethemes.animethemeentries.videos"
+ANIMETHEMES_INCLUDES = "animethemes.song.artists,animethemes.animethemeentries.videos,images"
 
 
 async def _fetch_themes_by_slug(slug: str) -> dict:
@@ -110,9 +110,24 @@ def _parse_themes(anime_data: dict) -> dict:
     openings.sort(key=lambda x: x.get("sequence", 0))
     endings.sort(key=lambda x: x.get("sequence", 0))
 
+    # Extract cover image
+    images = anime_data.get("images", []) or []
+    cover_image = ""
+    for img in images:
+        facet = (img.get("facet") or "").lower()
+        if "large" in facet and img.get("link"):
+            cover_image = img["link"]
+            break
+    if not cover_image:
+        for img in images:
+            if img.get("link"):
+                cover_image = img["link"]
+                break
+
     return {
         "anime_name": anime_data.get("name", ""),
         "anime_slug": anime_data.get("slug", ""),
+        "cover_image": cover_image,
         "openings": openings,
         "endings": endings,
     }

@@ -5,14 +5,13 @@
  */
 (() => {
     let loaded = false;
-    let currentlyPlaying = null; // track the currently playing video element
+    let currentlyPlaying = null;
 
     // ── Fetch themes when Music tab becomes active ─────────────────────────
     function initMusicTab() {
         const musicTab = document.getElementById('tab-music');
         if (!musicTab) return;
 
-        // Observe tab activation
         const observer = new MutationObserver((mutations) => {
             for (const m of mutations) {
                 if (m.attributeName === 'class' && musicTab.classList.contains('active') && !loaded) {
@@ -23,7 +22,6 @@
         });
         observer.observe(musicTab, { attributes: true });
 
-        // Also check if it's already active (e.g. deep-linked)
         if (musicTab.classList.contains('active') && !loaded) {
             loaded = true;
             fetchThemes();
@@ -33,10 +31,7 @@
     async function fetchThemes() {
         const musicTab = document.getElementById('tab-music');
         const title = musicTab?.dataset.animeTitle;
-        if (!title) {
-            showEmpty();
-            return;
-        }
+        if (!title) { showEmpty(); return; }
 
         try {
             const resp = await fetch(`/api/anime-themes?title=${encodeURIComponent(title)}`);
@@ -59,7 +54,6 @@
     function renderThemes(data) {
         const loading = document.getElementById('music-loading');
         const themes = document.getElementById('music-themes');
-        const empty = document.getElementById('music-empty');
 
         if (loading) loading.style.display = 'none';
 
@@ -73,12 +67,45 @@
 
         if (themes) themes.style.display = 'block';
 
+        // Get cover image: prefer AnimeThemes image, fallback to page poster
+        let coverImage = data.cover_image || '';
+        if (!coverImage) {
+            const posterEl = document.querySelector('.anime-poster img');
+            if (posterEl) coverImage = posterEl.src || '';
+        }
+
+        // Add cover banner at top of themes section
+        if (coverImage) {
+            const themesEl = document.getElementById('music-themes');
+            const existingBanner = themesEl?.querySelector('.music-cover-banner');
+            if (!existingBanner && themesEl) {
+                const banner = document.createElement('div');
+                banner.className = 'music-cover-banner';
+                banner.innerHTML = `
+                    <img src="${coverImage}" alt="" class="music-cover-banner-img">
+                    <div class="music-cover-banner-overlay"></div>
+                    <div class="music-cover-banner-info">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18V5l12-2v13" />
+                            <circle cx="6" cy="18" r="3" />
+                            <circle cx="18" cy="16" r="3" />
+                        </svg>
+                        <div>
+                            <div class="music-cover-banner-title">Theme Songs</div>
+                            <div class="music-cover-banner-count">${openings.length} Opening${openings.length !== 1 ? 's' : ''} · ${endings.length} Ending${endings.length !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                `;
+                themesEl.prepend(banner);
+            }
+        }
+
         // Render openings
         if (openings.length > 0) {
             const opGroup = document.getElementById('music-openings');
             const opList = document.getElementById('music-openings-list');
             if (opGroup) opGroup.style.display = 'block';
-            if (opList) opList.innerHTML = openings.map((t, i) => buildThemeCard(t, 'op', i)).join('');
+            if (opList) opList.innerHTML = openings.map((t, i) => buildThemeCard(t, 'op', i, coverImage)).join('');
         }
 
         // Render endings
@@ -86,14 +113,14 @@
             const edGroup = document.getElementById('music-endings');
             const edList = document.getElementById('music-endings-list');
             if (edGroup) edGroup.style.display = 'block';
-            if (edList) edList.innerHTML = endings.map((t, i) => buildThemeCard(t, 'ed', i)).join('');
+            if (edList) edList.innerHTML = endings.map((t, i) => buildThemeCard(t, 'ed', i, coverImage)).join('');
         }
 
         // Attach event listeners for play buttons
         attachVideoListeners();
     }
 
-    function buildThemeCard(theme, type, index) {
+    function buildThemeCard(theme, type, index, coverImage) {
         const artists = (theme.artists || [])
             .map(a => {
                 let display = a.name || '';
@@ -107,13 +134,25 @@
         const videoUrl = video ? video.url : '';
         const videoTags = video ? (video.tags || '') : '';
 
-        const sequenceLabel = `${type.toUpperCase()}${theme.sequence || (index + 1)}`;
+        const sequenceNum = theme.sequence || (index + 1);
         const episodesStr = theme.episodes ? `<span class="music-episodes">Eps: ${theme.episodes}</span>` : '';
+
+        // Badge with cover image + corner number
+        let badgeInner;
+        if (coverImage) {
+            badgeInner = `
+                <img src="${coverImage}" alt="" class="music-badge-img" loading="lazy">
+                <span class="music-badge-num ${type}">${sequenceNum}</span>`;
+        } else {
+            badgeInner = `<span class="music-badge-num no-img ${type}">${sequenceNum}</span>`;
+        }
 
         return `
         <div class="music-card" data-video-url="${videoUrl}">
             <div class="music-card-left">
-                <div class="music-sequence-badge ${type}">${sequenceLabel}</div>
+                <div class="music-sequence-badge ${coverImage ? 'has-image' : ''} ${type}">
+                    ${badgeInner}
+                </div>
                 <div class="music-card-info">
                     <div class="music-song-title">${escapeHtml(theme.title || 'Unknown')}</div>
                     <div class="music-artist">${artists || 'Unknown Artist'}</div>
@@ -152,14 +191,12 @@
                 const isVisible = videoContainer.style.display !== 'none';
 
                 if (isVisible) {
-                    // Close this video
                     video.pause();
                     videoContainer.style.display = 'none';
                     card.classList.remove('playing');
                     btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>`;
                     currentlyPlaying = null;
                 } else {
-                    // Stop any currently playing video
                     if (currentlyPlaying && currentlyPlaying !== video) {
                         currentlyPlaying.pause();
                         const prevContainer = currentlyPlaying.closest('.music-video-container');
@@ -176,23 +213,18 @@
                         }
                     }
 
-                    // Open and play this video
                     videoContainer.style.display = 'block';
                     card.classList.add('playing');
                     btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
-                    video.play().catch(() => { /* autoplay may be blocked */ });
+                    video.play().catch(() => {});
                     currentlyPlaying = video;
-
-                    // Smooth scroll to video
                     videoContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             });
         });
 
-        // Also allow clicking the entire card to toggle video
         document.querySelectorAll('.music-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                // Don't trigger if the play button was clicked (it handles itself)
                 if (e.target.closest('.music-play-btn')) return;
                 const btn = card.querySelector('.music-play-btn');
                 if (btn) btn.click();
@@ -206,6 +238,5 @@
         return div.innerHTML;
     }
 
-    // ── Init ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', initMusicTab);
 })();
