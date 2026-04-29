@@ -90,6 +90,22 @@ class MiruroEpisodesService:
                 "airDate": ep.get("airDate") or "",
             })
 
+        # Deduplicate by episode number — keep first occurrence (API sometimes
+        # returns the same episode number twice with different IDs or orderings).
+        seen_numbers: set = set()
+        unique_episodes = []
+        for ep in episodes:
+            num = ep["number"]
+            if num in seen_numbers:
+                logger.debug(
+                    f"[MiruroEpisodes] Skipping duplicate episode {num} "
+                    f"(provider={provider_name}, anilist_id={anilist_id})"
+                )
+                continue
+            seen_numbers.add(num)
+            unique_episodes.append(ep)
+        episodes = unique_episodes
+
         # Build a dub episode ID map for quick lookup
         dub_episode_ids = {}
         for ep in dub_episodes:
