@@ -7,8 +7,8 @@ from typing import Optional, Dict, Any, Union
 from urllib.parse import parse_qs
 
 from .miruro import MiruroScraper
-from .animex import AnimexScraper
-from .kuudere import KuudereScraper
+# from .animex import AnimexScraper
+# from .kuudere import KuudereScraper
 
 
 logger = logging.getLogger(__name__)
@@ -21,8 +21,8 @@ class UnifiedScraper:
 
     def __init__(self):
         self.miruro = MiruroScraper()
-        self.animex = AnimexScraper()
-        self.kuudere = KuudereScraper()
+        # self.animex = AnimexScraper()
+        # self.kuudere = KuudereScraper()
 
         logger.info("[UnifiedScraper] Initialized with Miruro + AnimeX + Kuudere")
 
