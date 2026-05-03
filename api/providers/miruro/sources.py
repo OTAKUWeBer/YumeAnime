@@ -179,6 +179,11 @@ class MiruroSourcesService:
             url = stream.get("url") or ""
             if not url:
                 continue
+
+            # Megaplay domain mapping fix
+            if "megaup.nl" in url:
+                url = url.replace("megaup.nl", "megaplay.buzz")
+
             stream_type = stream.get("type", "").lower()
             quality = stream.get("quality") or "default"
             resolution = stream.get("resolution") or {}
