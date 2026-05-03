@@ -1,7 +1,7 @@
 {% extends "shared/base.html" %}
 
 {% block title %}Manga - YumeZone{% endblock %}
-{% block meta_description %}Read manga online for free. Browse popular manga from Manganato, Atsumaru, and Comix.{% endblock %}
+{% block meta_description %}Read manga online for free. Browse popular manga from Atsumaru.{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
 
@@ -18,10 +18,12 @@
             <div class="skeleton" style="width: 100px; height: 36px; border-radius: var(--radius-full);"></div>
             <div class="skeleton" style="width: 100px; height: 36px; border-radius: var(--radius-full);"></div>
         </div>
-        <div class="skeleton" style="width: 100%; max-width: 600px; height: 48px; border-radius: var(--radius-md); margin: 0 auto 32px auto;"></div>
-        
+        <div class="skeleton"
+            style="width: 100%; max-width: 600px; height: 48px; border-radius: var(--radius-md); margin: 0 auto 32px auto;">
+        </div>
+
         <div class="skeleton skeleton-title" style="width: 25%; height: 28px; margin-bottom: 24px;"></div>
-        
+
         <div class="manga-grid">
             {% for _ in range(18) %}
             <div class="skeleton-card">
@@ -37,8 +39,7 @@
     <div class="manga-source-tabs" id="manga-source-tabs">
         {% for src_key, src_name in sources.items() %}
         <a href="/manga?source={{ src_key }}"
-           class="manga-source-tab {% if current_source == src_key %}active{% endif %}"
-           data-source="{{ src_key }}">
+            class="manga-source-tab {% if current_source == src_key %}active{% endif %}" data-source="{{ src_key }}">
             {{ src_name }}
         </a>
         {% endfor %}
@@ -48,11 +49,11 @@
     <form action="/manga/search" method="GET" class="manga-search-bar" id="manga-search-form">
         <input type="hidden" name="source" value="{{ current_source }}">
         <input type="text" name="q" placeholder="Search manga on {{ sources.get(current_source, 'Manganato') }}..."
-               value="{{ search_query or '' }}" autocomplete="off">
+            value="{{ search_query or '' }}" autocomplete="off">
         <button type="submit">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
             </svg>
             Search
         </button>
@@ -63,8 +64,8 @@
     <div class="manga-section">
         <div class="manga-section-header">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
             </svg>
             <h2>Results for "{{ search_query }}"</h2>
             {% if search_results and search_results.found %}
@@ -75,14 +76,11 @@
         {% if search_results and search_results.entries %}
         <div class="manga-grid">
             {% for manga in search_results.entries %}
-            <a href="/manga/{{ current_source }}/{{ manga.slug or manga.id }}"
-               class="manga-card"
-               data-is-adult="{{ manga.isAdult|default(false)|lower }}">
+            <a href="/manga/{{ current_source }}/{{ manga.slug or manga.id }}" class="manga-card"
+                data-is-adult="{{ manga.isAdult|default(false)|lower }}">
                 <div class="manga-card-poster">
-                    <img src="{{ manga.cover|manga_cover(manga_referer) }}"
-                         alt="{{ manga.title }}"
-                         loading="lazy"
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzFhMWEyZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBDb3ZlcjwvdGV4dD48L3N2Zz4='">
+                    <img src="{{ manga.cover|manga_cover(manga_referer) }}" alt="{{ manga.title }}" loading="lazy"
+                        onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzFhMWEyZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBDb3ZlcjwvdGV4dD48L3N2Zz4='">
                     <div class="manga-card-badges">
                         {% if manga.isAdult %}
                         <span class="badge badge-adult">18+</span>
@@ -105,8 +103,8 @@
         {% else %}
         <div class="manga-empty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
             </svg>
             <h3>No results found</h3>
             <p>Try a different search term or source.</p>
@@ -117,64 +115,62 @@
     {% else %}
     <!-- Home Sections -->
     {% if manga_data %}
-        {% for section_key, section in manga_data.items() %}
-        <div class="manga-section">
-            <div class="manga-section-header">
-                {% if 'popular' in section_key or 'trending' in section_key %}
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-                {% elif 'latest' in section_key or 'recent' in section_key %}
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                {% else %}
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                </svg>
-                {% endif %}
-                <h2>{{ section.title }}</h2>
-                <span class="section-badge">{{ section.entries|length }}</span>
-            </div>
-
-            <div class="manga-grid">
-                {% for manga in section.entries[:18] %}
-                <a href="/manga/{{ current_source }}/{{ manga.slug or manga.id }}"
-                   class="manga-card"
-                   data-is-adult="{{ manga.isAdult|default(false)|lower }}">
-                    <div class="manga-card-poster">
-                        <img src="{{ manga.cover|manga_cover(manga_referer) }}"
-                             alt="{{ manga.title }}"
-                             loading="lazy"
-                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzFhMWEyZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBDb3ZlcjwvdGV4dD48L3N2Zz4='">
-                        <div class="manga-card-badges">
-                            {% if manga.isAdult %}
-                            <span class="badge badge-adult">18+</span>
-                            {% endif %}
-                        </div>
-                        <div class="manga-card-overlay">
-                            <span class="btn btn-primary btn-sm">Read Now</span>
-                        </div>
-                    </div>
-                    <div class="manga-card-info">
-                        <h3 class="manga-card-title">{{ manga.title }}</h3>
-                        <div class="manga-card-meta">
-                            {% if manga.latest %}{{ manga.latest }}{% endif %}
-                            {% if manga.type %}{{ manga.type }}{% endif %}
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
+    {% for section_key, section in manga_data.items() %}
+    <div class="manga-section">
+        <div class="manga-section-header">
+            {% if 'popular' in section_key or 'trending' in section_key %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            {% elif 'latest' in section_key or 'recent' in section_key %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {% else %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            {% endif %}
+            <h2>{{ section.title }}</h2>
+            <span class="section-badge">{{ section.entries|length }}</span>
         </div>
-        {% endfor %}
+
+        <div class="manga-grid">
+            {% for manga in section.entries[:18] %}
+            <a href="/manga/{{ current_source }}/{{ manga.slug or manga.id }}" class="manga-card"
+                data-is-adult="{{ manga.isAdult|default(false)|lower }}">
+                <div class="manga-card-poster">
+                    <img src="{{ manga.cover|manga_cover(manga_referer) }}" alt="{{ manga.title }}" loading="lazy"
+                        onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzFhMWEyZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5ObyBDb3ZlcjwvdGV4dD48L3N2Zz4='">
+                    <div class="manga-card-badges">
+                        {% if manga.isAdult %}
+                        <span class="badge badge-adult">18+</span>
+                        {% endif %}
+                    </div>
+                    <div class="manga-card-overlay">
+                        <span class="btn btn-primary btn-sm">Read Now</span>
+                    </div>
+                </div>
+                <div class="manga-card-info">
+                    <h3 class="manga-card-title">{{ manga.title }}</h3>
+                    <div class="manga-card-meta">
+                        {% if manga.latest %}{{ manga.latest }}{% endif %}
+                        {% if manga.type %}{{ manga.type }}{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
     {% else %}
     <div class="manga-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
         <h3>No manga data available</h3>
         <p>Try switching to a different source or search for a manga.</p>
