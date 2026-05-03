@@ -2,12 +2,12 @@
 Unified MangaScraper — dispatches to per-source modules.
 """
 import logging
-from . import manga_atsumaru
+from . import atsumaru
 
 logger = logging.getLogger(__name__)
 
 SOURCES = {
-    "atsumaru": {"module": manga_atsumaru, "name": "Atsumaru", "referer": manga_atsumaru.REFERER},
+    "atsumaru": {"module": atsumaru, "name": "Atsumaru", "referer": atsumaru.REFERER},
     # "comix": {"module": comix, "name": "Comix", "referer": comix.REFERER},
 }
 DEFAULT_SOURCE = "atsumaru"
