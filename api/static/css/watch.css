@@ -2113,7 +2113,224 @@ media-player [data-media-buffering] media-buffering-indicator circle {
         transform: rotate(0deg);
     }
 
-    to {
-        transform: rotate(360deg);
+}
+
+/* =========================================
+   Episodes Unavailable / Empty State Styles
+   ========================================= */
+
+/* Main Player Card Replacement */
+.episodes-unavailable-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+
+.eu-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.eu-backdrop img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(20px) scale(1.1);
+    opacity: 0.4;
+}
+
+.eu-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 100%);
+    z-index: 2;
+}
+
+.eu-content {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-xl);
+    max-width: 600px;
+    animation: fade-in-up 0.6s ease forwards;
+}
+
+.eu-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    margin-bottom: var(--space-md);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.eu-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 var(--space-sm) 0;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.eu-subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0 0 var(--space-xl) 0;
+    line-height: 1.5;
+}
+
+.eu-subtitle strong {
+    color: #fff;
+}
+
+.eu-countdown-wrapper {
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-xl);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.eu-countdown-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.eu-countdown-timer {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.eu-countdown-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 45px;
+}
+
+.eu-countdown-num {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.eu-countdown-unit {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.eu-countdown-sep {
+    font-size: 1.5rem;
+    color: rgba(255,255,255,0.3);
+    margin-top: -15px;
+    font-weight: bold;
+}
+
+.eu-details-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.eu-details-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(var(--accent-rgb), 0.4);
+}
+
+/* Sidebar Empty State */
+.episodes-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-2xl) var(--space-lg);
+    color: var(--text-muted);
+}
+
+.ee-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--bg-elevated);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.episodes-empty-state h3 {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+.episodes-empty-state p {
+    font-size: 0.9rem;
+    margin: 0;
+    max-width: 250px;
+    line-height: 1.5;
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .eu-title { font-size: 1.5rem; }
+    .eu-icon { width: 60px; height: 60px; }
+    .eu-countdown-num { font-size: 1.4rem; }
+    .eu-countdown-timer { gap: 10px; }
 }
