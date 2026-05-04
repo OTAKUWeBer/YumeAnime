@@ -636,7 +636,10 @@
         malId: {{ mal_id | tojson | safe if mal_id else 'null' }},
         intro: {{ intro | tojson | safe if intro else 'null' }},
         outro: {{ outro | tojson | safe if outro else 'null' }},
-        videoLink: '{{ video_link or "" }}'
+        videoLink: '{{ video_link or "" }}',
+        animeName: {{ (anime.name or anime.title or anime_title or '') | tojson | safe }},
+        poster: {{ (anime.get('coverImage') or anime.get('poster') or anime.get('image') or '') | tojson | safe }},
+        episodeTitle: {{ (episode_title or '') | tojson | safe }}
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
