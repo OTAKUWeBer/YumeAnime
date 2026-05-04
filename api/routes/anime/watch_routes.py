@@ -220,197 +220,33 @@ def _parse_video_raw(raw):
     }
 
 
-def _fetch_video_and_scan(
-    full_slug, lang, server, anilist_id, providers_map, ep_number
+def _fetch_video_only(
+    full_slug, lang, server, anilist_id, providers_map
 ):
     """
-    Fetch default provider video data AND scan all providers' capabilities
-    in a SINGLE asyncio.run() call to avoid event loop conflicts.
+    Fetch video data for the selected provider ONLY.
+    All providers are assumed available — no scanning/checking.
     Returns (video_data_dict, provider_capabilities_dict).
-    
-    Handles both regular providers (watch/ format) and anidap providers (anidap: format).
-    Anidap providers are NOT scanned here - they're marked as always available since
-    they're discovered on-demand via the /sources endpoint.
     """
-    # Build scan tasks for all providers (excluding anidap)
-    scan_slugs = {}  # provider_name -> full_slug
-    anidap_providers = set()  # Track anidap providers for special handling
-    
-    if providers_map:
-        for p_name in providers_map:
-            provider_data = providers_map.get(p_name, {})
-            is_anidap = provider_data.get("_anidap", False)
-            
-            # Track anidap providers but don't scan them
-            if is_anidap:
-                anidap_providers.add(p_name)
-                continue
-            
-            ep_id = _find_episode_id_for_provider(
-                providers_map, p_name, ep_number, lang
-            )
-            if ep_id:
-                # For watch/ format, use as-is
-                if ep_id.startswith("watch/"):
-                    slug = ep_id
-                # For other formats, wrap in watch/
-                else:
-                    slug = f"watch/{p_name}/{anilist_id}/{lang}/{ep_id}"
-            else:
-                # Fallback: construct slug from provider name + episode number
-                # This works for providers like Zoro whose source handler extracts ep number from slug
-                slug = f"watch/{p_name}/{anilist_id}/{lang}/{p_name}-{ep_number}"
-            scan_slugs[p_name] = slug
-
-    async def _combined_fetch():
-        scraper = current_app.ha_scraper
-        # 1) Fetch main video data for default provider
-        main_task = scraper.video(full_slug, lang, server, anilist_id)
-        # 2) Scan all providers concurrently
-        scan_names = list(scan_slugs.keys())
-        scan_tasks = [
-            scraper.video(scan_slugs[p], lang, p, anilist_id) for p in scan_names
-        ]
-        # Run all together
-        all_results = await asyncio.gather(
-            main_task, *scan_tasks, return_exceptions=True
-        )
-        return all_results, scan_names
-
+    # Just fetch video from the selected provider
     try:
-        all_results, scan_names = asyncio.run(_combined_fetch())
+        raw = asyncio.run(
+            current_app.ha_scraper.video(full_slug, lang, server, anilist_id)
+        )
+        video_data = _parse_video_raw(raw)
     except Exception as e:
-        print(f"[FetchAndScan] Fatal error: {e}")
-        # Fallback: try just the main fetch
-        try:
-            raw = asyncio.run(
-                current_app.ha_scraper.video(full_slug, lang, server, anilist_id)
-            )
-            video_data = _parse_video_raw(raw)
-        except Exception:
-            video_data = _parse_video_raw(None)
-        # Mark all providers as available, with special handling for anidap
-        capabilities = {}
-        if providers_map:
-            for p_name in providers_map:
-                provider_data = providers_map.get(p_name, {})
-                is_anidap = provider_data.get("_anidap", False)
-                if is_anidap:
-                    capabilities[p_name] = {"hls": True, "embed": False}  # Anidap is HLS-only
-                else:
-                    capabilities[p_name] = {"hls": True, "embed": False}
-        return video_data, capabilities
-
-    # Parse main video result
-    main_raw = all_results[0]
-    if isinstance(main_raw, Exception):
-        print(f"[FetchAndScan] Main fetch error: {main_raw}")
+        print(f"[FetchVideo] Error fetching video: {e}")
         video_data = _parse_video_raw(None)
-    else:
-        video_data = _parse_video_raw(main_raw)
 
-    # Parse scan results + collect intro/outro from any provider that has it
+    # Mark ALL providers as available (both HLS and embed) — no checking
     capabilities = {}
-    skip_data_candidates = {}  # provider_name -> {"intro": ..., "outro": ...}
-
-    for i, p_name in enumerate(scan_names):
-        raw = all_results[i + 1]  # +1 because index 0 is main_task
-        if isinstance(raw, Exception):
-            print(f"[ProviderScan] Error for {p_name}: {raw}")
-            capabilities[p_name] = {"hls": False, "embed": False}
-        elif isinstance(raw, dict):
-            # Skip error responses
-            if raw.get("error"):
-                print(f"[ProviderScan] {p_name} returned error: {raw.get('error')}")
-                capabilities[p_name] = {"hls": False, "embed": False}
-                continue
-            hls = raw.get("hls_sources", raw.get("sources", []))
-            embed = raw.get("embed_sources", [])
-            # Also check video_link — if source_type is 'embed' and video_link exists, embed is available
-            has_embed = bool(embed and len(embed) > 0)
-            if (
-                not has_embed
-                and raw.get("source_type") == "embed"
-                and raw.get("video_link")
-            ):
-                has_embed = True
-            capabilities[p_name] = {
-                "hls": bool(hls and len(hls) > 0),
-                "embed": has_embed,
-            }
-
-            # ── Collect intro/outro skip data from this provider ──
-            raw_intro = raw.get("intro")
-            raw_outro = raw.get("outro")
-            has_intro = (
-                isinstance(raw_intro, dict) and raw_intro.get("start") is not None
-            )
-            has_outro = (
-                isinstance(raw_outro, dict) and raw_outro.get("start") is not None
-            )
-            if has_intro or has_outro:
-                skip_data_candidates[p_name] = {
-                    "intro": raw_intro if has_intro else None,
-                    "outro": raw_outro if has_outro else None,
-                }
-                print(
-                    f"[Scan] Provider {p_name} has skip data: intro={raw_intro}, outro={raw_outro}"
-                )
-        else:
-            capabilities[p_name] = {"hls": False, "embed": False}
-
-    # Providers not in scan_slugs (no episode ID found)
-    # For anidap providers, mark as available since they're handled by /sources endpoint
     if providers_map:
         for p_name in providers_map:
-            if p_name not in capabilities:
-                provider_data = providers_map.get(p_name, {})
-                is_anidap = provider_data.get("_anidap", False)
-                if is_anidap:
-                    # Mark anidap as available (HLS-only) - actual fetching happens in /sources endpoint
-                    capabilities[p_name] = {"hls": True, "embed": False}
-                else:
-                    capabilities[p_name] = {"hls": False, "embed": False}
+            capabilities[p_name] = {"hls": True, "embed": True}
 
-    # ── Inject intro/outro from other providers if main provider lacks it ──
-    # Priority: zoro > kai > arc > any other provider that has skip data
-    SKIP_PRIORITY = ["zoro", "kai", "arc"]
-    main_has_intro = (
-        video_data.get("intro")
-        and isinstance(video_data["intro"], dict)
-        and video_data["intro"].get("start") is not None
-    )
-    main_has_outro = (
-        video_data.get("outro")
-        and isinstance(video_data["outro"], dict)
-        and video_data["outro"].get("start") is not None
-    )
-
-    if (not main_has_intro or not main_has_outro) and skip_data_candidates:
-        # Pick best skip data source
-        best_skip_provider = None
-        for pref in SKIP_PRIORITY:
-            if pref in skip_data_candidates:
-                best_skip_provider = pref
-                break
-        if not best_skip_provider:
-            best_skip_provider = next(iter(skip_data_candidates))
-
-        skip_data = skip_data_candidates[best_skip_provider]
-        if not main_has_intro and skip_data.get("intro"):
-            video_data["intro"] = skip_data["intro"]
-            print(
-                f"[SkipData] Injected intro from '{best_skip_provider}': {skip_data['intro']}"
-            )
-        if not main_has_outro and skip_data.get("outro"):
-            video_data["outro"] = skip_data["outro"]
-            print(
-                f"[SkipData] Injected outro from '{best_skip_provider}': {skip_data['outro']}"
-            )
-
-    print(f"[FetchVideoAndScan] Final intro: {video_data.get('intro')}")
-    print(f"[FetchVideoAndScan] Final outro: {video_data.get('outro')}")
-    print(f"[ProviderScan] capabilities: {capabilities}")
+    print(f"[FetchVideo] Final intro: {video_data.get('intro')}")
+    print(f"[FetchVideo] Final outro: {video_data.get('outro')}")
+    print(f"[FetchVideo] All {len(capabilities)} providers marked available")
     return video_data, capabilities
 
 
@@ -740,57 +576,12 @@ def watch(anime_id, ep_number):
         if not selected_server:
             selected_server = "hd-1"
 
-    # ── Fetch video data + scan all provider capabilities in ONE async batch ──
-    video_data, provider_capabilities = _fetch_video_and_scan(
-        full_slug, lang, selected_server, anilist_id, providers_map, ep_number
+    # ── Fetch video data for selected provider only (no scanning) ──
+    video_data, provider_capabilities = _fetch_video_only(
+        full_slug, lang, selected_server, anilist_id, providers_map
     )
 
-    # ── Prefer HLS on initial load ──────────────────────────────────────────
-    # If the chosen provider only returned embed (no HLS), but another provider
-    # has HLS capability, switch to the HLS-capable provider so the internal
-    # player opens first (user's preference: try ALL internal HLS first).
     from api.providers.miruro.episodes import PROVIDER_PRIORITY as _PP
-
-    if video_data.get("source_type") != "hls" or not video_data.get("hls_sources"):
-        hls_provider = None
-        for p_name in _PP:
-            if p_name == provider_name:
-                continue  # already tried this one
-            caps = provider_capabilities.get(p_name, {})
-            if caps.get("hls"):
-                hls_provider = p_name
-                break
-        # Also check providers not in _PP
-        if not hls_provider:
-            for p_name, caps in provider_capabilities.items():
-                if p_name == provider_name:
-                    continue
-                if caps.get("hls"):
-                    hls_provider = p_name
-                    break
-
-        if hls_provider:
-            current_app.logger.info(
-                f"[Watch] Provider {provider_name} has no HLS, switching to {hls_provider} for initial HLS playback"
-            )
-            # Re-resolve episode ID for the HLS provider
-            hls_ep_id = _find_episode_id_for_provider(
-                providers_map, hls_provider, ep_number, lang
-            )
-            if hls_ep_id:
-                if hls_ep_id.startswith("watch/"):
-                    parts = hls_ep_id.split("/")
-                    if len(parts) >= 5:
-                        parts[3] = lang
-                    hls_slug = "/".join(parts)
-                else:
-                    hls_slug = hls_ep_id
-
-                hls_video = _fetch_video_data(hls_slug, lang, hls_provider, anilist_id)
-                if hls_video.get("hls_sources"):
-                    video_data = hls_video
-                    provider_name = hls_provider
-                    selected_server = hls_provider
 
     # Save last used server
     if selected_server:
@@ -1084,9 +875,9 @@ def get_watch_sources():
     except Exception:
         pass
 
-    # Fetch video data and scan all provider capabilities in ONE async batch
-    video_data, provider_capabilities = _fetch_video_and_scan(
-        full_slug, lang, selected_server, anilist_id, providers_map, ep_number
+    # Fetch video data for selected provider only (no scanning)
+    video_data, provider_capabilities = _fetch_video_only(
+        full_slug, lang, selected_server, anilist_id, providers_map
     )
 
     # Save preferences

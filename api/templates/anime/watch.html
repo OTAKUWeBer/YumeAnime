@@ -259,12 +259,9 @@
                                 <div class="server-section-pills" id="hlsServerPills">
                                     {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
                                     %}
-                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
-                                    %}
                                     <button
-                                        class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %} {% if not caps.get('hls', false) %}unavailable{% endif %}"
-                                        data-stream-type="hls" data-provider="{{ p_name }}" {% if not caps.get('hls',
-                                        false) %}disabled style="display: none;" {% endif %}>
+                                        class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %}"
+                                        data-stream-type="hls" data-provider="{{ p_name }}">
                                         {{ p_name | title }}
                                         <span class="srv-badge badge-hls">HLS</span>
                                     </button>
@@ -285,12 +282,9 @@
                                 <div class="server-section-pills" id="embedServerPills">
                                     {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
                                     %}
-                                    {% set caps = provider_capabilities.get(p_name, {}) if provider_capabilities else {}
-                                    %}
                                     <button
-                                        class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %} {% if not caps.get('embed', false) %}unavailable{% endif %}"
-                                        data-stream-type="embed" data-provider="{{ p_name }}" {% if not
-                                        caps.get('embed', false) %}disabled style="display: none;" {% endif %}>
+                                        class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %}"
+                                        data-stream-type="embed" data-provider="{{ p_name }}">
                                         {{ 'Megaplay' if p_name == 'zoro' else p_name | title }}
                                         <span class="srv-badge badge-embed">EMBED</span>
                                     </button>

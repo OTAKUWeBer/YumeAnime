@@ -552,25 +552,7 @@ function fetchAndLoadSources() {
 }
 
 function updateProviderPills(caps) {
-    ['hlsServerPills', 'embedServerPills'].forEach(id => {
-        const section = document.getElementById(id);
-        if (!section) return;
-
-        section.querySelectorAll('.server-pill').forEach(pill => {
-            const pName = pill.dataset.provider;
-            const hasCaps = id === 'hlsServerPills'
-                ? caps[pName]?.hls
-                : caps[pName]?.embed;
-
-            if (!hasCaps) {
-                pill.classList.add('unavailable');
-                pill.style.display = 'none';
-            } else {
-                pill.classList.remove('unavailable');
-                pill.style.display = '';
-            }
-        });
-    });
+    // No-op: all providers are always shown, no capability checking
 }
 
 // ── Episode Sidebar ───────────────────────────────────────────
@@ -614,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sections.addEventListener('click', (e) => {
         const pill = e.target.closest('.server-pill');
-        if (!pill || pill.disabled || pill.classList.contains('unavailable')) return;
+        if (!pill || pill.disabled) return;
 
         const streamType = pill.dataset.streamType;
         const provider = pill.dataset.provider;
