@@ -744,6 +744,7 @@
 <script>
     window.WATCH_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        anilistId: {{ (anime.get('anilistId') or anime.get('alID') or 'null') | tojson | safe }},
         episodeNumber: {{ episode_number or 1 }},
         language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
