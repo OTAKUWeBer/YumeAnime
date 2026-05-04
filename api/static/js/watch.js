@@ -50,11 +50,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store reference globally
     window.player = player;
 
-    // Wait for the custom element to be defined, then set up
+    // Immediately set up listeners, no need to wait for can-play
+    // because time-update handles duration dynamically
+    setupSkipButtons();
+    setupResumeAndTracking(player);
+
     function onPlayerReady() {
         console.log('[Player] Vidstack can-play fired');
-        setupSkipButtons();
-        setupResumeAndTracking(player);
     }
 
     player.addEventListener('can-play', onPlayerReady, { once: true });
@@ -402,8 +404,8 @@ function fetchAndLoadSources() {
             console.log('[AJAX] Got sources:', data);
 
             // Update intro/outro
-            if (data.intro) window.WATCH_CONFIG.intro = data.intro;
-            if (data.outro) window.WATCH_CONFIG.outro = data.outro;
+            if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
+            if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
 
             // Re-create skip buttons with new data
             const oldIntro = document.getElementById('skipIntroBtn');
