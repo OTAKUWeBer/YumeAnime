@@ -94,7 +94,7 @@ async def anime_info(anime_id: str):
     user_watched_episodes = 0
     if "username" in session and "_id" in session:
         try:
-            from api.routes.api.watchlist_api import get_anilist_watchlist_entry
+            from api.routes.shared.watchlist_api import get_anilist_watchlist_entry
             anilist_id = anime.get("anilistId") or anime.get("alID")
             al_entry = get_anilist_watchlist_entry(anilist_id)
             if al_entry:
