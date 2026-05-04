@@ -48,40 +48,29 @@ class MiruroAnimeInfoService:
         }
         '''
         import aiohttp
-        import asyncio
         resp = None
-        timeout = aiohttp.ClientTimeout(total=10)
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(
-                        "https://graphql.anilist.co",
-                        json={"query": query, "variables": {"id": int(anilist_id)}}
-                    ) as r:
-                        if r.status == 429:
-                            retry_after = int(r.headers.get("Retry-After", 2))
-                            logger.warning(f"Anilist rate limited (info fetch), retrying in {retry_after}s")
-                            await asyncio.sleep(retry_after)
-                            continue
-                        if r.status != 200:
-                            logger.error(f"Anilist info fetch failed with status {r.status}")
-                            if attempt < max_retries - 1:
-                                await asyncio.sleep(2)
-                                continue
-                            break
+        timeout = aiohttp.ClientTimeout(total=5)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"id": int(anilist_id)}}
+                ) as r:
+                    if r.status == 429:
+                        logger.warning("Anilist rate limited (info fetch), dropping request")
+                    elif r.status != 200:
+                        logger.error(f"Anilist info fetch failed with status {r.status}")
+                    else:
                         data = await r.json()
                         resp = data.get("data", {}).get("Media")
-                        break
-            except Exception as e:
-                logger.error(f"Anilist info fetch failed (attempt {attempt+1}/{max_retries}): {e}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2)
-                else:
-                    break
+        except Exception as e:
+            logger.error(f"Anilist info fetch failed: {e}")
 
         if not resp:
-            return {}
+            logger.info(f"Anilist info fetch failed for {anilist_id}, falling back to Miruro API")
+            resp = await self.client._get(f"info/{anilist_id}")
+            if not resp:
+                return {}
 
         title = resp.get("title", {}) or {}
         cover = resp.get("coverImage", {}) or {}
@@ -363,39 +352,27 @@ class MiruroAnimeInfoService:
         }
         '''
         import aiohttp
-        import asyncio
         resp = None
-        timeout = aiohttp.ClientTimeout(total=10)
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(
-                        "https://graphql.anilist.co",
-                        json={"query": query, "variables": {"id": int(anilist_id)}}
-                    ) as r:
-                        if r.status == 429:
-                            retry_after = int(r.headers.get("Retry-After", 2))
-                            logger.warning(f"Anilist rate limited (next ep fetch), retrying in {retry_after}s")
-                            await asyncio.sleep(retry_after)
-                            continue
-                        if r.status != 200:
-                            if attempt < max_retries - 1:
-                                await asyncio.sleep(2)
-                                continue
-                            break
+        timeout = aiohttp.ClientTimeout(total=5)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"id": int(anilist_id)}}
+                ) as r:
+                    if r.status == 429:
+                        logger.warning("Anilist rate limited (next ep fetch), dropping request")
+                    elif r.status == 200:
                         data = await r.json()
                         resp = data.get("data", {}).get("Media")
-                        break
-            except Exception as e:
-                logger.error(f"Anilist next ep fetch failed (attempt {attempt+1}/{max_retries}): {e}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2)
-                else:
-                    break
+        except Exception as e:
+            logger.error(f"Anilist next ep fetch failed: {e}")
 
         if not resp:
-            return {}
+            logger.info(f"Anilist next ep fetch failed for {anilist_id}, falling back to Miruro API")
+            resp = await self.client._get(f"info/{anilist_id}")
+            if not resp:
+                return {}
 
         next_ep = resp.get("nextAiringEpisode") or {}
         if not next_ep or not next_ep.get("airingAt"):

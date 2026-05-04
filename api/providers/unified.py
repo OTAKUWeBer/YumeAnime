@@ -33,7 +33,7 @@ class UnifiedScraper:
     # HOME
     # =========================================================================
     async def home(self) -> Dict[str, Any]:
-        """Get home page data from AniList GraphQL"""
+        """Get home page data from AniList GraphQL with fallback to Miruro API"""
         try:
             result = await self.anilist_home.home()
             if (
@@ -52,6 +52,14 @@ class UnifiedScraper:
                 return result
         except Exception as e:
             logger.warning(f"[UnifiedScraper] Home: AniList failed: {e}")
+
+        try:
+            logger.info("[UnifiedScraper] Home: Falling back to Miruro API")
+            miruro_result = await self.miruro.home()
+            if miruro_result and miruro_result.get("success"):
+                return miruro_result
+        except Exception as e:
+            logger.warning(f"[UnifiedScraper] Home: Miruro fallback failed: {e}")
 
         return {"success": False, "data": {}}
 
