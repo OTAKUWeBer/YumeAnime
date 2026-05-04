@@ -16,11 +16,50 @@ class MiruroAnimeInfoService:
         self.client = client
 
     async def get_anime_info(self, anilist_id) -> dict:
-        """
-        Fetch detailed anime info from Miruro /info/{anilist_id}
-        Normalizes response to standard shape
-        """
-        resp = await self.client._get(f"info/{anilist_id}")
+        query = '''
+        query ($id: Int) {
+          Media(id: $id, type: ANIME) {
+            id
+            idMal
+            title { romaji english native }
+            coverImage { extraLarge large medium }
+            bannerImage
+            description
+            status
+            genres
+            duration
+            isAdult
+            format
+            averageScore
+            meanScore
+            episodes
+            season
+            seasonYear
+            startDate { year month day }
+            endDate { year month day }
+            synonyms
+            studios { nodes { name isAnimationStudio } }
+            trailer { id site thumbnail }
+            relations { edges { relationType node { id idMal title { romaji english native } coverImage { large extraLarge } format averageScore episodes } } }
+            recommendations { nodes { mediaRecommendation { id title { romaji english native } coverImage { large extraLarge } format duration averageScore episodes } } }
+            characters { edges { role node { id name { first last full } image { large medium } } voiceActors(language: JAPANESE) { id name { first last full } image { large medium } language: languageV2 } } }
+            nextAiringEpisode { airingAt timeUntilAiring episode }
+          }
+        }
+        '''
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"id": int(anilist_id)}}
+                ) as r:
+                    data = await r.json()
+                    resp = data.get("data", {}).get("Media")
+        except Exception as e:
+            logger.error(f"Anilist info fetch failed: {e}")
+            resp = None
+
         if not resp:
             return {}
 
@@ -296,8 +335,26 @@ class MiruroAnimeInfoService:
         }]
 
     async def next_episode_schedule(self, anilist_id) -> Dict[str, Any]:
-        """Get next episode schedule from Miruro /info endpoint"""
-        resp = await self.client._get(f"info/{anilist_id}")
+        query = '''
+        query ($id: Int) {
+          Media(id: $id, type: ANIME) {
+            nextAiringEpisode { airingAt timeUntilAiring episode }
+          }
+        }
+        '''
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"id": int(anilist_id)}}
+                ) as r:
+                    data = await r.json()
+                    resp = data.get("data", {}).get("Media")
+        except Exception as e:
+            logger.error(f"Anilist next ep fetch failed: {e}")
+            resp = None
+
         if not resp:
             return {}
 

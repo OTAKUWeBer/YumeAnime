@@ -59,16 +59,8 @@ class MiruroCatalogService:
         return {}
 
     async def genre(self, name: str, page: int = 1) -> Dict[str, Any]:
-        """Get anime by genre via Miruro /filter endpoint with AniList fallback"""
-        params = {
-            "genre": name.title(),
-            "page": page,
-            "per_page": 24,
-            "sort": "SCORE_DESC",
-        }
-        resp = await self.client._get("filter", params=params)
-        
-        # AniList Fallback if Miruro fails
+        """Get anime by genre via AniList GraphQL"""
+        resp = None
         if not resp:
             logger.info(f"Miruro /filter failed for genre '{name}'. Using AniList fallback.")
             query = '''
@@ -117,59 +109,95 @@ class MiruroCatalogService:
                 }
             return {}
 
-        results = resp.get("results", [])
-        filtered_results = [
-            item for item in results 
-            if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
-        ]
-        animes = [self._normalize_anime(item) for item in filtered_results]
-        total = resp.get("total", 0)
 
-        return {
-            "animes": animes,
-            "genreName": name.title(),
-            "totalPages": max(1, (total + 24 - 1) // 24),
-            "hasNextPage": resp.get("hasNextPage", False),
-            "currentPage": page,
-        }
 
     async def category(self, name: str, page: int = 1) -> Dict[str, Any]:
-        """Get anime by category via Miruro API"""
-        # Map category names to Miruro endpoints/filters
+        """Get anime by category via AniList API"""
         category_map = {
-            "trending": ("trending", {}),
-            "popular": ("popular", {}),
-            "most-popular": ("popular", {}),
-            "recently-updated": ("recent", {}),
-            "recently-added": ("recent", {}),
-            "movie": ("filter", {"format": "MOVIE", "sort": "SCORE_DESC"}),
-            "tv": ("filter", {"format": "TV", "sort": "SCORE_DESC"}),
-            "ova": ("filter", {"format": "OVA", "sort": "SCORE_DESC"}),
-            "ona": ("filter", {"format": "ONA", "sort": "SCORE_DESC"}),
-            "special": ("filter", {"format": "SPECIAL", "sort": "SCORE_DESC"}),
-            "most-favorite": ("filter", {"sort": "FAVOURITES_DESC"}),
-            "top-airing": ("filter", {"status": "RELEASING", "sort": "SCORE_DESC"}),
-            "completed": ("filter", {"status": "FINISHED", "sort": "SCORE_DESC"}),
-            "upcoming": ("upcoming", {}),
+            "trending": {"sort": "TRENDING_DESC"},
+            "popular": {"sort": "POPULARITY_DESC"},
+            "most-popular": {"sort": "POPULARITY_DESC"},
+            "recently-updated": {"sort": "UPDATED_AT_DESC"},
+            "recently-added": {"sort": "UPDATED_AT_DESC"},
+            "movie": {"format": "MOVIE", "sort": "SCORE_DESC"},
+            "tv": {"format": "TV", "sort": "SCORE_DESC"},
+            "ova": {"format": "OVA", "sort": "SCORE_DESC"},
+            "ona": {"format": "ONA", "sort": "SCORE_DESC"},
+            "special": {"format": "SPECIAL", "sort": "SCORE_DESC"},
+            "most-favorite": {"sort": "FAVOURITES_DESC"},
+            "top-airing": {"status": "RELEASING", "sort": "SCORE_DESC"},
+            "completed": {"status": "FINISHED", "sort": "SCORE_DESC"},
+            "upcoming": {"status": "NOT_YET_RELEASED", "sort": "POPULARITY_DESC"},
         }
 
-        endpoint, extra_params = category_map.get(name.lower(), ("filter", {}))
+        extra_params = category_map.get(name.lower(), {"sort": "SCORE_DESC"})
 
-        params = {"page": page, "per_page": 24, **extra_params}
-        resp = await self.client._get(endpoint, params=params)
+        graphql_format = extra_params.get("format")
+        graphql_status = extra_params.get("status")
+        graphql_sort = extra_params.get("sort")
         
-        # AniList Fallback if Miruro fails
-        if not resp and endpoint == "filter":
-            logger.info(f"Miruro /filter failed for category '{name}'. Using AniList fallback.")
+        query = '''
+        query ($page: Int, $perPage: Int, $format: MediaFormat, $status: MediaStatus, $sort: [MediaSort]) {
+          Page(page: $page, perPage: $perPage) {
+            pageInfo { total hasNextPage lastPage }
+            media(type: ANIME, format: $format, status: $status, sort: $sort, isAdult: false) {
+              id
+              title { romaji english native }
+              coverImage { extraLarge large }
+              episodes
+              nextAiringEpisode { episode }
+              format
+              duration
+              averageScore
+              genres
+              isAdult
+            }
+          }
+        }
+        '''
+        variables = {"page": page, "perPage": 24}
+        if graphql_format:
+            variables["format"] = graphql_format
+        if graphql_status:
+            variables["status"] = graphql_status
+        if graphql_sort:
+            variables["sort"] = [graphql_sort]
             
-            # Map params to GraphQL variables
-            graphql_format = extra_params.get("format")
-            graphql_status = extra_params.get("status")
-            query = '''
-            query ($page: Int, $perPage: Int, $format: MediaFormat, $status: MediaStatus) {
-              Page(page: $page, perPage: $perPage) {
-                pageInfo { total hasNextPage lastPage }
-                media(type: ANIME, format: $format, status: $status, sort: SCORE_DESC, isAdult: false) {
+        fallback_data = await self._fallback_anilist_query(query, variables)
+        
+        if fallback_data and "data" in fallback_data and "Page" in fallback_data["data"]:
+            page_data = fallback_data["data"]["Page"]
+            media_list = page_data.get("media", [])
+            page_info = page_data.get("pageInfo", {})
+            
+            filtered_results = [
+                item for item in media_list 
+                if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
+            ]
+            animes = [self._normalize_anime(item) for item in filtered_results]
+            
+            return {
+                "animes": animes,
+                "category": name.replace("-", " ").title(),
+                "totalPages": page_info.get("lastPage", max(1, page)),
+                "hasNextPage": page_info.get("hasNextPage", False),
+                "currentPage": page,
+            }
+        return {}
+
+    async def producer(self, name: str, page: int = 1) -> Dict[str, Any]:
+        """
+        Get anime by producer/studio — Use AniList GraphQL
+        """
+        query = '''
+        query ($search: String, $page: Int, $perPage: Int) {
+          Page(page: $page, perPage: $perPage) {
+            pageInfo { total hasNextPage lastPage }
+            studios(search: $search) {
+              id
+              name
+              media(isMain: true, sort: SCORE_DESC) {
+                nodes {
                   id
                   title { romaji english native }
                   coverImage { extraLarge large }
@@ -183,100 +211,82 @@ class MiruroCatalogService:
                 }
               }
             }
-            '''
-            variables = {"page": page, "perPage": 24}
-            if graphql_format:
-                variables["format"] = graphql_format
-            if graphql_status:
-                variables["status"] = graphql_status
-                
-            fallback_data = await self._fallback_anilist_query(query, variables)
-            
-            if fallback_data and "data" in fallback_data and "Page" in fallback_data["data"]:
-                page_data = fallback_data["data"]["Page"]
-                media_list = page_data.get("media", [])
-                page_info = page_data.get("pageInfo", {})
-                
+          }
+        }
+        '''
+        variables = {"search": name.replace("-", " "), "page": page, "perPage": 24}
+        fallback_data = await self._fallback_anilist_query(query, variables)
+        
+        animes = []
+        page_info = {}
+        if fallback_data and "data" in fallback_data and "Page" in fallback_data["data"]:
+            page_data = fallback_data["data"]["Page"]
+            studios = page_data.get("studios", [])
+            page_info = page_data.get("pageInfo", {})
+            if studios and "media" in studios[0]:
+                media_list = studios[0]["media"].get("nodes", [])
                 filtered_results = [
                     item for item in media_list 
                     if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
                 ]
                 animes = [self._normalize_anime(item) for item in filtered_results]
-                
-                return {
-                    "animes": animes,
-                    "category": name.replace("-", " ").title(),
-                    "totalPages": page_info.get("lastPage", max(1, page)),
-                    "hasNextPage": page_info.get("hasNextPage", False),
-                    "currentPage": page,
-                }
-            return {}
-
-        if not resp:
-            return {}
-
-        results = resp.get("results", [])
-        filtered_results = [
-            item for item in results 
-            if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
-        ]
-        animes = [self._normalize_anime(item) for item in filtered_results]
-        total = resp.get("total", 0)
-
-        return {
-            "animes": animes,
-            "category": name.replace("-", " ").title(),
-            "totalPages": max(1, (total + 24 - 1) // 24) if total else 1,
-            "hasNextPage": resp.get("hasNextPage", False),
-            "currentPage": page,
-        }
-
-    async def producer(self, name: str, page: int = 1) -> Dict[str, Any]:
-        """
-        Get anime by producer/studio — Miruro doesn't have a direct endpoint,
-        so we use /filter with a search approach
-        """
-        params = {"page": page, "per_page": 24}
-        resp = await self.client._get("filter", params=params)
-        if not resp:
-            return {}
-
-        results = resp.get("results", [])
-        filtered_results = [
-            item for item in results 
-            if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
-        ]
-        animes = [self._normalize_anime(item) for item in filtered_results]
 
         return {
             "animes": animes,
             "producerName": name.replace("-", " ").title(),
-            "totalPages": max(1, (resp.get("total", 0) + 24 - 1) // 24),
-            "hasNextPage": resp.get("hasNextPage", False),
+            "totalPages": page_info.get("lastPage", max(1, page)),
+            "hasNextPage": page_info.get("hasNextPage", False),
             "currentPage": page,
         }
 
     async def schedule(self, date: str = None) -> Dict[str, Any]:
-        """Get anime airing schedule via Miruro /schedule endpoint"""
-        params = {"per_page": 50}
-        resp = await self.client._get("schedule", params=params)
-        if not resp:
-            return {}
-
-        results = resp.get("results", [])
+        """Get anime airing schedule via AniList GraphQL endpoint"""
+        import time
+        now = int(time.time())
+        query = '''
+        query ($page: Int, $perPage: Int, $airingAt_greater: Int, $airingAt_lesser: Int) {
+          Page(page: $page, perPage: $perPage) {
+            airingSchedules(airingAt_greater: $airingAt_greater, airingAt_lesser: $airingAt_lesser, sort: TIME) {
+              id
+              episode
+              airingAt
+              timeUntilAiring
+              media {
+                id
+                title { romaji english native }
+                coverImage { extraLarge large }
+                episodes
+                format
+                duration
+                averageScore
+                genres
+                isAdult
+              }
+            }
+          }
+        }
+        '''
+        # Next 7 days
+        variables = {
+            "page": 1,
+            "perPage": 50,
+            "airingAt_greater": now,
+            "airingAt_lesser": now + 7 * 24 * 3600
+        }
+        fallback_data = await self._fallback_anilist_query(query, variables)
         
-        # Normalize schedule items
         scheduled = []
-        for item in results:
-            if item.get("isAdult", False) or "Hentai" in item.get("genres", []):
-                continue
-            normalized = self._normalize_anime(item)
-            # Add schedule-specific fields
-            next_ep = item.get("nextAiringEpisode") or {}
-            normalized["next_episode"] = item.get("next_episode") or next_ep.get("episode")
-            normalized["airingAt"] = item.get("airingAt") or next_ep.get("airingAt")
-            normalized["timeUntilAiring"] = item.get("timeUntilAiring") or next_ep.get("timeUntilAiring")
-            scheduled.append(normalized)
+        if fallback_data and "data" in fallback_data and "Page" in fallback_data["data"]:
+            schedules = fallback_data["data"]["Page"].get("airingSchedules", [])
+            for sched in schedules:
+                media = sched.get("media", {})
+                if not media or media.get("isAdult", False) or "Hentai" in media.get("genres", []):
+                    continue
+                normalized = self._normalize_anime(media)
+                normalized["next_episode"] = sched.get("episode")
+                normalized["airingAt"] = sched.get("airingAt")
+                normalized["timeUntilAiring"] = sched.get("timeUntilAiring")
+                scheduled.append(normalized)
 
         return {
             "scheduledAnimes": scheduled,

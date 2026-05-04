@@ -1,5 +1,5 @@
 """
-Unified scraper - uses the Miruro Native API.
+Unified scraper - uses AniList GraphQL directly for home data, Miruro for episodes.
 """
 
 import logging
@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any, Union
 from urllib.parse import parse_qs
 
 from .miruro import MiruroScraper
+from .anilist_home import AnilistHomeService
 # from .animex import AnimexScraper
 # from .kuudere import KuudereScraper
 
@@ -16,24 +17,25 @@ logger = logging.getLogger(__name__)
 
 class UnifiedScraper:
     """
-    Unified scraper using the Miruro Native API.
+    Unified scraper using AniList GraphQL for home data + Miruro for episodes.
     """
 
     def __init__(self):
         self.miruro = MiruroScraper()
+        self.anilist_home = AnilistHomeService()
         # self.animex = AnimexScraper()
         # self.kuudere = KuudereScraper()
 
-        logger.info("[UnifiedScraper] Initialized with Miruro + AnimeX + Kuudere")
+        logger.info("[UnifiedScraper] Initialized with AniList GraphQL + Miruro")
 
 
     # =========================================================================
     # HOME
     # =========================================================================
     async def home(self) -> Dict[str, Any]:
-        """Get home page data from Miruro"""
+        """Get home page data from AniList GraphQL"""
         try:
-            result = await self.miruro.home()
+            result = await self.anilist_home.home()
             if (
                 result
                 and result.get("success")
@@ -46,17 +48,18 @@ class UnifiedScraper:
                     ]
                 )
             ):
-                logger.debug("[UnifiedScraper] Home: Miruro succeeded")
+                logger.debug("[UnifiedScraper] Home: AniList succeeded")
                 return result
         except Exception as e:
-            logger.warning(f"[UnifiedScraper] Home: Miruro failed: {e}")
+            logger.warning(f"[UnifiedScraper] Home: AniList failed: {e}")
 
         return {"success": False, "data": {}}
 
     def clear_home_cache(self) -> None:
-        """Clear caches on Miruro"""
+        """Clear caches on AniList home service"""
         try:
-            self.miruro.clear_home_cache()
+            # AnilistHomeService doesn't have a clear cache method yet, but we can add one if needed
+            pass
         except Exception:
             pass
 
