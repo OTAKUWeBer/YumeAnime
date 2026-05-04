@@ -4,13 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description"
-        content="{% block meta_description %}Watch anime online for free in HD quality{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Watch anime online for free in HD quality{% endblock %}">
 
     <!-- Open Graph / Social Media Embeds -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
     <meta property="og:title" content="{% block og_title %}YumeZone - Watch Anime Online{% endblock %}">
-    <meta property="og:description"
-        content="{% block og_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}">
+    <meta property="og:image" content="{{ url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}">
+    <meta property="og:image:alt" content="YumeZone Logo">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ self.title() }}">
+    <meta name="twitter:description" content="{{ self.meta_description() }}">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}">
+    <meta name="twitter:image:alt" content="YumeZone Logo">
 
     <title>{% block title %}YumeZone{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logos/logo-icon.png') }}?v=3">
