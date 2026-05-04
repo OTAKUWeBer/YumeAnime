@@ -313,6 +313,13 @@
     display: block;
 }
 
+.episode-sidebar-list[data-view="grid"] > .episodes-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 180px;
+    padding: var(--space-xl) var(--space-lg);
+}
+
 /* Grid View Filler Marks */
 .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.is-filler {
     border-color: rgba(243, 156, 18, 0.4);
