@@ -79,20 +79,49 @@ class MiruroSearchService:
         Search anime via Miruro /search endpoint
         Returns data in standard format
         """
-        params = {"query": q, "page": page, "per_page": 20}
+        query = '''
+        query ($search: String, $page: Int, $perPage: Int) {
+          Page(page: $page, perPage: $perPage) {
+            pageInfo { total hasNextPage lastPage perPage }
+            media(type: ANIME, search: $search, sort: SEARCH_MATCH) {
+              id
+              title { romaji english native }
+              coverImage { extraLarge large }
+              episodes
+              nextAiringEpisode { episode }
+              format
+              duration
+              averageScore
+              genres
+              isAdult
+              studios { nodes { name } }
+            }
+          }
+        }
+        '''
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"search": q, "page": page, "perPage": 20}}
+                ) as r:
+                    data = await r.json()
+                    page_data = data.get("data", {}).get("Page", {})
+        except Exception as e:
+            logger.error(f"Anilist search fetch failed: {e}")
+            page_data = {}
 
-        resp = await self.client._get("search", params=params)
-        if not resp:
-            return {}
-
-        results = resp.get("results", [])
+        results = page_data.get("media", [])
         filtered_results = [
             item for item in results 
             if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
         ]
-        total = resp.get("total", 0)
-        has_next = resp.get("hasNextPage", False)
-        per_page = resp.get("perPage", 20)
+        
+        page_info = page_data.get("pageInfo", {})
+        total = page_info.get("total", 0)
+        has_next = page_info.get("hasNextPage", False)
+        per_page = page_info.get("perPage", 20)
 
         animes = [
             a for a in (self._normalize_search_result(item) for item in filtered_results)
@@ -115,24 +144,49 @@ class MiruroSearchService:
         Get search suggestions via Miruro /suggestions endpoint
         Returns data in standard format
         """
-        resp = await self.client._get("suggestions", params={"query": q})
-        if not resp:
-            return {"suggestions": []}
+        query = '''
+        query ($search: String) {
+          Page(page: 1, perPage: 10) {
+            media(type: ANIME, search: $search, sort: SEARCH_MATCH) {
+              id
+              title { romaji english native }
+              coverImage { medium large }
+              format
+              episodes
+              status
+              seasonYear
+              genres
+              isAdult
+            }
+          }
+        }
+        '''
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"search": q}}
+                ) as r:
+                    data = await r.json()
+                    suggestions = data.get("data", {}).get("Page", {}).get("media", [])
+        except Exception as e:
+            logger.error(f"Anilist suggestions fetch failed: {e}")
+            suggestions = []
 
-        suggestions = resp.get("suggestions", [])
         filtered_suggestions = [
             s for s in suggestions 
             if not s.get("isAdult", False) and "Hentai" not in s.get("genres", [])
         ]
 
-        # Normalize each suggestion to standard shape, skip empty entries
         normalized = []
         for s in filtered_suggestions:
-            name = s.get("title") or s.get("title_romaji") or ""
-            poster = s.get("poster") or ""
+            title = s.get("title", {})
+            name = title.get("english") or title.get("romaji") or ""
+            cover = s.get("coverImage", {})
+            poster = cover.get("medium") or cover.get("large") or ""
             if not name or name == "Unknown":
                 continue
-            # Build moreInfo: format, episode count or status, then year
             more_info = []
             fmt = s.get("format")
             if fmt:
@@ -145,14 +199,14 @@ class MiruroSearchService:
                 more_info.append("Upcoming")
             elif status == "RELEASING":
                 more_info.append("Airing")
-            year = s.get("year")
+            year = s.get("seasonYear")
             if year:
                 more_info.append(str(year))
             normalized.append({
                 "id": str(s.get("id", "")),
                 "anilistId": s.get("id"),
                 "name": name,
-                "jname": s.get("title_romaji") or "",
+                "jname": title.get("native") or title.get("romaji") or "",
                 "poster": poster,
                 "moreInfo": more_info,
             })
@@ -164,16 +218,47 @@ class MiruroSearchService:
         Miruro doesn't have a direct A-Z list endpoint.
         Use /filter with alphabet sorting as a workaround.
         """
-        params = {"page": page, "per_page": 24, "sort": "TITLE_ROMAJI"}
-        resp = await self.client._get("filter", params=params)
-        if not resp:
-            return {}
+        query = '''
+        query ($page: Int, $perPage: Int) {
+          Page(page: $page, perPage: $perPage) {
+            pageInfo { total hasNextPage lastPage perPage }
+            media(type: ANIME, sort: TITLE_ROMAJI) {
+              id
+              title { romaji english native }
+              coverImage { extraLarge large }
+              episodes
+              nextAiringEpisode { episode }
+              format
+              duration
+              averageScore
+              genres
+              isAdult
+              studios { nodes { name } }
+            }
+          }
+        }
+        '''
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"page": page, "perPage": 24}}
+                ) as r:
+                    data = await r.json()
+                    page_data = data.get("data", {}).get("Page", {})
+        except Exception as e:
+            logger.error(f"Anilist az_list fetch failed: {e}")
+            page_data = {}
 
-        results = resp.get("results", [])
+        results = page_data.get("media", [])
         filtered_results = [
             item for item in results 
             if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
         ]
+        
+        page_info = page_data.get("pageInfo", {})
+        
         animes = [
             a for a in (self._normalize_search_result(item) for item in filtered_results)
             if self._is_valid_result(a)
@@ -181,7 +266,7 @@ class MiruroSearchService:
         
         return {
             "animes": animes,
-            "totalPages": max(1, (resp.get("total", 0) + 24 - 1) // 24),
-            "hasNextPage": resp.get("hasNextPage", False),
+            "totalPages": page_info.get("lastPage", max(1, page)),
+            "hasNextPage": page_info.get("hasNextPage", False),
             "currentPage": page,
         }
