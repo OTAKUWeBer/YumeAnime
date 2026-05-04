@@ -239,6 +239,33 @@ function setupResumeAndTracking(player) {
     _trackingSetup = true;
 
     let resumeApplied = false;
+    let lastHistorySave = 0; // throttle history saves
+
+    // ── Save watch history entry to localStorage ──
+    function saveWatchHistory(currentTime, duration) {
+        const cfg = window.WATCH_CONFIG;
+        if (!cfg || !cfg.animeId) return;
+
+        const epNum = cfg.episodeNumber;
+        const key = `yumeHistory_${cfg.animeId}_ep${epNum}`;
+        const progress = duration > 0 ? currentTime / duration : 0;
+
+        const entry = {
+            animeId: cfg.animeId,
+            epNum: epNum,
+            animeName: cfg.animeName || '',
+            poster: cfg.poster || '',
+            episodeTitle: cfg.episodeTitle || '',
+            timestamp: currentTime,
+            duration: duration,
+            completed: progress >= 0.9,
+            watchedAt: Date.now()
+        };
+
+        try {
+            localStorage.setItem(key, JSON.stringify(entry));
+        } catch (e) { }
+    }
 
     player.addEventListener('play', () => {
         if (resumeApplied) return;
@@ -255,6 +282,9 @@ function setupResumeAndTracking(player) {
             console.log('[AutoResume] Resuming from:', savedTime);
             player.currentTime = savedTime;
         }
+
+        // Save initial history entry on first play
+        saveWatchHistory(player.currentTime, player.duration || 0);
     });
 
     player.addEventListener('time-update', (e) => {
@@ -265,12 +295,26 @@ function setupResumeAndTracking(player) {
             const key = `yumeResume_${pathMatch[1]}_ep${pathMatch[2]}`;
             try { localStorage.setItem(key, String(cur)); } catch (e) { }
         }
+
+        // Save watch history every 15 seconds to avoid excessive writes
+        const now = Date.now();
+        if (cur > 5 && now - lastHistorySave > 15000) {
+            lastHistorySave = now;
+            saveWatchHistory(cur, player.duration || 0);
+        }
     });
 
     player.addEventListener('time-update', (e) => {
         const dur = player.duration;
         if (dur > 0 && (e.detail.currentTime / dur) >= 0.8) {
             markEpisodeWatched();
+        }
+    });
+
+    // Save history when user leaves the page
+    window.addEventListener('beforeunload', () => {
+        if (player && player.currentTime > 5) {
+            saveWatchHistory(player.currentTime, player.duration || 0);
         }
     });
 }

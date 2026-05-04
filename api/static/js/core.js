@@ -296,24 +296,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const latestWatched = {};
         const latestTimestamps = {};
 
+        // Use yumeHistory_ entries which have proper watchedAt timestamps
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('yumeResume_')) {
-                const match = key.match(/^yumeResume_([^_]+)_ep(\d+)$/);
-                if (match) {
-                    const animeId = match[1];
-                    const epNum = parseInt(match[2]);
-
-                    try {
-                        const data = JSON.parse(localStorage.getItem(key));
-                        const lastUpdated = data.lastUpdated || 0;
+            if (key && key.startsWith('yumeHistory_')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    if (data && data.animeId && data.epNum) {
+                        const animeId = data.animeId;
+                        const epNum = parseInt(data.epNum);
+                        const lastUpdated = data.watchedAt || 0;
 
                         if (!latestTimestamps[animeId] || lastUpdated > latestTimestamps[animeId]) {
                             latestTimestamps[animeId] = lastUpdated;
                             latestWatched[animeId] = epNum;
                         }
-                    } catch (e) { }
-                }
+                    }
+                } catch (e) { }
             }
         }
 
