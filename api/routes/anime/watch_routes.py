@@ -555,26 +555,13 @@ def watch(anime_id, ep_number):
                 parts[3] = "sub"
             full_slug = "/".join(parts)
 
-    # ── Fetch available servers ──
+    # ── Fetch available servers (Obsolete) ──
     available_servers = []
-    try:
-        servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
-        if servers_data:
-            available_servers = servers_data.get(lang, [])
-    except Exception:
-        pass
 
     # Determine which server to use
     selected_server = preferred_provider or default_provider
-    if available_servers:
-        server_names = [
-            s.get("serverName") for s in available_servers if s.get("serverName")
-        ]
-        if selected_server not in server_names and server_names:
-            selected_server = server_names[0]
-    else:
-        if not selected_server:
-            selected_server = "hd-1"
+    if not selected_server:
+        selected_server = "hd-1"
 
     # ── Fetch video data for selected provider only (no scanning) ──
     video_data, provider_capabilities = _fetch_video_only(
@@ -866,14 +853,8 @@ def get_watch_sources():
     # Determine server
     selected_server = provider_name
 
-    # Fetch available servers
+    # Fetch available servers (Obsolete)
     available_servers = []
-    try:
-        servers_data = asyncio.run(current_app.ha_scraper.episode_servers(full_slug))
-        if servers_data:
-            available_servers = servers_data.get(lang, [])
-    except Exception:
-        pass
 
     # Fetch video data for selected provider only (no scanning)
     video_data, provider_capabilities = _fetch_video_only(
