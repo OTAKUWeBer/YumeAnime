@@ -24,10 +24,97 @@
         Back to Details
     </a>
 
-    <div class="watch-layout">
+        <div class="watch-layout">
 
         <!-- Main -->
         <div class="watch-main">
+            {% if episodes_unavailable %}
+            <!-- Episodes Unavailable / Upcoming Banner -->
+            <div class="video-wrapper" id="video-wrapper" style="position: relative;">
+                <div class="episodes-unavailable-card">
+                    {% if anime and (anime.get('coverImage') or anime.get('poster') or anime.get('banner') or anime.get('image')) %}
+                    <div class="eu-backdrop">
+                        <img src="{{ anime.get('banner') or anime.get('coverImage') or anime.get('poster') or anime.get('image') }}" alt="{{ anime_title or '' }}">
+                    </div>
+                    {% endif %}
+                    <div class="eu-overlay"></div>
+                    <div class="eu-content">
+                        <div class="eu-icon">
+                            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            {% else %}
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                            {% endif %}
+                        </div>
+
+                        <h2 class="eu-title">
+                            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                                Coming Soon
+                            {% else %}
+                                Episodes Unavailable
+                            {% endif %}
+                        </h2>
+
+                        <p class="eu-subtitle">
+                            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                                {{ anime_title or 'This anime' }} is upcoming. Episodes will be available once they air.
+                            {% else %}
+                                Episodes for <strong>{{ anime_title or 'this anime' }}</strong> are not available yet.
+                            {% endif %}
+                        </p>
+
+                        {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                        <div class="eu-countdown-wrapper" id="eu-countdown-wrapper" data-timestamp="{{ next_episode_schedule.airingTimestamp }}">
+                            <div class="eu-countdown-label">
+                                <svg width="14" height="14" viewBox="0 0 448 512" fill="currentColor">
+                                    <path d="M224 512c35.32 0 63.97-28.65 63.97-64H160.03c0 35.35 28.65 64 63.97 64zm215.39-149.71c-19.32-20.76-55.47-51.99-55.47-154.29 0-77.7-54.48-139.9-127.94-155.16V32c0-17.67-14.32-32-31.98-32s-31.98 14.33-31.98 32v20.84C118.56 68.1 64.08 130.3 64.08 208c0 102.3-36.15 133.53-55.47 154.29-6 6.45-8.66 14.16-8.61 21.71.11 16.4 12.98 32 32.1 32h383.8c19.12 0 32-15.6 32.1-32 .05-7.55-2.61-15.27-8.61-21.71z"/>
+                                </svg>
+                                Episode {{ next_episode_schedule.episode or '?' }} airs in
+                            </div>
+                            <div class="eu-countdown-timer" id="eu-countdown-timer">
+                                <div class="eu-countdown-block">
+                                    <span class="eu-countdown-num" id="eu-days">--</span>
+                                    <span class="eu-countdown-unit">Days</span>
+                                </div>
+                                <span class="eu-countdown-sep">:</span>
+                                <div class="eu-countdown-block">
+                                    <span class="eu-countdown-num" id="eu-hours">--</span>
+                                    <span class="eu-countdown-unit">Hours</span>
+                                </div>
+                                <span class="eu-countdown-sep">:</span>
+                                <div class="eu-countdown-block">
+                                    <span class="eu-countdown-num" id="eu-mins">--</span>
+                                    <span class="eu-countdown-unit">Min</span>
+                                </div>
+                                <span class="eu-countdown-sep">:</span>
+                                <div class="eu-countdown-block">
+                                    <span class="eu-countdown-num" id="eu-secs">--</span>
+                                    <span class="eu-countdown-unit">Sec</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <a href="/anime/{{ anime_id }}" class="btn btn-primary btn-lg eu-details-btn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            View Anime Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Normal Video Player -->
             <div class="video-wrapper paused" id="video-wrapper" style="position: relative;">
                 <!-- Mark as Watched Button (Shows at 80%) -->
                 <button id="markWatchedBtn" class="btn btn-primary"
@@ -88,6 +175,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
 
 
@@ -300,7 +388,38 @@
                 </div>
 
                 <div class="episode-sidebar-list" id="episodeList" data-view="grid">
-                    {% if episodes and episodes.episodes %}
+                    {% if episodes_unavailable or not episodes or not episodes.episodes %}
+                    <div class="episodes-empty-state">
+                        <div class="ee-icon">
+                            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            {% else %}
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <h3>
+                            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                                Upcoming Anime
+                            {% else %}
+                                No Episodes Yet
+                            {% endif %}
+                        </h3>
+                        <p>
+                            {% if next_episode_schedule and next_episode_schedule.airingTimestamp %}
+                                Episodes will appear here once they start airing.
+                            {% else %}
+                                We couldn't find any episodes for this anime. Check back later!
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% else %}
                     {% for ep in episodes.episodes %}
                     {% set is_current = (ep.number|string == episode_number|string) or (ep.number|int == Episode|int) %}
                     <a href="/watch/{{ anime_id or eps_title.split('?')[0] }}/ep-{{ ep.number }}"
@@ -317,8 +436,6 @@
                         </div>
                     </a>
                     {% endfor %}
-                    {% else %}
-                    <div class="text-center p-lg text-muted">No episodes found</div>
                     {% endif %}
                 </div>
             </div>

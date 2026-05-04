@@ -680,37 +680,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Next Episode Countdown ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    // Legacy small countdown
     const countdownEl = document.getElementById('countdown-text');
     const container = document.getElementById('watch-countdown');
-    if (!countdownEl || !container) return;
+    let legacyTimestamp = null;
+    if (container) {
+        legacyTimestamp = parseInt(container.getAttribute('data-timestamp'), 10);
+    }
 
-    const timestamp = parseInt(container.getAttribute('data-timestamp'), 10);
-    if (!timestamp) {
-        countdownEl.textContent = 'Unknown';
-        return;
+    // New large countdown (Episodes Unavailable UI)
+    const euContainer = document.getElementById('eu-countdown-wrapper');
+    const euDays = document.getElementById('eu-days');
+    const euHours = document.getElementById('eu-hours');
+    const euMins = document.getElementById('eu-mins');
+    const euSecs = document.getElementById('eu-secs');
+    let euTimestamp = null;
+    if (euContainer) {
+        euTimestamp = parseInt(euContainer.getAttribute('data-timestamp'), 10);
+    }
+
+    if (!legacyTimestamp && !euTimestamp) return;
+
+    function pad(n) {
+        return n < 10 ? '0' + n : n;
     }
 
     function updateTimer() {
         const now = Date.now();
-        const jsTimestamp = timestamp > 9999999999 ? timestamp : timestamp * 1000;
-        const diff = jsTimestamp - now;
 
-        if (diff <= 0) {
-            countdownEl.textContent = "Aired";
-            return;
+        // Update legacy countdown
+        if (countdownEl && legacyTimestamp) {
+            const jsTimestamp = legacyTimestamp > 9999999999 ? legacyTimestamp : legacyTimestamp * 1000;
+            const diff = jsTimestamp - now;
+
+            if (diff <= 0) {
+                countdownEl.textContent = "Aired";
+            } else {
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / 1000 / 60) % 60);
+                const s = Math.floor((diff / 1000) % 60);
+
+                let timeStr = '';
+                if (d > 0) timeStr += `${d}d `;
+                if (h > 0 || d > 0) timeStr += `${h}h `;
+                timeStr += `${m}m ${s}s`;
+                countdownEl.textContent = timeStr;
+            }
         }
 
-        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const m = Math.floor((diff / 1000 / 60) % 60);
-        const s = Math.floor((diff / 1000) % 60);
+        // Update new large countdown
+        if (euTimestamp && euDays && euHours && euMins && euSecs) {
+            const jsTimestamp = euTimestamp > 9999999999 ? euTimestamp : euTimestamp * 1000;
+            const diff = jsTimestamp - now;
 
-        let timeStr = '';
-        if (d > 0) timeStr += `${d}d `;
-        if (h > 0 || d > 0) timeStr += `${h}h `;
-        timeStr += `${m}m ${s}s`;
+            if (diff <= 0) {
+                euDays.textContent = "00";
+                euHours.textContent = "00";
+                euMins.textContent = "00";
+                euSecs.textContent = "00";
+            } else {
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / 1000 / 60) % 60);
+                const s = Math.floor((diff / 1000) % 60);
 
-        countdownEl.textContent = timeStr;
+                euDays.textContent = pad(d);
+                euHours.textContent = pad(h);
+                euMins.textContent = pad(m);
+                euSecs.textContent = pad(s);
+            }
+        }
     }
 
     updateTimer();

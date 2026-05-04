@@ -561,15 +561,106 @@ def watch(anime_id, ep_number):
     # ── Resolve episode (returns sorted eps_list) ──
     resolved = _resolve_episode(all_episodes, ep_number, preferred_provider)
     if not resolved:
-        # eps_list empty also hits here
-        raw_eps = (all_episodes or {}).get("episodes", [])
-        if not raw_eps:
-            return render_template(
-                "shared/404.html", error_message="No episodes found for this anime."
-            ), 404
+        # Episodes unavailable — render the watch page with a friendly message
+        # instead of a 404 so the user can still see anime info and airing schedule
+
+        # Resolve anime dict
+        if (
+            isinstance(anime_info, dict)
+            and "info" in anime_info
+            and isinstance(anime_info["info"], dict)
+        ):
+            anime = anime_info["info"]
+        else:
+            anime = anime_info or {}
+
+        actual_title = anime.get("name") or anime.get("title")
+        if not actual_title:
+            actual_title = anime_id_clean.replace("-", " ").title()
+
+        # Fetch next episode schedule for upcoming info
+        next_episode_schedule = anime.get("nextAiringEpisode") if isinstance(anime, dict) else None
+
+        needs_fallback = False
+        if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
+            needs_fallback = True
+        else:
+            import time as _time
+            airing_ts = next_episode_schedule.get("airingTimestamp")
+            try:
+                ts_secs = int(airing_ts)
+                if ts_secs > 9_999_999_999:
+                    ts_secs //= 1000
+                if ts_secs < int(_time.time()):
+                    needs_fallback = True
+            except (ValueError, TypeError):
+                needs_fallback = True
+
+        if needs_fallback:
+            al_id = anime.get("anilistId") or anime.get("alID") if isinstance(anime, dict) else None
+            _mal_id = anime.get("malId") or anime.get("malID") if isinstance(anime, dict) else None
+            _anime_title = anime.get("title") if isinstance(anime, dict) else None
+
+            if al_id or _mal_id or _anime_title:
+                try:
+                    from api.utils.helpers import fetch_anilist_next_episode
+
+                    async def fetch_fallback_schedule():
+                        return await fetch_anilist_next_episode(
+                            anilist_id=al_id,
+                            mal_id=_mal_id,
+                            search_title=_anime_title,
+                        )
+
+                    try:
+                        loop = asyncio.get_running_loop()
+                        fallback_schedule = loop.run_until_complete(fetch_fallback_schedule())
+                    except RuntimeError:
+                        fallback_schedule = asyncio.run(fetch_fallback_schedule())
+
+                    if fallback_schedule and fallback_schedule.get("airingTimestamp"):
+                        next_episode_schedule = fallback_schedule
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Failed to fetch fallback schedule from AniList: {e}"
+                    )
+
         return render_template(
-            "shared/404.html", error_message=f"Episode {ep_number} not found."
-        ), 404
+            "anime/watch.html",
+            back_to_ep=anime_id_clean,
+            anime_id=anime_id_clean,
+            video_link=None,
+            subtitles=[],
+            intro=None,
+            outro=None,
+            Episode=str(ep_number),
+            episode_number=ep_number,
+            episode_title=None,
+            prev_episode_url=None,
+            next_episode_url=None,
+            prev_episode_number=None,
+            next_episode_number=None,
+            eps_title=anime_id_clean,
+            anime_title=actual_title,
+            anime=anime,
+            lang="sub",
+            episodes=all_episodes,
+            dub_available=False,
+            selected_server=None,
+            available_servers=[],
+            next_episode_schedule=next_episode_schedule,
+            video_sources=[],
+            available_qualities=[],
+            source_type=None,
+            embed_sources=[],
+            hls_sources=[],
+            server_progress={},
+            is_logged_in="username" in session and "_id" in session,
+            provider_capabilities={},
+            sorted_providers=[],
+            mal_id=anime.get("malId") or anime.get("malID") if isinstance(anime, dict) else None,
+            episodes_unavailable=True,
+        )
 
     current_item = resolved["episode_item"]
     current_idx = resolved["episode_idx"]
