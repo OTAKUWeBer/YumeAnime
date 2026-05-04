@@ -48,17 +48,37 @@ class MiruroAnimeInfoService:
         }
         '''
         import aiohttp
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://graphql.anilist.co",
-                    json={"query": query, "variables": {"id": int(anilist_id)}}
-                ) as r:
-                    data = await r.json()
-                    resp = data.get("data", {}).get("Media")
-        except Exception as e:
-            logger.error(f"Anilist info fetch failed: {e}")
-            resp = None
+        import asyncio
+        resp = None
+        timeout = aiohttp.ClientTimeout(total=10)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(
+                        "https://graphql.anilist.co",
+                        json={"query": query, "variables": {"id": int(anilist_id)}}
+                    ) as r:
+                        if r.status == 429:
+                            retry_after = int(r.headers.get("Retry-After", 2))
+                            logger.warning(f"Anilist rate limited (info fetch), retrying in {retry_after}s")
+                            await asyncio.sleep(retry_after)
+                            continue
+                        if r.status != 200:
+                            logger.error(f"Anilist info fetch failed with status {r.status}")
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(2)
+                                continue
+                            break
+                        data = await r.json()
+                        resp = data.get("data", {}).get("Media")
+                        break
+            except Exception as e:
+                logger.error(f"Anilist info fetch failed (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                else:
+                    break
 
         if not resp:
             return {}
@@ -343,17 +363,36 @@ class MiruroAnimeInfoService:
         }
         '''
         import aiohttp
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://graphql.anilist.co",
-                    json={"query": query, "variables": {"id": int(anilist_id)}}
-                ) as r:
-                    data = await r.json()
-                    resp = data.get("data", {}).get("Media")
-        except Exception as e:
-            logger.error(f"Anilist next ep fetch failed: {e}")
-            resp = None
+        import asyncio
+        resp = None
+        timeout = aiohttp.ClientTimeout(total=10)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(
+                        "https://graphql.anilist.co",
+                        json={"query": query, "variables": {"id": int(anilist_id)}}
+                    ) as r:
+                        if r.status == 429:
+                            retry_after = int(r.headers.get("Retry-After", 2))
+                            logger.warning(f"Anilist rate limited (next ep fetch), retrying in {retry_after}s")
+                            await asyncio.sleep(retry_after)
+                            continue
+                        if r.status != 200:
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(2)
+                                continue
+                            break
+                        data = await r.json()
+                        resp = data.get("data", {}).get("Media")
+                        break
+            except Exception as e:
+                logger.error(f"Anilist next ep fetch failed (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                else:
+                    break
 
         if not resp:
             return {}

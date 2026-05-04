@@ -87,25 +87,43 @@ class AnilistHomeService:
         return base
 
     async def _fetch_anilist_data(self, query: str, variables: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Make a GraphQL request to AniList"""
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    ANILIST_GRAPHQL,
-                    json={'query': query, 'variables': variables or {}},
-                    headers={'Content-Type': 'application/json'}
-                ) as resp:
-                    if resp.status != 200:
-                        logger.error(f"AniList API error {resp.status}")
-                        return {}
-                    data = await resp.json()
-                    if 'errors' in data:
-                        logger.error(f"AniList GraphQL errors: {data['errors']}")
-                        return {}
-                    return data.get('data', {})
-        except Exception as e:
-            logger.error(f"AniList request failed: {e}")
-            return {}
+        """Make a GraphQL request to AniList with retries and timeout"""
+        timeout = aiohttp.ClientTimeout(total=10)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(
+                        ANILIST_GRAPHQL,
+                        json={'query': query, 'variables': variables or {}},
+                        headers={'Content-Type': 'application/json'}
+                    ) as resp:
+                        if resp.status == 429:
+                            retry_after = int(resp.headers.get("Retry-After", 2))
+                            logger.warning(f"AniList rate limited, retrying in {retry_after}s")
+                            await asyncio.sleep(retry_after)
+                            continue
+                        if resp.status != 200:
+                            logger.error(f"AniList API error {resp.status}")
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(2)
+                                continue
+                            return {}
+                        data = await resp.json()
+                        if 'errors' in data:
+                            logger.error(f"AniList GraphQL errors: {data['errors']}")
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(2)
+                                continue
+                            return {}
+                        return data.get('data', {})
+            except Exception as e:
+                logger.error(f"AniList request failed (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                else:
+                    return {}
+        return {}
 
     async def _fetch_home_data(self) -> Dict[str, Any]:
         """Fetch trending, popular, and recent from AniList GraphQL API using a single combined query"""
