@@ -468,7 +468,14 @@ def update_watchlist():
     if not anime_id or not action:
         return jsonify({'success': False, 'message': 'Missing parameters'}), 400
 
-    variables = {'mediaId': int(anime_id)}
+    try:
+        media_id = int(anime_id)
+    except (ValueError, TypeError):
+        logger.error(f"[Watchlist Update] Non-numeric anime_id received: '{anime_id}'. "
+                     "Frontend should send anilistId instead of slug.")
+        return jsonify({'success': False, 'message': 'Invalid anime ID — expected numeric AniList ID'}), 400
+
+    variables = {'mediaId': media_id}
 
     if action == 'status':
         status = body.get('status', 'watching')

@@ -324,21 +324,73 @@ function setupResumeAndTracking(player) {
 let watchedMarked = false;
 function markEpisodeWatched() {
     if (watchedMarked || !window.WATCH_CONFIG?.isLoggedIn) return;
-    watchedMarked = true;
 
-    const animeId = window.WATCH_CONFIG?.animeId;
+    // Use anilistId (numeric) for the AniList API, fall back to animeId
+    const anilistId = window.WATCH_CONFIG?.anilistId;
+    const animeId = anilistId || window.WATCH_CONFIG?.animeId;
     const epNum = window.WATCH_CONFIG?.episodeNumber;
+    const malId = window.WATCH_CONFIG?.malId;
     if (!animeId || !epNum) return;
 
-    fetch('/api/watchlist/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            anime_id: animeId,
-            action: 'episodes',
-            watched_episodes: epNum
+    watchedMarked = true;
+    console.log('[Watchlist] Marking watched:', { animeId, anilistId, epNum });
+
+    const payload = {
+        anime_id: animeId,
+        action: 'episodes',
+        watched_episodes: epNum
+    };
+    // Include malId for direct MAL sync if available
+    if (malId) {
+        payload.mal_id = malId;
+        payload.sync_mal = true;
+    }
+
+    function doUpdate(attempt) {
+        fetch('/api/watchlist/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            // Keep the request alive even if the page is being closed (mobile)
+            keepalive: true
         })
-    }).then(() => console.log('[Watchlist] Marked watched')).catch(() => { });
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP ${r.status}`);
+            }
+            return r.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log('[Watchlist] Marked watched successfully');
+            } else {
+                console.warn('[Watchlist] Server returned failure:', data.message);
+                // Retry once on server-side failure
+                if (attempt < 2) {
+                    console.log('[Watchlist] Retrying...');
+                    setTimeout(() => doUpdate(attempt + 1), 2000);
+                }
+            }
+        })
+        .catch(err => {
+            console.error('[Watchlist] Update failed:', err);
+            // Retry on network error (common on mobile)
+            if (attempt < 2) {
+                console.log('[Watchlist] Retrying after error...');
+                setTimeout(() => doUpdate(attempt + 1), 3000);
+            } else {
+                // Last resort: reset flag so it can try again on next time-update
+                watchedMarked = false;
+            }
+        });
+    }
+
+    doUpdate(1);
+}
+
+// Reset watchedMarked when episode changes (AJAX navigation)
+function resetWatchedFlag() {
+    watchedMarked = false;
 }
 
 // ── URL Episode Number Fix ──────────────────────────────────────
@@ -406,6 +458,9 @@ function fetchAndLoadSources() {
             // Update intro/outro
             if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
             if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
+
+            // Reset watched flag so the new episode can be marked
+            resetWatchedFlag();
 
             // Re-create skip buttons with new data
             const oldIntro = document.getElementById('skipIntroBtn');
