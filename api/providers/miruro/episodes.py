@@ -24,21 +24,39 @@ class MiruroEpisodesService:
         self.client = client
 
     def _pick_best_provider(self, providers: Dict[str, Any]) -> Optional[str]:
-        """Pick the best available provider based on priority"""
+        """Pick the provider with the most sub episodes, using priority as a tiebreaker."""
         if not providers:
             return None
+
+        best_name = None
+        best_count = -1
+
         for name in PROVIDER_PRIORITY:
-            if name in providers and providers[name]:
-                provider_data = providers[name]
-                # Check it has episodes
-                if isinstance(provider_data, dict):
-                    if provider_data.get("episodes") or provider_data.get("meta"):
-                        return name
-        # Fallback: first provider with data
+            if name not in providers:
+                continue
+            provider_data = providers[name]
+            if not isinstance(provider_data, dict):
+                continue
+            episodes = provider_data.get("episodes", {}) or {}
+            sub_count = len(episodes.get("sub", []) or [])
+            if sub_count > best_count:
+                best_count = sub_count
+                best_name = name
+
+        if best_name:
+            return best_name
+
+        # Fallback: any provider with data, still picking the one with most episodes
         for name, data in providers.items():
-            if isinstance(data, dict) and (data.get("episodes") or data.get("meta")):
-                return name
-        return None
+            if not isinstance(data, dict):
+                continue
+            episodes = data.get("episodes", {}) or {}
+            sub_count = len(episodes.get("sub", []) or [])
+            if sub_count > best_count:
+                best_count = sub_count
+                best_name = name
+
+        return best_name
 
     def _normalize_episodes(
         self, provider_data: Dict[str, Any], provider_name: str, anilist_id
