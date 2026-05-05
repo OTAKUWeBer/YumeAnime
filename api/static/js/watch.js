@@ -483,18 +483,51 @@ function fetchAndLoadSources() {
             // Decide which source type to use:
             // If user explicitly picked a stream type, prefer it (fall back if unavailable)
             let useEmbed = false;
-            if (desired === 'embed' && embedSources.length > 0) {
-                useEmbed = true;
-            } else if (desired === 'hls' && hlsSources.length > 0) {
+            if (desired === 'hls') {
+                // User explicitly clicked INTERNAL — only use HLS, never fall back to embed
                 useEmbed = false;
+            } else if (desired === 'embed' && embedSources.length > 0) {
+                useEmbed = true;
             } else if (hlsSources.length > 0) {
                 useEmbed = false;
             } else if (embedSources.length > 0) {
                 useEmbed = true;
             }
-
-            if (!useEmbed && hlsSources.length > 0) {
+            if (!useEmbed) {
+                if (hlsSources.length === 0) {
+                    // HLS was requested but not available for this provider
+                    const videoContainer = document.getElementById('videoContainer');
+                    if (videoContainer) videoContainer.style.display = '';
+                    const embedFrame = document.getElementById('embedPlayer');
+                    if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
+                    const fsBtn = document.getElementById('embedFullscreenBtn');
+                    if (fsBtn) fsBtn.style.display = 'none';
+                    const player = window.player;
+                    if (player) player.src = '';
+                    if (serverSections) serverSections.classList.remove('loading');
+                    return;
+                }
                 const videoUrl = hlsSources[0].file || hlsSources[0].url;
+                const player = window.player;
+
+                if (player && videoUrl) {
+                    player.src = {
+                        src: videoUrl,
+                        type: 'application/x-mpegurl'
+                    };
+                }
+
+                if (videoContainer) videoContainer.style.display = '';
+
+                const embedFrame = document.getElementById('embedPlayer');
+                if (embedFrame) {
+                    embedFrame.removeAttribute('src');
+                    embedFrame.style.display = 'none';
+                }
+
+                const fsBtn = document.getElementById('embedFullscreenBtn');
+                if (fsBtn) fsBtn.style.display = 'none';
+            } else if (embedSources.length > 0) {
                 const player = window.player;
 
                 if (player && videoUrl) {

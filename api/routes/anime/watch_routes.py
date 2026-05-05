@@ -178,7 +178,9 @@ def _parse_video_raw(raw):
         if source_type == "hls" and hls_sources:
             first_hls = hls_sources[0] if isinstance(hls_sources, list) else None
             if isinstance(first_hls, dict):
-                video_link = first_hls.get("file") or first_hls.get("url") or video_link
+                hls_url = first_hls.get("file") or first_hls.get("url")
+                if hls_url:
+                    video_link = hls_url
             elif isinstance(first_hls, str):
                 video_link = first_hls
         elif source_type == "hls" and not video_link:
@@ -191,6 +193,8 @@ def _parse_video_raw(raw):
                     video_link = first_source.get("file") or first_source.get("url")
                 elif isinstance(first_source, str):
                     video_link = first_source
+        elif source_type == "embed" and embed_sources:
+            video_link = embed_sources[0].get("url", "")
 
         all_sources = raw.get("sources", [])
         if isinstance(all_sources, list):
