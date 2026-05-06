@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Dict, Any, Optional, List
 from .base import MiruroBaseClient
-from ..video_utils import encode_proxy
+from ..video_utils import encode_proxy, encode_kiwi_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,6 @@ class MiruroSourcesService:
         Parse episode ID in format 'watch/kiwi/178005/sub/animepahe-1'
         Returns dict with provider, anilist_id, category, slug
         """
-        # Format: watch/{provider}/{anilist_id}/{category}/{slug}
         pattern = r"watch/([^/]+)/(\d+)/([^/]+)/(.+)"
         match = re.match(pattern, episode_id)
         if match:
@@ -47,7 +46,6 @@ class MiruroSourcesService:
         Returns ALL quality options for the frontend quality selector.
         For the 'zoro' provider, constructs a megaplay.buzz embed URL directly.
         """
-        # Try to parse the new episode ID format first
         parsed = self._parse_episode_id(episode_id)
 
         if parsed:
@@ -58,15 +56,12 @@ class MiruroSourcesService:
 
             # --- Zoro provider: direct megaplay.buzz embed ---
             if provider == "zoro":
-                # The slug is like 'zoro-1' — extract the episode number
-                # then look up the actual ep ID from the episodes API
                 ep_num_match = re.search(r"(\d+)$", slug)
                 ep_number = int(ep_num_match.group(1)) if ep_num_match else None
 
                 embed_ep_id = None
                 if ep_number is not None and anilist_id:
                     try:
-                        # Fetch episodes from the API to get the zoro url field
                         episodes_resp = await self.client._get(f"episodes/{anilist_id}")
                         if episodes_resp:
                             zoro_data = episodes_resp.get("providers", {}).get("zoro", {})
@@ -77,7 +72,7 @@ class MiruroSourcesService:
                                     target_num = float(ep_number)
                                 except (TypeError, ValueError):
                                     api_num, target_num = -1, -2
-                                    
+
                                 if api_num == target_num:
                                     ep_url = ep.get("url", "")
                                     if "?ep=" in ep_url:
@@ -96,9 +91,7 @@ class MiruroSourcesService:
                     }
 
                 embed_url = f"https://megaplay.buzz/stream/s-2/{embed_ep_id}/{category}"
-                logger.info(
-                    f"[MiruroSources] Zoro embed: {embed_url}"
-                )
+                logger.info(f"[MiruroSources] Zoro embed: {embed_url}")
                 embed_sources = [
                     {
                         "url": embed_url,
@@ -126,7 +119,6 @@ class MiruroSourcesService:
             endpoint = f"watch/{provider}/{anilist_id}/{category}/{slug}"
             resp = await self.client._get(endpoint)
         else:
-            # Fallback to old /sources endpoint
             params = {
                 "episodeId": episode_id,
                 "provider": provider,
@@ -144,7 +136,7 @@ class MiruroSourcesService:
 
         raw_streams = resp.get("streams", []) or resp.get("sources", []) or []
 
-        # Handle new API format - subtitles in resp.get("subtitles", [])
+        # Handle subtitles — always use the default proxy (not kiwi proxy)
         subtitles = resp.get("subtitles", []) or []
         tracks = []
         for sub in subtitles:
@@ -187,13 +179,19 @@ class MiruroSourcesService:
             stream_type = stream.get("type", "").lower()
             quality = stream.get("quality") or "default"
             resolution = stream.get("resolution") or {}
-            
+
             # Extract referer from stream if available
             referer = stream.get("referer")
             headers = {"referer": referer} if referer else None
 
             if stream_type == "hls" or url.endswith(".m3u8"):
-                proxied_url = encode_proxy(url, headers)
+                # ── Kiwi provider: use dedicated kiwi proxy ──────────────────
+                if provider == "kiwi":
+                    kiwi_referer = (headers or {}).get("referer", "https://kwik.cx/")
+                    proxied_url = encode_kiwi_proxy(url, referer=kiwi_referer)
+                else:
+                    proxied_url = encode_proxy(url, headers)
+
                 hls_sources.append(
                     {
                         "url": proxied_url,
@@ -219,19 +217,20 @@ class MiruroSourcesService:
                 )
 
         # Filter sources: only show streams > 700p
-        # For HLS: use height field
         hls_sources = [
-            s for s in hls_sources 
-            if s.get("height", 0) > 700 or (s.get("height", 0) == 0 and "480" not in s.get("quality", "").lower() and "360" not in s.get("quality", "").lower())
+            s for s in hls_sources
+            if s.get("height", 0) > 700 or (
+                s.get("height", 0) == 0
+                and "480" not in s.get("quality", "").lower()
+                and "360" not in s.get("quality", "").lower()
+            )
         ]
-        
-        # For embed sources: filter based on quality string (exclude low resolutions)
+
         embed_sources = [
-            s for s in embed_sources 
+            s for s in embed_sources
             if not any(low_res in s.get("quality", "").lower() for low_res in ["480", "360", "240", "144"])
         ]
 
-        # Sort HLS by quality: 1080p > 720p
         def quality_sort_key(s):
             q = s.get("quality", "").lower()
             if "1080" in q:
@@ -246,11 +245,8 @@ class MiruroSourcesService:
             f"[MiruroSources] hls_sources: {len(hls_sources)}, embed_sources: {len(embed_sources)}"
         )
 
-        # Priority: embed first (default), HLS as fallback/alternative
-        # Determine source_type and default source
         source_type = "embed" if embed_sources else ("hls" if hls_sources else None)
 
-        # Default HLS source (highest quality or first active)
         default_hls_source = None
         for s in hls_sources:
             if s.get("isActive"):
@@ -270,19 +266,15 @@ class MiruroSourcesService:
             "embed_sources": embed_sources,
             "hls_sources": hls_sources,
             "source_type": source_type,
-            # Quality info for frontend
             "available_qualities": [s.get("quality") for s in hls_sources],
         }
 
-        # Set video_link based on source_type
         if source_type == "embed" and embed_sources:
-            # Embed is default — video_link is the embed URL (for iframe)
             result["video_link"] = embed_sources[0].get("url", "")
             print(
                 f"[MiruroSources] video_link (embed): {result['video_link'][:100] if result['video_link'] else 'EMPTY'}"
             )
         elif source_type == "hls" and default_hls_source:
-            # HLS fallback — video_link is proxied m3u8
             result["video_link"] = (
                 default_hls_source.get("file") or default_hls_source.get("url") or ""
             )

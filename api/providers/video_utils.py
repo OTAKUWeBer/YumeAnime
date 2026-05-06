@@ -12,31 +12,61 @@ from bs4 import BeautifulSoup
 
 dotenv.load_dotenv()
 proxy_url = os.getenv("PROXY_URL", "https://cdn-eu.1ani.me/proxy/m3u8")
+kiwi_proxy_url = os.getenv("KIWI_PROXY_URL", "https://cluster.lunaranime.ru/api/proxy/hls/custom")
 
-# Enforce HTTPS on proxy URL to prevent mixed content blocking
+# Enforce HTTPS on proxy URLs to prevent mixed content blocking
 if proxy_url and proxy_url.startswith("http://"):
     proxy_url = proxy_url.replace("http://", "https://", 1)
+if kiwi_proxy_url and kiwi_proxy_url.startswith("http://"):
+    kiwi_proxy_url = kiwi_proxy_url.replace("http://", "https://", 1)
 
-def encode_proxy(url: Optional[str], headers: Optional[Dict[str, str]] = None) -> Optional[str]:
+
+def encode_kiwi_proxy(url: Optional[str], referer: str = "https://kwik.cx/") -> Optional[str]:
     """
-    Return proxied URL through proxy using query parameters format.
-    Format: {proxy_url}?url={url_encoded}&headers={headers_encoded}
+    Return proxied URL through the kiwi/kwik-specific proxy.
+    Format: {kiwi_proxy_url}?url={url_encoded}&referer={referer}
     """
     if not url:
         return url
     try:
-        # URL-encode the target URL (keeping slashes safe for readability)
         encoded_url = quote(url, safe='')
-        
+        result = f"{kiwi_proxy_url}?url={encoded_url}&referer={referer}"
+        if result.startswith("http://"):
+            result = result.replace("http://", "https://", 1)
+        return result
+    except Exception:
+        return url
+
+
+def encode_proxy(url: Optional[str], headers: Optional[Dict[str, str]] = None, provider: Optional[str] = None) -> Optional[str]:
+    """
+    Return proxied URL through proxy using query parameters format.
+    For the 'kiwi' provider, uses the dedicated kiwi proxy with referer support.
+    Format (default): {proxy_url}?url={url_encoded}&headers={headers_encoded}
+    Format (kiwi):    {kiwi_proxy_url}?url={url_encoded}&referer={referer}
+    """
+    if not url:
+        return url
+    try:
+        # Use kiwi-specific proxy for kiwi/kwik provider
+        if provider == "kiwi":
+            referer = "https://kwik.cx/"
+            if headers and headers.get("referer"):
+                referer = headers["referer"]
+            return encode_kiwi_proxy(url, referer=referer)
+
+        # URL-encode the target URL
+        encoded_url = quote(url, safe='')
+
         # Build query parameters
         query_params = f"?url={encoded_url}"
-        
+
         # Add headers if provided
         if headers:
             headers_json = json.dumps(headers)
             encoded_headers = quote(headers_json, safe='')
             query_params += f"&headers={encoded_headers}"
-        
+
         result = f'{proxy_url}{query_params}'
         if result.startswith("http://"):
             result = result.replace("http://", "https://", 1)
@@ -117,7 +147,7 @@ def extract_episode_id(data: Union[str, Dict[str, Any], BeautifulSoup]) -> Optio
                 data["episode_id"] = ep
                 return ep
 
-        # 3) fallback to IDs like anilistID/malID if nothing else found (less ideal but useful)
+        # 3) fallback to IDs like anilistID/malID if nothing else found
         for key in ("anilistID", "anilistId", "malID", "malId"):
             if key in data and data[key]:
                 val = str(data[key])
@@ -180,37 +210,41 @@ def sort_subtitle_priority(track: Dict[str, Any]) -> int:
     return 10
 
 
-def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] = None, provider: Optional[str] = None) -> Dict[str, Any]:
     """
     Patch all file/url links in video data to go through proxy.
     Handles both 'file' and 'url' keys for sources and tracks.
     Also sorts subtitle tracks by priority.
-    
+
     Args:
         data: The video data dictionary containing sources and tracks
         headers: Optional headers to pass to the proxy (e.g., referer)
+        provider: Optional provider name — 'kiwi' uses the dedicated kiwi proxy
     """
     if not isinstance(data, dict):
         return data
 
     # Set default headers if none provided
     if headers is None:
-        headers = {"referer": "https://kwik.cx/"}
+        if provider == "kiwi":
+            headers = {"referer": "https://kwik.cx/"}
+        else:
+            headers = {"referer": "https://kwik.cx/"}
 
     # Proxy sources (dict or list)
     sources = data.get("sources")
     if isinstance(sources, dict):
         for k in ("file", "url"):
             if sources.get(k):
-                sources[k] = encode_proxy(sources[k], headers)
+                sources[k] = encode_proxy(sources[k], headers, provider=provider)
     elif isinstance(sources, list):
         for s in sources:
             if isinstance(s, dict):
                 for k in ("file", "url"):
                     if s.get(k):
-                        s[k] = encode_proxy(s[k], headers)
+                        s[k] = encode_proxy(s[k], headers, provider=provider)
 
-# Proxy tracks
+    # Proxy tracks
     if "tracks" in data and isinstance(data["tracks"], list):
         print(f"[Proxy] Processing {len(data['tracks'])} subtitle tracks")
         for idx, track in enumerate(data["tracks"]):
@@ -221,14 +255,12 @@ def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] 
             original_url = track.get("url")
 
             # Ensure 'label' field exists for frontend compatibility
-            # If track has 'lang' but not 'label', copy lang to label
             if track.get("lang") and not track.get("label"):
                 track["label"] = track["lang"]
                 print(f"[Proxy] Track {idx}: Added label from lang: {track['label']}")
-            
+
             # Also ensure 'kind' is set for subtitle tracks
             if not track.get("kind"):
-                # Check if this is a thumbnail track
                 lang_or_label = (track.get("lang") or track.get("label") or "").lower()
                 if "thumbnail" in lang_or_label or "thumbnails" in lang_or_label:
                     track["kind"] = "metadata"
@@ -237,6 +269,7 @@ def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] 
 
             for k in ("file", "url"):
                 if track.get(k):
+                    # Subtitle tracks: use default proxy regardless of provider
                     proxied = encode_proxy(track[k], headers)
                     track[k] = proxied
                     print(f"[Proxy] Track {idx} ({track.get('label', 'unknown')}): {k} proxied")
@@ -248,11 +281,10 @@ def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] 
         try:
             data["tracks"].sort(key=sort_subtitle_priority)
             print(f"[Proxy] Sorted {len(data['tracks'])} tracks by priority")
-            
-            # Log final track order
             for idx, track in enumerate(data["tracks"]):
                 print(f"[Proxy] Final track {idx}: label={track.get('label')}, kind={track.get('kind')}")
         except Exception as e:
             print(f"[Proxy] Error sorting tracks: {e}")
             pass
+
     return data

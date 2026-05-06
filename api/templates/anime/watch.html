@@ -763,16 +763,23 @@
         player.addEventListener('provider-change', (event) => {
             const provider = event.detail;
             if (provider?.type === 'hls') {
-                provider.config = {
-                    ...provider.config,
-                    xhrSetup(xhr, url) {
-                        // Force GET method for all HLS requests to avoid 405 from proxy
-                        const originalOpen = xhr.open.bind(xhr);
-                        xhr.open = function (method, url, async, user, password) {
-                            return originalOpen.call(this, 'GET', url, async, user, password);
-                        };
-                    }
-                };
+                const isKiwi = window.WATCH_CONFIG?.provider === 'kiwi' 
+                    || window._watchState?.provider === 'kiwi';
+
+                if (isKiwi) {
+                    const KIWI_PROXY = 'https://cluster.lunaranime.ru/api/proxy/hls/custom';
+                    const KIWI_REFERER = 'https://kwik.cx/';
+                    provider.config = {
+                        ...provider.config,
+                        xhrSetup(xhr, url) {
+                            let finalUrl = url;
+                            if (!url.includes('cluster.lunaranime.ru')) {
+                                finalUrl = `${KIWI_PROXY}?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(KIWI_REFERER)}`;
+                            }
+                            xhr.open('GET', finalUrl, true);
+                        }
+                    };
+                }
             }
         });
 
