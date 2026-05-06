@@ -767,14 +767,34 @@
                     || window._watchState?.provider === 'kiwi';
 
                 if (isKiwi) {
-                    const KIWI_PROXY = 'https://cluster.lunaranime.ru/api/proxy/hls/custom';
+                    const CLUSTER_PROXY = 'https://cluster.lunaranime.ru/api/proxy/hls/custom';
                     const KIWI_REFERER = 'https://kwik.cx/';
                     provider.config = {
                         ...provider.config,
+                        // ── HLS.js timeout & retry config ──
+                        // The double-hop proxy (local→cluster→CDN) adds latency.
+                        // Default HLS.js timeouts are too tight and cause segment
+                        // retries that look like "same segment repeating".
+                        fragLoadingTimeOut: 60000,       // 60s (default 20s)
+                        fragLoadingMaxRetry: 6,          // retries per fragment
+                        fragLoadingMaxRetryDelay: 8000,  // max backoff between retries
+                        manifestLoadingTimeOut: 30000,   // 30s (default 10s)
+                        manifestLoadingMaxRetry: 4,
+                        levelLoadingTimeOut: 30000,       // 30s (default 10s)
+                        levelLoadingMaxRetry: 4,
+                        // Allow larger back buffer to avoid re-fetching
+                        backBufferLength: 90,
+                        // Max buffer length before pausing fetches
+                        maxBufferLength: 60,
+                        maxMaxBufferLength: 120,
                         xhrSetup(xhr, url) {
                             let finalUrl = url;
-                            if (!url.includes('cluster.lunaranime.ru')) {
-                                finalUrl = `${KIWI_PROXY}?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(KIWI_REFERER)}`;
+                            // If the URL is not already going through our local proxy,
+                            // reroute it through /api/proxy/ with the cluster upstream
+                            if (!url.startsWith('/api/proxy/') && !url.startsWith(window.location.origin + '/api/proxy/')) {
+                                // Wrap through cluster proxy, then through our local proxy
+                                const clusterUrl = `${CLUSTER_PROXY}?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(KIWI_REFERER)}`;
+                                finalUrl = `/api/proxy/${clusterUrl}`;
                             }
                             xhr.open('GET', finalUrl, true);
                         }

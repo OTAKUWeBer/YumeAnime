@@ -8,6 +8,7 @@ from ..anime.anilist_api import anilist_api_bp
 from .watchlist_api import watchlist_api_bp
 from ..manga.manga_api import manga_api_bp
 from .comments_api import comments_api_bp
+from .kiwi_proxy import kiwi_proxy_bp
 
 api_bp = Blueprint('api', __name__)
 
@@ -16,6 +17,7 @@ api_bp.register_blueprint(anilist_api_bp, url_prefix='/anilist')
 api_bp.register_blueprint(watchlist_api_bp, url_prefix='/watchlist')
 api_bp.register_blueprint(manga_api_bp, url_prefix='/manga')
 api_bp.register_blueprint(comments_api_bp, url_prefix='')
+api_bp.register_blueprint(kiwi_proxy_bp, url_prefix='')
 
 @api_bp.route('/set-server', methods=['POST'])
 def set_server():

@@ -23,17 +23,17 @@ if kiwi_proxy_url and kiwi_proxy_url.startswith("http://"):
 
 def encode_kiwi_proxy(url: Optional[str], referer: str = "https://kwik.cx/") -> Optional[str]:
     """
-    Return proxied URL through the kiwi/kwik-specific proxy.
-    Format: {kiwi_proxy_url}?url={url_encoded}&referer={referer}
+    Return proxied URL through our own backend proxy.
+    Builds the full cluster.lunaranime.ru URL and wraps it in /api/proxy/.
+
+    Format: /api/proxy/{kiwi_proxy_url}?url={url_encoded}&referer={referer}
     """
     if not url:
         return url
     try:
         encoded_url = quote(url, safe='')
-        result = f"{kiwi_proxy_url}?url={encoded_url}&referer={referer}"
-        if result.startswith("http://"):
-            result = result.replace("http://", "https://", 1)
-        return result
+        cluster_url = f"{kiwi_proxy_url}?url={encoded_url}&referer={referer}"
+        return f"/api/proxy/{cluster_url}"
     except Exception:
         return url
 
