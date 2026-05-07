@@ -884,6 +884,31 @@
         // Try adding chapters once player can play
         player.addEventListener('can-play', () => addChaptersTrack(), { once: true });
     });
+
+    // ── Initial Source Validation — auto-fallback if server-rendered source is broken ──
+    document.addEventListener('DOMContentLoaded', () => {
+        const cfg = window.WATCH_CONFIG;
+        if (!cfg || !cfg.providers || cfg.providers.length === 0) return;
+
+        const hasVideo = cfg.videoLink && cfg.videoLink.length > 0;
+        const sourceType = '{{ source_type or "" }}';
+        const hasEmbed = sourceType === 'embed';
+
+        // If the initial page load has no working source, try other providers
+        if (!hasVideo && !hasEmbed) {
+            console.log('[InitFallback] No initial source — triggering provider fallback');
+            const currentProvider = cfg.provider;
+            if (currentProvider && typeof markProviderFailed === 'function') {
+                markProviderFailed(currentProvider);
+                const next = getNextAvailableProvider(currentProvider);
+                if (next) {
+                    showFallbackToast(currentProvider, next);
+                    window._watchState.provider = next;
+                    fetchAndLoadSources(true);
+                }
+            }
+        }
+    });
 </script>
 <script>
     window.COMMENTS_CONFIG = {

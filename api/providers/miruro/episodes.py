@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Provider preference order (best quality/reliability first)
 PROVIDER_PRIORITY = [
-    "arc", "jet", "kiwi", "zoro", "bee", "wco",
+    "arc", "jet", "kiwi", "ally", "zoro", "bee", "wco",
 ]
 
 

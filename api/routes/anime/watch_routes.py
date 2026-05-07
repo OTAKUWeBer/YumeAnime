@@ -229,10 +229,9 @@ def _fetch_video_only(
 ):
     """
     Fetch video data for the selected provider ONLY.
-    All providers are assumed available — no scanning/checking.
     Returns (video_data_dict, provider_capabilities_dict).
+    Capabilities are based on what was actually returned — not guessed.
     """
-    # Just fetch video from the selected provider
     try:
         raw = asyncio.run(
             current_app.ha_scraper.video(full_slug, lang, server, anilist_id)
@@ -242,15 +241,16 @@ def _fetch_video_only(
         print(f"[FetchVideo] Error fetching video: {e}")
         video_data = _parse_video_raw(None)
 
-    # Mark ALL providers as available (both HLS and embed) — no checking
+    # Only report capabilities for the provider we actually fetched
     capabilities = {}
-    if providers_map:
-        for p_name in providers_map:
-            capabilities[p_name] = {"hls": True, "embed": True}
+    if server:
+        has_hls = bool(video_data.get("hls_sources"))
+        has_embed = bool(video_data.get("embed_sources"))
+        capabilities[server] = {"hls": has_hls, "embed": has_embed}
 
     print(f"[FetchVideo] Final intro: {video_data.get('intro')}")
     print(f"[FetchVideo] Final outro: {video_data.get('outro')}")
-    print(f"[FetchVideo] All {len(capabilities)} providers marked available")
+    print(f"[FetchVideo] Provider {server}: hls={capabilities.get(server, {}).get('hls')}, embed={capabilities.get(server, {}).get('embed')}")
     return video_data, capabilities
 
 
@@ -865,8 +865,13 @@ def get_watch_sources():
         full_slug, lang, selected_server, anilist_id, providers_map
     )
 
-    # Save preferences
-    if selected_server:
+    # Determine if this provider actually has working sources
+    has_hls = bool(video_data.get("hls_sources"))
+    has_embed = bool(video_data.get("embed_sources"))
+    has_sources = has_hls or has_embed
+
+    # Only save preferences if the provider actually had sources
+    if selected_server and has_sources:
         session["last_used_server"] = selected_server
 
     response_data = {
@@ -883,7 +888,15 @@ def get_watch_sources():
         "language": lang,
         "available_servers": available_servers,
         "provider_capabilities": provider_capabilities,
+        "available": has_sources,
     }
+
+    # Signal error to frontend when provider has no sources
+    if not has_sources:
+        response_data["error"] = f"no_sources"
+        response_data["message"] = f"Provider '{provider_name}' has no playable sources for this episode."
+        print(f"[API /sources] Provider {provider_name}: NO SOURCES — frontend will auto-fallback")
+
     print(f"[API /sources] intro response: {response_data.get('intro')}")
     print(f"[API /sources] outro response: {response_data.get('outro')}")
 
@@ -891,8 +904,9 @@ def get_watch_sources():
     resp.set_cookie(
         "preferred_language", lang, max_age=365 * 24 * 60 * 60, samesite="Lax"
     )
-    resp.set_cookie(
-        "preferred_server", provider_name, max_age=365 * 24 * 60 * 60, samesite="Lax"
-    )
+    if has_sources:
+        resp.set_cookie(
+            "preferred_server", provider_name, max_age=365 * 24 * 60 * 60, samesite="Lax"
+        )
 
     return resp

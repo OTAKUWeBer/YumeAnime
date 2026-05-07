@@ -399,6 +399,72 @@ function resetWatchedFlag() {
     window._urlEpNum = match ? parseFloat(match[1]) : null;
 })();
 
+// ── Provider Fallback System ───────────────────────────────────
+const _PROVIDER_PRIORITY = ['arc', 'jet', 'kiwi', 'zoro', 'bee', 'wco'];
+let _failedProviders = new Set();
+let _isFallbackInProgress = false;
+
+function resetFailedProviders() {
+    _failedProviders.clear();
+    _isFallbackInProgress = false;
+}
+
+function getNextAvailableProvider(currentProvider) {
+    const providers = window._watchState?.providers || _PROVIDER_PRIORITY;
+    const currentIdx = providers.indexOf(currentProvider);
+    for (let i = 1; i < providers.length; i++) {
+        const idx = (currentIdx + i) % providers.length;
+        const candidate = providers[idx];
+        if (!_failedProviders.has(candidate)) return candidate;
+    }
+    return null;
+}
+
+function markProviderFailed(provider, streamType) {
+    const key = streamType ? `${provider}::${streamType}` : provider;
+    _failedProviders.add(provider);
+    console.warn(`[Fallback] Marked provider "${provider}" as failed`);
+    updateServerPillAvailability();
+}
+
+function updateServerPillAvailability() {
+    document.querySelectorAll('.server-pill').forEach(pill => {
+        const provider = pill.dataset.provider;
+        if (_failedProviders.has(provider)) {
+            pill.classList.add('unavailable');
+            pill.title = 'Source unavailable for this episode';
+        }
+    });
+}
+
+function showFallbackToast(fromProvider, toProvider) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(30,30,40,0.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:0.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.4);transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1),opacity 0.3s ease;opacity:0;max-width:360px;';
+    toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span><strong>${fromProvider}</strong> unavailable — switching to <strong>${toProvider}</strong></span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; });
+    setTimeout(() => {
+        toast.style.transform = 'translateX(120%)'; toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 3500);
+}
+
+function showNoSourcesMessage() {
+    const videoContainer = document.getElementById('videoContainer');
+    const embedFrame = document.getElementById('embedPlayer');
+    const errorContainer = document.getElementById('errorFallbackContainer');
+    if (videoContainer) videoContainer.style.display = 'none';
+    if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
+    if (errorContainer) {
+        errorContainer.style.display = 'flex';
+        errorContainer.innerHTML = `<div class="text-center"><div class="no-results-icon">🔌</div><p class="text-muted" style="max-width:300px;margin:8px auto 0">All servers tried — no working sources found for this episode. Try switching language or check back later.</p></div>`;
+    }
+    const fsBtn = document.getElementById('embedFullscreenBtn');
+    if (fsBtn) fsBtn.style.display = 'none';
+}
+
 // ── Watch State for AJAX ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     window._watchState = {
@@ -408,30 +474,139 @@ document.addEventListener('DOMContentLoaded', () => {
         provider: window.WATCH_CONFIG?.provider,
         providers: window.WATCH_CONFIG?.providers
     };
+
+    // ── HLS Player Error Handler — auto-fallback on playback failure ──
+    const player = document.querySelector('#vidstackPlayer');
+    if (player) {
+        player.addEventListener('error', (e) => {
+            console.error('[Player] Playback error:', e.detail);
+            const currentProvider = window._watchState?.provider;
+            if (!currentProvider || _isFallbackInProgress) return;
+            markProviderFailed(currentProvider, 'hls');
+            const next = getNextAvailableProvider(currentProvider);
+            if (next) {
+                showFallbackToast(currentProvider, next);
+                window._watchState.provider = next;
+                _isFallbackInProgress = true;
+                // Prefer embed as HLS just failed for this provider
+                delete window._watchState._desiredStreamType;
+                fetchAndLoadSources(true);
+            } else {
+                showNoSourcesMessage();
+            }
+        });
+    }
 });
 
 // ── Server Switching ────────────────────────────────────────────
 function switchProvider(provider) {
     window._watchState.provider = provider;
+    // User explicit switch — clear failed tracking for a fresh attempt
+    _failedProviders.delete(provider);
+    _isFallbackInProgress = false;
     fetchAndLoadSources();
 }
 window.switchProvider = switchProvider;
 
 function switchLanguage(lang) {
     window._watchState.language = lang;
+    // Language switch resets provider availability
+    resetFailedProviders();
 
-    // Update active state on language buttons
     document.querySelectorAll('.lang-btn, .language-btn, [data-lang]').forEach(btn => {
         const btnLang = btn.dataset.lang || btn.textContent.trim().toLowerCase();
         btn.classList.toggle('active', btnLang === lang.toLowerCase());
     });
 
+    // Reset unavailable pill states
+    document.querySelectorAll('.server-pill.unavailable').forEach(p => p.classList.remove('unavailable'));
+
     fetchAndLoadSources();
 }
 
-function fetchAndLoadSources() {
+// ── Apply video sources to the player ──────────────────────────
+function applyVideoSources(data) {
+    const hlsSources = data.hls_sources || [];
+    const embedSources = data.embed_sources || [];
+    const videoContainer = document.getElementById('videoContainer');
+    const desired = window._watchState._desiredStreamType;
+
+    // Decide which source type to use
+    let useEmbed = false;
+    if (desired === 'hls') {
+        useEmbed = false;
+    } else if (desired === 'embed' && embedSources.length > 0) {
+        useEmbed = true;
+    } else if (hlsSources.length > 0) {
+        useEmbed = false;
+    } else if (embedSources.length > 0) {
+        useEmbed = true;
+    }
+
+    const errorContainer = document.getElementById('errorFallbackContainer');
+
+    if (!useEmbed && hlsSources.length > 0) {
+        // ── HLS playback ──
+        const videoUrl = hlsSources[0].file || hlsSources[0].url;
+        const player = window.player;
+
+        if (player && videoUrl) {
+            player.src = { src: videoUrl, type: 'application/x-mpegurl' };
+        }
+
+        if (videoContainer) videoContainer.style.display = '';
+        if (errorContainer) errorContainer.style.display = 'none';
+
+        const embedFrame = document.getElementById('embedPlayer');
+        if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
+
+        const fsBtn = document.getElementById('embedFullscreenBtn');
+        if (fsBtn) fsBtn.style.display = 'none';
+
+    } else if (useEmbed && embedSources.length > 0) {
+        // ── Embed playback ──
+        if (videoContainer) videoContainer.style.display = 'none';
+        if (errorContainer) errorContainer.style.display = 'none';
+
+        // Stop HLS player if running
+        const player = window.player;
+        if (player) { try { player.src = ''; } catch (_) {} }
+
+        let frame = document.getElementById('embedPlayer');
+        if (!frame) {
+            frame = document.createElement('iframe');
+            frame.id = 'embedPlayer';
+            frame.className = 'embed-player-frame';
+            frame.allowFullscreen = true;
+            frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+            frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
+            const wrapper = document.getElementById('video-wrapper');
+            if (wrapper) wrapper.insertBefore(frame, videoContainer);
+        }
+        frame.style.cssText = 'width:100%;height:100%;border:none;display:block;position:absolute;top:0;left:0;';
+        frame.src = embedSources[0].url;
+
+        ensureEmbedFullscreenBtn();
+        const fsBtn = document.getElementById('embedFullscreenBtn');
+        if (fsBtn) fsBtn.style.display = '';
+
+    } else {
+        // ── No sources at all for this path ──
+        // This shouldn't normally be reached (fallback handles it), but just in case
+        if (videoContainer) videoContainer.style.display = 'none';
+        const embedFrame = document.getElementById('embedPlayer');
+        if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
+        const fsBtn = document.getElementById('embedFullscreenBtn');
+        if (fsBtn) fsBtn.style.display = 'none';
+        if (errorContainer) errorContainer.style.display = 'flex';
+    }
+}
+
+// ── Core: Fetch and load sources with auto-fallback ────────────
+function fetchAndLoadSources(isAutoFallback) {
     const state = window._watchState;
-    console.log('[AJAX] Fetching sources:', state);
+    const currentProvider = state.provider;
+    console.log(`[AJAX] Fetching sources: provider=${currentProvider}, lang=${state.language}, fallback=${!!isAutoFallback}`);
 
     const serverSections = document.getElementById('serverSections');
     if (serverSections) serverSections.classList.add('loading');
@@ -443,149 +618,85 @@ function fetchAndLoadSources() {
             anime_id: state.animeId,
             episode_number: state.episodeNumber,
             language: state.language,
-            provider: state.provider
+            provider: currentProvider
         })
     })
-        .then(res => res.json())
-        .then(data => {
-            if (data.error) {
-                console.error('[AJAX] Error:', data.error);
+    .then(res => res.json())
+    .then(data => {
+        const hlsSources = data.hls_sources || [];
+        const embedSources = data.embed_sources || [];
+        const hasSources = hlsSources.length > 0 || embedSources.length > 0;
+
+        if (data.error || !hasSources) {
+            console.warn(`[AJAX] Provider "${currentProvider}" failed:`, data.error || 'no sources');
+            markProviderFailed(currentProvider);
+
+            const next = getNextAvailableProvider(currentProvider);
+            if (next) {
+                showFallbackToast(currentProvider, next);
+                state.provider = next;
+                _isFallbackInProgress = true;
+                fetchAndLoadSources(true);
                 return;
             }
 
-            console.log('[AJAX] Got sources:', data);
-
-            // Update intro/outro
-            if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
-            if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
-
-            // Reset watched flag so the new episode can be marked
-            resetWatchedFlag();
-
-            // Re-create skip buttons with new data
-            const oldIntro = document.getElementById('skipIntroBtn');
-            const oldOutro = document.getElementById('skipOutroBtn');
-            if (oldIntro) oldIntro.remove();
-            if (oldOutro) oldOutro.remove();
-
-            if (window.player) {
-                setupSkipButtons();
-                // Rebuild chapters track with new intro/outro data
-                rebuildChaptersTrack();
-            }
-
-            // Update video source — respect user's desired stream type
-            const hlsSources = data.hls_sources || [];
-            const embedSources = data.embed_sources || [];
-            const videoContainer = document.getElementById('videoContainer');
-            const desired = window._watchState._desiredStreamType;
-
-            // Decide which source type to use:
-            // If user explicitly picked a stream type, prefer it (fall back if unavailable)
-            let useEmbed = false;
-            if (desired === 'hls') {
-                // User explicitly clicked INTERNAL — only use HLS, never fall back to embed
-                useEmbed = false;
-            } else if (desired === 'embed' && embedSources.length > 0) {
-                useEmbed = true;
-            } else if (hlsSources.length > 0) {
-                useEmbed = false;
-            } else if (embedSources.length > 0) {
-                useEmbed = true;
-            }
-            if (!useEmbed) {
-                if (hlsSources.length === 0) {
-                    // HLS was requested but not available for this provider
-                    const videoContainer = document.getElementById('videoContainer');
-                    if (videoContainer) videoContainer.style.display = '';
-                    const embedFrame = document.getElementById('embedPlayer');
-                    if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
-                    const fsBtn = document.getElementById('embedFullscreenBtn');
-                    if (fsBtn) fsBtn.style.display = 'none';
-                    const player = window.player;
-                    if (player) player.src = '';
-                    if (serverSections) serverSections.classList.remove('loading');
-                    return;
-                }
-                const videoUrl = hlsSources[0].file || hlsSources[0].url;
-                const player = window.player;
-
-                if (player && videoUrl) {
-                    player.src = {
-                        src: videoUrl,
-                        type: 'application/x-mpegurl'
-                    };
-                }
-
-                if (videoContainer) videoContainer.style.display = '';
-
-                const embedFrame = document.getElementById('embedPlayer');
-                if (embedFrame) {
-                    embedFrame.removeAttribute('src');
-                    embedFrame.style.display = 'none';
-                }
-
-                const fsBtn = document.getElementById('embedFullscreenBtn');
-                if (fsBtn) fsBtn.style.display = 'none';
-            } else if (embedSources.length > 0) {
-                const player = window.player;
-
-                if (player && videoUrl) {
-                    // Vidstack web component: set src with type for HLS
-                    player.src = {
-                        src: videoUrl,
-                        type: 'application/x-mpegurl'
-                    };
-                }
-
-                if (videoContainer) videoContainer.style.display = '';
-
-                // Hide embed
-                const embedFrame = document.getElementById('embedPlayer');
-                if (embedFrame) {
-                    embedFrame.removeAttribute('src');
-                    embedFrame.style.display = 'none';
-                }
-
-                // Hide fullscreen button (only for embed)
-                const fsBtn = document.getElementById('embedFullscreenBtn');
-                if (fsBtn) fsBtn.style.display = 'none';
-            } else if (embedSources.length > 0) {
-                if (videoContainer) videoContainer.style.display = 'none';
-
-                let frame = document.getElementById('embedPlayer');
-                if (!frame) {
-                    frame = document.createElement('iframe');
-                    frame.id = 'embedPlayer';
-                    frame.className = 'embed-player-frame';
-                    frame.allowFullscreen = true;
-                    frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-                    frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
-                    document.getElementById('video-wrapper').insertBefore(frame, document.getElementById('videoContainer'));
-                }
-                frame.style.cssText = 'width:100%; height:100%; border:none; display:block; position:absolute; top:0; left:0;';
-                frame.src = embedSources[0].url;
-
-                // Ensure fullscreen button exists and is visible for embed mode
-                ensureEmbedFullscreenBtn();
-                const fsBtn = document.getElementById('embedFullscreenBtn');
-                if (fsBtn) fsBtn.style.display = '';
-            }
-
-            // Clear desired stream type after use
-            delete window._watchState._desiredStreamType;
-
+            // All providers exhausted
+            _isFallbackInProgress = false;
+            showNoSourcesMessage();
             if (serverSections) serverSections.classList.remove('loading');
+            return;
+        }
 
-            // Update provider capabilities
-            if (data.provider_capabilities) {
-                updateProviderPills(data.provider_capabilities);
-            }
-        });
-}
+        // ── Success — apply sources ──
+        _isFallbackInProgress = false;
 
-function updateProviderPills(caps) {
-    // No-op: all providers are always shown, no capability checking
+        // Update intro/outro
+        if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
+        if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
+
+        resetWatchedFlag();
+
+        // Re-create skip buttons
+        document.getElementById('skipIntroBtn')?.remove();
+        document.getElementById('skipOutroBtn')?.remove();
+        if (window.player) {
+            setupSkipButtons();
+            rebuildChaptersTrack();
+        }
+
+        applyVideoSources(data);
+
+        // Update active pill to reflect what actually loaded
+        if (serverSections) {
+            serverSections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+            const desired = state._desiredStreamType;
+            const streamType = desired || data.source_type || (hlsSources.length > 0 ? 'hls' : 'embed');
+            const activePill = serverSections.querySelector(
+                `.server-pill[data-provider="${currentProvider}"][data-stream-type="${streamType}"]`
+            );
+            if (activePill) activePill.classList.add('active');
+        }
+
+        delete state._desiredStreamType;
+        if (serverSections) serverSections.classList.remove('loading');
+    })
+    .catch(err => {
+        console.error(`[AJAX] Network error for provider "${currentProvider}":`, err);
+        markProviderFailed(currentProvider);
+
+        const next = getNextAvailableProvider(currentProvider);
+        if (next) {
+            showFallbackToast(currentProvider, next);
+            state.provider = next;
+            _isFallbackInProgress = true;
+            fetchAndLoadSources(true);
+            return;
+        }
+
+        _isFallbackInProgress = false;
+        showNoSourcesMessage();
+        if (serverSections) serverSections.classList.remove('loading');
+    });
 }
 
 // ── Episode Sidebar ───────────────────────────────────────────
@@ -630,6 +741,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sections.addEventListener('click', (e) => {
         const pill = e.target.closest('.server-pill');
         if (!pill || pill.disabled) return;
+        // Block clicks on unavailable pills
+        if (pill.classList.contains('unavailable')) return;
 
         const streamType = pill.dataset.streamType;
         const provider = pill.dataset.provider;
@@ -637,13 +750,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window._watchState._desiredStreamType = streamType;
         window._watchState.provider = provider;
+        _isFallbackInProgress = false;
 
         try {
             localStorage.setItem('yumePreferredServer', provider);
             document.cookie = `preferred_server=${provider}; path=/; max-age=31536000`;
         } catch (e) { }
 
-        // Update active states
         sections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
 
