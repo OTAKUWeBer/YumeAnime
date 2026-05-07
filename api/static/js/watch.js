@@ -401,7 +401,7 @@ function resetWatchedFlag() {
 
 // ── Provider Fallback System ───────────────────────────────────
 const _PROVIDER_PRIORITY = ['arc', 'jet', 'kiwi', 'zoro', 'bee', 'wco'];
-let _failedProviders = new Set();
+let _failedProviders = new Set(); // stores "provider" (fully failed) or "provider::hls" / "provider::embed"
 let _isFallbackInProgress = false;
 
 function resetFailedProviders() {
@@ -409,30 +409,57 @@ function resetFailedProviders() {
     _isFallbackInProgress = false;
 }
 
+// Check if a provider is fully failed (no sources at all from API)
+function isProviderFullyFailed(provider) {
+    return _failedProviders.has(provider) ||
+        (_failedProviders.has(`${provider}::hls`) && _failedProviders.has(`${provider}::embed`));
+}
+
+// Check if a provider is failed for a specific stream type
+function isProviderFailedForType(provider, streamType) {
+    if (_failedProviders.has(provider)) return true; // fully failed
+    if (streamType && _failedProviders.has(`${provider}::${streamType}`)) return true;
+    return false;
+}
+
 function getNextAvailableProvider(currentProvider) {
     const providers = window._watchState?.providers || _PROVIDER_PRIORITY;
+    const desiredType = window._watchState?._desiredStreamType;
     const currentIdx = providers.indexOf(currentProvider);
     for (let i = 1; i < providers.length; i++) {
         const idx = (currentIdx + i) % providers.length;
         const candidate = providers[idx];
-        if (!_failedProviders.has(candidate)) return candidate;
+        if (isProviderFullyFailed(candidate)) continue;
+        // If user wants a specific type, skip providers failed for that type
+        if (desiredType && isProviderFailedForType(candidate, desiredType)) continue;
+        return candidate;
     }
     return null;
 }
 
 function markProviderFailed(provider, streamType) {
-    const key = streamType ? `${provider}::${streamType}` : provider;
-    _failedProviders.add(provider);
-    console.warn(`[Fallback] Marked provider "${provider}" as failed`);
+    if (streamType) {
+        _failedProviders.add(`${provider}::${streamType}`);
+        console.warn(`[Fallback] Marked "${provider}::${streamType}" as failed`);
+    } else {
+        // No stream type = API returned nothing at all — fully failed
+        _failedProviders.add(provider);
+        console.warn(`[Fallback] Marked provider "${provider}" as fully failed (no sources)`);
+    }
     updateServerPillAvailability();
 }
 
 function updateServerPillAvailability() {
     document.querySelectorAll('.server-pill').forEach(pill => {
         const provider = pill.dataset.provider;
-        if (_failedProviders.has(provider)) {
+        const streamType = pill.dataset.streamType;
+        // Only mark a pill unavailable if that specific type failed, or provider fully failed
+        if (isProviderFullyFailed(provider) || isProviderFailedForType(provider, streamType)) {
             pill.classList.add('unavailable');
             pill.title = 'Source unavailable for this episode';
+        } else {
+            pill.classList.remove('unavailable');
+            pill.title = '';
         }
     });
 }
@@ -483,16 +510,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentProvider = window._watchState?.provider;
             if (!currentProvider || _isFallbackInProgress) return;
             markProviderFailed(currentProvider, 'hls');
+
+            // Set desired type BEFORE lookup so getNextAvailableProvider
+            // knows to skip providers whose HLS already failed
+            window._watchState._desiredStreamType = 'hls';
             const next = getNextAvailableProvider(currentProvider);
             if (next) {
+                // Try next provider's HLS
                 showFallbackToast(currentProvider, next);
                 window._watchState.provider = next;
                 _isFallbackInProgress = true;
-                // Prefer embed as HLS just failed for this provider
-                delete window._watchState._desiredStreamType;
                 fetchAndLoadSources(true);
             } else {
-                showNoSourcesMessage();
+                // All HLS exhausted — try embed on the first available provider
+                const providers = window._watchState?.providers || _PROVIDER_PRIORITY;
+                const embedProvider = providers.find(p => !isProviderFailedForType(p, 'embed'));
+                if (embedProvider) {
+                    console.log(`[Fallback] All HLS exhausted — switching to embed on "${embedProvider}"`);
+                    showFallbackToast('All HLS servers', embedProvider + ' (embed)');
+                    window._watchState.provider = embedProvider;
+                    window._watchState._desiredStreamType = 'embed';
+                    _isFallbackInProgress = true;
+                    fetchAndLoadSources(true);
+                } else {
+                    showNoSourcesMessage();
+                }
             }
         });
     }
@@ -741,7 +783,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sections.addEventListener('click', (e) => {
         const pill = e.target.closest('.server-pill');
         if (!pill || pill.disabled) return;
-        // Block clicks on unavailable pills
         if (pill.classList.contains('unavailable')) return;
 
         const streamType = pill.dataset.streamType;
@@ -751,6 +792,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window._watchState._desiredStreamType = streamType;
         window._watchState.provider = provider;
         _isFallbackInProgress = false;
+
+        // User explicit click — clear stream-specific failure so this attempt is fresh
+        _failedProviders.delete(`${provider}::${streamType}`);
+        _failedProviders.delete(provider);
 
         try {
             localStorage.setItem('yumePreferredServer', provider);
