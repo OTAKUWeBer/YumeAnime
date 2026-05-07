@@ -185,10 +185,13 @@ class MiruroSourcesService:
             headers = {"referer": referer} if referer else None
 
             if stream_type == "hls" or url.endswith(".m3u8"):
-                # ── Kiwi provider: use dedicated kiwi proxy ──────────────────
+                # ── Kiwi provider: proxy raw vault URL directly ──────────────
+                # cluster.lunaranime.ru rejects non-browser TLS fingerprints
+                # (Python requests gets 404). Bypass it and proxy the raw URL
+                # directly through our own Flask proxy with the referer header.
                 if provider == "kiwi":
                     kiwi_referer = (headers or {}).get("referer", "https://kwik.cx/")
-                    proxied_url = encode_kiwi_proxy(url, referer=kiwi_referer)
+                    proxied_url = encode_proxy(url, {"referer": kiwi_referer})
                 else:
                     proxied_url = encode_proxy(url, headers)
 
