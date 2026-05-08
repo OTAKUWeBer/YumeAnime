@@ -45,8 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    console.log('[Player] Initializing Vidstack web component, WATCH_CONFIG:', window.WATCH_CONFIG);
-
     // Store reference globally
     window.player = player;
 
@@ -54,10 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // because time-update handles duration dynamically
     setupSkipButtons();
     setupResumeAndTracking(player);
-
-    function onPlayerReady() {
-        console.log('[Player] Vidstack can-play fired');
-    }
 
     player.addEventListener('can-play', onPlayerReady, { once: true });
 
@@ -82,8 +76,6 @@ function setupSkipButtons() {
     const intro = window.WATCH_CONFIG?.intro;
     const outro = window.WATCH_CONFIG?.outro;
     const autoSkip = localStorage.getItem('yume_skip_intro') === 'true';
-
-    console.log('[Skip] Setup, intro:', intro, 'outro:', outro, 'autoSkip:', autoSkip);
 
     // Remove old skip buttons
     document.getElementById('skipIntroBtn')?.remove();
@@ -228,8 +220,6 @@ function rebuildChaptersTrack() {
         default: true,
         type: 'vtt'
     });
-
-    console.log('[Chapters] Rebuilt chapter markers — segments:', segments.length);
 }
 window.rebuildChaptersTrack = rebuildChaptersTrack;
 
@@ -281,7 +271,6 @@ function setupResumeAndTracking(player) {
         try { savedTime = parseFloat(localStorage.getItem(key)) || 0; } catch (e) { }
 
         if (savedTime > 10 && player.currentTime < 5) {
-            console.log('[AutoResume] Resuming from:', savedTime);
             player.currentTime = savedTime;
         }
 
@@ -333,7 +322,6 @@ function markEpisodeWatched() {
     if (!animeId || !epNum) return;
 
     watchedMarked = true;
-    console.log('[Watchlist] Marking watched:', { animeId, anilistId, epNum });
 
     const payload = {
         anime_id: animeId,
@@ -362,12 +350,10 @@ function markEpisodeWatched() {
             })
             .then(data => {
                 if (data.success) {
-                    console.log('[Watchlist] Marked watched successfully');
                 } else {
                     console.warn('[Watchlist] Server returned failure:', data.message);
                     // Retry once on server-side failure
                     if (attempt < 2) {
-                        console.log('[Watchlist] Retrying...');
                         setTimeout(() => doUpdate(attempt + 1), 2000);
                     }
                 }
@@ -376,7 +362,6 @@ function markEpisodeWatched() {
                 console.error('[Watchlist] Update failed:', err);
                 // Retry on network error (common on mobile)
                 if (attempt < 2) {
-                    console.log('[Watchlist] Retrying after error...');
                     setTimeout(() => doUpdate(attempt + 1), 3000);
                 } else {
                     // Last resort: reset flag so it can try again on next time-update
@@ -526,7 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const providers = window._watchState?.providers || _PROVIDER_PRIORITY;
                 const embedProvider = providers.find(p => !isProviderFailedForType(p, 'embed'));
                 if (embedProvider) {
-                    console.log(`[Fallback] All HLS exhausted — switching to embed on "${embedProvider}"`);
                     showFallbackToast('All HLS servers', embedProvider + ' (embed)');
                     window._watchState.provider = embedProvider;
                     window._watchState._desiredStreamType = 'embed';
@@ -648,7 +632,6 @@ function applyVideoSources(data) {
 function fetchAndLoadSources(isAutoFallback) {
     const state = window._watchState;
     const currentProvider = state.provider;
-    console.log(`[AJAX] Fetching sources: provider=${currentProvider}, lang=${state.language}, fallback=${!!isAutoFallback}`);
 
     const serverSections = document.getElementById('serverSections');
     if (serverSections) serverSections.classList.add('loading');

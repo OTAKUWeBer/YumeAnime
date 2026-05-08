@@ -877,8 +877,6 @@
                 default: true,
                 type: 'vtt'
             });
-
-            console.log('[Chapters] Added intro/outro chapter markers to timeline');
         }
 
         // Try adding chapters once player can play
@@ -896,7 +894,6 @@
 
         // If the initial page load has no working source, try other providers
         if (!hasVideo && !hasEmbed) {
-            console.log('[InitFallback] No initial source — triggering provider fallback');
             const currentProvider = cfg.provider;
             if (currentProvider && typeof markProviderFailed === 'function') {
                 markProviderFailed(currentProvider);
