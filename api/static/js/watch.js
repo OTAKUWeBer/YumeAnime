@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('videoContainer');
 
     if (!player || !container) {
-        console.error('[Player] Vidstack player element or container not found');
         return;
     }
 
@@ -57,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle errors
     player.addEventListener('error', (e) => {
-        console.error('[Player] Vidstack error:', e.detail);
+        console.error('Player error:', e.detail);
     });
 });
 
@@ -351,7 +350,6 @@ function markEpisodeWatched() {
             .then(data => {
                 if (data.success) {
                 } else {
-                    console.warn('[Watchlist] Server returned failure:', data.message);
                     // Retry once on server-side failure
                     if (attempt < 2) {
                         setTimeout(() => doUpdate(attempt + 1), 2000);
@@ -359,7 +357,6 @@ function markEpisodeWatched() {
                 }
             })
             .catch(err => {
-                console.error('[Watchlist] Update failed:', err);
                 // Retry on network error (common on mobile)
                 if (attempt < 2) {
                     setTimeout(() => doUpdate(attempt + 1), 3000);
@@ -425,11 +422,9 @@ function getNextAvailableProvider(currentProvider) {
 function markProviderFailed(provider, streamType) {
     if (streamType) {
         _failedProviders.add(`${provider}::${streamType}`);
-        console.warn(`[Fallback] Marked "${provider}::${streamType}" as failed`);
     } else {
         // No stream type = API returned nothing at all — fully failed
         _failedProviders.add(provider);
-        console.warn(`[Fallback] Marked provider "${provider}" as fully failed (no sources)`);
     }
     updateServerPillAvailability();
 }
@@ -653,7 +648,6 @@ function fetchAndLoadSources(isAutoFallback) {
             const hasSources = hlsSources.length > 0 || embedSources.length > 0;
 
             if (data.error || !hasSources) {
-                console.warn(`[AJAX] Provider "${currentProvider}" failed:`, data.error || 'no sources');
                 markProviderFailed(currentProvider);
 
                 const next = getNextAvailableProvider(currentProvider);
@@ -706,7 +700,6 @@ function fetchAndLoadSources(isAutoFallback) {
             if (serverSections) serverSections.classList.remove('loading');
         })
         .catch(err => {
-            console.error(`[AJAX] Network error for provider "${currentProvider}":`, err);
             markProviderFailed(currentProvider);
 
             const next = getNextAvailableProvider(currentProvider);

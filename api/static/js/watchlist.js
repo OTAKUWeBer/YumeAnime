@@ -236,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     isLoading = false;
                     return;
                 }
-                console.error('Watchlist error:', e);
                 if (thisGeneration === fetchGeneration && !append && watchlistContent) {
                     watchlistContent.innerHTML = `
                         <div class="watchlist-empty">
@@ -551,7 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 progressSpan.textContent = `${payload.progress} / ${itemDataObj.total_episodes || '?'}`;
                             }
                         } catch (e) {
-                            console.error("Error updating row visually:", e);
                             fetchWatchlist(currentStatus, 1, false); // fallback
                         }
                     } else {
@@ -570,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {
                 alert('Connection error. Please refresh the page and try again.');
-                console.error(e);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;

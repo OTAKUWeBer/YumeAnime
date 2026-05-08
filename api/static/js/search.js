@@ -468,7 +468,6 @@ class SearchManager {
             this.hideLoading(searchType);
 
             if (!response.ok) {
-                console.error('Search suggestions API error:', response.status);
                 return;
             }
 
@@ -488,7 +487,6 @@ class SearchManager {
         } catch (error) {
             this.hideLoading(searchType);
             if (error.name !== 'AbortError') {
-                console.error('Error fetching suggestions:', error);
             }
         }
     }

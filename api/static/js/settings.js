@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(data.message || 'Failed to disconnect');
                 }
             } catch (e) {
-                console.error('Disconnect error:', e);
                 alert('An error occurred');
             }
         });
@@ -78,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(data.message || 'Failed to disconnect MyAnimeList');
             }
         } catch (e) {
-            console.error('MAL Disconnect error:', e);
             alert('An error occurred');
         }
     };
@@ -164,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (err) {
-                console.error(err);
                 if (pwdErrorMsg) {
                     pwdErrorMsg.textContent = 'A network error occurred. Please try again.';
                     pwdErrorMsg.style.display = 'block';
