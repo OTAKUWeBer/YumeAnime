@@ -21,16 +21,20 @@ if kiwi_proxy_url and kiwi_proxy_url.startswith("http://"):
     kiwi_proxy_url = kiwi_proxy_url.replace("http://", "https://", 1)
 
 
-def encode_kiwi_proxy(url: Optional[str], referer: str = "https://kwik.cx/") -> Optional[str]:
+def encode_kiwi_proxy(url: Optional[str], referer = "https://kwik.cx/") -> Optional[str]:
     """
     Return proxied URL through our own backend proxy.
     Builds the full cluster.lunaranime.ru URL and wraps it in /api/proxy/.
 
-    Format: /api/proxy/{kiwi_proxy_url}?url={url_encoded}&referer={referer}
+    Format: /api/proxy/{kiwi_proxy_url}?url={url_encoded}&referer={referer_encoded}
     """
     if not url:
         return url
     try:
+        # Guard: if caller accidentally passes a dict, extract the value
+        if isinstance(referer, dict):
+            referer = referer.get("referer", "https://kwik.cx/")
+
         encoded_url = quote(url, safe='')
         cluster_url = f"{kiwi_proxy_url}?url={encoded_url}&referer={referer}"
         return f"/api/proxy/{cluster_url}"
@@ -38,23 +42,14 @@ def encode_kiwi_proxy(url: Optional[str], referer: str = "https://kwik.cx/") -> 
         return url
 
 
-def encode_proxy(url: Optional[str], headers: Optional[Dict[str, str]] = None, provider: Optional[str] = None) -> Optional[str]:
+def encode_proxy(url: Optional[str], headers: Optional[Dict[str, str]] = None) -> Optional[str]:
     """
     Return proxied URL through proxy using query parameters format.
-    For the 'kiwi' provider, uses the dedicated kiwi proxy with referer support.
-    Format (default): {proxy_url}?url={url_encoded}&headers={headers_encoded}
-    Format (kiwi):    {kiwi_proxy_url}?url={url_encoded}&referer={referer}
+    Format: {proxy_url}?url={url_encoded}&headers={headers_encoded}
     """
     if not url:
         return url
     try:
-        # Use kiwi-specific proxy for kiwi/kwik provider
-        if provider == "kiwi":
-            referer = "https://kwik.cx/"
-            if headers and headers.get("referer"):
-                referer = headers["referer"]
-            return encode_kiwi_proxy(url, referer=referer)
-
         # URL-encode the target URL
         encoded_url = quote(url, safe='')
 
@@ -236,13 +231,13 @@ def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] 
     if isinstance(sources, dict):
         for k in ("file", "url"):
             if sources.get(k):
-                sources[k] = encode_proxy(sources[k], headers, provider=provider)
+                sources[k] = encode_proxy(sources[k], headers)
     elif isinstance(sources, list):
         for s in sources:
             if isinstance(s, dict):
                 for k in ("file", "url"):
                     if s.get(k):
-                        s[k] = encode_proxy(s[k], headers, provider=provider)
+                        s[k] = encode_proxy(s[k], headers)
 
     # Proxy tracks
     if "tracks" in data and isinstance(data["tracks"], list):

@@ -191,7 +191,7 @@ class MiruroSourcesService:
                 # directly through our own Flask proxy with the referer header.
                 if provider == "kiwi":
                     kiwi_referer = (headers or {}).get("referer", "https://kwik.cx/")
-                    proxied_url = encode_proxy(url, {"referer": kiwi_referer})
+                    proxied_url = encode_kiwi_proxy(url, kiwi_referer)
                 else:
                     proxied_url = encode_proxy(url, headers)
 
@@ -207,6 +207,7 @@ class MiruroSourcesService:
                         "codec": stream.get("codec", ""),
                         "fansub": stream.get("fansub", ""),
                         "isActive": stream.get("isActive", False),
+                        "_provider": provider,  # debug tag
                     }
                 )
             elif stream_type == "embed":
