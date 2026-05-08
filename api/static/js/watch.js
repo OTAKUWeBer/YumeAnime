@@ -354,35 +354,35 @@ function markEpisodeWatched() {
             // Keep the request alive even if the page is being closed (mobile)
             keepalive: true
         })
-        .then(r => {
-            if (!r.ok) {
-                throw new Error(`HTTP ${r.status}`);
-            }
-            return r.json();
-        })
-        .then(data => {
-            if (data.success) {
-                console.log('[Watchlist] Marked watched successfully');
-            } else {
-                console.warn('[Watchlist] Server returned failure:', data.message);
-                // Retry once on server-side failure
-                if (attempt < 2) {
-                    console.log('[Watchlist] Retrying...');
-                    setTimeout(() => doUpdate(attempt + 1), 2000);
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}`);
                 }
-            }
-        })
-        .catch(err => {
-            console.error('[Watchlist] Update failed:', err);
-            // Retry on network error (common on mobile)
-            if (attempt < 2) {
-                console.log('[Watchlist] Retrying after error...');
-                setTimeout(() => doUpdate(attempt + 1), 3000);
-            } else {
-                // Last resort: reset flag so it can try again on next time-update
-                watchedMarked = false;
-            }
-        });
+                return r.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('[Watchlist] Marked watched successfully');
+                } else {
+                    console.warn('[Watchlist] Server returned failure:', data.message);
+                    // Retry once on server-side failure
+                    if (attempt < 2) {
+                        console.log('[Watchlist] Retrying...');
+                        setTimeout(() => doUpdate(attempt + 1), 2000);
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('[Watchlist] Update failed:', err);
+                // Retry on network error (common on mobile)
+                if (attempt < 2) {
+                    console.log('[Watchlist] Retrying after error...');
+                    setTimeout(() => doUpdate(attempt + 1), 3000);
+                } else {
+                    // Last resort: reset flag so it can try again on next time-update
+                    watchedMarked = false;
+                }
+            });
     }
 
     doUpdate(1);
@@ -612,7 +612,7 @@ function applyVideoSources(data) {
 
         // Stop HLS player if running
         const player = window.player;
-        if (player) { try { player.src = ''; } catch (_) {} }
+        if (player) { try { player.src = ''; } catch (_) { } }
 
         let frame = document.getElementById('embedPlayer');
         if (!frame) {
@@ -663,14 +663,67 @@ function fetchAndLoadSources(isAutoFallback) {
             provider: currentProvider
         })
     })
-    .then(res => res.json())
-    .then(data => {
-        const hlsSources = data.hls_sources || [];
-        const embedSources = data.embed_sources || [];
-        const hasSources = hlsSources.length > 0 || embedSources.length > 0;
+        .then(res => res.json())
+        .then(data => {
+            const hlsSources = data.hls_sources || [];
+            const embedSources = data.embed_sources || [];
+            const hasSources = hlsSources.length > 0 || embedSources.length > 0;
 
-        if (data.error || !hasSources) {
-            console.warn(`[AJAX] Provider "${currentProvider}" failed:`, data.error || 'no sources');
+            if (data.error || !hasSources) {
+                console.warn(`[AJAX] Provider "${currentProvider}" failed:`, data.error || 'no sources');
+                markProviderFailed(currentProvider);
+
+                const next = getNextAvailableProvider(currentProvider);
+                if (next) {
+                    showFallbackToast(currentProvider, next);
+                    state.provider = next;
+                    _isFallbackInProgress = true;
+                    fetchAndLoadSources(true);
+                    return;
+                }
+
+                // All providers exhausted
+                _isFallbackInProgress = false;
+                showNoSourcesMessage();
+                if (serverSections) serverSections.classList.remove('loading');
+                return;
+            }
+
+            // ── Success — apply sources ──
+            _isFallbackInProgress = false;
+
+            // Update intro/outro
+            if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
+            if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
+
+            resetWatchedFlag();
+
+            // Re-create skip buttons
+            document.getElementById('skipIntroBtn')?.remove();
+            document.getElementById('skipOutroBtn')?.remove();
+            if (window.player) {
+                setupSkipButtons();
+                rebuildChaptersTrack();
+            }
+
+            applyVideoSources(data);
+
+            // Update active pill to reflect what actually loaded
+            if (serverSections) {
+                serverSections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+                const desired = state._desiredStreamType;
+                const streamType = desired || data.source_type || (hlsSources.length > 0 ? 'hls' : 'embed');
+                const activePill = serverSections.querySelector(
+                    `.server-pill[data-provider="${currentProvider}"][data-stream-type="${streamType}"]`
+                );
+                if (activePill) activePill.classList.add('active');
+            }
+
+            delete state._desiredStreamType;
+            if (serverSections) serverSections.classList.remove('loading');
+        })
+        .catch(err => {
+            console.error(`[AJAX] Network error for provider "${currentProvider}":`, err);
             markProviderFailed(currentProvider);
 
             const next = getNextAvailableProvider(currentProvider);
@@ -682,63 +735,10 @@ function fetchAndLoadSources(isAutoFallback) {
                 return;
             }
 
-            // All providers exhausted
             _isFallbackInProgress = false;
             showNoSourcesMessage();
             if (serverSections) serverSections.classList.remove('loading');
-            return;
-        }
-
-        // ── Success — apply sources ──
-        _isFallbackInProgress = false;
-
-        // Update intro/outro
-        if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
-        if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
-
-        resetWatchedFlag();
-
-        // Re-create skip buttons
-        document.getElementById('skipIntroBtn')?.remove();
-        document.getElementById('skipOutroBtn')?.remove();
-        if (window.player) {
-            setupSkipButtons();
-            rebuildChaptersTrack();
-        }
-
-        applyVideoSources(data);
-
-        // Update active pill to reflect what actually loaded
-        if (serverSections) {
-            serverSections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
-            const desired = state._desiredStreamType;
-            const streamType = desired || data.source_type || (hlsSources.length > 0 ? 'hls' : 'embed');
-            const activePill = serverSections.querySelector(
-                `.server-pill[data-provider="${currentProvider}"][data-stream-type="${streamType}"]`
-            );
-            if (activePill) activePill.classList.add('active');
-        }
-
-        delete state._desiredStreamType;
-        if (serverSections) serverSections.classList.remove('loading');
-    })
-    .catch(err => {
-        console.error(`[AJAX] Network error for provider "${currentProvider}":`, err);
-        markProviderFailed(currentProvider);
-
-        const next = getNextAvailableProvider(currentProvider);
-        if (next) {
-            showFallbackToast(currentProvider, next);
-            state.provider = next;
-            _isFallbackInProgress = true;
-            fetchAndLoadSources(true);
-            return;
-        }
-
-        _isFallbackInProgress = false;
-        showNoSourcesMessage();
-        if (serverSections) serverSections.classList.remove('loading');
-    });
+        });
 }
 
 // ── Episode Sidebar ───────────────────────────────────────────

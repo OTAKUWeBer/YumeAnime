@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Dict, Any, Optional, List
 from .base import MiruroBaseClient
-from ..video_utils import encode_proxy, encode_kiwi_proxy
+from ..video_utils import encode_proxy, encode_kiwi_proxy, proxy_url, kiwi_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -191,9 +191,17 @@ class MiruroSourcesService:
                 # directly through our own Flask proxy with the referer header.
                 if provider == "kiwi":
                     kiwi_referer = (headers or {}).get("referer", "https://kwik.cx/")
-                    proxied_url = encode_kiwi_proxy(url, kiwi_referer)
+                    proxied_url = (
+                        encode_kiwi_proxy(url, kiwi_referer)
+                        if not url.startswith(kiwi_proxy_url)
+                        else url
+                    )
                 else:
-                    proxied_url = encode_proxy(url, headers)
+                    proxied_url = (
+                        encode_proxy(url, headers)
+                        if not url.startswith(proxy_url)
+                        else url
+                    )
 
                 hls_sources.append(
                     {

@@ -200,81 +200,59 @@ def sort_subtitle_priority(track: Dict[str, Any]) -> int:
     return 10
 
 
-def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] = None, provider: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Patch all file/url links in video data to go through proxy.
-    Handles both 'file' and 'url' keys for sources and tracks.
-    Also sorts subtitle tracks by priority.
+def _is_already_proxied(url: str) -> bool:
+    """True if the URL already routes through one of our proxies."""
+    if not url:
+        return False
+    return proxy_url in url or kiwi_proxy_url in url
 
-    Args:
-        data: The video data dictionary containing sources and tracks
-        headers: Optional headers to pass to the proxy (e.g., referer)
-        provider: Optional provider name — 'kiwi' uses the dedicated kiwi proxy
-    """
+
+def proxy_video_sources(data: Dict[str, Any], headers: Optional[Dict[str, str]] = None, provider: Optional[str] = None) -> Dict[str, Any]:
     if not isinstance(data, dict):
         return data
 
-    # Set default headers if none provided
     if headers is None:
-        if provider == "kiwi":
-            headers = {"referer": "https://kwik.cx/"}
-        else:
-            headers = {"referer": "https://kwik.cx/"}
+        headers = {"referer": "https://kwik.cx/"}
 
-    # Proxy sources (dict or list)
+    def _pick_proxy(url: str, for_subtitles: bool = False) -> str:
+        """Route through the correct proxy. Subtitles always use cdn-eu.1ani."""
+        if not url or _is_already_proxied(url):
+            return url
+        if provider == "kiwi" and not for_subtitles:
+            referer = headers.get("referer", "https://kwik.cx/")
+            return encode_kiwi_proxy(url, referer) or url
+        return encode_proxy(url, headers) or url
+
+    # Proxy sources
     sources = data.get("sources")
     if isinstance(sources, dict):
         for k in ("file", "url"):
             if sources.get(k):
-                sources[k] = encode_proxy(sources[k], headers)
+                sources[k] = _pick_proxy(sources[k])
     elif isinstance(sources, list):
         for s in sources:
             if isinstance(s, dict):
                 for k in ("file", "url"):
                     if s.get(k):
-                        s[k] = encode_proxy(s[k], headers)
+                        s[k] = _pick_proxy(s[k])
 
-    # Proxy tracks
+    # Proxy tracks — subtitles always via cdn-eu.1ani, never kiwi worker
     if "tracks" in data and isinstance(data["tracks"], list):
-        print(f"[Proxy] Processing {len(data['tracks'])} subtitle tracks")
         for idx, track in enumerate(data["tracks"]):
             if not isinstance(track, dict):
                 continue
-
-            original_file = track.get("file")
-            original_url = track.get("url")
-
-            # Ensure 'label' field exists for frontend compatibility
             if track.get("lang") and not track.get("label"):
                 track["label"] = track["lang"]
-                print(f"[Proxy] Track {idx}: Added label from lang: {track['label']}")
-
-            # Also ensure 'kind' is set for subtitle tracks
             if not track.get("kind"):
                 lang_or_label = (track.get("lang") or track.get("label") or "").lower()
-                if "thumbnail" in lang_or_label or "thumbnails" in lang_or_label:
-                    track["kind"] = "metadata"
-                else:
-                    track["kind"] = "subtitles"
-
+                track["kind"] = "metadata" if "thumbnail" in lang_or_label else "subtitles"
             for k in ("file", "url"):
                 if track.get(k):
-                    # Subtitle tracks: use default proxy regardless of provider
-                    proxied = encode_proxy(track[k], headers)
-                    track[k] = proxied
-                    print(f"[Proxy] Track {idx} ({track.get('label', 'unknown')}): {k} proxied")
+                    track[k] = _pick_proxy(track[k], for_subtitles=True)
 
-            if not original_file and not original_url:
-                print(f"[Proxy] Warning: Track {idx} has no file or url: {track}")
-
-        # Sort tracks: english first, thumbnails last
         try:
             data["tracks"].sort(key=sort_subtitle_priority)
-            print(f"[Proxy] Sorted {len(data['tracks'])} tracks by priority")
-            for idx, track in enumerate(data["tracks"]):
-                print(f"[Proxy] Final track {idx}: label={track.get('label')}, kind={track.get('kind')}")
-        except Exception as e:
-            print(f"[Proxy] Error sorting tracks: {e}")
+        except Exception:
             pass
 
     return data
