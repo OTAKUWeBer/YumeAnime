@@ -114,14 +114,37 @@ def manga_read(source, manga_id, chapter_id):
     current_title = chapter_id
     if details and details.get("chapters"):
         chapters = details["chapters"]
+        current_idx = -1
         for i, ch in enumerate(chapters):
             if str(ch.get("id", "")) == str(chapter_id):
+                current_idx = i
                 current_title = ch.get("title", chapter_id)
-                if i > 0:
-                    next_chapter = chapters[i - 1]  # chapters usually desc order
-                if i < len(chapters) - 1:
-                    prev_chapter = chapters[i + 1]
                 break
+
+        if current_idx != -1:
+            # Detect order (descending is default)
+            is_desc = True
+            if len(chapters) > 1:
+                try:
+                    c1 = float(chapters[0].get("number", 0))
+                    c2 = float(chapters[-1].get("number", 0))
+                    if c1 < c2:
+                        is_desc = False
+                except (ValueError, TypeError):
+                    pass
+
+            if is_desc:
+                # [10, 9, 8] -> at index 1 (Ch 9), next is i-1 (Ch 10), prev is i+1 (Ch 8)
+                if current_idx > 0:
+                    next_chapter = chapters[current_idx - 1]
+                if current_idx < len(chapters) - 1:
+                    prev_chapter = chapters[current_idx + 1]
+            else:
+                # [8, 9, 10] -> at index 1 (Ch 9), next is i+1 (Ch 10), prev is i-1 (Ch 8)
+                if current_idx < len(chapters) - 1:
+                    next_chapter = chapters[current_idx + 1]
+                if current_idx > 0:
+                    prev_chapter = chapters[current_idx - 1]
 
     return render_template(
         'manga/read.html',
