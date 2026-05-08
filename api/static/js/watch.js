@@ -52,6 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSkipButtons();
     setupResumeAndTracking(player);
 
+    function onPlayerReady() {
+        console.log('[Player] Vidstack can-play fired');
+    }
+
     player.addEventListener('can-play', onPlayerReady, { once: true });
 
     // Handle errors
