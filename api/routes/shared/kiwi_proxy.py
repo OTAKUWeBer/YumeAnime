@@ -48,7 +48,6 @@ _UPSTREAM_TIMEOUT = (10, 30)
 _STREAM_CHUNK_SIZE = 65536
 
 # Domains whose URLs we rewrite inside m3u8 manifests
-_KIWI_DOMAINS = {"cluster.lunaranime.ru"}
 _REWRITE_DOMAINS = [
     "https://cluster.lunaranime.ru",
     "http://cluster.lunaranime.ru",
@@ -73,11 +72,9 @@ def _fix_merged_slashes(url: str) -> str:
 
 def _build_upstream_headers(upstream_url: str) -> dict:
     """
-    Build headers that match what Chrome sends when playing
-    directly from cluster.lunaranime.ru.
+    Build standard browser-like headers for upstream requests.
     """
-    is_kiwi = any(d in upstream_url for d in _KIWI_DOMAINS)
-    base = {
+    return {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -86,16 +83,6 @@ def _build_upstream_headers(upstream_url: str) -> dict:
         "Accept": "*/*",
         "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
     }
-    if is_kiwi:
-        base.update({
-            "sec-ch-ua": '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"',
-            "sec-fetch-dest": "video",
-            "sec-fetch-mode": "no-cors",
-            "sec-fetch-site": "same-origin",
-        })
-    return base
 
 
 def _rewrite_m3u8(body: str) -> str:
@@ -150,20 +137,14 @@ def proxy_passthrough(target: str):
 
     headers = _build_upstream_headers(upstream_url)
 
-    # Cluster requires Referer to be itself (same-origin check)
-    is_kiwi_upstream = any(d in upstream_url for d in _KIWI_DOMAINS)
-    if is_kiwi_upstream:
-        headers["Referer"] = upstream_url
-        headers["Origin"] = "https://cluster.lunaranime.ru"
-    else:
-        # For non-kiwi upstreams, use referer from query string if provided
-        referer = request.args.get("referer")
-        if referer:
-            headers["Referer"] = referer
-            # Derive Origin properly using urlparse
-            parsed = urlparse(referer)
-            if parsed.scheme and parsed.netloc:
-                headers["Origin"] = f"{parsed.scheme}://{parsed.netloc}"
+    # For upstreams that require it, use referer from query string if provided
+    referer = request.args.get("referer")
+    if referer:
+        headers["Referer"] = referer
+        # Derive Origin properly using urlparse
+        parsed = urlparse(referer)
+        if parsed.scheme and parsed.netloc:
+            headers["Origin"] = f"{parsed.scheme}://{parsed.netloc}"
 
     # Forward Range header (Chrome sends "Range: bytes=0-" for segments)
     range_header = request.headers.get("Range")
@@ -189,13 +170,11 @@ def proxy_passthrough(target: str):
 
     # ── m3u8 manifests: rewrite cluster URLs → local proxy ──
     is_m3u8 = "mpegurl" in content_type.lower() or upstream_url.endswith(".m3u8")
-    is_kiwi_upstream = any(d in upstream_url for d in _KIWI_DOMAINS)
 
     if is_m3u8:
         body = upstream_resp.text
         upstream_resp.close()
-        # Only rewrite segment URLs if this manifest came from kiwi
-        rewritten = _rewrite_m3u8(body) if is_kiwi_upstream else body
+        rewritten = _rewrite_m3u8(body)
 
         resp_headers = {
             "Content-Type": "application/vnd.apple.mpegurl",

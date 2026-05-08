@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 dotenv.load_dotenv()
 proxy_url = os.getenv("PROXY_URL", "https://cdn-eu.1ani.me/proxy/m3u8")
-kiwi_proxy_url = os.getenv("KIWI_PROXY_URL", "https://cluster.lunaranime.ru/api/proxy/hls/custom")
+kiwi_proxy_url = os.getenv("KIWI_PROXY_URL", "https://")
 
 # Enforce HTTPS on proxy URLs to prevent mixed content blocking
 if proxy_url and proxy_url.startswith("http://"):
@@ -21,23 +21,18 @@ if kiwi_proxy_url and kiwi_proxy_url.startswith("http://"):
     kiwi_proxy_url = kiwi_proxy_url.replace("http://", "https://", 1)
 
 
-def encode_kiwi_proxy(url: Optional[str], referer = "https://kwik.cx/") -> Optional[str]:
+def encode_kiwi_proxy(url: Optional[str], referer: str = "https://kwik.cx/") -> Optional[str]:
     """
-    Return proxied URL through our own backend proxy.
-    Builds the full cluster.lunaranime.ru URL and wraps it in /api/proxy/.
-
-    Format: /api/proxy/{kiwi_proxy_url}?url={url_encoded}&referer={referer_encoded}
+    Return proxied URL through the dedicated Kiwi worker.
+    The worker handles all headers (referer, origin, UA) internally.
     """
     if not url:
         return url
     try:
-        # Guard: if caller accidentally passes a dict, extract the value
-        if isinstance(referer, dict):
-            referer = referer.get("referer", "https://kwik.cx/")
-
+        # Guard: if caller accidentally passes a dict, ignore it
+        # (Worker only needs the raw vault URL)
         encoded_url = quote(url, safe='')
-        cluster_url = f"{kiwi_proxy_url}?url={encoded_url}&referer={referer}"
-        return f"/api/proxy/{cluster_url}"
+        return f"{kiwi_proxy_url}/?url={encoded_url}"
     except Exception:
         return url
 
