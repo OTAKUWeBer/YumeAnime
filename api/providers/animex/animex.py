@@ -428,11 +428,7 @@ class AnimexScraper:
                 file_url = sub.get("file") or sub.get("url")
                 if not file_url:
                     continue
-                proxied_sub = (
-                    encode_proxy(file_url, proxy_headers)
-                    if file_url.startswith("http")
-                    else file_url
-                )
+                proxied_sub = file_url
                 tracks.append(
                     {
                         "file": proxied_sub,

@@ -5,11 +5,94 @@ Uses the new /watch/{provider}/{anilistId}/{category}/{slug} endpoint
 
 import logging
 import re
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, Optional, List
+
 from .base import MiruroBaseClient
-from ..video_utils import encode_proxy, encode_kiwi_proxy, proxy_url, kiwi_proxy_url
+from ..video_utils import encode_proxy, encode_kiwi_proxy, encode_payload, WORKER_BASE
 
 logger = logging.getLogger(__name__)
+
+# Providers that must use the kiwi worker (/p/ Base64 route)
+_WORKER_PROVIDERS = {
+    "kiwi",
+    "animex",
+    "ax",
+    "ax-uwu",
+    "ax-mochi",
+    "ax-wave",
+    "ax-zaza",
+    "ax-yuki",
+    "ax-zen",
+    "uwu",
+    "mochi",
+    "wave",
+    "zaza",
+    "yuki",
+    "zen",
+}
+
+# Providers that must always use cdn-eu (never kiwi worker)
+_CDN_ONLY_PROVIDERS = {
+    "arc",
+    "jet",
+    "zoro",
+    "miruro",
+}
+
+
+def _normalize_provider(provider: Optional[str]) -> str:
+    return (provider or "").strip().lower()
+
+
+def _is_already_proxied(url: str) -> bool:
+    if not url:
+        return False
+    return url.startswith(WORKER_BASE + "/p/") or "cdn-eu.1ani.me/proxy/m3u8" in url
+
+
+def _route_stream_proxy(
+    url: str,
+    provider: Optional[str],
+    headers: Optional[Dict[str, str]] = None,
+    subtitles: bool = False,
+) -> str:
+    """
+    Route stream URLs to the correct proxy.
+
+    Rules:
+      - kiwi / animex / ax-* / AnimeX sub-servers -> kiwi worker (/p/)
+      - arc / jet / zoro / miruro -> cdn-eu only
+      - subtitles -> cdn-eu only
+      - everything else -> cdn-eu only
+    """
+    if not url or _is_already_proxied(url):
+        return url
+
+    provider_norm = _normalize_provider(provider)
+
+    # Subtitles always go through cdn-eu, never kiwi worker
+    if subtitles:
+        return encode_proxy(url, headers) or url
+
+    # Hard-force CDN for Arc/Miruro-style providers
+    if provider_norm in _CDN_ONLY_PROVIDERS:
+        return encode_proxy(url, headers) or url
+
+    # Kiwi / AnimeX family -> kiwi worker
+    is_worker_provider = (
+        provider_norm in _WORKER_PROVIDERS
+        or provider_norm.startswith("ax-")
+        or provider_norm.startswith("animex")
+    )
+
+    if is_worker_provider:
+        referer = (headers or {}).get("referer") or (headers or {}).get("Referer") or ""
+        if not referer and provider_norm == "kiwi":
+            referer = "https://kwik.cx/"
+        return encode_payload(url, referer)
+
+    # Default: cdn-eu only
+    return encode_proxy(url, headers) or url
 
 
 class MiruroSourcesService:
@@ -37,25 +120,32 @@ class MiruroSourcesService:
     async def get_sources(
         self,
         episode_id: str,
-        provider: str = "kiwi",
+        provider: Optional[str] = None,
         anilist_id: Optional[int] = None,
         category: str = "sub",
     ) -> Dict[str, Any]:
         """
         Fetch streaming sources from Miruro /watch/{provider}/{anilistId}/{category}/{slug} endpoint.
-        Returns ALL quality options for the frontend quality selector.
-        For the 'zoro' provider, constructs a megaplay.buzz embed URL directly.
+        Returns all quality options for the frontend quality selector.
+
+        Routing rules:
+          - kiwi / AnimeX -> kiwi worker
+          - arc / jet / zoro / miruro -> cdn-eu only
+          - subtitles -> cdn-eu only
         """
         parsed = self._parse_episode_id(episode_id)
 
         if parsed:
-            provider = parsed["provider"]
+            # Use requested provider if it's not set or is default kiwi, otherwise use provider from ID
+            if not provider or provider == "kiwi":
+                provider = parsed["provider"]
+
             anilist_id = parsed["anilist_id"]
             category = parsed["category"]
             slug = parsed["slug"]
 
             # --- Zoro provider: direct megaplay.buzz embed ---
-            if provider == "zoro":
+            if _normalize_provider(provider) == "zoro":
                 ep_num_match = re.search(r"(\d+)$", slug)
                 ep_number = int(ep_num_match.group(1)) if ep_num_match else None
 
@@ -119,6 +209,8 @@ class MiruroSourcesService:
             endpoint = f"watch/{provider}/{anilist_id}/{category}/{slug}"
             resp = await self.client._get(endpoint)
         else:
+            if not provider:
+                provider = "kiwi"
             params = {
                 "episodeId": episode_id,
                 "provider": provider,
@@ -136,21 +228,23 @@ class MiruroSourcesService:
 
         raw_streams = resp.get("streams", []) or resp.get("sources", []) or []
 
-        # Handle subtitles — always use the default proxy (not kiwi proxy)
+        # Subtitles: always use cdn-eu, never kiwi worker
         subtitles = resp.get("subtitles", []) or []
         tracks = []
         for sub in subtitles:
             if isinstance(sub, dict):
                 track_file = sub.get("file") or sub.get("url") or ""
                 if track_file:
+                    proxied_track = _route_stream_proxy(
+                        track_file,
+                        provider,
+                        headers={"referer": sub.get("referer")} if sub.get("referer") else None,
+                        subtitles=True,
+                    )
                     tracks.append(
                         {
-                            "file": encode_proxy(track_file)
-                            if track_file.startswith("http")
-                            else track_file,
-                            "url": encode_proxy(track_file)
-                            if track_file.startswith("http")
-                            else track_file,
+                            "file": proxied_track,
+                            "url": proxied_track,
                             "label": sub.get("label", "Unknown"),
                             "kind": "subtitles",
                             "lang": sub.get("label", "Unknown"),
@@ -168,6 +262,7 @@ class MiruroSourcesService:
         for stream in raw_streams:
             if not isinstance(stream, dict):
                 continue
+
             url = stream.get("url") or ""
             if not url:
                 continue
@@ -176,32 +271,18 @@ class MiruroSourcesService:
             if "megaup.nl" in url:
                 url = url.replace("megaup.nl", "megaplay.buzz")
 
-            stream_type = stream.get("type", "").lower()
+            stream_type = (stream.get("type") or "").lower()
             quality = stream.get("quality") or "default"
             resolution = stream.get("resolution") or {}
 
-            # Extract referer from stream if available
             referer = stream.get("referer")
             headers = {"referer": referer} if referer else None
 
             if stream_type == "hls" or url.endswith(".m3u8"):
-                # ── Kiwi provider: proxy raw vault URL directly ──────────────
-                # cluster.lunaranime.ru rejects non-browser TLS fingerprints
-                # (Python requests gets 404). Bypass it and proxy the raw URL
-                # directly through our own Flask proxy with the referer header.
-                if provider == "kiwi":
-                    kiwi_referer = (headers or {}).get("referer", "https://kwik.cx/")
-                    proxied_url = (
-                        encode_kiwi_proxy(url, kiwi_referer)
-                        if not url.startswith(kiwi_proxy_url)
-                        else url
-                    )
-                else:
-                    proxied_url = (
-                        encode_proxy(url, headers)
-                        if not url.startswith(proxy_url)
-                        else url
-                    )
+                # Provider-aware routing:
+                # arc/jet/zoro/miruro -> cdn-eu only
+                # kiwi/animex -> kiwi worker
+                proxied_url = _route_stream_proxy(url, provider, headers=headers)
 
                 hls_sources.append(
                     {
@@ -215,9 +296,10 @@ class MiruroSourcesService:
                         "codec": stream.get("codec", ""),
                         "fansub": stream.get("fansub", ""),
                         "isActive": stream.get("isActive", False),
-                        "_provider": provider,  # debug tag
+                        "_provider": provider,
                     }
                 )
+
             elif stream_type == "embed":
                 embed_sources.append(
                     {

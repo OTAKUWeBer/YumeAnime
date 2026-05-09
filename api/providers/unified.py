@@ -8,7 +8,7 @@ from urllib.parse import parse_qs
 
 from .miruro import MiruroScraper
 from .anilist_home import AnilistHomeService
-# from .animex import AnimexScraper
+from .animex import AnimexScraper
 # from .kuudere import KuudereScraper
 
 
@@ -23,7 +23,7 @@ class UnifiedScraper:
     def __init__(self):
         self.miruro = MiruroScraper()
         self.anilist_home = AnilistHomeService()
-        # self.animex = AnimexScraper()
+        self.animex = AnimexScraper()
         # self.kuudere = KuudereScraper()
 
         logger.info("[UnifiedScraper] Initialized with AniList GraphQL + Miruro")
@@ -130,18 +130,40 @@ class UnifiedScraper:
         }
 
     async def episodes(self, anime_id: str, anime_slug: str = None) -> Dict[str, Any]:
-        """Get episodes list — Miruro for numeric IDs, optionally with anime_slug for anidap discovery"""
+        """Get episodes list — Miruro for numeric IDs, merged with AnimeX provider blocks."""
         print(f"[UnifiedScraper] episodes() called with: {anime_id}, slug: {anime_slug}")
+
+        result: Dict[str, Any] = {}
 
         if str(anime_id).isdigit():
             try:
-                result = await self.miruro.episodes(anime_id, anime_slug)
-                if result and result.get("episodes"):
-                    return result
-            except Exception:
-                pass
+                miruro_result = await self.miruro.episodes(anime_id, anime_slug)
+                if miruro_result and miruro_result.get("episodes"):
+                    result = miruro_result
+            except Exception as e:
+                logger.warning(f"[UnifiedScraper] episodes() Miruro failed: {e}")
 
-        # Fallback removed since search API is dead.
+            # Merge AnimeX provider blocks into providers_map
+            try:
+                anime_title = result.get("title") or ""
+                ax_blocks = await self.animex.build_provider_blocks(
+                    int(anime_id), anime_title
+                )
+                if ax_blocks:
+                    providers_map = result.setdefault("providers_map", {})
+                    for server_id, block in ax_blocks.items():
+                        provider_key = f"ax-{server_id}"
+                        providers_map[provider_key] = block
+                    logger.info(
+                        f"[UnifiedScraper] episodes() merged AnimeX servers for "
+                        f"anilist_id={anime_id}: {list(ax_blocks.keys())}"
+                    )
+            except Exception as e:
+                logger.warning(f"[UnifiedScraper] episodes() AnimeX merge failed: {e}")
+
+        if result:
+            return result
+
         return {"episodes": [], "totalEpisodes": 0}
 
     async def episode_servers(self, anime_episode_id: str) -> Dict[str, Any]:
@@ -364,7 +386,12 @@ class UnifiedScraper:
 
         if miruro_ep_id:
             try:
-                provider = server or "kiwi"
+                # Derive provider from the ep_id slug if not explicitly passed.
+                # Format: watch/{provider}/{anilist_id}/{category}/{slug}
+                import re as _re
+                _m = _re.match(r"watch/([^/]+)/\d+/", ep_id_str)
+                provider = server or (_m.group(1) if _m else "kiwi")
+
                 result = await self.miruro.get_sources(
                     episode_id=miruro_ep_id,
                     provider=provider,
@@ -372,10 +399,10 @@ class UnifiedScraper:
                     category=language,
                 )
                 if result and not result.get("error") and (result.get("video_link") or result.get("embed_sources")):
-                    logger.info(
-                        f"[UnifiedScraper] Video (Miruro): OK for {miruro_ep_id}"
-                    )
-                    result["source_provider"] = "miruro"
+                    logger.info(f"[UnifiedScraper] Video (Miruro, server={provider}): OK for {miruro_ep_id}")
+                    # All providers now route through the unified worker /p/ endpoint.
+                    # The worker handles referer/origin headers via Base64url payload.
+                    result["source_provider"] = provider
                     return result
                 else:
                     logger.warning(

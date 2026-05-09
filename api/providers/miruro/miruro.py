@@ -91,7 +91,7 @@ class MiruroScraper:
     async def get_sources(
         self,
         episode_id: str,
-        provider: str = "kiwi",
+        provider: Optional[str] = None,
         anilist_id: Optional[int] = None,
         category: str = "sub",
     ) -> Dict[str, Any]:
@@ -108,7 +108,7 @@ class MiruroScraper:
         # we attempt to use the ep_id as-is
         return await self.sources_service.get_sources(
             episode_id=str(ep_id),
-            provider=server or "kiwi",
+            provider=server,
             category=language,
         )
 
