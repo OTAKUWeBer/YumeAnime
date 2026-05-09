@@ -67,9 +67,35 @@ def details(manga_id):
         "type": info_data.get("type", ""), "views": manga_page.get("views", ""),
         "source": "atsumaru", "description": "", "authors": "Unknown",
         "status": "Unknown", "genres": [],
+        "anilistId": manga_page.get("anilistId"),
+        "malId": manga_page.get("malId"),
     }
+    # Extract banner and poster
+    banner_url = ""
     if manga_page.get("banner") and manga_page["banner"].get("url"):
-        result["cover"] = _poster_url(manga_page['banner']['url'])
+        banner_url = _poster_url(manga_page['banner']['url'])
+    
+    poster_url = ""
+    # Check manga_page first as it has structured poster info
+    poster_data = manga_page.get("poster")
+    if poster_data and isinstance(poster_data, dict):
+        poster_path = poster_data.get("largeImage") or poster_data.get("image")
+        if poster_path:
+            poster_url = _poster_url(poster_path)
+    
+    # Fallback to info_data if still empty
+    if not poster_url:
+        poster_path = info_data.get("poster") or info_data.get("image")
+        if poster_path:
+            poster_url = _poster_url(poster_path)
+    
+    result["banner"] = banner_url
+    result["poster"] = poster_url
+    
+    # Fallback for cover (used in existing templates)
+    result["cover"] = poster_url or banner_url
+
+    
     chapters = []
     for chap in info_data.get("chapters", []):
         chapters.append({
@@ -78,6 +104,7 @@ def details(manga_id):
         })
     result["chapters"] = chapters
     return result
+
 
 def chapter_images(manga_id, chapter_id):
     data = _fetch_json(f"{BASE_URL}/api/read/chapter?mangaId={manga_id}&chapterId={chapter_id}")

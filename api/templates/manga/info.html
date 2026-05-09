@@ -14,8 +14,13 @@
     <!-- Skeleton Overlay -->
     <div class="skeleton-container" style="padding-top: var(--space-lg); background: var(--bg-primary);">
         <div class="skeleton skeleton-text" style="width: 200px; margin-bottom: var(--space-lg);"></div>
-        <div class="manga-detail-hero" style="margin-bottom: var(--space-xl);">
-            <div class="skeleton" style="width: 220px; height: 330px; border-radius: var(--radius-lg); flex-shrink: 0;"></div>
+        
+        <!-- Banner Skeleton -->
+        <div class="skeleton" style="width: 100%; height: 180px; border-radius: var(--radius-xl); margin-bottom: var(--space-lg);"></div>
+        
+        <div class="manga-detail-hero" style="margin-top: -80px; background: rgba(20, 20, 20, 0.5); backdrop-filter: blur(10px); margin-bottom: var(--space-xl);">
+            <div class="skeleton" style="width: 180px; height: 270px; border-radius: var(--radius-lg); flex-shrink: 0;"></div>
+
             <div style="flex: 1;">
                 <div class="skeleton skeleton-title" style="width: 70%; height: 40px; margin-bottom: var(--space-lg);"></div>
                 <div style="display: flex; gap: 12px; margin-bottom: var(--space-lg);">
@@ -28,7 +33,10 @@
                     <div class="skeleton" style="width: 60px; height: 28px; border-radius: 20px;"></div>
                 </div>
                 <div class="skeleton skeleton-text" style="width: 100%; height: 80px; border-radius: var(--radius-md);"></div>
-                <div class="skeleton" style="width: 160px; height: 48px; border-radius: var(--radius-md); margin-top: var(--space-lg);"></div>
+                <div style="display: flex; gap: 12px; margin-top: var(--space-lg);">
+                    <div class="skeleton" style="width: 160px; height: 48px; border-radius: var(--radius-md);"></div>
+                    <div class="skeleton" style="width: 140px; height: 48px; border-radius: var(--radius-md);"></div>
+                </div>
             </div>
         </div>
         <div class="skeleton skeleton-title" style="width: 150px; height: 32px; margin-bottom: var(--space-lg);"></div>
@@ -38,6 +46,7 @@
             {% endfor %}
         </div>
     </div>
+
 
     <!-- Breadcrumb -->
     <div style="margin-bottom: var(--space-lg); display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
@@ -54,10 +63,21 @@
         <span style="color: var(--text-primary); font-weight: 500;">{{ manga.title }}</span>
     </div>
 
+    <!-- Banner Section -->
+    {% if manga.banner %}
+    <div class="manga-banner-container">
+        <img class="w-full rounded-lg max-h-230 object-cover" 
+             src="{{ manga.banner|manga_cover(manga_referer) }}" 
+             alt="{{ manga.title }} Banner">
+        <div class="banner-overlay"></div>
+    </div>
+    {% endif %}
+
     <!-- Hero Section -->
-    <div class="manga-detail-hero">
-        <div class="manga-detail-cover">
-            <img src="{{ manga.cover|manga_cover(manga_referer) }}"
+    <div class="manga-detail-hero {% if manga.banner %}has-banner{% endif %}">
+        <div class="manga-detail-cover rounded-inherit">
+            <img class="poster size-full block object-cover rounded-inherit"
+                 src="{{ (manga.poster or manga.cover)|manga_cover(manga_referer) }}"
                  alt="{{ manga.title }}"
                  onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIwIiBoZWlnaHQ9IjMzMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjIwIiBoZWlnaHQ9IjMzMCIgZmlsbD0iIzFhMWEyZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE2Ij5ObyBDb3ZlcjwvdGV4dD48L3N2Zz4='">
         </div>
@@ -109,6 +129,23 @@
                 </span>
             </div>
 
+            <div class="external-links" style="margin-bottom: 16px;">
+                {% if manga.anilistId %}
+                <a href="https://anilist.co/manga/{{ manga.anilistId }}" target="_blank" class="external-pill anilist" title="View on AniList">
+                    <img src="https://anilist.co/img/icons/icon.svg" alt="AniList">
+                </a>
+                {% endif %}
+
+                {% if manga.malId %}
+                <a href="https://myanimelist.net/manga/{{ manga.malId }}" target="_blank" class="external-pill mal" title="View on MyAnimeList">
+                    <img src="https://myanimelist.net/favicon.ico" alt="MAL">
+
+                </a>
+                {% endif %}
+            </div>
+
+
+
             {% if manga.genres %}
             <div class="manga-detail-genres">
                 {% for genre in manga.genres %}
@@ -124,18 +161,28 @@
             {% endif %}
 
             {% if manga.chapters %}
-            <div style="margin-top: var(--space-lg);">
-                <a href="#chapters" class="btn btn-primary btn-lg" style="display: inline-flex; align-items: center; gap: 8px;">
+            <div style="margin-top: var(--space-lg); display: flex; gap: 12px; flex-wrap: wrap;">
+                <a href="/manga/{{ source }}/{{ manga.slug or manga.id }}/read/{{ manga.chapters[0].id if manga.chapters else '' }}" class="btn btn-primary btn-lg" style="display: inline-flex; align-items: center; gap: 8px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                     Start Reading
                 </a>
+                
+                <button class="btn btn-secondary btn-lg" style="display: inline-flex; align-items: center; gap: 8px;" onclick="window.location.hash = 'chapters'">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/>
+                        <line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                    </svg>
+                    Chapters
+                </button>
             </div>
             {% endif %}
         </div>
     </div>
+
 
     <!-- Chapters Section -->
     {% if manga.chapters %}
