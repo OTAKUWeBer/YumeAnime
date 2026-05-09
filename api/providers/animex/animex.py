@@ -4,13 +4,14 @@ GraphQL maps AniList ID -> AnimeX slug; REST gives episodes/servers/sources.
 """
 
 import asyncio
+import time
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 
-from ..video_utils import encode_proxy
+from ..video_utils import encode_payload
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,18 @@ UPSTREAM_HEADERS = {
 class AnimexScraper:
     """Async scraper for the AnimeX API (animex.one)."""
 
+    # How long to cache a failed (None) slug lookup before retrying
+    _NEG_CACHE_TTL = 300  # 5 minutes
+
     def __init__(self, timeout: int = 20):
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         # Cache anilist_id -> animex slug to avoid repeated graphql calls
-        self._slug_cache: Dict[int, Optional[str]] = {}
+        # Values: str (slug) | (None, expire_ts) for negative cache
+        self._slug_cache: Dict[int, Any] = {}
         # Cache anilist_id -> episodes list
         self._episodes_cache: Dict[int, List[Dict[str, Any]]] = {}
+        # Limit concurrent upstream requests to avoid rate-limiting
+        self._semaphore = asyncio.Semaphore(3)
 
     # ──────────────────────────────────────────────────────────
     #  Internal helpers
@@ -45,34 +52,62 @@ class AnimexScraper:
     async def _post_json(
         self, session: aiohttp.ClientSession, url: str, payload: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        try:
-            async with session.post(
-                url,
-                json=payload,
-                headers={**UPSTREAM_HEADERS, "Content-Type": "application/json"},
-            ) as r:
-                if r.status != 200:
-                    logger.warning(f"[AnimeX] POST {url} -> {r.status}")
-                    return None
-                return await r.json(content_type=None)
-        except Exception as e:
-            logger.warning(f"[AnimeX] POST {url} failed: {e}")
-            return None
-        
+        for attempt in range(2):
+            try:
+                async with self._semaphore:
+                    async with session.post(
+                        url,
+                        json=payload,
+                        headers={**UPSTREAM_HEADERS, "Content-Type": "application/json"},
+                    ) as r:
+                        if r.status == 429:
+                            logger.warning(f"[AnimeX] POST {url} -> 429 (rate-limited), attempt {attempt+1}")
+                            if attempt == 0:
+                                await asyncio.sleep(1.5)
+                                continue
+                            return None
+                        if r.status != 200:
+                            logger.warning(f"[AnimeX] POST {url} -> {r.status}")
+                            return None
+                        return await r.json(content_type=None)
+            except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+                logger.warning(f"[AnimeX] POST {url} failed (attempt {attempt+1}): {e}")
+                if attempt == 0:
+                    await asyncio.sleep(1)
+                    continue
+            except Exception as e:
+                logger.warning(f"[AnimeX] POST {url} unexpected error: {e}")
+                return None
+        return None
+
     async def _get_json(
         self,
         session: aiohttp.ClientSession,
         url: str,
         params: Optional[Dict[str, Any]] = None,
     ) -> Optional[Any]:
-        try:
-            async with session.get(url, params=params, headers=UPSTREAM_HEADERS) as r:
-                if r.status != 200:
-                    logger.warning(f"[AnimeX] GET {url} -> {r.status}")
-                    return None
-                return await r.json(content_type=None)
-        except Exception as e:
-            logger.warning(f"[AnimeX] GET {url} failed: {e}")
+        for attempt in range(2):
+            try:
+                async with self._semaphore:
+                    async with session.get(url, params=params, headers=UPSTREAM_HEADERS) as r:
+                        if r.status == 429:
+                            logger.warning(f"[AnimeX] GET {url} -> 429 (rate-limited), attempt {attempt+1}")
+                            if attempt == 0:
+                                await asyncio.sleep(1.5)
+                                continue
+                            return None
+                        if r.status != 200:
+                            logger.warning(f"[AnimeX] GET {url} -> {r.status}")
+                            return None
+                        return await r.json(content_type=None)
+            except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+                logger.warning(f"[AnimeX] GET {url} failed (attempt {attempt+1}): {e}")
+                if attempt == 0:
+                    await asyncio.sleep(1)
+                    continue
+            except Exception as e:
+                logger.warning(f"[AnimeX] GET {url} unexpected error: {e}")
+                return None
         return None
 
     # ──────────────────────────────────────────────────────────
@@ -85,8 +120,16 @@ class AnimexScraper:
         except (TypeError, ValueError):
             return None
 
-        if anilist_id in self._slug_cache:
-            return self._slug_cache[anilist_id]
+        cached = self._slug_cache.get(anilist_id)
+        if cached is not None:
+            # Positive cache hit (string slug)
+            if isinstance(cached, str):
+                return cached
+            # Negative cache hit — tuple (None, expire_ts)
+            if isinstance(cached, tuple) and len(cached) == 2:
+                if time.time() < cached[1]:
+                    return None  # still within TTL, skip re-fetch
+                # Expired — fall through to re-fetch
 
         async with aiohttp.ClientSession(timeout=self._timeout) as session:
             data = await self._post_json(
@@ -103,9 +146,12 @@ class AnimexScraper:
             anime = ((data.get("data") or {}).get("anime")) or {}
             slug = anime.get("id")
 
-        self._slug_cache[anilist_id] = slug
-        if not slug:
-            logger.info(f"[AnimeX] No slug found for anilist_id={anilist_id}")
+        if slug:
+            self._slug_cache[anilist_id] = slug
+        else:
+            # Negative cache with TTL so transient errors self-heal
+            self._slug_cache[anilist_id] = (None, time.time() + self._NEG_CACHE_TTL)
+            logger.info(f"[AnimeX] No slug found for anilist_id={anilist_id} (cached for {self._NEG_CACHE_TTL}s)")
         return slug
 
     # ──────────────────────────────────────────────────────────
@@ -394,7 +440,8 @@ class AnimexScraper:
             if not url:
                 continue
             quality = stream.get("quality") or "default"
-            proxied = encode_proxy(url, proxy_headers)
+            referer = ref or ""
+            proxied = encode_payload(url, referer)
             hls_sources.append(
                 {
                     "url": proxied,

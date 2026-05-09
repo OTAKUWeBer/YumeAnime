@@ -1,13 +1,11 @@
 (function patchProxyHeadRequests() {
-    const PROXY_MARKER = '/proxy/';
-
     const _fetch = window.fetch.bind(window);
     window.fetch = function (input, init = {}) {
         const url = typeof input === 'string' ? input : input?.url;
         if (
             init.method?.toUpperCase() === 'HEAD' &&
             typeof url === 'string' &&
-            url.includes(PROXY_MARKER)
+            (url.includes('/proxy/') || url.includes('/p/'))
         ) {
             return Promise.resolve(
                 new Response(null, {
@@ -27,7 +25,7 @@
         if (
             method?.toUpperCase() === 'HEAD' &&
             typeof url === 'string' &&
-            url.includes(PROXY_MARKER)
+            (url.includes('/proxy/') || url.includes('/p/'))
         ) {
             method = 'GET';
         }
