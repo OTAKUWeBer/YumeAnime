@@ -56,3 +56,9 @@ def home():
             error=f"Error fetching home page data: {e}",
             info=info
         )
+
+
+@home_routes_bp.route("/history", methods=["GET"])
+def history():
+    """Watch history page — reads from localStorage client-side"""
+    return render_template("shared/history.html", info="Watch History")

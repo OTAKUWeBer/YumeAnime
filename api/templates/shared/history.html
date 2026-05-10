@@ -1,0 +1,56 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Watch History - YumeZone{% endblock %}
+{% block meta_description %}View your watch history and continue watching your favorite anime on YumeZone.{% endblock %}
+{% block og_title %}Watch History - YumeZone{% endblock %}
+{% block og_description %}Continue watching your favorite anime where you left off.{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl); min-height: 80vh;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+        <div>
+            <div class="section-subtitle">Your Progress</div>
+            <h1 class="section-title" style="margin-bottom: 0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                    <polyline points="12 7 12 12 16.5 14.5"/>
+                </svg>
+                Watch History
+            </h1>
+        </div>
+        <button class="cw-clear-btn" id="history-clear-all" title="Clear all history">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear All
+        </button>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="content-tabs" style="margin-bottom: 24px;">
+        <button class="tab-btn active" data-filter="all">All</button>
+        <button class="tab-btn" data-filter="progress">In Progress</button>
+        <button class="tab-btn" data-filter="completed">Completed</button>
+    </div>
+
+    <!-- History Grid -->
+    <div class="anime-grid" id="history-grid">
+        <!-- Filled by history.js -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="history-empty" style="display: none; text-align: center; padding: 60px 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom: 16px;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <h3 style="margin-bottom: 8px; color: var(--text-primary); font-size: 1.25rem;">No History Found</h3>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">You haven't watched any anime yet, or your history has been cleared.</p>
+        <a href="/" class="btn btn-primary">Discover Anime</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+{% endblock %}

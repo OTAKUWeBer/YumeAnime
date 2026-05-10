@@ -49,9 +49,16 @@ function buildCustomPlayer(playerArea, video) {
 <div id="yz-buffering" class="yz-buffering" style="display:none"><div class="yz-spinner"></div></div>
 <button id="yz-skip-btn" class="yz-skip-btn" style="display:none">Skip Intro</button>
 <div id="yz-overlay" class="yz-overlay"></div>
+<div id="yz-dt-left" class="yz-dt-zone yz-dt-left">
+  <div class="yz-dt-indicator"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg><span>10s</span></div>
+</div>
+<div id="yz-dt-right" class="yz-dt-zone yz-dt-right">
+  <div class="yz-dt-indicator"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg><span>10s</span></div>
+</div>
 <div id="yz-pause-flash" class="yz-pause-flash">
   <svg width="56" height="56" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
 </div>
+<div id="yz-resume-toast" class="yz-resume-toast" style="display:none"></div>
 <div id="yz-controls" class="yz-controls yz-hidden">
   <div class="yz-progress-wrap" id="yz-progress-wrap">
     <div class="yz-buf-bar" id="yz-buf-bar"></div>
@@ -183,7 +190,7 @@ function attachPlayerControls(shell, vid) {
         let buf=0; for(let i=0;i<vid.buffered.length;i++) if(vid.buffered.start(i)<=vid.currentTime) buf=vid.buffered.end(i);
         bufBar.style.width = ((buf/vid.duration)*100)+'%';
     });
-    vid.addEventListener('canplay', ()=>{ try{const s=parseInt(localStorage.getItem(resumeKey)); if(s>5&&vid.duration&&s<vid.duration-10) vid.currentTime=s;}catch{} }, {once:true});
+    vid.addEventListener('canplay', ()=>{ try{const s=parseInt(localStorage.getItem(resumeKey)); if(s>5&&vid.duration&&s<vid.duration-10){ vid.currentTime=s; var rt=g('yz-resume-toast'); if(rt){rt.textContent='Resuming from '+fmt(s);rt.style.display='flex';setTimeout(function(){rt.style.display='none';},3000);} }}catch{} }, {once:true});
     vid.addEventListener('ended',   ()=>{ try{localStorage.removeItem(resumeKey);}catch{} });
     vid.addEventListener('pause',   ()=>{ if(vid.currentTime>3&&vid.duration&&(vid.duration-vid.currentTime)>5) try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} });
 
@@ -207,9 +214,36 @@ function attachPlayerControls(shell, vid) {
     }
     shell.addEventListener('mousemove', showCtrls);
     shell.addEventListener('mouseenter', showCtrls);
+
+    // ── Mobile double-tap seek & tap-to-toggle ──
+    var _isMobile = navigator.maxTouchPoints > 0;
+    var _dtLeftZone = g('yz-dt-left'), _dtRightZone = g('yz-dt-right');
+    if (_isMobile && _dtLeftZone && _dtRightZone) {
+        function setupDoubleTap(zone, seekDelta) {
+            var lastTap = 0, tapTimeout = null;
+            zone.addEventListener('touchend', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                var now = Date.now();
+                if (now - lastTap < 300) {
+                    clearTimeout(tapTimeout);
+                    vid.currentTime = Math.max(0, Math.min(vid.duration || 0, vid.currentTime + seekDelta));
+                    var ind = zone.querySelector('.yz-dt-indicator');
+                    if (ind) { ind.classList.remove('yz-dt-active','yz-dt-fade'); void ind.offsetWidth; ind.classList.add('yz-dt-active'); setTimeout(function(){ ind.classList.remove('yz-dt-active'); ind.classList.add('yz-dt-fade'); }, 300); setTimeout(function(){ ind.classList.remove('yz-dt-fade'); }, 800); }
+                    showCtrls();
+                } else {
+                    tapTimeout = setTimeout(function() {
+                        controls?.classList.contains('yz-hidden') ? showCtrls() : controls?.classList.add('yz-hidden');
+                    }, 300);
+                }
+                lastTap = now;
+            }, { passive: false });
+        }
+        setupDoubleTap(_dtLeftZone, -10);
+        setupDoubleTap(_dtRightZone, 10);
+    }
+
     overlay?.addEventListener('click', ()=>{
-        const mobile = window.innerWidth<=1024||navigator.maxTouchPoints>0;
-        if (mobile) { controls?.classList.contains('yz-hidden') ? showCtrls() : controls?.classList.add('yz-hidden'); }
+        if (_isMobile) { controls?.classList.contains('yz-hidden') ? showCtrls() : controls?.classList.add('yz-hidden'); }
         else { vid.paused ? vid.play() : vid.pause(); }
     });
 
@@ -244,7 +278,7 @@ function attachPlayerControls(shell, vid) {
         });
     };
 
-    // Fullscreen
+    // Fullscreen + mobile landscape rotation
     fsBtn?.addEventListener('click', ()=>{
         if (!document.fullscreenElement) shell.requestFullscreen?.()?.catch(()=>{});
         else document.exitFullscreen?.();
@@ -253,6 +287,11 @@ function attachPlayerControls(shell, vid) {
         const fs=!!document.fullscreenElement;
         fsBtn?.querySelector('.icon-fs')?.style.setProperty('display',fs?'none':'');
         fsBtn?.querySelector('.icon-exit-fs')?.style.setProperty('display',fs?'':'none');
+        // Lock landscape on mobile fullscreen
+        if (_isMobile && screen.orientation && screen.orientation.lock) {
+            if (fs) { try { screen.orientation.lock('landscape').catch(function(){}); } catch(e){} }
+            else    { try { screen.orientation.unlock(); } catch(e){} }
+        }
     });
 
     // Keyboard shortcuts
@@ -536,6 +575,7 @@ function saveWatchHistory(ct, dur) {
         localStorage.setItem(key, JSON.stringify({
             animeId: cfg.animeId, epNum: cfg.episodeNumber,
             animeName: cfg.animeName || '', poster: cfg.poster || '',
+            episodeTitle: cfg.episodeTitle || '',
             timestamp: ct, duration: dur, completed: dur > 0 && (ct/dur) >= 0.9,
             watchedAt: Date.now()
         }));

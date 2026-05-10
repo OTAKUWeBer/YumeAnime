@@ -2508,3 +2508,105 @@ media-player [data-media-buffering] media-buffering-indicator circle {
 /* Fullscreen adjustments */
 .yz-player:-webkit-full-screen { width: 100vw; height: 100vh; }
 .yz-player:fullscreen          { width: 100vw; height: 100vh; }
+
+/* ── Mobile Double-Tap Seek Zones ─────────────────────────── */
+.yz-dt-zone {
+    position: absolute;
+    top: 0; bottom: 60px;
+    width: 40%; z-index: 6;
+    display: none; /* hidden on desktop */
+    align-items: center; justify-content: center;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+}
+.yz-dt-left  { left: 0; }
+.yz-dt-right { right: 0; }
+
+@media (hover: none) and (pointer: coarse) {
+    .yz-dt-zone { display: flex; }
+}
+
+.yz-dt-indicator {
+    background: rgba(0,0,0,.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    border-radius: 50%;
+    width: 72px; height: 72px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px;
+    opacity: 0;
+    transform: scale(.7);
+    pointer-events: none;
+    transition: none;
+}
+.yz-dt-indicator span {
+    font-size: .75rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.yz-dt-indicator.yz-dt-active {
+    opacity: 1;
+    transform: scale(1.15);
+    transition: opacity .15s, transform .2s cubic-bezier(.175,.885,.32,1.275);
+}
+.yz-dt-indicator.yz-dt-fade {
+    opacity: 0;
+    transform: scale(1);
+    transition: opacity .4s ease .15s, transform .4s ease .15s;
+}
+
+/* Ripple effect on double-tap zones */
+.yz-dt-zone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,.08) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s;
+}
+.yz-dt-zone:active::after { opacity: 1; }
+
+/* ── Resume Toast ─────────────────────────────────────────── */
+.yz-resume-toast {
+    position: absolute;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 35;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.12);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    animation: yz-toast-in .35s cubic-bezier(.16,1,.3,1);
+    pointer-events: none;
+}
+@keyframes yz-toast-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Mobile Control Bar Tweaks ────────────────────────────── */
+@media (max-width: 768px) {
+    .yz-controls { padding: 24px 8px 8px; }
+    .yz-vol { display: none; }
+    .yz-time { font-size: .7rem; }
+    .yz-btn { padding: 5px; }
+    .yz-btn svg { width: 18px; height: 18px; }
+    .yz-settings { bottom: 48px; right: 8px; min-width: 160px; }
+    .yz-progress-wrap { height: 24px; margin-bottom: 4px; }
+    .yz-progress-wrap::before { height: 4px; }
+    .yz-buf-bar, .yz-play-bar { height: 4px; }
+    .yz-skip-btn { bottom: 60px; right: 10px; font-size: .78rem; padding: 6px 14px; }
+}
