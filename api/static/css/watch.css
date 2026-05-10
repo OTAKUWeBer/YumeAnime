@@ -2513,7 +2513,7 @@ media-player [data-media-buffering] media-buffering-indicator circle {
 .yz-dt-zone {
     position: absolute;
     top: 0; bottom: 60px;
-    width: 40%; z-index: 6;
+    width: 30%; z-index: 6;
     display: none; /* hidden on desktop */
     align-items: center; justify-content: center;
     pointer-events: auto;

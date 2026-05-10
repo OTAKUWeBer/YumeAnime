@@ -243,8 +243,8 @@ function attachPlayerControls(shell, vid) {
     if (_isMobile && _dtLeftZone && _dtRightZone) {
         function setupDoubleTap(zone, seekDelta) {
             var lastTap = 0, tapTimeout = null;
-            zone.addEventListener('touchend', function(e) {
-                e.preventDefault(); e.stopPropagation();
+            zone.addEventListener('click', function(e) {
+                e.stopPropagation();
                 var now = Date.now();
                 if (now - lastTap < 300) {
                     clearTimeout(tapTimeout);
@@ -258,15 +258,15 @@ function attachPlayerControls(shell, vid) {
                     }, 300);
                 }
                 lastTap = now;
-            }, { passive: false });
+            });
         }
         setupDoubleTap(_dtLeftZone, -10);
         setupDoubleTap(_dtRightZone, 10);
     }
 
     overlay?.addEventListener('click', ()=>{
-        if (_isMobile) { controls?.classList.contains('yz-hidden') ? showCtrls() : controls?.classList.add('yz-hidden'); }
-        else { vid.paused ? vid.play() : vid.pause(); }
+        vid.paused ? vid.play() : vid.pause();
+        if (_isMobile) showCtrls();
     });
 
     // Settings
