@@ -421,7 +421,7 @@ function onHlsFatal() {
 }
 
 // ── Provider fallback system ──────────────────────────────────────
-var _PROVIDER_PRIORITY = ['arc','jet','kiwi','zoro','bee','wco'];
+var _PROVIDER_PRIORITY = ['kiwi','ax-mimi','ax-wave','ax-shiro','ax-yuki','ax-zen','bee','zoro'];
 
 function resetFailedProviders() { _failedProviders.clear(); _isFallbackInProgress = false; }
 

@@ -197,6 +197,14 @@
                         {% set default_p = selected_server or episodes.default_provider %}
                         <div class="server-sections" id="serverSections">
                             <!-- INTERNAL (HLS) -->
+                            {% set hls_providers = [] %}
+                            {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map) %}
+                                {% set caps = provider_capabilities_map.get(p_name, {"hls": true, "embed": false}) %}
+                                {% if caps.get("hls", true) %}
+                                    {% set _ = hls_providers.append(p_name) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if hls_providers %}
                             <div class="server-section">
                                 <div class="server-section-label">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -206,8 +214,7 @@
                                     INTERNAL
                                 </div>
                                 <div class="server-section-pills" id="hlsServerPills">
-                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
-                                    %}
+                                    {% for p_name in hls_providers %}
                                     <button
                                         class="server-pill {% if p_name == default_p and source_type == 'hls' %}active{% endif %}"
                                         data-stream-type="hls" data-provider="{{ p_name }}">
@@ -217,7 +224,16 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            {% endif %}
                             <!-- EXTERNAL (Embed) -->
+                            {% set embed_providers = [] %}
+                            {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map) %}
+                                {% set caps = provider_capabilities_map.get(p_name, {"hls": true, "embed": false}) %}
+                                {% if caps.get("embed", false) %}
+                                    {% set _ = embed_providers.append(p_name) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if embed_providers %}
                             <div class="server-section">
                                 <div class="server-section-label">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -229,8 +245,7 @@
                                     EXTERNAL
                                 </div>
                                 <div class="server-section-pills" id="embedServerPills">
-                                    {% for p_name in (sorted_providers if sorted_providers else episodes.providers_map)
-                                    %}
+                                    {% for p_name in embed_providers %}
                                     <button
                                         class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %}"
                                         data-stream-type="embed" data-provider="{{ p_name }}">
@@ -240,6 +255,7 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            {% endif %}
                         </div>
                         {% endif %}
 

@@ -497,6 +497,7 @@ def watch(anime_id, ep_number):
             server_progress={},
             is_logged_in="username" in session and "_id" in session,
             provider_capabilities={},
+            provider_capabilities_map={},
             sorted_providers=[],
             mal_id=anime.get("malId") or anime.get("malID") if isinstance(anime, dict) else None,
             episodes_unavailable=True,
@@ -573,6 +574,7 @@ def watch(anime_id, ep_number):
     )
 
     from api.providers.miruro.episodes import PROVIDER_PRIORITY as _PP
+    from api.providers.miruro.episodes import PROVIDER_CAPABILITIES as _PC
 
     # Save last used server
     if selected_server:
@@ -746,9 +748,10 @@ def watch(anime_id, ep_number):
             server_progress=server_progress_dict,
             is_logged_in=is_logged_in,
             provider_capabilities=provider_capabilities,
+            provider_capabilities_map=_PC,
             sorted_providers=sorted(
-                (providers_map or {}).keys(),
-                key=lambda p: _PP.index(p) if p in _PP else len(_PP),
+                [p for p in (providers_map or {}).keys() if p in _PP],
+                key=lambda p: _PP.index(p),
             ),
             mal_id=mal_id,
         )

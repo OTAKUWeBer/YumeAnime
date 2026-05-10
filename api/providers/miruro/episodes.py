@@ -11,10 +11,24 @@ from .base import MiruroBaseClient
 
 logger = logging.getLogger(__name__)
 
-# Provider preference order (best quality/reliability first)
+# Provider preference order — ONLY working servers (others are filtered out of the watch page)
 PROVIDER_PRIORITY = [
-    "arc", "jet", "kiwi", "ally", "zoro", "bee", "wco",
+    "kiwi", "ax-mimi", "ax-wave", "ax-shiro", "ax-yuki", "ax-zen", "bee", "zoro",
 ]
+
+# Which stream types each provider supports.
+# Used by the template to place providers in the correct section (INTERNAL vs EXTERNAL).
+# Only providers listed in PROVIDER_PRIORITY will appear on the watch page.
+PROVIDER_CAPABILITIES = {
+    "kiwi":      {"hls": True,  "embed": True},
+    "ax-mimi":   {"hls": True,  "embed": False},
+    "ax-wave":   {"hls": True,  "embed": False},
+    "ax-shiro":  {"hls": True,  "embed": False},
+    "ax-yuki":   {"hls": True,  "embed": False},
+    "ax-zen":    {"hls": True,  "embed": False},
+    "bee":       {"hls": True,  "embed": False},
+    "zoro":      {"hls": False, "embed": True},   # Megaplay embed only
+}
 
 
 class MiruroEpisodesService:
