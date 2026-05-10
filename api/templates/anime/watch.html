@@ -7,12 +7,9 @@
 {% block og_image %}{% if anime %}{{ anime.banner or anime.poster or anime.image }}{% endif %}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/theme.min.css" />
-<link rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/layouts/video.min.css" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/cdn/with-layouts/vidstack.js" type="module"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -115,63 +112,15 @@
             </div>
             {% else %}
             <!-- Normal Video Player -->
-            <div class="video-wrapper paused" id="video-wrapper" style="position: relative;">
-                <!-- Mark as Watched Button (Shows at 80%) -->
-                <button id="markWatchedBtn" class="btn btn-primary"
-                    style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-weight: bold; border-radius: var(--radius-md); padding: 8px 16px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-                        style="margin-right: 6px; vertical-align: text-bottom;">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    Mark as Watched
-                </button>
-
-                {% if source_type == 'embed' and embed_sources %}
-                <!-- Embed iframe player (default) -->
-                <iframe id="embedPlayer" class="embed-player-frame" src="{{ embed_sources[0].url }}" allowfullscreen
-                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin"
-                    style="display: block; border: none;"
-                    sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"></iframe>
-                <!-- Fullscreen toggle (sandbox blocks embed's native fullscreen, so we fullscreen the wrapper) -->
-                <button id="embedFullscreenBtn" class="embed-fullscreen-btn" title="Toggle Fullscreen (F)">
-                    <svg class="embed-fs-enter" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <polyline points="9 21 3 21 3 15"></polyline>
-                        <line x1="21" y1="3" x2="14" y2="10"></line>
-                        <line x1="3" y1="21" x2="10" y2="14"></line>
-                    </svg>
-                    <svg class="embed-fs-exit" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        style="display:none;">
-                        <polyline points="4 14 10 14 10 20"></polyline>
-                        <polyline points="20 10 14 10 14 4"></polyline>
-                        <line x1="14" y1="10" x2="21" y2="3"></line>
-                        <line x1="3" y1="21" x2="10" y2="14"></line>
-                    </svg>
-                </button>
-                {% endif %}
-
-                {% if video_link %}
-                <!-- Vidstack Player -->
-                <div id="videoContainer"
-                    style="{% if source_type == 'embed' %}display:none;{% endif %}width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000;">
-                    <media-player id="vidstackPlayer" src="{{ video_link }}" type="application/x-mpegurl" crossorigin
-                        playsinline title="{{ episode_title or anime_title or 'Episode' }} · Episode {{ Episode }}"
-                        data-video-url="{{ video_link }}" style="width: 100%; height: 100%;">
-                        <media-provider></media-provider>
-                        <media-video-layout color-scheme="dark" no-seek-button>
-                        </media-video-layout>
-                    </media-player>
-                </div>
-                {% endif %}
-
-                <!-- Fallback container -->
-                <div id="errorFallbackContainer"
-                    style="aspect-ratio:16/9; align-items:center; justify-content:center; background:var(--bg-surface); {% if video_link or (source_type == 'embed' and embed_sources) or source_type == 'hls' %}display:none;{% else %}display:flex;{% endif %}">
+            <!-- Video Player -->
+            <div class="video-wrapper" id="video-wrapper" style="position:relative;">
+                <!-- Custom HLS.js player injected by watch.js -->
+                <div id="player-area" style="width:100%;aspect-ratio:16/9;background:#000;position:relative;overflow:hidden;"></div>
+                <!-- Error fallback -->
+                <div id="errorFallbackContainer" style="aspect-ratio:16/9;display:none;align-items:center;justify-content:center;background:var(--bg-surface);">
                     <div class="text-center">
-                        <div class="no-results-icon">🎬</div>
-                        <p class="text-muted">Video not available</p>
+                        <div class="no-results-icon">🔌</div>
+                        <p class="text-muted">No playable sources found for this episode.</p>
                     </div>
                 </div>
             </div>
@@ -749,124 +698,14 @@
         intro: {{ intro | tojson | safe if intro else 'null' }},
         outro: {{ outro | tojson | safe if outro else 'null' }},
         videoLink: '{{ video_link or "" }}',
+        sourceType: '{{ source_type or "hls" }}',
         animeName: {{ (anime.name or anime.title or anime_title or '') | tojson | safe }},
         poster: {{ (anime.get('coverImage') or anime.get('poster') or anime.get('image') or '') | tojson | safe }},
         episodeTitle: {{ (episode_title or '') | tojson | safe }}
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const player = document.querySelector('#vidstackPlayer');
-        if (!player) return;
-        // Unified worker handles proxying and headers natively.
-        // No client-side xhrSetup wrapping is needed anymore.
 
-        // ── Add intro/outro as chapters on the timeline ──
-        function addChaptersTrack() {
-            const cfg = window.WATCH_CONFIG;
-            if (!cfg) return;
-            const intro = cfg.intro;
-            const outro = cfg.outro;
-            if (!intro && !outro) return;
-
-            // Wait for duration to be available
-            const duration = player.duration;
-            if (!duration || duration <= 0) {
-                player.addEventListener('duration-change', () => addChaptersTrack(), { once: true });
-                return;
-            }
-
-            // Remove any existing chapters track we added
-            const existing = player.textTracks.toArray().filter(t => t.kind === 'chapters' && t.label === 'Sections');
-            existing.forEach(t => player.textTracks.remove(t));
-
-            // Build VTT cues for chapter segments
-            function fmtVTT(sec) {
-                const h = Math.floor(sec / 3600);
-                const m = Math.floor((sec % 3600) / 60);
-                const s = Math.floor(sec % 60);
-                const ms = Math.floor((sec % 1) * 1000);
-                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
-            }
-
-            // Build chapter segments that cover the full duration
-            const segments = [];
-            let cursor = 0;
-
-            if (intro && intro.start != null && intro.end != null) {
-                if (intro.start > cursor) {
-                    segments.push({ start: cursor, end: intro.start, text: 'Episode' });
-                }
-                segments.push({ start: intro.start, end: intro.end, text: 'Intro' });
-                cursor = intro.end;
-            }
-
-            if (outro && outro.start != null) {
-                const outroEnd = outro.end || duration;
-                if (outro.start > cursor) {
-                    segments.push({ start: cursor, end: outro.start, text: 'Episode' });
-                }
-                segments.push({ start: outro.start, end: outroEnd, text: 'Outro' });
-                cursor = outroEnd;
-            }
-
-            if (cursor < duration) {
-                segments.push({ start: cursor, end: duration, text: 'Episode' });
-            }
-
-            // If no segments, skip
-            if (segments.length === 0) return;
-
-            // Build VTT content string
-            let vtt = 'WEBVTT\n\n';
-            segments.forEach((seg, i) => {
-                vtt += `${i + 1}\n${fmtVTT(seg.start)} --> ${fmtVTT(seg.end)}\n${seg.text}\n\n`;
-            });
-
-            // Create a blob URL and add as text track
-            const blob = new Blob([vtt], { type: 'text/vtt' });
-            const url = URL.createObjectURL(blob);
-
-            player.textTracks.add({
-                src: url,
-                kind: 'chapters',
-                label: 'Sections',
-                language: 'en',
-                default: true,
-                type: 'vtt'
-            });
-        }
-
-        // Try adding chapters once player can play
-        player.addEventListener('can-play', () => addChaptersTrack(), { once: true });
-    });
-
-    // ── Initial Source Validation — auto-fallback if server-rendered source is broken ──
-    document.addEventListener('DOMContentLoaded', () => {
-        const cfg = window.WATCH_CONFIG;
-        if (!cfg || !cfg.providers || cfg.providers.length === 0) return;
-
-        const hasVideo = cfg.videoLink && cfg.videoLink.length > 0;
-        const sourceType = '{{ source_type or "" }}';
-        const hasEmbed = sourceType === 'embed';
-
-        // If the initial page load has no working source, try other providers
-        if (!hasVideo && !hasEmbed) {
-            const currentProvider = cfg.provider;
-            if (currentProvider && typeof markProviderFailed === 'function') {
-                markProviderFailed(currentProvider);
-                const next = getNextAvailableProvider(currentProvider);
-                if (next) {
-                    showFallbackToast(currentProvider, next);
-                    window._watchState.provider = next;
-                    fetchAndLoadSources(true);
-                }
-            }
-        }
-    });
-</script>
-<script>
     window.COMMENTS_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
         episodeNumber: {{ episode_number or 1 }},

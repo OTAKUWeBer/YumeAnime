@@ -1,530 +1,502 @@
-(function patchProxyHeadRequests() {
-    const _fetch = window.fetch.bind(window);
-    window.fetch = function (input, init = {}) {
-        const url = typeof input === 'string' ? input : input?.url;
-        if (
-            init.method?.toUpperCase() === 'HEAD' &&
-            typeof url === 'string' &&
-            (url.includes('/proxy/') || url.includes('/p/'))
-        ) {
-            return Promise.resolve(
-                new Response(null, {
-                    status: 200,
-                    headers: {
-                        'Content-Type': 'application/x-mpegurl',
-                        'Accept-Ranges': 'bytes',
-                    },
-                })
-            );
-        }
-        return _fetch(input, init);
-    };
+/* ═══════════════════════════════════════════════════════════════
+ *  YumeZone Watch — Custom HLS.js Player (Kurovexa architecture)
+ *  Fixes: segment looping · infinite buffer · retry loops
+ * ═══════════════════════════════════════════════════════════════ */
 
-    const _open = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-        if (
-            method?.toUpperCase() === 'HEAD' &&
-            typeof url === 'string' &&
-            (url.includes('/proxy/') || url.includes('/p/'))
-        ) {
-            method = 'GET';
-        }
-        return _open.call(this, method, url, ...rest);
+// ── MSE Codec Patch ──────────────────────────────────────────────
+(function () {
+    if (typeof MediaSource === 'undefined') return;
+    const _orig = MediaSource.prototype.addSourceBuffer;
+    MediaSource.prototype.addSourceBuffer = function (t) {
+        return _orig.call(this, t.replace('mp4a.40.1', 'mp4a.40.2'));
     };
 })();
 
-// ── Initialize Watch Page with Vidstack Player (Web Component) ──────────
-document.addEventListener('DOMContentLoaded', () => {
-    const player = document.querySelector('#vidstackPlayer');
-    const container = document.getElementById('videoContainer');
-
-    if (!player || !container) {
-        return;
-    }
-
-    // Store reference globally
-    window.player = player;
-
-    // Immediately set up listeners, no need to wait for can-play
-    // because time-update handles duration dynamically
-    setupSkipButtons();
-    setupResumeAndTracking(player);
-
-    function onPlayerReady() {
-        console.log('[Player] Vidstack can-play fired');
-    }
-
-    player.addEventListener('can-play', onPlayerReady, { once: true });
-
-    // Handle errors
-    player.addEventListener('error', (e) => {
-        console.error('Player error:', e.detail);
-    });
-});
-
-// ── Abort controller to clean up listeners on re-init ──────────
-let _playerAbort = null;
-
-function setupSkipButtons() {
-    const player = window.player;
-    if (!player) return;
-
-    // Cancel all previous time-update/skip listeners
-    if (_playerAbort) _playerAbort.abort();
-    _playerAbort = new AbortController();
-    const signal = _playerAbort.signal;
-
-    const intro = window.WATCH_CONFIG?.intro;
-    const outro = window.WATCH_CONFIG?.outro;
-    const autoSkip = localStorage.getItem('yume_skip_intro') === 'true';
-
-    // Remove old skip buttons
-    document.getElementById('skipIntroBtn')?.remove();
-    document.getElementById('skipOutroBtn')?.remove();
-
-    const wrapper = document.getElementById('video-wrapper') || document.getElementById('videoContainer');
-
-    if (intro && wrapper) {
-        const btn = document.createElement('button');
-        btn.id = 'skipIntroBtn';
-        btn.className = 'skip-btn';
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Intro`;
-        btn.addEventListener('click', () => {
-            if (intro.end != null) {
-                player.currentTime = intro.end;
-                btn.classList.remove('show');
-            }
-        });
-        wrapper.appendChild(btn);
-    }
-
-    if (outro && wrapper) {
-        const btn = document.createElement('button');
-        btn.id = 'skipOutroBtn';
-        btn.className = 'skip-btn';
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip Outro`;
-        btn.addEventListener('click', () => {
-            const targetTime = outro.end || (player.duration - 10);
-            player.currentTime = targetTime;
-            btn.classList.remove('show');
-        });
-        wrapper.appendChild(btn);
-    }
-
-    let introSkipped = false;
-    let outroSkipped = false;
-
-    player.addEventListener('time-update', (e) => {
-        const cur = e.detail.currentTime;
-        const dur = player.duration || 1;
-
-        const introBtn = document.getElementById('skipIntroBtn');
-        if (intro && intro.start != null && intro.end != null) {
-            introBtn?.classList.toggle('show', cur >= intro.start && cur <= intro.end);
-        }
-
-        const outroBtn = document.getElementById('skipOutroBtn');
-        if (outro && outro.start != null) {
-            const outroEnd = outro.end || dur - 5;
-            outroBtn?.classList.toggle('show', cur >= outro.start && cur <= outroEnd);
-        }
-
-        if (autoSkip) {
-            if (!introSkipped && intro?.start != null && intro?.end != null && cur >= intro.start && cur <= intro.end) {
-                introSkipped = true;
-                player.currentTime = intro.end;
-            }
-            if (!outroSkipped && outro?.start != null && cur >= outro.start && cur <= (outro.end || dur - 5)) {
-                outroSkipped = true;
-                player.currentTime = outro.end || (dur - 1);
-            }
-        }
-    }, { signal });
-}
-
-// ── Build chapter markers on the timeline for intro/outro ──────────
-function rebuildChaptersTrack() {
-    const player = window.player;
-    if (!player) return;
-
-    const cfg = window.WATCH_CONFIG;
-    if (!cfg) return;
-
-    const intro = cfg.intro;
-    const outro = cfg.outro;
-    if (!intro && !outro) return;
-
-    const duration = player.duration;
-    if (!duration || duration <= 0) {
-        // Wait for duration, then retry
-        player.addEventListener('duration-change', () => rebuildChaptersTrack(), { once: true });
-        return;
-    }
-
-    // Remove existing chapter tracks
-    try {
-        const tracks = player.textTracks.toArray();
-        tracks.filter(t => t.kind === 'chapters' && t.label === 'Sections')
-            .forEach(t => player.textTracks.remove(t));
-    } catch (e) { }
-
-    // VTT timestamp formatter
-    function fmtVTT(sec) {
-        const h = Math.floor(sec / 3600);
-        const m = Math.floor((sec % 3600) / 60);
-        const s = Math.floor(sec % 60);
-        const ms = Math.floor((sec % 1) * 1000);
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
-    }
-
-    // Build chapter segments spanning the full duration
-    const segments = [];
-    let cursor = 0;
-
-    if (intro && intro.start != null && intro.end != null) {
-        if (intro.start > cursor) {
-            segments.push({ start: cursor, end: intro.start, text: 'Episode' });
-        }
-        segments.push({ start: intro.start, end: intro.end, text: '\ud83c\udfb5 Intro' });
-        cursor = intro.end;
-    }
-
-    if (outro && outro.start != null) {
-        const outroEnd = outro.end || duration;
-        if (outro.start > cursor) {
-            segments.push({ start: cursor, end: outro.start, text: 'Episode' });
-        }
-        segments.push({ start: outro.start, end: outroEnd, text: '\ud83c\udfb5 Outro' });
-        cursor = outroEnd;
-    }
-
-    if (cursor < duration) {
-        segments.push({ start: cursor, end: duration, text: 'Episode' });
-    }
-
-    if (segments.length === 0) return;
-
-    // Generate VTT content
-    let vtt = 'WEBVTT\n\n';
-    segments.forEach((seg, i) => {
-        vtt += `${i + 1}\n${fmtVTT(seg.start)} --> ${fmtVTT(seg.end)}\n${seg.text}\n\n`;
-    });
-
-    const blob = new Blob([vtt], { type: 'text/vtt' });
-    const url = URL.createObjectURL(blob);
-
-    player.textTracks.add({
-        src: url,
-        kind: 'chapters',
-        label: 'Sections',
-        language: 'en',
-        default: true,
-        type: 'vtt'
-    });
-}
-window.rebuildChaptersTrack = rebuildChaptersTrack;
-
-// ── Resume & watched tracking — runs ONCE, never re-registered ──
-let _trackingSetup = false;
-
-function setupResumeAndTracking(player) {
-    if (_trackingSetup) return;   // ← prevents duplicate listeners
-    _trackingSetup = true;
-
-    let resumeApplied = false;
-    let lastHistorySave = 0; // throttle history saves
-
-    // ── Save watch history entry to localStorage ──
-    function saveWatchHistory(currentTime, duration) {
-        const cfg = window.WATCH_CONFIG;
-        if (!cfg || !cfg.animeId) return;
-
-        const epNum = cfg.episodeNumber;
-        const key = `yumeHistory_${cfg.animeId}_ep${epNum}`;
-        const progress = duration > 0 ? currentTime / duration : 0;
-
-        const entry = {
-            animeId: cfg.animeId,
-            epNum: epNum,
-            animeName: cfg.animeName || '',
-            poster: cfg.poster || '',
-            episodeTitle: cfg.episodeTitle || '',
-            timestamp: currentTime,
-            duration: duration,
-            completed: progress >= 0.9,
-            watchedAt: Date.now()
-        };
-
-        try {
-            localStorage.setItem(key, JSON.stringify(entry));
-        } catch (e) { }
-    }
-
-    player.addEventListener('play', () => {
-        if (resumeApplied) return;
-        resumeApplied = true;
-
-        const pathMatch = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
-        if (!pathMatch) return;
-
-        const key = `yumeResume_${pathMatch[1]}_ep${pathMatch[2]}`;
-        let savedTime = 0;
-        try { savedTime = parseFloat(localStorage.getItem(key)) || 0; } catch (e) { }
-
-        if (savedTime > 10 && player.currentTime < 5) {
-            player.currentTime = savedTime;
-        }
-
-        // Save initial history entry on first play
-        saveWatchHistory(player.currentTime, player.duration || 0);
-    });
-
-    player.addEventListener('time-update', (e) => {
-        const cur = e.detail.currentTime;
-        if (cur > 10) {
-            const pathMatch = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
-            if (!pathMatch) return;
-            const key = `yumeResume_${pathMatch[1]}_ep${pathMatch[2]}`;
-            try { localStorage.setItem(key, String(cur)); } catch (e) { }
-        }
-
-        // Save watch history every 15 seconds to avoid excessive writes
-        const now = Date.now();
-        if (cur > 5 && now - lastHistorySave > 15000) {
-            lastHistorySave = now;
-            saveWatchHistory(cur, player.duration || 0);
-        }
-    });
-
-    player.addEventListener('time-update', (e) => {
-        const dur = player.duration;
-        if (dur > 0 && (e.detail.currentTime / dur) >= 0.8) {
-            markEpisodeWatched();
-        }
-    });
-
-    // Save history when user leaves the page
-    window.addEventListener('beforeunload', () => {
-        if (player && player.currentTime > 5) {
-            saveWatchHistory(player.currentTime, player.duration || 0);
-        }
-    });
-}
-
-let watchedMarked = false;
-function markEpisodeWatched() {
-    if (watchedMarked || !window.WATCH_CONFIG?.isLoggedIn) return;
-
-    // Use anilistId (numeric) for the AniList API, fall back to animeId
-    const anilistId = window.WATCH_CONFIG?.anilistId;
-    const animeId = anilistId || window.WATCH_CONFIG?.animeId;
-    const epNum = window.WATCH_CONFIG?.episodeNumber;
-    const malId = window.WATCH_CONFIG?.malId;
-    if (!animeId || !epNum) return;
-
-    watchedMarked = true;
-
-    const payload = {
-        anime_id: animeId,
-        action: 'episodes',
-        watched_episodes: epNum
-    };
-    // Include malId for direct MAL sync if available
-    if (malId) {
-        payload.mal_id = malId;
-        payload.sync_mal = true;
-    }
-
-    function doUpdate(attempt) {
-        fetch('/api/watchlist/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            // Keep the request alive even if the page is being closed (mobile)
-            keepalive: true
-        })
-            .then(r => {
-                if (!r.ok) {
-                    throw new Error(`HTTP ${r.status}`);
-                }
-                return r.json();
-            })
-            .then(data => {
-                if (data.success) {
-                } else {
-                    // Retry once on server-side failure
-                    if (attempt < 2) {
-                        setTimeout(() => doUpdate(attempt + 1), 2000);
-                    }
-                }
-            })
-            .catch(err => {
-                // Retry on network error (common on mobile)
-                if (attempt < 2) {
-                    setTimeout(() => doUpdate(attempt + 1), 3000);
-                } else {
-                    // Last resort: reset flag so it can try again on next time-update
-                    watchedMarked = false;
-                }
-            });
-    }
-
-    doUpdate(1);
-}
-
-// Reset watchedMarked when episode changes (AJAX navigation)
-function resetWatchedFlag() {
-    watchedMarked = false;
-}
-
-// ── URL Episode Number Fix ──────────────────────────────────────
-(function fixEpisodeFromURL() {
-    const match = window.location.pathname.match(/\/ep-(\d+(?:\.\d+)?)/i);
-    window._urlEpNum = match ? parseFloat(match[1]) : null;
-})();
-
-// ── Provider Fallback System ───────────────────────────────────
-const _PROVIDER_PRIORITY = ['arc', 'jet', 'kiwi', 'zoro', 'bee', 'wco'];
-let _failedProviders = new Set(); // stores "provider" (fully failed) or "provider::hls" / "provider::embed"
+// ── State ────────────────────────────────────────────────────────
+let hlsInstance = null;
+let _lastProbe   = { t: 0, ct: -1 };
+let _ctrlTimer   = null;
+let _watchedMarked = false;
 let _isFallbackInProgress = false;
+let _failedProviders = new Set();
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-function resetFailedProviders() {
-    _failedProviders.clear();
-    _isFallbackInProgress = false;
+// ── Helpers ──────────────────────────────────────────────────────
+function fmt(s) {
+    if (!isFinite(s) || s < 0) return '0:00';
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = Math.floor(s % 60);
+    return h ? `${h}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`
+             : `${m}:${String(ss).padStart(2,'0')}`;
 }
 
-// Check if a provider is fully failed (no sources at all from API)
-function isProviderFullyFailed(provider) {
-    return _failedProviders.has(provider) ||
-        (_failedProviders.has(`${provider}::hls`) && _failedProviders.has(`${provider}::embed`));
+function isPlaybackHealthy() {
+    const vid = document.getElementById('yz-video');
+    if (!vid || vid.paused || vid.ended || vid.readyState < 3 || !(vid.currentTime > 0)) return false;
+    const now = Date.now(), moved = vid.currentTime !== _lastProbe.ct, fresh = (now - _lastProbe.t) < 1500;
+    _lastProbe = { t: now, ct: vid.currentTime };
+    return !fresh || moved;
 }
 
-// Check if a provider is failed for a specific stream type
-function isProviderFailedForType(provider, streamType) {
-    if (_failedProviders.has(provider)) return true; // fully failed
-    if (streamType && _failedProviders.has(`${provider}::${streamType}`)) return true;
-    return false;
+// ── Build Custom Player HTML ──────────────────────────────────────
+function buildCustomPlayer(playerArea, video) {
+    playerArea.innerHTML = '';
+    video.id = 'yz-video';
+    video.style.cssText = 'width:100%;height:100%;display:block;background:#000;';
+
+    const shell = document.createElement('div');
+    shell.className = 'yz-player'; shell.id = 'yz-player';
+    shell.innerHTML = `
+<div id="yz-buffering" class="yz-buffering" style="display:none"><div class="yz-spinner"></div></div>
+<button id="yz-skip-btn" class="yz-skip-btn" style="display:none">Skip Intro</button>
+<div id="yz-overlay" class="yz-overlay"></div>
+<div id="yz-pause-flash" class="yz-pause-flash">
+  <svg width="56" height="56" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+</div>
+<div id="yz-controls" class="yz-controls yz-hidden">
+  <div class="yz-progress-wrap" id="yz-progress-wrap">
+    <div class="yz-buf-bar" id="yz-buf-bar"></div>
+    <div class="yz-play-bar" id="yz-play-bar"></div>
+    <input type="range" id="yz-seek" class="yz-seek" min="0" max="100" step="0.01" value="0">
+    <div class="yz-tooltip" id="yz-tooltip">0:00</div>
+  </div>
+  <div class="yz-ctrl-row">
+    <div class="yz-ctrl-left">
+      <button id="yz-play-btn" class="yz-btn" title="Play/Pause (K)">
+        <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button id="yz-back10" class="yz-btn" title="-10s">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      </button>
+      <button id="yz-fwd10" class="yz-btn" title="+10s">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg>
+      </button>
+      <button id="yz-mute-btn" class="yz-btn" title="Mute (M)">
+        <svg class="icon-vol" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <svg class="icon-muted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+      </button>
+      <input type="range" id="yz-vol" class="yz-vol" min="0" max="1" step="0.02" value="1">
+      <span id="yz-time" class="yz-time">0:00 / 0:00</span>
+    </div>
+    <div class="yz-ctrl-right">
+      <button id="yz-sett-btn" class="yz-btn" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="yz-fs-btn" class="yz-btn" title="Fullscreen (F)">
+        <svg class="icon-fs" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        <svg class="icon-exit-fs" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+<div id="yz-settings" class="yz-settings" style="display:none">
+  <div id="yz-sett-main">
+    <button class="yz-sett-row" id="yz-speed-row"><span>Speed</span><span id="yz-cur-speed" class="yz-sett-val">1x</span></button>
+    <button class="yz-sett-row" id="yz-qual-row" style="display:none"><span>Quality</span><span id="yz-cur-qual" class="yz-sett-val">Auto</span></button>
+  </div>
+  <div id="yz-sett-speed" style="display:none">
+    <button class="yz-sett-back" id="yz-speed-back">&#8592; Speed</button>
+    <div id="yz-speed-opts" class="yz-sett-opts"></div>
+  </div>
+  <div id="yz-sett-qual" style="display:none">
+    <button class="yz-sett-back" id="yz-qual-back">&#8592; Quality</button>
+    <div id="yz-qual-opts" class="yz-sett-opts"></div>
+  </div>
+</div>`;
+    shell.prepend(video);
+    playerArea.appendChild(shell);
+    attachPlayerControls(shell, video);
 }
 
-function getNextAvailableProvider(currentProvider) {
-    const providers = window._watchState?.providers || _PROVIDER_PRIORITY;
-    const desiredType = window._watchState?._desiredStreamType;
-    const currentIdx = providers.indexOf(currentProvider);
-    for (let i = 1; i < providers.length; i++) {
-        const idx = (currentIdx + i) % providers.length;
-        const candidate = providers[idx];
-        if (isProviderFullyFailed(candidate)) continue;
-        // If user wants a specific type, skip providers failed for that type
-        if (desiredType && isProviderFailedForType(candidate, desiredType)) continue;
-        return candidate;
+// ── Attach Controls ───────────────────────────────────────────────
+function attachPlayerControls(shell, vid) {
+    const g = id => shell.querySelector('#' + id) || document.getElementById(id);
+    const controls    = g('yz-controls'),  playBtn   = g('yz-play-btn'),
+          muteBtn     = g('yz-mute-btn'),  volSlider = g('yz-vol'),
+          seekSlider  = g('yz-seek'),      progWrap  = g('yz-progress-wrap'),
+          playBar     = g('yz-play-bar'),  bufBar    = g('yz-buf-bar'),
+          timeEl      = g('yz-time'),      tooltip   = g('yz-tooltip'),
+          bufEl       = g('yz-buffering'), skipBtn   = g('yz-skip-btn'),
+          settBtn     = g('yz-sett-btn'), settPanel  = g('yz-settings'),
+          settMain    = g('yz-sett-main'), settSpeed  = g('yz-sett-speed'),
+          settQual    = g('yz-sett-qual'), speedOpts  = g('yz-speed-opts'),
+          qualOpts    = g('yz-qual-opts'), curSpeedLbl= g('yz-cur-speed'),
+          curQualLbl  = g('yz-cur-qual'),  qualRow   = g('yz-qual-row'),
+          fsBtn       = g('yz-fs-btn'),    overlay   = g('yz-overlay'),
+          pauseFlash  = g('yz-pause-flash'),back10   = g('yz-back10'),
+          fwd10       = g('yz-fwd10');
+
+    const cfg = window.WATCH_CONFIG || {};
+    let skipTarget = null;
+
+    // Skip intro/outro
+    vid.addEventListener('timeupdate', () => {
+        if (!skipBtn) return;
+        const cur = vid.currentTime, i = cfg.intro, o = cfg.outro;
+        let found = false;
+        if (i && cur >= i.start && cur <= i.end)       { skipBtn.textContent='Skip Intro'; skipBtn.style.display='block'; skipTarget=i.end; found=true; }
+        else if (o && cur >= o.start && cur <= o.end)  { skipBtn.textContent='Skip Outro'; skipBtn.style.display='block'; skipTarget=o.end; found=true; }
+        if (!found) { skipBtn.style.display='none'; skipTarget=null; }
+    });
+    skipBtn?.addEventListener('click', e => { e.stopPropagation(); if (skipTarget!==null){vid.currentTime=skipTarget;skipBtn.style.display='none';} });
+
+    // Buffering
+    vid.addEventListener('waiting', ()=>{ if(bufEl) bufEl.style.display='flex'; });
+    vid.addEventListener('playing', ()=>{ if(bufEl) bufEl.style.display='none'; });
+    vid.addEventListener('canplay', ()=>{ if(bufEl) bufEl.style.display='none'; });
+
+    // Play/Pause
+    function syncPlay() {
+        g('yz-play-btn')?.querySelector('.icon-play')?.style.setProperty('display', vid.paused?'':'none');
+        g('yz-play-btn')?.querySelector('.icon-pause')?.style.setProperty('display', vid.paused?'none':'');
+    }
+    playBtn?.addEventListener('click', ()=> vid.paused ? vid.play() : vid.pause());
+    vid.addEventListener('play', syncPlay);
+    vid.addEventListener('pause', ()=>{ syncPlay(); flashEl(pauseFlash); });
+    function flashEl(el) { if(!el) return; el.classList.remove('yz-flash'); void el.offsetWidth; el.classList.add('yz-flash'); }
+
+    // Volume
+    function syncMute() {
+        const m = vid.muted||vid.volume===0;
+        muteBtn?.querySelector('.icon-vol')?.style.setProperty('display', m?'none':'');
+        muteBtn?.querySelector('.icon-muted')?.style.setProperty('display', m?'':'none');
+        if(volSlider) volSlider.style.setProperty('--pct', (m?0:vid.volume*100)+'%');
+    }
+    volSlider?.addEventListener('input', ()=>{ vid.volume=parseFloat(volSlider.value); vid.muted=(volSlider.value==0); syncMute(); });
+    muteBtn?.addEventListener('click', ()=>{ vid.muted=!vid.muted; if(!vid.muted&&vid.volume===0) vid.volume=0.5; if(volSlider) volSlider.value=vid.muted?0:vid.volume; syncMute(); });
+
+    // Seek & time
+    const resumeKey = `yumeResume_${cfg.animeId||''}_ep${cfg.episodeNumber||''}`;
+    let _saveT = null;
+    vid.addEventListener('timeupdate', ()=>{
+        if (!vid.duration) return;
+        const pct = (vid.currentTime/vid.duration)*100;
+        if (seekSlider) { seekSlider.value=pct; seekSlider.style.setProperty('--pct',pct+'%'); }
+        if (playBar)    playBar.style.width = pct+'%';
+        if (timeEl)     timeEl.textContent  = `${fmt(vid.currentTime)} / ${fmt(vid.duration)}`;
+        clearTimeout(_saveT);
+        _saveT = setTimeout(()=>{ if(vid.currentTime>3&&(vid.duration-vid.currentTime)>5){ try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} saveWatchHistory(vid.currentTime,vid.duration); } }, 3000);
+        if (vid.duration>0 && (vid.currentTime/vid.duration)>=0.8) markEpisodeWatched();
+    });
+    vid.addEventListener('progress', ()=>{
+        if (!vid.duration||!bufBar) return;
+        let buf=0; for(let i=0;i<vid.buffered.length;i++) if(vid.buffered.start(i)<=vid.currentTime) buf=vid.buffered.end(i);
+        bufBar.style.width = ((buf/vid.duration)*100)+'%';
+    });
+    vid.addEventListener('canplay', ()=>{ try{const s=parseInt(localStorage.getItem(resumeKey)); if(s>5&&vid.duration&&s<vid.duration-10) vid.currentTime=s;}catch{} }, {once:true});
+    vid.addEventListener('ended',   ()=>{ try{localStorage.removeItem(resumeKey);}catch{} });
+    vid.addEventListener('pause',   ()=>{ if(vid.currentTime>3&&vid.duration&&(vid.duration-vid.currentTime)>5) try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} });
+
+    seekSlider?.addEventListener('input', ()=>{ if(vid.duration) vid.currentTime=(seekSlider.value/100)*vid.duration; seekSlider.style.setProperty('--pct',seekSlider.value+'%'); });
+    progWrap?.addEventListener('mousemove', e=>{
+        if(!vid.duration||!tooltip) return;
+        const r=progWrap.getBoundingClientRect(), f=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+        tooltip.textContent=fmt(f*vid.duration); tooltip.style.left=(f*100)+'%'; tooltip.style.opacity='1';
+    });
+    progWrap?.addEventListener('mouseleave', ()=>{ if(tooltip) tooltip.style.opacity='0'; });
+
+    // ±10s
+    back10?.addEventListener('click', e=>{ e.stopPropagation(); vid.currentTime=Math.max(0,vid.currentTime-10); });
+    fwd10?.addEventListener('click',  e=>{ e.stopPropagation(); vid.currentTime=Math.min(vid.duration||0,vid.currentTime+10); });
+
+    // Controls auto-hide
+    function showCtrls() {
+        controls?.classList.remove('yz-hidden'); shell.style.cursor='';
+        clearTimeout(_ctrlTimer);
+        if (!vid.paused) _ctrlTimer = setTimeout(()=>{ controls?.classList.add('yz-hidden'); shell.style.cursor='none'; if(settPanel) settPanel.style.display='none'; }, 3000);
+    }
+    shell.addEventListener('mousemove', showCtrls);
+    shell.addEventListener('mouseenter', showCtrls);
+    overlay?.addEventListener('click', ()=>{
+        const mobile = window.innerWidth<=1024||navigator.maxTouchPoints>0;
+        if (mobile) { controls?.classList.contains('yz-hidden') ? showCtrls() : controls?.classList.add('yz-hidden'); }
+        else { vid.paused ? vid.play() : vid.pause(); }
+    });
+
+    // Settings
+    function showSettPage(p) { settMain.style.display=p==='main'?'':'none'; settSpeed.style.display=p==='speed'?'':'none'; settQual.style.display=p==='qual'?'':'none'; }
+    settBtn?.addEventListener('click', e=>{ e.stopPropagation(); settPanel.style.display=settPanel.style.display==='none'?'block':'none'; if(settPanel.style.display!=='none'){showSettPage('main');showCtrls();} });
+    g('yz-speed-row')?.addEventListener('click', ()=>showSettPage('speed'));
+    qualRow?.addEventListener('click', ()=>showSettPage('qual'));
+    g('yz-speed-back')?.addEventListener('click', ()=>showSettPage('main'));
+    g('yz-qual-back')?.addEventListener('click',  ()=>showSettPage('main'));
+    document.addEventListener('click', e=>{ if(settPanel&&!settPanel.contains(e.target)&&!settBtn?.contains(e.target)) settPanel.style.display='none'; }, true);
+    settPanel?.addEventListener('click', e=>e.stopPropagation());
+
+    // Speed options
+    if (speedOpts) {
+        speedOpts.innerHTML = SPEEDS.map(s=>`<button class="yz-opt${s===1?' active':''}" data-speed="${s}">${s}x</button>`).join('');
+        speedOpts.addEventListener('click', e=>{ const b=e.target.closest('[data-speed]'); if(!b) return; vid.playbackRate=parseFloat(b.dataset.speed); if(curSpeedLbl) curSpeedLbl.textContent=b.dataset.speed+'x'; speedOpts.querySelectorAll('.yz-opt').forEach(x=>x.classList.toggle('active',x===b)); setTimeout(()=>showSettPage('main'),250); });
+    }
+
+    // Quality builder (called by playHLS after MANIFEST_PARSED)
+    shell._buildQuality = function(levels, current) {
+        if (!qualOpts||!levels||levels.length<=1) { if(qualRow) qualRow.style.display='none'; return; }
+        if (qualRow) qualRow.style.display='';
+        if (curQualLbl) curQualLbl.textContent = current||levels[0]?.label||'Auto';
+        qualOpts.innerHTML = levels.map(l=>`<button class="yz-opt${l.label===current?' active':''}" data-label="${l.label}" data-url="${l.url||''}">${l.label}</button>`).join('');
+        qualOpts.addEventListener('click', e=>{
+            const b=e.target.closest('[data-label]'); if(!b) return;
+            if(curQualLbl) curQualLbl.textContent=b.dataset.label;
+            qualOpts.querySelectorAll('.yz-opt').forEach(x=>x.classList.toggle('active',x===b));
+            if (b.dataset.url && hlsInstance) { hlsInstance.loadSource(b.dataset.url); }
+            setTimeout(()=>showSettPage('main'),250);
+        });
+    };
+
+    // Fullscreen
+    fsBtn?.addEventListener('click', ()=>{
+        if (!document.fullscreenElement) shell.requestFullscreen?.()?.catch(()=>{});
+        else document.exitFullscreen?.();
+    });
+    document.addEventListener('fullscreenchange', ()=>{
+        const fs=!!document.fullscreenElement;
+        fsBtn?.querySelector('.icon-fs')?.style.setProperty('display',fs?'none':'');
+        fsBtn?.querySelector('.icon-exit-fs')?.style.setProperty('display',fs?'':'none');
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', e=>{
+        if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+        if (e.key===' '||e.key==='k') { e.preventDefault(); vid.paused?vid.play():vid.pause(); }
+        if (e.key==='ArrowRight') { e.preventDefault(); vid.currentTime=Math.min(vid.duration||0,vid.currentTime+5); }
+        if (e.key==='ArrowLeft')  { e.preventDefault(); vid.currentTime=Math.max(0,vid.currentTime-5); }
+        if (e.key==='m')          { vid.muted=!vid.muted; syncMute(); }
+        if (e.key==='f')          { fsBtn?.click(); }
+    });
+
+    syncPlay(); syncMute();
+    if (volSlider) { volSlider.value=vid.muted?0:vid.volume; volSlider.style.setProperty('--pct',(vid.muted?0:vid.volume*100)+'%'); }
+}
+// ── playHLS ───────────────────────────────────────────────────────
+function playHLS(rawUrl, allStreams) {
+    const playerArea = document.getElementById('player-area');
+    if (!playerArea) return;
+    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.autoplay    = true;
+    video.playsInline = true;
+    buildCustomPlayer(playerArea, video);
+
+    const shell = playerArea.querySelector('.yz-player');
+    const vid   = playerArea.querySelector('#yz-video');
+    if (!vid) return;
+
+    if (typeof Hls === 'undefined') { console.error('[HLS] hls.js not loaded'); return; }
+
+    if (Hls.isSupported()) {
+        hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: false });
+
+        hlsInstance.on(Hls.Events.ERROR, function(_, d) {
+            if (!d.fatal) return;
+            if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                hlsInstance.swapAudioCodec();
+                hlsInstance.recoverMediaError();
+            } else {
+                if (isPlaybackHealthy()) { console.warn('[HLS] fatal but healthy, ignoring'); return; }
+                console.warn('[HLS] fatal error:', d.type, d.details);
+                onHlsFatal();
+            }
+        });
+
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, function(_, data) {
+            vid.play().catch(function(){});
+            if (shell && shell._buildQuality && data.levels && data.levels.length > 1) {
+                var seen = new Set();
+                var levels = data.levels
+                    .map(function(l, i) {
+                        var url = Array.isArray(l.url) ? l.url[0] : l.url;
+                        return { label: l.height ? l.height + 'p' : (l.name || String(i+1)), url: url };
+                    })
+                    .filter(function(l) { if (!l.url || seen.has(l.label)) return false; seen.add(l.label); return true; });
+                if (levels.length > 1) shell._buildQuality(levels, levels[levels.length-1].label);
+            }
+        });
+
+        hlsInstance.loadSource(rawUrl);
+        hlsInstance.attachMedia(vid);
+
+    } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+        vid.src = rawUrl;
+        vid.play().catch(function(){});
+    } else {
+        playerArea.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:40px;">HLS not supported in this browser.</div>';
+    }
+}
+
+// ── playEmbed ─────────────────────────────────────────────────────
+function playEmbed(url) {
+    var playerArea = document.getElementById('player-area');
+    if (!playerArea) return;
+    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+    var isAdHeavy = /megaplay\.buzz|vidwish/i.test(url);
+    var sb = isAdHeavy
+        ? 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"'
+        : 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock"';
+    playerArea.innerHTML =
+        '<div style="position:relative;width:100%;height:100%;background:#000">'
+        + '<iframe src="' + url + '" allowfullscreen allow="autoplay;fullscreen;picture-in-picture" '
+        + 'referrerpolicy="origin" ' + sb + ' style="width:100%;height:100%;border:none;display:block"></iframe>'
+        + '</div>';
+}
+
+// ── HLS fatal → trigger provider fallback ─────────────────────────
+function onHlsFatal() {
+    var cur = window._watchState && window._watchState.provider;
+    if (!cur || _isFallbackInProgress) return;
+    markProviderFailed(cur, 'hls');
+    var next = getNextAvailableProvider(cur);
+    if (next) {
+        showFallbackToast(cur, next);
+        window._watchState.provider = next;
+        _isFallbackInProgress = true;
+        fetchAndLoadSources(true);
+    } else {
+        showNoSourcesMessage();
+    }
+}
+
+// ── Provider fallback system ──────────────────────────────────────
+var _PROVIDER_PRIORITY = ['arc','jet','kiwi','zoro','bee','wco'];
+
+function resetFailedProviders() { _failedProviders.clear(); _isFallbackInProgress = false; }
+
+function isProviderFullyFailed(p) {
+    return _failedProviders.has(p) ||
+        (_failedProviders.has(p+'::hls') && _failedProviders.has(p+'::embed'));
+}
+function isProviderFailedForType(p, t) {
+    return _failedProviders.has(p) || (t && _failedProviders.has(p+'::'+t));
+}
+function getNextAvailableProvider(cur) {
+    var list = (window._watchState && window._watchState.providers) || _PROVIDER_PRIORITY;
+    var dt   = window._watchState && window._watchState._desiredStreamType;
+    var idx  = list.indexOf(cur);
+    for (var i = 1; i < list.length; i++) {
+        var c = list[(idx + i) % list.length];
+        if (isProviderFullyFailed(c)) continue;
+        if (dt && isProviderFailedForType(c, dt)) continue;
+        return c;
     }
     return null;
 }
-
-function markProviderFailed(provider, streamType) {
-    if (streamType) {
-        _failedProviders.add(`${provider}::${streamType}`);
-    } else {
-        // No stream type = API returned nothing at all — fully failed
-        _failedProviders.add(provider);
-    }
+function markProviderFailed(p, t) {
+    _failedProviders.add(t ? p + '::' + t : p);
     updateServerPillAvailability();
 }
-
 function updateServerPillAvailability() {
-    document.querySelectorAll('.server-pill').forEach(pill => {
-        const provider = pill.dataset.provider;
-        const streamType = pill.dataset.streamType;
-        // Only mark a pill unavailable if that specific type failed, or provider fully failed
-        if (isProviderFullyFailed(provider) || isProviderFailedForType(provider, streamType)) {
-            pill.classList.add('unavailable');
-            pill.title = 'Source unavailable for this episode';
-        } else {
-            pill.classList.remove('unavailable');
-            pill.title = '';
+    document.querySelectorAll('.server-pill').forEach(function(pill) {
+        var p = pill.dataset.provider, t = pill.dataset.streamType;
+        var fail = isProviderFullyFailed(p) || isProviderFailedForType(p, t);
+        pill.classList.toggle('unavailable', fail);
+        pill.title = fail ? 'Source unavailable for this episode' : '';
+    });
+}
+function showFallbackToast(from, to) {
+    var c = document.getElementById('toastContainer');
+    if (!c) return;
+    var t = document.createElement('div');
+    t.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(20,20,30,.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s,opacity .3s;opacity:0;max-width:360px';
+    t.innerHTML = '<span><strong>' + from + '</strong> unavailable \u2014 switching to <strong>' + to + '</strong></span>';
+    c.appendChild(t);
+    requestAnimationFrame(function() { t.style.transform = 'translateX(0)'; t.style.opacity = '1'; });
+    setTimeout(function() {
+        t.style.transform = 'translateX(120%)'; t.style.opacity = '0';
+        setTimeout(function() { t.remove(); }, 400);
+    }, 3500);
+}
+function showNoSourcesMessage() {
+    var pa = document.getElementById('player-area');
+    if (pa) pa.innerHTML = '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0d0d;gap:12px"><span style="color:#ef4444;font-size:.95rem;font-weight:600">No streams available</span><span style="color:#64748b;font-size:.82rem">Try another server or check back later.</span></div>';
+}
+
+// ── applyVideoSources (replaces old Vidstack version) ────────────
+function applyVideoSources(data) {
+    var hlsSources   = data.hls_sources   || [];
+    var embedSources = data.embed_sources || [];
+    var desired      = window._watchState && window._watchState._desiredStreamType;
+    var useEmbed     = false;
+
+    if      (desired === 'hls')                     useEmbed = false;
+    else if (desired === 'embed' && embedSources.length) useEmbed = true;
+    else if (hlsSources.length)                     useEmbed = false;
+    else if (embedSources.length)                   useEmbed = true;
+
+    var errEl = document.getElementById('errorFallbackContainer');
+    if (errEl) errEl.style.display = 'none';
+
+    if (!useEmbed && hlsSources.length) {
+        var url = hlsSources[0].file || hlsSources[0].url;
+        if (url) playHLS(url, hlsSources);
+    } else if (useEmbed && embedSources.length) {
+        playEmbed(embedSources[0].url);
+    } else {
+        showNoSourcesMessage();
+    }
+}
+
+// ── fetchAndLoadSources ───────────────────────────────────────────
+function fetchAndLoadSources(isAutoFallback) {
+    var state   = window._watchState || {};
+    var curProv = state.provider;
+    var ss      = document.getElementById('serverSections');
+    if (ss) ss.classList.add('loading');
+
+    fetch('/api/watch/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            anime_id:       state.animeId,
+            episode_number: state.episodeNumber,
+            language:       state.language,
+            provider:       curProv
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var hasHls   = (data.hls_sources   || []).length > 0;
+        var hasEmbed = (data.embed_sources || []).length > 0;
+
+        if (data.error || (!hasHls && !hasEmbed)) {
+            markProviderFailed(curProv);
+            var next = getNextAvailableProvider(curProv);
+            if (next) { showFallbackToast(curProv, next); state.provider = next; _isFallbackInProgress = true; fetchAndLoadSources(true); return; }
+            _isFallbackInProgress = false; showNoSourcesMessage();
+            if (ss) ss.classList.remove('loading');
+            return;
         }
+
+        _isFallbackInProgress = false;
+        if (data.intro !== undefined && window.WATCH_CONFIG) window.WATCH_CONFIG.intro = data.intro;
+        if (data.outro !== undefined && window.WATCH_CONFIG) window.WATCH_CONFIG.outro = data.outro;
+        resetWatchedFlag();
+        applyVideoSources(data);
+
+        if (ss) {
+            ss.querySelectorAll('.server-pill').forEach(function(p) { p.classList.remove('active'); });
+            var dt   = state._desiredStreamType;
+            var type = dt || data.source_type || (hasHls ? 'hls' : 'embed');
+            var act  = ss.querySelector('.server-pill[data-provider="' + curProv + '"][data-stream-type="' + type + '"]');
+            if (act) act.classList.add('active');
+        }
+        delete state._desiredStreamType;
+        if (ss) ss.classList.remove('loading');
+    })
+    .catch(function(err) {
+        console.error('[Sources] fetch error:', err);
+        markProviderFailed(curProv);
+        var next = getNextAvailableProvider(curProv);
+        if (next) { showFallbackToast(curProv, next); state.provider = next; _isFallbackInProgress = true; fetchAndLoadSources(true); return; }
+        _isFallbackInProgress = false; showNoSourcesMessage();
+        if (ss) ss.classList.remove('loading');
     });
 }
 
-function showFallbackToast(fromProvider, toProvider) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(30,30,40,0.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:0.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.4);transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.2,0.8,0.2,1),opacity 0.3s ease;opacity:0;max-width:360px;';
-    toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink:0"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span><strong>${fromProvider}</strong> unavailable — switching to <strong>${toProvider}</strong></span>`;
-    container.appendChild(toast);
-    requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; });
-    setTimeout(() => {
-        toast.style.transform = 'translateX(120%)'; toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 400);
-    }, 3500);
-}
-
-function showNoSourcesMessage() {
-    const videoContainer = document.getElementById('videoContainer');
-    const embedFrame = document.getElementById('embedPlayer');
-    const errorContainer = document.getElementById('errorFallbackContainer');
-    if (videoContainer) videoContainer.style.display = 'none';
-    if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
-    if (errorContainer) {
-        errorContainer.style.display = 'flex';
-        errorContainer.innerHTML = `<div class="text-center"><div class="no-results-icon">🔌</div><p class="text-muted" style="max-width:300px;margin:8px auto 0">All servers tried — no working sources found for this episode. Try switching language or check back later.</p></div>`;
-    }
-    const fsBtn = document.getElementById('embedFullscreenBtn');
-    if (fsBtn) fsBtn.style.display = 'none';
-}
-
-// ── Watch State for AJAX ───────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    window._watchState = {
-        animeId: window.WATCH_CONFIG?.animeId,
-        episodeNumber: window._urlEpNum || window.WATCH_CONFIG?.episodeNumber,
-        language: window.WATCH_CONFIG?.language,
-        provider: window.WATCH_CONFIG?.provider,
-        providers: window.WATCH_CONFIG?.providers
-    };
-
-    // ── HLS Player Error Handler — auto-fallback on playback failure ──
-    const player = document.querySelector('#vidstackPlayer');
-    if (player) {
-        player.addEventListener('error', (e) => {
-            console.error('[Player] Playback error:', e.detail);
-            const currentProvider = window._watchState?.provider;
-            if (!currentProvider || _isFallbackInProgress) return;
-            markProviderFailed(currentProvider, 'hls');
-
-            // Set desired type BEFORE lookup so getNextAvailableProvider
-            // knows to skip providers whose HLS already failed
-            window._watchState._desiredStreamType = 'hls';
-            const next = getNextAvailableProvider(currentProvider);
-            if (next) {
-                // Try next provider's HLS
-                showFallbackToast(currentProvider, next);
-                window._watchState.provider = next;
-                _isFallbackInProgress = true;
-                fetchAndLoadSources(true);
-            } else {
-                // All HLS exhausted — try embed on the first available provider
-                const providers = window._watchState?.providers || _PROVIDER_PRIORITY;
-                const embedProvider = providers.find(p => !isProviderFailedForType(p, 'embed'));
-                if (embedProvider) {
-                    showFallbackToast('All HLS servers', embedProvider + ' (embed)');
-                    window._watchState.provider = embedProvider;
-                    window._watchState._desiredStreamType = 'embed';
-                    _isFallbackInProgress = true;
-                    fetchAndLoadSources(true);
-                } else {
-                    showNoSourcesMessage();
-                }
-            }
-        });
-    }
-});
-
-// ── Server Switching ────────────────────────────────────────────
+// ── switchProvider / switchLanguage ───────────────────────────────
 function switchProvider(provider) {
     window._watchState.provider = provider;
-    // User explicit switch — clear failed tracking for a fresh attempt
     _failedProviders.delete(provider);
     _isFallbackInProgress = false;
     fetchAndLoadSources();
@@ -533,434 +505,173 @@ window.switchProvider = switchProvider;
 
 function switchLanguage(lang) {
     window._watchState.language = lang;
-    // Language switch resets provider availability
     resetFailedProviders();
-
-    document.querySelectorAll('.lang-btn, .language-btn, [data-lang]').forEach(btn => {
-        const btnLang = btn.dataset.lang || btn.textContent.trim().toLowerCase();
-        btn.classList.toggle('active', btnLang === lang.toLowerCase());
+    document.querySelectorAll('.lang-btn,[data-lang]').forEach(function(b) {
+        var bl = b.dataset.lang || b.textContent.trim().toLowerCase();
+        b.classList.toggle('active', bl === lang.toLowerCase());
     });
-
-    // Reset unavailable pill states
-    document.querySelectorAll('.server-pill.unavailable').forEach(p => p.classList.remove('unavailable'));
-
+    document.querySelectorAll('.server-pill.unavailable').forEach(function(p) { p.classList.remove('unavailable'); });
     fetchAndLoadSources();
 }
 
-// ── Apply video sources to the player ──────────────────────────
-function applyVideoSources(data) {
-    const hlsSources = data.hls_sources || [];
-    const embedSources = data.embed_sources || [];
-    const videoContainer = document.getElementById('videoContainer');
-    const desired = window._watchState._desiredStreamType;
+// ── Watchlist tracking ────────────────────────────────────────────
+function resetWatchedFlag() { _watchedMarked = false; }
 
-    // Decide which source type to use
-    let useEmbed = false;
-    if (desired === 'hls') {
-        useEmbed = false;
-    } else if (desired === 'embed' && embedSources.length > 0) {
-        useEmbed = true;
-    } else if (hlsSources.length > 0) {
-        useEmbed = false;
-    } else if (embedSources.length > 0) {
-        useEmbed = true;
-    }
-
-    const errorContainer = document.getElementById('errorFallbackContainer');
-
-    if (!useEmbed && hlsSources.length > 0) {
-        // ── HLS playback ──
-        const videoUrl = hlsSources[0].file || hlsSources[0].url;
-        const player = window.player;
-
-        if (player && videoUrl) {
-            player.src = { src: videoUrl, type: 'application/x-mpegurl' };
-        }
-
-        if (videoContainer) videoContainer.style.display = '';
-        if (errorContainer) errorContainer.style.display = 'none';
-
-        const embedFrame = document.getElementById('embedPlayer');
-        if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
-
-        const fsBtn = document.getElementById('embedFullscreenBtn');
-        if (fsBtn) fsBtn.style.display = 'none';
-
-    } else if (useEmbed && embedSources.length > 0) {
-        // ── Embed playback ──
-        if (videoContainer) videoContainer.style.display = 'none';
-        if (errorContainer) errorContainer.style.display = 'none';
-
-        // Stop HLS player if running
-        const player = window.player;
-        if (player) { try { player.src = ''; } catch (_) { } }
-
-        let frame = document.getElementById('embedPlayer');
-        if (!frame) {
-            frame = document.createElement('iframe');
-            frame.id = 'embedPlayer';
-            frame.className = 'embed-player-frame';
-            frame.allowFullscreen = true;
-            frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-            frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
-            const wrapper = document.getElementById('video-wrapper');
-            if (wrapper) wrapper.insertBefore(frame, videoContainer);
-        }
-        frame.style.cssText = 'width:100%;height:100%;border:none;display:block;position:absolute;top:0;left:0;';
-        frame.src = embedSources[0].url;
-
-        ensureEmbedFullscreenBtn();
-        const fsBtn = document.getElementById('embedFullscreenBtn');
-        if (fsBtn) fsBtn.style.display = '';
-
-    } else {
-        // ── No sources at all for this path ──
-        // This shouldn't normally be reached (fallback handles it), but just in case
-        if (videoContainer) videoContainer.style.display = 'none';
-        const embedFrame = document.getElementById('embedPlayer');
-        if (embedFrame) { embedFrame.removeAttribute('src'); embedFrame.style.display = 'none'; }
-        const fsBtn = document.getElementById('embedFullscreenBtn');
-        if (fsBtn) fsBtn.style.display = 'none';
-        if (errorContainer) errorContainer.style.display = 'flex';
-    }
-}
-
-// ── Core: Fetch and load sources with auto-fallback ────────────
-function fetchAndLoadSources(isAutoFallback) {
-    const state = window._watchState;
-    const currentProvider = state.provider;
-
-    const serverSections = document.getElementById('serverSections');
-    if (serverSections) serverSections.classList.add('loading');
-
-    fetch('/api/watch/sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            anime_id: state.animeId,
-            episode_number: state.episodeNumber,
-            language: state.language,
-            provider: currentProvider
-        })
-    })
-        .then(res => res.json())
-        .then(data => {
-            const hlsSources = data.hls_sources || [];
-            const embedSources = data.embed_sources || [];
-            const hasSources = hlsSources.length > 0 || embedSources.length > 0;
-
-            if (data.error || !hasSources) {
-                markProviderFailed(currentProvider);
-
-                const next = getNextAvailableProvider(currentProvider);
-                if (next) {
-                    showFallbackToast(currentProvider, next);
-                    state.provider = next;
-                    _isFallbackInProgress = true;
-                    fetchAndLoadSources(true);
-                    return;
-                }
-
-                // All providers exhausted
-                _isFallbackInProgress = false;
-                showNoSourcesMessage();
-                if (serverSections) serverSections.classList.remove('loading');
-                return;
-            }
-
-            // ── Success — apply sources ──
-            _isFallbackInProgress = false;
-
-            // Update intro/outro
-            if (data.intro !== undefined) window.WATCH_CONFIG.intro = data.intro;
-            if (data.outro !== undefined) window.WATCH_CONFIG.outro = data.outro;
-
-            resetWatchedFlag();
-
-            // Re-create skip buttons
-            document.getElementById('skipIntroBtn')?.remove();
-            document.getElementById('skipOutroBtn')?.remove();
-            if (window.player) {
-                setupSkipButtons();
-                rebuildChaptersTrack();
-            }
-
-            applyVideoSources(data);
-
-            // Update active pill to reflect what actually loaded
-            if (serverSections) {
-                serverSections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
-                const desired = state._desiredStreamType;
-                const streamType = desired || data.source_type || (hlsSources.length > 0 ? 'hls' : 'embed');
-                const activePill = serverSections.querySelector(
-                    `.server-pill[data-provider="${currentProvider}"][data-stream-type="${streamType}"]`
-                );
-                if (activePill) activePill.classList.add('active');
-            }
-
-            delete state._desiredStreamType;
-            if (serverSections) serverSections.classList.remove('loading');
-        })
-        .catch(err => {
-            markProviderFailed(currentProvider);
-
-            const next = getNextAvailableProvider(currentProvider);
-            if (next) {
-                showFallbackToast(currentProvider, next);
-                state.provider = next;
-                _isFallbackInProgress = true;
-                fetchAndLoadSources(true);
-                return;
-            }
-
-            _isFallbackInProgress = false;
-            showNoSourcesMessage();
-            if (serverSections) serverSections.classList.remove('loading');
-        });
-}
-
-// ── Episode Sidebar ───────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    const viewList = document.getElementById('view-list-btn');
-    const viewGrid = document.getElementById('view-grid-btn');
-    const list = document.getElementById('episodeList');
-
-    function setView(view) {
-        if (list) list.setAttribute('data-view', view);
-        localStorage.setItem('episodeView', view);
-        viewList?.classList.toggle('active', view === 'list');
-        viewGrid?.classList.toggle('active', view === 'grid');
-    }
-
+function saveWatchHistory(ct, dur) {
+    var cfg = window.WATCH_CONFIG;
+    if (!cfg || !cfg.animeId) return;
+    var key = 'yumeHistory_' + cfg.animeId + '_ep' + cfg.episodeNumber;
     try {
-        setView(localStorage.getItem('episodeView') || 'grid');
-    } catch (e) { }
+        localStorage.setItem(key, JSON.stringify({
+            animeId: cfg.animeId, epNum: cfg.episodeNumber,
+            animeName: cfg.animeName || '', poster: cfg.poster || '',
+            timestamp: ct, duration: dur, completed: dur > 0 && (ct/dur) >= 0.9,
+            watchedAt: Date.now()
+        }));
+    } catch(e) {}
+}
 
-    viewList?.addEventListener('click', () => setView('list'));
-    viewGrid?.addEventListener('click', () => setView('grid'));
+function markEpisodeWatched() {
+    if (_watchedMarked || !(window.WATCH_CONFIG && window.WATCH_CONFIG.isLoggedIn)) return;
+    var anilistId = window.WATCH_CONFIG.anilistId;
+    var animeId   = anilistId || window.WATCH_CONFIG.animeId;
+    var epNum     = window.WATCH_CONFIG.episodeNumber;
+    var malId     = window.WATCH_CONFIG.malId;
+    if (!animeId || !epNum) return;
+    _watchedMarked = true;
+    var payload = { anime_id: animeId, action: 'episodes', watched_episodes: epNum };
+    if (malId) { payload.mal_id = malId; payload.sync_mal = true; }
+    function doUpdate(attempt) {
+        fetch('/api/watchlist/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), keepalive: true })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (!d.success && attempt < 2) setTimeout(function(){doUpdate(attempt+1);}, 2000); })
+        .catch(function() { if (attempt < 2) setTimeout(function(){doUpdate(attempt+1);},3000); else _watchedMarked=false; });
+    }
+    doUpdate(1);
+}
 
-    // Search
-    const search = document.getElementById('episodeSearch');
+// ── Episode sidebar ───────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    var viewList = document.getElementById('view-list-btn');
+    var viewGrid = document.getElementById('view-grid-btn');
+    var list     = document.getElementById('episodeList');
+    function setView(v) {
+        if (list) list.setAttribute('data-view', v);
+        try { localStorage.setItem('episodeView', v); } catch(e) {}
+        if (viewList) viewList.classList.toggle('active', v==='list');
+        if (viewGrid) viewGrid.classList.toggle('active', v==='grid');
+    }
+    try { setView(localStorage.getItem('episodeView') || 'grid'); } catch(e) {}
+    if (viewList) viewList.addEventListener('click', function(){setView('list');});
+    if (viewGrid) viewGrid.addEventListener('click', function(){setView('grid');});
+
+    var search = document.getElementById('episodeSearch');
     if (search && list) {
-        search.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            list.querySelectorAll('.episode-sidebar-item').forEach(item => {
-                const match = item.dataset.number.includes(term) ||
-                    item.textContent.toLowerCase().includes(term);
-                item.style.display = match ? '' : 'none';
+        search.addEventListener('input', function(e) {
+            var term = e.target.value.toLowerCase();
+            list.querySelectorAll('.episode-sidebar-item').forEach(function(item) {
+                item.style.display = (item.dataset.number.includes(term) || item.textContent.toLowerCase().includes(term)) ? '' : 'none';
             });
         });
     }
 });
 
-// ── Server Pill Clicks ─────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    const sections = document.getElementById('serverSections');
+// ── Server pill clicks ────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    var sections = document.getElementById('serverSections');
     if (!sections) return;
-
-    sections.addEventListener('click', (e) => {
-        const pill = e.target.closest('.server-pill');
-        if (!pill || pill.disabled) return;
-        if (pill.classList.contains('unavailable')) return;
-
-        const streamType = pill.dataset.streamType;
-        const provider = pill.dataset.provider;
+    sections.addEventListener('click', function(e) {
+        var pill = e.target.closest('.server-pill');
+        if (!pill || pill.disabled || pill.classList.contains('unavailable')) return;
+        var streamType = pill.dataset.streamType, provider = pill.dataset.provider;
         if (!streamType || !provider) return;
 
         window._watchState._desiredStreamType = streamType;
         window._watchState.provider = provider;
         _isFallbackInProgress = false;
-
-        // User explicit click — clear stream-specific failure so this attempt is fresh
-        _failedProviders.delete(`${provider}::${streamType}`);
+        _failedProviders.delete(provider+'::'+streamType);
         _failedProviders.delete(provider);
+        try { localStorage.setItem('yumePreferredServer', provider); document.cookie='preferred_server='+provider+'; path=/; max-age=31536000'; } catch(e) {}
 
-        try {
-            localStorage.setItem('yumePreferredServer', provider);
-            document.cookie = `preferred_server=${provider}; path=/; max-age=31536000`;
-        } catch (e) { }
-
-        sections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+        sections.querySelectorAll('.server-pill').forEach(function(p){p.classList.remove('active');});
         pill.classList.add('active');
-
         fetchAndLoadSources();
     });
 });
 
-// ── Embed Fullscreen (wrapper-based, bypasses iframe sandbox) ──
-function ensureEmbedFullscreenBtn() {
-    const wrapper = document.getElementById('video-wrapper');
-    if (!wrapper || document.getElementById('embedFullscreenBtn')) return;
+// ── Countdown timer ───────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    var countdownEl  = document.getElementById('countdown-text');
+    var euContainer  = document.getElementById('eu-countdown-wrapper');
+    var euDays       = document.getElementById('eu-days');
+    var euHours      = document.getElementById('eu-hours');
+    var euMins       = document.getElementById('eu-mins');
+    var euSecs       = document.getElementById('eu-secs');
+    var legacyTs     = null, euTs = null;
 
-    const btn = document.createElement('button');
-    btn.id = 'embedFullscreenBtn';
-    btn.className = 'embed-fullscreen-btn';
-    btn.title = 'Toggle Fullscreen (F)';
-    btn.innerHTML = `
-        <svg class="embed-fs-enter" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <polyline points="9 21 3 21 3 15"></polyline>
-            <line x1="21" y1="3" x2="14" y2="10"></line>
-            <line x1="3" y1="21" x2="10" y2="14"></line>
-        </svg>
-        <svg class="embed-fs-exit" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-            <polyline points="4 14 10 14 10 20"></polyline>
-            <polyline points="20 10 14 10 14 4"></polyline>
-            <line x1="14" y1="10" x2="21" y2="3"></line>
-            <line x1="3" y1="21" x2="10" y2="14"></line>
-        </svg>`;
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleEmbedFullscreen();
-    });
-    wrapper.appendChild(btn);
-}
-window.ensureEmbedFullscreenBtn = ensureEmbedFullscreenBtn;
+    if (document.getElementById('watch-countdown'))
+        legacyTs = parseInt(document.getElementById('watch-countdown').getAttribute('data-timestamp'), 10);
+    if (euContainer)
+        euTs = parseInt(euContainer.getAttribute('data-timestamp'), 10);
+    if (!legacyTs && !euTs) return;
 
-function isEmbedVisible() {
-    const frame = document.getElementById('embedPlayer');
-    return frame && frame.style.display !== 'none' && frame.offsetParent !== null;
-}
-
-function toggleEmbedFullscreen() {
-    const wrapper = document.getElementById('video-wrapper');
-    if (!wrapper) return;
-
-    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
-
-    if (fsEl) {
-        // Currently in fullscreen — exit
-        if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => { });
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        }
-    } else {
-        // Not in fullscreen — enter
-        if (wrapper.requestFullscreen) {
-            wrapper.requestFullscreen().catch(() => { });
-        } else if (wrapper.webkitRequestFullscreen) {
-            wrapper.webkitRequestFullscreen();
-        }
-    }
-}
-
-// Swap fullscreen icons on state change
-document.addEventListener('fullscreenchange', updateEmbedFsIcons);
-document.addEventListener('webkitfullscreenchange', updateEmbedFsIcons);
-
-function updateEmbedFsIcons() {
-    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
-    const isFs = !!fsEl;
-    // Use class-based selectors (works for both template and JS-created buttons)
-    document.querySelectorAll('.embed-fs-enter').forEach(el => el.style.display = isFs ? 'none' : '');
-    document.querySelectorAll('.embed-fs-exit').forEach(el => el.style.display = isFs ? '' : 'none');
-}
-
-// "F" key shortcut + double-click for embed fullscreen
-document.addEventListener('DOMContentLoaded', () => {
-    const wrapper = document.getElementById('video-wrapper');
-    if (!wrapper) return;
-
-    // Double-click on wrapper to toggle fullscreen
-    wrapper.addEventListener('dblclick', (e) => {
-        if (e.target === wrapper || e.target.closest('.embed-fullscreen-btn')) {
-            toggleEmbedFullscreen();
-        }
-    });
-
-    // "F" key to toggle fullscreen when embed is visible
-    document.addEventListener('keydown', (e) => {
-        // Don't trigger if typing in an input
-        const tag = document.activeElement?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-        if (document.activeElement?.isContentEditable) return;
-
-        if (e.key === 'f' || e.key === 'F') {
-            if (isEmbedVisible()) {
-                e.preventDefault();
-                toggleEmbedFullscreen();
+    function pad(n) { return n < 10 ? '0'+n : n; }
+    function tick() {
+        var now = Date.now();
+        if (countdownEl && legacyTs) {
+            var jsTs = legacyTs > 9999999999 ? legacyTs : legacyTs*1000;
+            var diff = jsTs - now;
+            if (diff <= 0) { countdownEl.textContent = 'Aired'; }
+            else {
+                var d=Math.floor(diff/86400000), h=Math.floor((diff/3600000)%24),
+                    m=Math.floor((diff/60000)%60), s=Math.floor((diff/1000)%60);
+                countdownEl.textContent = (d?d+'d ':'')+( h||d?h+'h ':'')+m+'m '+s+'s';
             }
         }
-    });
+        if (euTs && euDays && euHours && euMins && euSecs) {
+            var jsTs2 = euTs > 9999999999 ? euTs : euTs*1000;
+            var diff2 = jsTs2 - now;
+            if (diff2 <= 0) { euDays.textContent=euHours.textContent=euMins.textContent=euSecs.textContent='00'; }
+            else {
+                euDays.textContent  = pad(Math.floor(diff2/86400000));
+                euHours.textContent = pad(Math.floor((diff2/3600000)%24));
+                euMins.textContent  = pad(Math.floor((diff2/60000)%60));
+                euSecs.textContent  = pad(Math.floor((diff2/1000)%60));
+            }
+        }
+    }
+    tick(); setInterval(tick, 1000);
 });
 
-// ── Next Episode Countdown ───────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    // Legacy small countdown
-    const countdownEl = document.getElementById('countdown-text');
-    const container = document.getElementById('watch-countdown');
-    let legacyTimestamp = null;
-    if (container) {
-        legacyTimestamp = parseInt(container.getAttribute('data-timestamp'), 10);
-    }
+// ── DOMContentLoaded — init everything ───────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Init watch state
+    var cfg = window.WATCH_CONFIG || {};
+    window._watchState = {
+        animeId:       cfg.animeId,
+        episodeNumber: cfg.episodeNumber,
+        language:      cfg.language,
+        provider:      cfg.provider,
+        providers:     cfg.providers || []
+    };
 
-    // New large countdown (Episodes Unavailable UI)
-    const euContainer = document.getElementById('eu-countdown-wrapper');
-    const euDays = document.getElementById('eu-days');
-    const euHours = document.getElementById('eu-hours');
-    const euMins = document.getElementById('eu-mins');
-    const euSecs = document.getElementById('eu-secs');
-    let euTimestamp = null;
-    if (euContainer) {
-        euTimestamp = parseInt(euContainer.getAttribute('data-timestamp'), 10);
-    }
-
-    if (!legacyTimestamp && !euTimestamp) return;
-
-    function pad(n) {
-        return n < 10 ? '0' + n : n;
-    }
-
-    function updateTimer() {
-        const now = Date.now();
-
-        // Update legacy countdown
-        if (countdownEl && legacyTimestamp) {
-            const jsTimestamp = legacyTimestamp > 9999999999 ? legacyTimestamp : legacyTimestamp * 1000;
-            const diff = jsTimestamp - now;
-
-            if (diff <= 0) {
-                countdownEl.textContent = "Aired";
-            } else {
-                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                const m = Math.floor((diff / 1000 / 60) % 60);
-                const s = Math.floor((diff / 1000) % 60);
-
-                let timeStr = '';
-                if (d > 0) timeStr += `${d}d `;
-                if (h > 0 || d > 0) timeStr += `${h}h `;
-                timeStr += `${m}m ${s}s`;
-                countdownEl.textContent = timeStr;
-            }
+    // Play initial stream from server-rendered WATCH_CONFIG
+    if (cfg.videoLink && cfg.videoLink.length > 0) {
+        if (cfg.sourceType === 'embed') {
+            playEmbed(cfg.videoLink);
+        } else {
+            playHLS(cfg.videoLink, null);
         }
-
-        // Update new large countdown
-        if (euTimestamp && euDays && euHours && euMins && euSecs) {
-            const jsTimestamp = euTimestamp > 9999999999 ? euTimestamp : euTimestamp * 1000;
-            const diff = jsTimestamp - now;
-
-            if (diff <= 0) {
-                euDays.textContent = "00";
-                euHours.textContent = "00";
-                euMins.textContent = "00";
-                euSecs.textContent = "00";
-            } else {
-                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                const m = Math.floor((diff / 1000 / 60) % 60);
-                const s = Math.floor((diff / 1000) % 60);
-
-                euDays.textContent = pad(d);
-                euHours.textContent = pad(h);
-                euMins.textContent = pad(m);
-                euSecs.textContent = pad(s);
+    } else {
+        // No server-side source — try AJAX fallback immediately
+        if (cfg.provider && cfg.providers && cfg.providers.length > 0) {
+            markProviderFailed(cfg.provider);
+            var next = getNextAvailableProvider(cfg.provider);
+            if (next) {
+                window._watchState.provider = next;
+                _isFallbackInProgress = true;
+                fetchAndLoadSources(true);
             }
         }
     }
-
-    updateTimer();
-    setInterval(updateTimer, 1000);
 });
