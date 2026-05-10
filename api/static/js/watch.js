@@ -480,20 +480,28 @@ function updateServerPillAvailability() {
         pill.title = fail ? 'Source unavailable for this episode' : '';
     });
 }
-function showFallbackToast(oldP, newP) {
-    var oldName = PROVIDER_DISPLAY_NAMES[oldP] || oldP;
-    var newName = PROVIDER_DISPLAY_NAMES[newP] || newP;
+function showToast(msg, type) {
     var c = document.getElementById('toastContainer');
     if (!c) return;
     var t = document.createElement('div');
-    t.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(20,20,30,.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s,opacity .3s;opacity:0;max-width:360px';
-    t.innerHTML = '<span><strong>' + oldName + '</strong> unavailable — switching to <strong>' + newName + '</strong></span>';
+    t.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(20,20,30,0.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:0.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.4);transform:translateX(120%);transition:transform 0.35s,opacity 0.3s;opacity:0;max-width:360px;';
+    if (type === 'error') t.style.borderLeft = '4px solid #ef4444';
+    else if (type === 'success') t.style.borderLeft = '4px solid #10b981';
+    else if (type === 'info') t.style.borderLeft = '4px solid #3b82f6';
+    
+    t.innerHTML = '<span>' + msg + '</span>';
     c.appendChild(t);
     requestAnimationFrame(function() { t.style.transform = 'translateX(0)'; t.style.opacity = '1'; });
     setTimeout(function() {
         t.style.transform = 'translateX(120%)'; t.style.opacity = '0';
         setTimeout(function() { t.remove(); }, 400);
-    }, 3500);
+    }, 4000);
+}
+
+function showFallbackToast(oldP, newP) {
+    var oldName = PROVIDER_DISPLAY_NAMES[oldP] || oldP;
+    var newName = PROVIDER_DISPLAY_NAMES[newP] || newP;
+    showToast('<strong>' + oldName + '</strong> unavailable — switching to <strong>' + newName + '</strong>', 'info');
 }
 
 function showNoSourcesMessage() {
@@ -775,3 +783,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// ── Refresh Sources Logic ─────────────────────────────────────────────
+window.refreshSourcesCache = function() {
+    var state = window._watchState || {};
+    var btn = document.getElementById('quickReportBtn');
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 5px;"></i> Reporting...';
+    }
+    
+    fetch('/api/watch/clear-cache', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anime_id: state.animeId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        showToast('Report sent! Fetching fresh sources...', 'success');
+        setTimeout(function() { location.reload(); }, 800);
+    })
+    .catch(function() {
+        showToast('Error sending report, please refresh manually.', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg><span class="report-label">Report</span>';
+        }
+    });
+};

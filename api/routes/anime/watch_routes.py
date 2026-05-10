@@ -23,6 +23,10 @@ from ...models.watchlist import get_watchlist_entry
 
 watch_routes_bp = Blueprint("watch_routes", __name__)
 
+# Global cache for episode data to avoid session size limits (Flask session is max 4KB)
+# Key: fetch_id, Value: all_episodes data
+EPS_CACHE = {}
+
 
 def _get_preferred_lang():
     """Get the user's preferred language from cookie → session → default."""
@@ -366,9 +370,6 @@ def watch(anime_id, ep_number):
         current_app.logger.error(f"[Watch] Error getting anime info: {e}")
 
     # ── Fetch episodes list ──
-    # Prefer anime_id_clean (what's in the URL) so episode URLs stay consistent.
-    # Only use anilist_id if anime_id_clean is NOT numeric (i.e. it's a real slug),
-    # because Miruro only accepts numeric AniList IDs.
     try:
         fetch_id = (
             anime_id_clean
@@ -376,21 +377,28 @@ def watch(anime_id, ep_number):
             else (str(anilist_id) if anilist_id else anime_id_clean)
         )
         
-        # Try to get anime_slug for anidap provider discovery
-        # Use anime_id_clean if it looks like a slug (non-numeric), otherwise construct from title
         anime_slug = None
         if not anime_id_clean.isdigit():
             anime_slug = anime_id_clean
         elif anime and isinstance(anime, dict):
-            # Try to use title to construct slug
             title = anime.get("title") or anime.get("name")
             if title:
-                # Simple slug: lowercase, replace spaces with hyphens, remove non-alphanumeric
                 import re as regex
                 anime_slug = regex.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
         
-        all_episodes = asyncio.run(current_app.ha_scraper.episodes(fetch_id, anime_slug))
-    except Exception:
+        # Use global EPS_CACHE to avoid session size limits
+        all_episodes = EPS_CACHE.get(str(fetch_id))
+        
+        if not all_episodes:
+            try:
+                all_episodes = asyncio.run(current_app.ha_scraper.episodes(fetch_id, anime_slug))
+                if all_episodes and all_episodes.get("providers_map"):
+                    EPS_CACHE[str(fetch_id)] = all_episodes
+            except Exception as e:
+                current_app.logger.error(f"[Watch] Error fetching episodes: {e}")
+                all_episodes = None
+    except Exception as e:
+        current_app.logger.error(f"[Watch] Cache/Fetch outer error: {e}")
         all_episodes = None
 
     providers_map = all_episodes.get("providers_map", {}) if all_episodes else {}
@@ -765,6 +773,31 @@ def watch(anime_id, ep_number):
 # ──────────────────────────────────────────────────────────────
 #  AJAX ENDPOINT: Switch server/language without page reload
 # ──────────────────────────────────────────────────────────────
+
+
+@watch_routes_bp.route("/api/watch/clear-cache", methods=["POST"])
+def clear_watch_cache():
+    """Clear the global cached providers_map for an anime."""
+    data = request.get_json() or {}
+    anime_id = data.get("anime_id")
+    if not anime_id:
+        return jsonify({"success": False, "error": "Missing anime_id"}), 400
+    
+    clean_id = str(anime_id).split("?", 1)[0]
+    
+    # Remove from global cache
+    removed = 0
+    if clean_id in EPS_CACHE:
+        del EPS_CACHE[clean_id]
+        removed += 1
+    
+    # Also clean up any session junk left over from previous broken implementation
+    keys = list(session.keys())
+    for k in keys:
+        if k.startswith("eps_cache_"):
+            session.pop(k, None)
+            
+    return jsonify({"success": True, "removed_count": removed})
 
 
 @watch_routes_bp.route("/api/watch/sources", methods=["POST"])

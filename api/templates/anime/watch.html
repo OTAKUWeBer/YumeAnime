@@ -169,8 +169,8 @@
                             {% endif %}
                         </div>
 
-                        <!-- Report Issue Button -->
-                        <button id="openReportBtn" class="premium-action-btn">
+                        <!-- Report Issue Button (1-Click Cache Clear) -->
+                        <button id="quickReportBtn" class="premium-action-btn" onclick="if(window.refreshSourcesCache) window.refreshSourcesCache()" title="Report playback issue & clear cache">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
@@ -657,44 +657,14 @@
     </div>
 </div>
 
-{% endblock %}
 
-
-<!-- Report Issue Modal -->
-<div id="reportModalOverlay"
-    style="position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 9999; display: none; align-items: center; justify-content: center;">
-    <div
-        style="background: var(--bg-surface); padding: 25px; border-radius: var(--radius-lg); width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color);">
-        <h3 style="margin-top: 0; margin-bottom: 5px;">Report Playback Issue</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Experiencing problems? Let us know
-            so we can fix it.</p>
-
-        <div style="margin-bottom: 15px;">
-            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Current
-                Source Data:</label>
-            <input type="text" id="reportSourceData" disabled
-                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); cursor: not-allowed;">
-        </div>
-
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">Issue
-                Details:</label>
-            <textarea id="reportDetails" rows="4"
-                placeholder="e.g. Video is buffering constantly, audio out of sync, subtitle error..."
-                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-sm); color: white; resize: vertical;"></textarea>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button id="closeReportBtn" class="btn btn-ghost">Cancel</button>
-            <button id="submitReportBtn" class="btn btn-primary">Submit Report</button>
-        </div>
-    </div>
-</div>
 
 <!-- Toast Container -->
 <div id="toastContainer"
     style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;">
 </div>
+
+{% endblock %}
 
 
 <!-- Thumbnail tooltip & mobile control styles moved to watch.css -->
