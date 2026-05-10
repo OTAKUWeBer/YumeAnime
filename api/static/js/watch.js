@@ -174,15 +174,22 @@ function attachPlayerControls(shell, vid) {
 
     // Seek & time
     const resumeKey = `yumeResume_${cfg.animeId||''}_ep${cfg.episodeNumber||''}`;
-    let _saveT = null;
+    let _lastSave = 0;
     vid.addEventListener('timeupdate', ()=>{
         if (!vid.duration) return;
         const pct = (vid.currentTime/vid.duration)*100;
         if (seekSlider) { seekSlider.value=pct; seekSlider.style.setProperty('--pct',pct+'%'); }
         if (playBar)    playBar.style.width = pct+'%';
         if (timeEl)     timeEl.textContent  = `${fmt(vid.currentTime)} / ${fmt(vid.duration)}`;
-        clearTimeout(_saveT);
-        _saveT = setTimeout(()=>{ if(vid.currentTime>3&&(vid.duration-vid.currentTime)>5){ try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} saveWatchHistory(vid.currentTime,vid.duration); } }, 3000);
+        
+        const now = Date.now();
+        if (now - _lastSave > 3000) {
+            _lastSave = now;
+            if(vid.currentTime>3&&(vid.duration-vid.currentTime)>5){ 
+                try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} 
+                saveWatchHistory(vid.currentTime,vid.duration); 
+            }
+        }
         if (vid.duration>0 && (vid.currentTime/vid.duration)>=0.8) markEpisodeWatched();
     });
     vid.addEventListener('progress', ()=>{
@@ -190,9 +197,24 @@ function attachPlayerControls(shell, vid) {
         let buf=0; for(let i=0;i<vid.buffered.length;i++) if(vid.buffered.start(i)<=vid.currentTime) buf=vid.buffered.end(i);
         bufBar.style.width = ((buf/vid.duration)*100)+'%';
     });
-    vid.addEventListener('canplay', ()=>{ try{const s=parseInt(localStorage.getItem(resumeKey)); if(s>5&&vid.duration&&s<vid.duration-10){ vid.currentTime=s; var rt=g('yz-resume-toast'); if(rt){rt.textContent='Resuming from '+fmt(s);rt.style.display='flex';setTimeout(function(){rt.style.display='none';},3000);} }}catch{} }, {once:true});
+    vid.addEventListener('canplay', ()=>{ 
+        try {
+            const s=parseInt(localStorage.getItem(resumeKey)); 
+            if(s>5) {
+                if (vid.duration && s >= vid.duration-10) return;
+                vid.currentTime=s; 
+                var rt=g('yz-resume-toast'); 
+                if(rt){rt.textContent='Resuming from '+fmt(s);rt.style.display='flex';setTimeout(function(){rt.style.display='none';},3000);} 
+            }
+        } catch{} 
+    }, {once:true});
     vid.addEventListener('ended',   ()=>{ try{localStorage.removeItem(resumeKey);}catch{} });
-    vid.addEventListener('pause',   ()=>{ if(vid.currentTime>3&&vid.duration&&(vid.duration-vid.currentTime)>5) try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} });
+    vid.addEventListener('pause',   ()=>{ 
+        if(vid.currentTime>3&&vid.duration&&(vid.duration-vid.currentTime)>5) { 
+            try{localStorage.setItem(resumeKey,Math.floor(vid.currentTime));}catch{} 
+            saveWatchHistory(vid.currentTime,vid.duration); 
+        } 
+    });
 
     seekSlider?.addEventListener('input', ()=>{ if(vid.duration) vid.currentTime=(seekSlider.value/100)*vid.duration; seekSlider.style.setProperty('--pct',seekSlider.value+'%'); });
     progWrap?.addEventListener('mousemove', e=>{
@@ -379,6 +401,7 @@ function playEmbed(url) {
         + '<iframe src="' + url + '" allowfullscreen allow="autoplay;fullscreen;picture-in-picture" '
         + 'referrerpolicy="origin" ' + sb + ' style="width:100%;height:100%;border:none;display:block"></iframe>'
         + '</div>';
+    saveWatchHistory(0, 0);
 }
 
 // ── HLS fatal → trigger provider fallback ─────────────────────────
