@@ -234,14 +234,15 @@ function attachPlayerControls(shell, vid) {
         if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
         
         switch (e.key.toLowerCase()) {
-            case 'f':
-                e.preventDefault();
-                fsBtn?.click();
-                break;
             case ' ':
+            case 'k':
                 e.preventDefault();
                 vid.paused ? vid.play() : vid.pause();
                 showCtrls();
+                break;
+            case 'f':
+                e.preventDefault();
+                fsBtn?.click();
                 break;
             case 'arrowright':
                 e.preventDefault();
