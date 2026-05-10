@@ -705,14 +705,14 @@
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
-
+<script>
     window.COMMENTS_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
         episodeNumber: {{ episode_number or 1 }},
-    isLoggedIn: {% if session.get('username') %} true{% else %} false{% endif %},
-    username: '{{ session.get("username") or "" }}',
+        isLoggedIn: {% if session.get('username') %} true{% else %} false{% endif %},
+        username: '{{ session.get("username") or "" }}',
         avatar: '{{ session.get("avatar") or "" }}',
-            userId: '{{ session.get("_id") or "" }}',
+        userId: '{{ session.get("_id") or "" }}',
     };
 </script>
 <script src="{{ url_for('static', filename='js/comments.js') }}"></script>
