@@ -399,7 +399,7 @@ function showFallbackToast(from, to) {
     if (!c) return;
     var t = document.createElement('div');
     t.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(20,20,30,.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s,opacity .3s;opacity:0;max-width:360px';
-    t.innerHTML = '<span><strong>' + from + '</strong> unavailable \u2014 switching to <strong>' + to + '</strong></span>';
+    t.innerHTML = '<span><strong>' + from + '</strong> unavailable — switching to <strong>' + to + '</strong></span>';
     c.appendChild(t);
     requestAnimationFrame(function() { t.style.transform = 'translateX(0)'; t.style.opacity = '1'; });
     setTimeout(function() {
@@ -407,9 +407,21 @@ function showFallbackToast(from, to) {
         setTimeout(function() { t.remove(); }, 400);
     }, 3500);
 }
+
 function showNoSourcesMessage() {
     var pa = document.getElementById('player-area');
     if (pa) pa.innerHTML = '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0d0d;gap:12px"><span style="color:#ef4444;font-size:.95rem;font-weight:600">No streams available</span><span style="color:#64748b;font-size:.82rem">Try another server or check back later.</span></div>';
+}
+
+// ── Proxy Wrapping ────────────────────────────────────────────────
+const WORKER_BASE = 'https:///p/';
+function proxyUrl(url, referer) {
+    if (!url || url.startsWith('blob:')) return url;
+    if (url.startsWith(WORKER_BASE) || url.startsWith('https:///proxy')) return url;
+    var ref = referer || '';
+    var payload = url + '\0' + ref;
+    var b64u = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return WORKER_BASE + b64u;
 }
 
 // ── applyVideoSources (replaces old Vidstack version) ────────────
@@ -429,14 +441,13 @@ function applyVideoSources(data) {
 
     if (!useEmbed && hlsSources.length) {
         var url = hlsSources[0].file || hlsSources[0].url;
-        if (url) playHLS(url, hlsSources);
+        if (url) playHLS(proxyUrl(url, ''), hlsSources);
     } else if (useEmbed && embedSources.length) {
         playEmbed(embedSources[0].url);
     } else {
         showNoSourcesMessage();
     }
 }
-
 // ── fetchAndLoadSources ───────────────────────────────────────────
 function fetchAndLoadSources(isAutoFallback) {
     var state   = window._watchState || {};
