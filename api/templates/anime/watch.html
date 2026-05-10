@@ -169,8 +169,8 @@
                             {% endif %}
                         </div>
 
-                        <!-- Report Issue Button (1-Click Cache Clear) -->
-                        <button id="quickReportBtn" class="premium-action-btn" onclick="if(window.refreshSourcesCache) window.refreshSourcesCache()" title="Report playback issue & clear cache">
+                        <!-- Report Issue Button -->
+                        <button id="quickReportBtn" class="premium-action-btn" onclick="if(window.openFixModal) window.openFixModal()" title="Report playback issue">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
@@ -658,6 +658,43 @@
 </div>
 
 
+
+<!-- Fix Issue Modal -->
+<div id="fixIssueModal"
+    style="position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 9999; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">
+    <div
+        style="background: #121212; padding: 25px; border-radius: var(--radius-lg); width: 90%; max-width: 480px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.05); position: relative; transform: translateY(20px); transition: transform 0.2s;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #ffffff;">Report Issue</h3>
+            <button id="closeFixModalIcon" style="background: none; border: none; color: #a1a1aa; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.05); margin-bottom: 20px;"></div>
+
+        <!-- Warning Box -->
+        <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md); padding: 18px; display: flex; gap: 15px; margin-bottom: 25px;">
+            <div style="color: #ef4444; flex-shrink: 0; margin-top: 2px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+            </div>
+            <div>
+                <h4 style="margin: 0 0 8px 0; color: #60a5fa; font-size: 1.05rem; font-weight: 600;">Wrong episode playing?</h4>
+                <p style="margin: 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.5;">
+                    If the episode content doesn't match, clicking <strong style="color: #cbd5e1;">Fix it</strong> will clear the cached source and fetch a fresh stream from the server.
+                </p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button id="cancelFixBtn" style="background: none; border: none; color: #a1a1aa; font-weight: 600; font-size: 0.95rem; cursor: pointer; padding: 10px 20px; border-radius: var(--radius-sm); transition: color 0.2s;">Cancel</button>
+            <button id="submitFixBtn" style="background: #ef4444; color: white; border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; padding: 10px 24px; border-radius: var(--radius-md); transition: background 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">Fix it</button>
+        </div>
+    </div>
+</div>
 
 <!-- Toast Container -->
 <div id="toastContainer"

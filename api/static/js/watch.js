@@ -784,31 +784,73 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ── Refresh Sources Logic ─────────────────────────────────────────────
-window.refreshSourcesCache = function() {
-    var state = window._watchState || {};
-    var btn = document.getElementById('quickReportBtn');
+// ── Report / Fix Issue Modal Logic ─────────────────────────────────────────────
+window.openFixModal = function() {
+    var modal = document.getElementById('fixIssueModal');
+    if (!modal) return;
     
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 5px;"></i> Reporting...';
+    modal.style.display = 'flex';
+    // Trigger reflow for animation
+    void modal.offsetWidth;
+    modal.style.opacity = '1';
+    var inner = modal.querySelector('div');
+    if (inner) inner.style.transform = 'translateY(0)';
+};
+
+window.closeFixModal = function() {
+    var modal = document.getElementById('fixIssueModal');
+    if (!modal) return;
+    
+    modal.style.opacity = '0';
+    var inner = modal.querySelector('div');
+    if (inner) inner.style.transform = 'translateY(20px)';
+    
+    setTimeout(function() {
+        modal.style.display = 'none';
+    }, 200);
+};
+
+// Handle clicks for the modal
+document.addEventListener('DOMContentLoaded', function() {
+    var closeIcon = document.getElementById('closeFixModalIcon');
+    var cancelBtn = document.getElementById('cancelFixBtn');
+    var submitBtn = document.getElementById('submitFixBtn');
+    var modal = document.getElementById('fixIssueModal');
+    
+    if (closeIcon) closeIcon.onclick = window.closeFixModal;
+    if (cancelBtn) cancelBtn.onclick = window.closeFixModal;
+    if (modal) {
+        modal.onclick = function(e) {
+            if (e.target === modal) window.closeFixModal();
+        };
     }
     
-    fetch('/api/watch/clear-cache', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ anime_id: state.animeId })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        showToast('Report sent! Fetching fresh sources...', 'success');
-        setTimeout(function() { location.reload(); }, 800);
-    })
-    .catch(function() {
-        showToast('Error sending report, please refresh manually.', 'error');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg><span class="report-label">Report</span>';
-        }
-    });
-};
+    if (submitBtn) {
+        submitBtn.onclick = function() {
+            var state = window._watchState || {};
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 5px;"></i> Fixing...';
+            submitBtn.style.opacity = '0.8';
+            submitBtn.style.cursor = 'not-allowed';
+            
+            fetch('/api/watch/clear-cache', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ anime_id: state.animeId })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                showToast('Cache cleared! Fetching fresh stream...', 'success');
+                setTimeout(function() { location.reload(); }, 800);
+            })
+            .catch(function() {
+                showToast('Error clearing cache, please refresh manually.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Fix it';
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            });
+        };
+    }
+});
