@@ -228,6 +228,62 @@ function attachPlayerControls(shell, vid) {
     back10?.addEventListener('click', e=>{ e.stopPropagation(); vid.currentTime=Math.max(0,vid.currentTime-10); });
     fwd10?.addEventListener('click',  e=>{ e.stopPropagation(); vid.currentTime=Math.min(vid.duration||0,vid.currentTime+10); });
 
+    // ── Keyboard Shortcuts ──
+    document.addEventListener('keydown', function(e) {
+        // Ignore if user is typing in an input/textarea (like search or comments)
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+        
+        switch (e.key.toLowerCase()) {
+            case 'f':
+                e.preventDefault();
+                fsBtn?.click();
+                break;
+            case ' ':
+                e.preventDefault();
+                vid.paused ? vid.play() : vid.pause();
+                showCtrls();
+                break;
+            case 'arrowright':
+                e.preventDefault();
+                vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
+                showCtrls();
+                break;
+            case 'arrowleft':
+                e.preventDefault();
+                vid.currentTime = Math.max(0, vid.currentTime - 10);
+                showCtrls();
+                break;
+            case 'arrowup':
+                e.preventDefault();
+                vid.volume = Math.min(1, vid.volume + 0.05);
+                vid.muted = (vid.volume === 0);
+                if (volSlider) volSlider.value = vid.volume;
+                syncMute();
+                showCtrls();
+                break;
+            case 'arrowdown':
+                e.preventDefault();
+                vid.volume = Math.max(0, vid.volume - 0.05);
+                vid.muted = (vid.volume === 0);
+                if (volSlider) volSlider.value = vid.volume;
+                syncMute();
+                showCtrls();
+                break;
+            case 'm':
+                e.preventDefault();
+                muteBtn?.click();
+                showCtrls();
+                break;
+        }
+    });
+
+    // ── Right-click to skip 10s ──
+    shell.addEventListener('contextmenu', function(e) {
+        e.preventDefault(); // Prevent default browser context menu
+        vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
+        showCtrls();
+    });
+
     // Controls auto-hide
     function showCtrls() {
         controls?.classList.remove('yz-hidden'); shell.style.cursor='';
