@@ -249,7 +249,7 @@
                                     <button
                                         class="server-pill {% if p_name == default_p and source_type == 'embed' %}active{% endif %}"
                                         data-stream-type="embed" data-provider="{{ p_name }}">
-                                        {{ 'Megaplay' if p_name == 'zoro' else p_name | title }}
+                                        {{ p_name | title }}
                                         <span class="srv-badge badge-embed">EMBED</span>
                                     </button>
                                     {% endfor %}

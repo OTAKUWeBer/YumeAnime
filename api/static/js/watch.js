@@ -422,6 +422,30 @@ function onHlsFatal() {
 
 // ── Provider fallback system ──────────────────────────────────────
 var _PROVIDER_PRIORITY = ['kiwi','ax-mimi','ax-wave','ax-shiro','ax-yuki','ax-zen','bee','zoro'];
+var PROVIDER_DISPLAY_NAMES = {
+    "kiwi":      "Miku",
+    "ax-mimi":   "Shinra",
+    "ax-wave":   "Nami",
+    "ax-shiro":  "Shiro",
+    "ax-yuki":   "Yuki",
+    "ax-zen":    "Senku",
+    "bee":       "Hachi",
+    "zoro":      "Megaplay",
+};
+
+function applyServerDisplayNames() {
+    document.querySelectorAll('.server-pill').forEach(function(pill) {
+        var p = pill.dataset.provider;
+        if (PROVIDER_DISPLAY_NAMES[p]) {
+            // Keep the badge span
+            var badge = pill.querySelector('.srv-badge');
+            pill.childNodes[0].textContent = PROVIDER_DISPLAY_NAMES[p] + ' ';
+            if (badge) pill.appendChild(badge);
+        }
+    });
+}
+// Run immediately
+applyServerDisplayNames();
 
 function resetFailedProviders() { _failedProviders.clear(); _isFallbackInProgress = false; }
 
@@ -456,12 +480,14 @@ function updateServerPillAvailability() {
         pill.title = fail ? 'Source unavailable for this episode' : '';
     });
 }
-function showFallbackToast(from, to) {
+function showFallbackToast(oldP, newP) {
+    var oldName = PROVIDER_DISPLAY_NAMES[oldP] || oldP;
+    var newName = PROVIDER_DISPLAY_NAMES[newP] || newP;
     var c = document.getElementById('toastContainer');
     if (!c) return;
     var t = document.createElement('div');
     t.style.cssText = 'pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(20,20,30,.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:.85rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s,opacity .3s;opacity:0;max-width:360px';
-    t.innerHTML = '<span><strong>' + from + '</strong> unavailable — switching to <strong>' + to + '</strong></span>';
+    t.innerHTML = '<span><strong>' + oldName + '</strong> unavailable — switching to <strong>' + newName + '</strong></span>';
     c.appendChild(t);
     requestAnimationFrame(function() { t.style.transform = 'translateX(0)'; t.style.opacity = '1'; });
     setTimeout(function() {
