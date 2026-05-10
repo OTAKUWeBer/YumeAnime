@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
- *  YumeZone Watch — Custom HLS.js Player (Kurovexa architecture)
+ *  YumeZone Watch — Custom HLS.js Player (YumeZone architecture)
  *  Fixes: segment looping · infinite buffer · retry loops
  * ═══════════════════════════════════════════════════════════════ */
 
@@ -19,9 +19,21 @@ let _ctrlTimer   = null;
 let _watchedMarked = false;
 let _isFallbackInProgress = false;
 let _failedProviders = new Set();
+let globalTimestamps = { intro: null, outro: null };
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 // ── Helpers ──────────────────────────────────────────────────────
+const YumeZone = {
+    watch: async (provider, animeId, language, epNumber) => {
+        const r = await fetch('/api/watch/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ anime_id: animeId, episode_number: epNumber, language, provider })
+        });
+        return await r.json();
+    }
+};
+
 function fmt(s) {
     if (!isFinite(s) || s < 0) return '0:00';
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = Math.floor(s % 60);
@@ -112,7 +124,37 @@ function buildCustomPlayer(playerArea, video) {
 </div>`;
     shell.prepend(video);
     playerArea.appendChild(shell);
+    
+    // Initialize timestamps from config if present
+    const cfg = window.WATCH_CONFIG || {};
+    if (cfg.intro) globalTimestamps.intro = cfg.intro;
+    if (cfg.outro) globalTimestamps.outro = cfg.outro;
+    
     attachPlayerControls(shell, video);
+}
+
+// ── Render Segments ───────────────────────────────────────────────
+function renderIntroOutroSegments() {
+    const vid = document.getElementById('yz-video');
+    const wrap = document.getElementById('yz-progress-wrap');
+    if (!vid || !wrap || !vid.duration) return;
+
+    // Remove existing segments
+    wrap.querySelectorAll('.yz-segment').forEach(s => s.remove());
+
+    const draw = (ts, cls) => {
+        if (!ts || ts.start === undefined || ts.end === undefined) return;
+        const s = (ts.start / vid.duration) * 100;
+        const e = (ts.end / vid.duration) * 100;
+        const el = document.createElement('div');
+        el.className = 'yz-segment ' + cls;
+        el.style.left = s + '%';
+        el.style.width = (e - s) + '%';
+        wrap.appendChild(el);
+    };
+
+    draw(globalTimestamps.intro, 'yz-seg-intro');
+    draw(globalTimestamps.outro, 'yz-seg-outro');
 }
 
 // ── Attach Controls ───────────────────────────────────────────────
@@ -139,7 +181,7 @@ function attachPlayerControls(shell, vid) {
     // Skip intro/outro
     vid.addEventListener('timeupdate', () => {
         if (!skipBtn) return;
-        const cur = vid.currentTime, i = cfg.intro, o = cfg.outro;
+        const cur = vid.currentTime, i = globalTimestamps.intro, o = globalTimestamps.outro;
         let found = false;
         if (i && cur >= i.start && cur <= i.end)       { skipBtn.textContent='Skip Intro'; skipBtn.style.display='block'; skipTarget=i.end; found=true; }
         else if (o && cur >= o.start && cur <= o.end)  { skipBtn.textContent='Skip Outro'; skipBtn.style.display='block'; skipTarget=o.end; found=true; }
@@ -198,6 +240,7 @@ function attachPlayerControls(shell, vid) {
         bufBar.style.width = ((buf/vid.duration)*100)+'%';
     });
     vid.addEventListener('canplay', ()=>{ 
+        renderIntroOutroSegments();
         try {
             const s=parseInt(localStorage.getItem(resumeKey)); 
             if(s>5) {
@@ -603,47 +646,59 @@ function applyVideoSources(data) {
 }
 // ── fetchAndLoadSources ───────────────────────────────────────────
 function fetchAndLoadSources(isAutoFallback) {
-    var state   = window._watchState || {};
-    var curProv = state.provider;
-    var ss      = document.getElementById('serverSections');
+    const cfg = window.WATCH_CONFIG || {};
+    const state = window._watchState || {};
+    const curProv = state.provider || cfg.provider;
+    const ss = document.getElementById('serverSections');
+    
+    if (!curProv) return;
+    if (!isAutoFallback) _failedProviders.clear();
+    _isFallbackInProgress = true;
     if (ss) ss.classList.add('loading');
 
-    fetch('/api/watch/sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            anime_id:       state.animeId,
-            episode_number: state.episodeNumber,
-            language:       state.language,
-            provider:       curProv
-        })
-    })
-    .then(function(r) { return r.json(); })
+    YumeZone.watch(curProv, cfg.animeId, state.language || cfg.language, cfg.episodeNumber)
     .then(function(data) {
-        var hasHls   = (data.hls_sources   || []).length > 0;
-        var hasEmbed = (data.embed_sources || []).length > 0;
+        const hasHls   = (data.hls_sources   || []).length > 0;
+        const hasEmbed = (data.embed_sources || []).length > 0;
 
         if (data.error || (!hasHls && !hasEmbed)) {
             markProviderFailed(curProv);
-            var next = getNextAvailableProvider(curProv);
-            if (next) { showFallbackToast(curProv, next); state.provider = next; _isFallbackInProgress = true; fetchAndLoadSources(true); return; }
-            _isFallbackInProgress = false; showNoSourcesMessage();
+            const next = getNextAvailableProvider(curProv);
+            if (next) {
+                showFallbackToast(curProv, next);
+                state.provider = next;
+                _isFallbackInProgress = true;
+                fetchAndLoadSources(true);
+                return;
+            }
+            _isFallbackInProgress = false;
+            showNoSourcesMessage();
             if (ss) ss.classList.remove('loading');
             return;
         }
 
         _isFallbackInProgress = false;
-        if (data.intro !== undefined && window.WATCH_CONFIG) window.WATCH_CONFIG.intro = data.intro;
-        if (data.outro !== undefined && window.WATCH_CONFIG) window.WATCH_CONFIG.outro = data.outro;
+        
+        // Update global timestamps
+        globalTimestamps.intro = (data.intro && data.intro.start !== undefined) ? data.intro : null;
+        globalTimestamps.outro = (data.outro && data.outro.start !== undefined) ? data.outro : null;
+        renderIntroOutroSegments();
+
+        if (window.WATCH_CONFIG) {
+            window.WATCH_CONFIG.intro = globalTimestamps.intro;
+            window.WATCH_CONFIG.outro = globalTimestamps.outro;
+        }
+
         resetWatchedFlag();
         applyVideoSources(data);
 
         if (ss) {
             ss.querySelectorAll('.server-pill').forEach(function(p) { p.classList.remove('active'); });
-            var dt   = state._desiredStreamType;
-            var type = dt || data.source_type || (hasHls ? 'hls' : 'embed');
-            var act  = ss.querySelector('.server-pill[data-provider="' + curProv + '"][data-stream-type="' + type + '"]');
+            const dt   = state._desiredStreamType;
+            const type = dt || data.source_type || (hasHls ? 'hls' : 'embed');
+            const act  = ss.querySelector('.server-pill[data-provider="' + curProv + '"][data-stream-type="' + type + '"]');
             if (act) act.classList.add('active');
+            ss.classList.remove('loading');
         }
         delete state._desiredStreamType;
         if (ss) ss.classList.remove('loading');

@@ -487,11 +487,12 @@ class AnimexScraper:
                 )
 
         primary_url = hls_sources[0]["url"]
+        print(f"[AnimeX] get_sources: anilist_id={anilist_id} ep={ep_num} server={provider_id} -> intro={raw.get('intro')}, outro={raw.get('outro')}")
         return {
             "sources": [{"file": s["url"], "url": s["url"], "quality": s["quality"]} for s in hls_sources],
             "tracks": tracks,
-            "intro": None,
-            "outro": None,
+            "intro": raw.get("intro"),
+            "outro": raw.get("outro"),
             "headers": upstream_headers or {},
             "provider": "animex",
             "download": "",

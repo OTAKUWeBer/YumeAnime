@@ -212,7 +212,7 @@ def _parse_video_raw(raw):
         outro = raw.get("outro")
 
     print(
-        f"[_fetch_video_data] source_type={source_type}, video_link={str(video_link)[:80] if video_link else 'NONE'}"
+        f"[_fetch_video_data] source_type={source_type}, video_link={str(video_link)[:80] if video_link else 'NONE'}, intro={intro}, outro={outro}"
     )
 
     return {
@@ -900,6 +900,38 @@ def get_watch_sources():
     video_data, provider_capabilities = _fetch_video_only(
         full_slug, lang, selected_server, anilist_id, providers_map
     )
+
+    # ── Intro/Outro Scavenging ───────────────────────────────────────
+    # If the current provider has no intro/outro, try to find them from
+    # other available providers to ensure global skip availability.
+    if not video_data.get("intro") and not video_data.get("outro") and anilist_id:
+        other_providers = [p for p in providers_map.keys() if p != selected_server]
+        # Prioritize providers likely to have metadata
+        other_providers.sort(key=lambda p: 0 if p == 'kiwi' or p.startswith('ax-') else 1)
+        
+        for other_p in other_providers[:3]: # try up to 3 other providers
+            other_ep_id = _find_episode_id_for_provider(providers_map, other_p, ep_number, lang)
+            if other_ep_id:
+                try:
+                    print(f"[Scavenge] Checking {other_p} for intro/outro metadata...")
+                    # Construct full slug for other provider
+                    if other_ep_id.startswith("watch/"):
+                        p_parts = other_ep_id.split("/")
+                        if len(p_parts) >= 5: p_parts[3] = lang
+                        other_full_slug = "/".join(p_parts)
+                    else:
+                        other_full_slug = other_ep_id
+
+                    # Fetch ONLY to get metadata (scraper cache will help)
+                    m_data = asyncio.run(current_app.ha_scraper.video(other_full_slug, lang, other_p, anilist_id))
+                    if m_data.get("intro") or m_data.get("outro"):
+                        video_data["intro"] = m_data.get("intro")
+                        video_data["outro"] = m_data.get("outro")
+                        print(f"[Scavenge] SUCCESS: Found intro/outro from {other_p}!")
+                        break
+                except Exception as e:
+                    print(f"[Scavenge] Failed to check {other_p}: {e}")
+    # ────────────────────────────────────────────────────────────────
 
     # Determine if this provider actually has working sources
     has_hls = bool(video_data.get("hls_sources"))

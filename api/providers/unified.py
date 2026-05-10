@@ -25,6 +25,7 @@ class UnifiedScraper:
         self.anilist_home = AnilistHomeService()
         self.animex = AnimexScraper()
         # self.kuudere = KuudereScraper()
+        self._metadata_cache = {}  # (anilist_id, ep_num) -> {"intro": ..., "outro": ...}
 
         logger.info("[UnifiedScraper] Initialized with AniList GraphQL + Miruro")
 
@@ -297,6 +298,21 @@ class UnifiedScraper:
                         f"ep={ax_ep_num} server={ax_server_id}"
                     )
                     result["source_provider"] = ax_server_id or result.get("source_provider")
+                    
+                    # Update metadata cache if found
+                    if ax_anilist_id and ax_ep_num is not None:
+                        intro = result.get("intro")
+                        outro = result.get("outro")
+                        if intro or outro:
+                            self._metadata_cache[(int(ax_anilist_id), ax_ep_num)] = {"intro": intro, "outro": outro}
+                        elif (int(ax_anilist_id), ax_ep_num) in self._metadata_cache:
+                            cached = self._metadata_cache[(int(ax_anilist_id), ax_ep_num)]
+                            result["intro"] = cached.get("intro")
+                            result["outro"] = cached.get("outro")
+                            print(f"[UnifiedScraper] Borrowed intro/outro from cache for ep {ax_ep_num} (AnimeX)")
+                        else:
+                            print(f"[UnifiedScraper] Intro/outro not coming for AnimeX (server {ax_server_id}) ep {ax_ep_num}")
+
                     return result
                 logger.warning(
                     f"[UnifiedScraper] AnimeX returned no sources for anilist_id={ax_anilist_id} "
@@ -392,6 +408,16 @@ class UnifiedScraper:
                 _m = _re.match(r"watch/([^/]+)/\d+/", ep_id_str)
                 provider = server or (_m.group(1) if _m else "kiwi")
 
+                # Extract episode number for metadata caching
+                slug_tail = ep_id_str.split("/")[-1]
+                num_match = _re.search(r"(\d+(?:\.\d+)?)$", slug_tail)
+                ep_num = None
+                if num_match:
+                    try:
+                        f_num = float(num_match.group(1))
+                        ep_num = int(f_num) if f_num.is_integer() else f_num
+                    except: pass
+
                 result = await self.miruro.get_sources(
                     episode_id=miruro_ep_id,
                     provider=provider,
@@ -400,9 +426,23 @@ class UnifiedScraper:
                 )
                 if result and not result.get("error") and (result.get("video_link") or result.get("embed_sources")):
                     logger.info(f"[UnifiedScraper] Video (Miruro, server={provider}): OK for {miruro_ep_id}")
-                    # All providers now route through the unified worker /p/ endpoint.
-                    # The worker handles referer/origin headers via Base64url payload.
                     result["source_provider"] = provider
+                    
+                    # Update metadata cache if found
+                    if anilist_id and ep_num is not None:
+                        intro = result.get("intro")
+                        outro = result.get("outro")
+                        if intro or outro:
+                            self._metadata_cache[(int(anilist_id), ep_num)] = {"intro": intro, "outro": outro}
+                        elif (int(anilist_id), ep_num) in self._metadata_cache:
+                            cached = self._metadata_cache[(int(anilist_id), ep_num)]
+                            result["intro"] = cached.get("intro")
+                            result["outro"] = cached.get("outro")
+                            print(f"[UnifiedScraper] Borrowed intro/outro from cache for ep {ep_num}")
+                        else:
+                            print(f"[UnifiedScraper] Intro/outro not coming for {provider} {ep_num}. Checking providers_map...")
+                            # Note: scavenge logic is better handled in the route or a separate loop to avoid recursion
+                    
                     return result
                 else:
                     logger.warning(
@@ -411,6 +451,9 @@ class UnifiedScraper:
             except Exception as e:
                 logger.warning(f"[UnifiedScraper] Video Miruro failed: {e}")
 
+        # Final check: if we have cached metadata but the result was empty or missing it, 
+        # (Actually, if we are here it failed, but if it returned something we should ensure intro/outro)
+        
         logger.info(f"[UnifiedScraper] Video: Miruro failed for {ep_id_str}")
         return {
             "error": "no_sources",
