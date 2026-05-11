@@ -329,13 +329,16 @@ function attachPlayerControls(shell, vid) {
     });
 
     // Controls auto-hide
+    let _lastTouchTime = 0;
+    shell.addEventListener('touchstart', ()=>{ _lastTouchTime = Date.now(); }, {passive: true});
+
     function showCtrls() {
         controls?.classList.remove('yz-hidden'); shell.style.cursor='';
         clearTimeout(_ctrlTimer);
         if (!vid.paused) _ctrlTimer = setTimeout(()=>{ controls?.classList.add('yz-hidden'); shell.style.cursor='none'; if(settPanel) settPanel.style.display='none'; }, 3000);
     }
-    shell.addEventListener('mousemove', showCtrls);
-    shell.addEventListener('mouseenter', showCtrls);
+    shell.addEventListener('mousemove', ()=>{ if (Date.now() - _lastTouchTime < 500) return; showCtrls(); });
+    shell.addEventListener('mouseenter', ()=>{ if (Date.now() - _lastTouchTime < 500) return; showCtrls(); });
 
     // ── Mobile double-tap seek & tap-to-toggle ──
     var _isMobile = navigator.maxTouchPoints > 0;
