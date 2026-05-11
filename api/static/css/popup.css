@@ -152,6 +152,19 @@
     line-height: 1.6;
 }
 
+.welcome-popup-list {
+    margin: 10px 0 0 18px;
+    padding: 0;
+    list-style: disc;
+    color: #a1a1aa;
+    font-size: 0.9rem;
+}
+
+.welcome-popup-list li {
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
 .welcome-popup-actions {
     display: flex;
     gap: 16px;

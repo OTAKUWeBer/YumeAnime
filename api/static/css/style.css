@@ -1353,6 +1353,26 @@ h6 {
     font-weight: 500;
 }
 
+.welcome-popup-card-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.welcome-popup-list {
+    margin: 10px 0 0 18px;
+    padding: 0;
+    list-style: disc;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.welcome-popup-list li {
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
 .history-card-duration {
     font-size: 0.75rem;
     color: var(--text-secondary);
