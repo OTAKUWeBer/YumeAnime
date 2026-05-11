@@ -81,44 +81,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleText = entry.episodeTitle ? `${entry.epNum}. ${entry.episodeTitle}` : (entry.animeName || entry.animeId.replace(/-/g, ' '));
 
         return `
-            <div class="anime-card" style="position: relative;" data-key="${entry._key}">
-                <a href="/watch/${entry.animeId}/ep-${entry.epNum}" style="display: block; position: relative;">
+            <div class="anime-card history-card" data-key="${entry._key}">
+                <a href="/watch/${entry.animeId}/ep-${entry.epNum}" class="history-card-poster-link">
                     <div class="anime-card-poster" style="aspect-ratio: 16/9;">
-                        <img src="${posterSrc}" alt="${entry.animeName || ''}" loading="lazy" style="object-fit: cover;">
+                        <img src="${posterSrc}" alt="${entry.animeName || ''}" loading="lazy">
                         
-                        <!-- Badges Overlay -->
-                        <div style="position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; z-index: 2;">
-                            <span class="badge" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">EP ${entry.epNum}</span>
-                            ${isCompleted ? '<span class="badge" style="background: var(--success); color: #fff;">Completed</span>' : ''}
+                        <div class="history-card-badges">
+                            <span class="history-badge ep">EP ${entry.epNum}</span>
+                            ${isCompleted ? '<span class="history-badge completed">Completed</span>' : ''}
                         </div>
 
-                        <!-- Remove Button -->
-                        <button class="history-remove-btn" data-key="${entry._key}" data-anime-id="${entry.animeId}" data-ep="${entry.epNum}" title="Remove from history" style="position: absolute; top: 8px; right: 8px; z-index: 5; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px);">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <button class="history-remove-btn" data-key="${entry._key}" data-anime-id="${entry.animeId}" data-ep="${entry.epNum}" title="Remove from history">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
 
                         <div class="anime-card-overlay">
-                            <span class="btn btn-primary btn-sm">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                Resume
-                            </span>
+                            <div class="play-icon-circle">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-left: 2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </div>
                         </div>
 
-                        <!-- Progress Bar -->
                         ${entry.duration > 0 ? `
-                        <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: rgba(255,255,255,0.2);">
-                            <div style="height: 100%; width: ${progress}%; background: var(--accent);"></div>
+                        <div class="history-progress-wrap">
+                            <div class="history-progress-bar" style="width: ${progress}%;"></div>
                         </div>
                         ` : ''}
                     </div>
                 </a>
-                <div class="anime-card-info" style="padding-top: 10px;">
-                    <h3 class="anime-card-title" style="margin-bottom: 4px; font-size: 0.95rem;">${titleText}</h3>
-                    <div class="anime-card-meta" style="justify-content: space-between;">
-                        <span style="color: var(--text-muted);">${entry.animeName}</span>
-                        ${entry.duration > 0 ? `<span style="font-size: 0.75rem;">${formatTime(entry.timestamp)} / ${formatTime(entry.duration)}</span>` : ''}
+                <div class="history-card-details">
+                    <h3 class="history-card-title">${titleText}</h3>
+                    <div class="history-card-anime">${entry.animeName}</div>
+                    <div class="history-card-footer">
+                        <span class="history-card-time">${timeAgoText}</span>
+                        ${entry.duration > 0 ? `<span class="history-card-duration">${formatTime(entry.timestamp)} / ${formatTime(entry.duration)}</span>` : ''}
                     </div>
-                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">${timeAgoText}</div>
                 </div>
             </div>
         `;

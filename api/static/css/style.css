@@ -861,6 +861,12 @@ h6 {
     font-size: 0.8rem;
 }
 
+.btn-xs {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    gap: 4px;
+}
+
 .btn-lg {
     padding: var(--space-md) var(--space-xl);
     font-size: 1rem;
@@ -1177,12 +1183,182 @@ h6 {
     opacity: 1;
 }
 
+.play-icon-circle {
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    color: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.anime-card:hover .play-icon-circle {
+    transform: translateY(0) scale(1.1);
+    background: var(--badge-sub);
+    color: #fff;
+}
+
 .anime-card-badges {
     position: absolute;
     top: var(--space-sm);
     left: var(--space-sm);
     display: flex;
     gap: var(--space-xs);
+    z-index: 2;
+}
+
+/* ── History Cards Redesign ─────────────────────────────────── */
+.history-card {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.history-card:hover {
+    transform: none !important;
+}
+
+.history-card-poster-link {
+    display: block;
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.history-card:hover .history-card-poster-link {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.history-card-badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 2;
+}
+
+.history-badge {
+    padding: 3px 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(8px);
+}
+
+.history-badge.ep {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-badge.completed {
+    background: rgba(34, 197, 94, 0.85);
+    color: #fff;
+}
+
+.history-remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-card:hover .history-remove-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.history-remove-btn:hover {
+    background: #ef4444;
+    transform: scale(1.1) !important;
+}
+
+.history-progress-wrap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.history-progress-bar {
+    height: 100%;
+    background: var(--badge-sub);
+    box-shadow: 0 0 8px var(--badge-sub);
+}
+
+.history-card-details {
+    padding: 12px 4px;
+}
+
+.history-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.history-card-anime {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.history-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-card-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.history-card-duration {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 .badge {
