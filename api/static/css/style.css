@@ -291,7 +291,9 @@ h6 {
     gap: var(--space-sm);
     font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: -0.03em;
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -1px;
+    text-transform: uppercase;
     flex-shrink: 0;
 }
 
