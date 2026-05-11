@@ -16,10 +16,7 @@ from bs4 import BeautifulSoup
 dotenv.load_dotenv()
 
 # ── Proxy endpoints ───────────────────────────────────────────────────────────
-WORKER_BASE = os.getenv(
-    "WORKER_URL",
-    "",
-).rstrip("/")
+WORKER_BASE = os.getenv("WORKER_URL", "").rstrip("/")
 
 CDN_PROXY_URL = os.getenv(
     "PROXY_URL",
