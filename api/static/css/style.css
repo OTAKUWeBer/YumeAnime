@@ -31,7 +31,7 @@
     --info: #3b82f6;
 
     /* Badge Colors */
-    --badge-sub: #a855f7;
+    --badge-sub: #ff3e3e;
     --badge-dub: #3b82f6;
 
     /* Spacing */
@@ -607,7 +607,7 @@ h6 {
     transform: translateY(-50%);
     width: 3px;
     height: 0;
-    background: #a855f7;
+    background: #ff3e3e;
     border-radius: 0 4px 4px 0;
     transition: height 0.2s ease;
 }
@@ -622,8 +622,8 @@ h6 {
 }
 
 .sidebar-link.active {
-    color: #a855f7;
-    background: rgba(168, 85, 247, 0.1);
+    color: #ff3e3e;
+    background: rgba(255, 62, 62, 0.1);
     font-weight: 600;
 }
 
@@ -632,7 +632,7 @@ h6 {
 }
 
 .sidebar-link.active svg {
-    color: #a855f7;
+    color: #ff3e3e;
 }
 
 .sidebar-link svg {
@@ -972,9 +972,9 @@ h6 {
 }
 
 .tab-btn.active {
-    background: rgba(168, 85, 247, 0.15);
-    border-color: rgba(168, 85, 247, 0.3);
-    color: #a855f7;
+    background: rgba(255, 62, 62, 0.15);
+    border-color: rgba(255, 62, 62, 0.3);
+    color: #ff3e3e;
 }
 
 .tab-content {
@@ -1402,9 +1402,9 @@ h6 {
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-md);
-    background: rgba(var(--primary-color-rgb, 168, 85, 247), 0.2);
+    background: rgba(var(--primary-color-rgb, 255, 62, 62), 0.2);
     color: var(--primary-color);
-    border: 1px solid rgba(var(--primary-color-rgb, 168, 85, 247), 0.3);
+    border: 1px solid rgba(var(--primary-color-rgb, 255, 62, 62), 0.3);
     border-radius: var(--radius-full);
     font-size: 0.85rem;
     font-weight: 600;
@@ -1473,8 +1473,8 @@ h6 {
 }
 
 .spotlight-genre-tag:hover {
-    background: rgba(var(--primary-color-rgb, 168, 85, 247), 0.25);
-    border-color: rgba(var(--primary-color-rgb, 168, 85, 247), 0.5);
+    background: rgba(var(--primary-color-rgb, 255, 62, 62), 0.25);
+    border-color: rgba(var(--primary-color-rgb, 255, 62, 62), 0.5);
 }
 
 .spotlight-meta {
@@ -2184,7 +2184,7 @@ h6 {
 .stat-card-value {
     font-size: 1.75rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #02a9ff, #8b5cf6);
+    background: linear-gradient(135deg, #ef4444, #ff3e3e);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -2390,7 +2390,7 @@ h6 {
 
 .sync-bar {
     height: 100%;
-    background: linear-gradient(90deg, #02a9ff, #8b5cf6);
+    background: linear-gradient(90deg, #ef4444, #ff3e3e);
     border-radius: 2px;
     transition: width 0.3s ease;
 }

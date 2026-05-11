@@ -49,12 +49,12 @@
 .reaction-btn:hover {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(var(--primary-rgb, 139, 92, 246), 0.08);
+    background: rgba(var(--primary-rgb, 255, 62, 62), 0.08);
     transform: translateY(-1px);
 }
 
 .reaction-btn.liked {
-    background: rgba(var(--primary-rgb, 139, 92, 246), 0.15);
+    background: rgba(var(--primary-rgb, 255, 62, 62), 0.15);
     border-color: var(--primary);
     color: var(--primary);
 }
@@ -107,7 +107,7 @@
 }
 
 .comment-total-badge {
-    background: rgba(var(--primary-rgb, 139, 92, 246), 0.18);
+    background: rgba(var(--primary-rgb, 255, 62, 62), 0.18);
     color: var(--primary);
     font-size: 0.78rem;
     font-weight: 700;
@@ -140,7 +140,7 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #ef4444, #ff3e3e);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -432,7 +432,7 @@
 
 .comment-react-btn.liked {
     color: var(--primary);
-    background: rgba(var(--primary-rgb, 139, 92, 246), 0.1);
+    background: rgba(var(--primary-rgb, 255, 62, 62), 0.1);
 }
 
 .comment-react-btn.disliked {
@@ -471,7 +471,7 @@
     margin-left: 46px;
     margin-top: 12px;
     padding-left: 14px;
-    border-left: 2px solid rgba(var(--primary-rgb, 139, 92, 246), 0.25);
+    border-left: 2px solid rgba(var(--primary-rgb, 255, 62, 62), 0.25);
 }
 
 .reply-item {
@@ -500,7 +500,7 @@
     margin-left: 46px;
     margin-top: 10px;
     padding-left: 14px;
-    border-left: 2px solid rgba(var(--primary-rgb, 139, 92, 246), 0.25);
+    border-left: 2px solid rgba(var(--primary-rgb, 255, 62, 62), 0.25);
     padding-top: 10px;
 }
 

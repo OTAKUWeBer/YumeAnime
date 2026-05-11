@@ -37,7 +37,7 @@
 .manga-source-tab.active {
     background: var(--primary);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 2px 8px rgba(255, 62, 62, 0.3);
 }
 
 /* ── Manga Search Bar ────────────────────────────────────────────────── */
@@ -138,7 +138,7 @@
 .manga-card:hover {
     transform: translateY(-6px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(168, 85, 247, 0.15);
+                0 0 0 1px rgba(255, 62, 62, 0.15);
 }
 
 .manga-card-poster {
@@ -194,7 +194,7 @@
 }
 
 .manga-card-badges .badge-source {
-    background: rgba(168, 85, 247, 0.8);
+    background: rgba(255, 62, 62, 0.8);
     color: #fff;
 }
 
@@ -246,7 +246,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.05), transparent 50%);
+    background: linear-gradient(135deg, rgba(255, 62, 62, 0.05), transparent 50%);
     pointer-events: none;
 }
 
@@ -360,17 +360,17 @@
 
 .manga-detail-genres .genre-tag {
     padding: 4px 12px;
-    background: rgba(168, 85, 247, 0.15);
+    background: rgba(255, 62, 62, 0.15);
     color: var(--primary);
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(255, 62, 62, 0.2);
     transition: all 0.2s;
 }
 
 .manga-detail-genres .genre-tag:hover {
-    background: rgba(168, 85, 247, 0.25);
+    background: rgba(255, 62, 62, 0.25);
 }
 
 .manga-detail-description {
@@ -603,7 +603,7 @@
     border-color: var(--primary);
     color: #fff;
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 4px 16px rgba(255, 62, 62, 0.3);
 }
 
 /* ── Empty State ─────────────────────────────────────────────────────── */

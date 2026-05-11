@@ -336,7 +336,7 @@
     }
 
     .wl-input:focus {
-        border-color: var(--primary-color, #a855f7);
+        border-color: var(--primary-color, #ff3e3e);
         background: rgba(255, 255, 255, 0.08);
     }
 
@@ -369,8 +369,8 @@
     }
 
     .wl-step-btn:hover {
-        background: rgba(168, 85, 247, 0.15);
-        border-color: rgba(168, 85, 247, 0.4);
+        background: rgba(255, 62, 62, 0.15);
+        border-color: rgba(255, 62, 62, 0.4);
     }
 
     .wl-actions {
@@ -401,7 +401,7 @@
     }
 
     .wl-btn-save {
-        background: var(--primary-color, #a855f7);
+        background: var(--primary-color, #ff3e3e);
         border: none;
         color: white;
         padding: 10px 24px;

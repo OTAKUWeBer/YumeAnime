@@ -25,7 +25,7 @@
 
     .season-card.current {
         border-color: var(--primary-color);
-        box-shadow: 0 0 15px var(--primary-color-alpha, rgba(168, 85, 247, 0.4));
+        box-shadow: 0 0 15px var(--primary-color-alpha, rgba(255, 62, 62, 0.4));
         transform: scale(1.02);
     }
 
@@ -397,7 +397,7 @@
     }
 
     .wl-input:focus {
-        border-color: var(--primary-color, #a855f7);
+        border-color: var(--primary-color, #ff3e3e);
         background: rgba(255, 255, 255, 0.08);
     }
 
@@ -430,8 +430,8 @@
     }
 
     .wl-step-btn:hover {
-        background: rgba(168, 85, 247, 0.15);
-        border-color: rgba(168, 85, 247, 0.4);
+        background: rgba(255, 62, 62, 0.15);
+        border-color: rgba(255, 62, 62, 0.4);
     }
 
     .wl-actions {
@@ -462,7 +462,7 @@
     }
 
     .wl-btn-save {
-        background: var(--primary-color, #a855f7);
+        background: var(--primary-color, #ff3e3e);
         border: none;
         color: white;
         padding: 10px 24px;
@@ -613,7 +613,7 @@
     }
 
     .music-group-badge.op {
-        background: linear-gradient(135deg, #6366f1, #a855f7);
+        background: linear-gradient(135deg, #ef4444, #ff3e3e);
     }
 
     .music-group-badge.ed {
@@ -641,15 +641,15 @@
     }
 
     .music-card:hover {
-        border-color: var(--accent-muted, rgba(168, 85, 247, 0.3));
+        border-color: var(--accent-muted, rgba(255, 62, 62, 0.3));
         background: var(--bg-surface-hover);
         transform: translateX(4px);
     }
 
     .music-card.playing {
         border-color: var(--accent);
-        background: rgba(168, 85, 247, 0.08);
-        box-shadow: 0 0 20px rgba(168, 85, 247, 0.1);
+        background: rgba(255, 62, 62, 0.08);
+        box-shadow: 0 0 20px rgba(255, 62, 62, 0.1);
     }
 
     .music-card-left {
@@ -674,7 +674,7 @@
     }
 
     .music-sequence-badge:not(.has-image).op {
-        background: linear-gradient(135deg, #6366f1, #a855f7);
+        background: linear-gradient(135deg, #ef4444, #ff3e3e);
     }
 
     .music-sequence-badge:not(.has-image).ed {
@@ -713,7 +713,7 @@
     }
 
     .music-badge-num.op {
-        background: linear-gradient(135deg, #6366f1, #a855f7);
+        background: linear-gradient(135deg, #ef4444, #ff3e3e);
     }
 
     .music-badge-num.ed {

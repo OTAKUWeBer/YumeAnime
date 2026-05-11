@@ -27,7 +27,7 @@
     width: 90%;
     max-width: 480px;
     position: relative;
-    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.8), 0 0 60px rgba(168, 85, 247, 0.1);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.8), 0 0 60px rgba(255, 62, 62, 0.1);
     transform: translateY(30px) scale(0.9);
     transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     overflow: hidden;
@@ -40,7 +40,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle at top right, rgba(168, 85, 247, 0.15) 0%, transparent 60%);
+    background: radial-gradient(circle at top right, rgba(255, 62, 62, 0.15) 0%, transparent 60%);
     pointer-events: none;
 }
 
@@ -97,9 +97,9 @@
 
 .welcome-popup-card:hover {
     background: rgba(30, 30, 35, 0.9);
-    border-color: rgba(168, 85, 247, 0.3);
+    border-color: rgba(255, 62, 62, 0.3);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(168, 85, 247, 0.05);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(255, 62, 62, 0.05);
 }
 
 .welcome-popup-card-header {
@@ -125,8 +125,8 @@
 }
 
 .welcome-icon.fix-icon {
-    color: #a855f7;
-    filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
+    color: #ff3e3e;
+    filter: drop-shadow(0 0 8px rgba(255, 62, 62, 0.4));
 }
 
 .welcome-popup-card-title {
@@ -141,7 +141,7 @@
 }
 
 .welcome-popup-card-title.update {
-    background: linear-gradient(to right, #a855f7, #d8b4fe);
+    background: linear-gradient(to right, #ef4444, #ff3e3e);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
