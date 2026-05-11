@@ -1704,6 +1704,20 @@ media-player:not(:defined) {
     gap: 8px;
 }
 
+.watch-nav-left .btn-primary {
+    background: #fff !important;
+    color: #000 !important;
+    border: none !important;
+    font-weight: 600 !important;
+}
+
+.watch-nav-left .btn-primary:hover {
+    background: #e2e2e2 !important;
+    color: #000 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+}
+
 .watch-nav-right {
     display: flex;
     align-items: center;
