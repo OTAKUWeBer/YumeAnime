@@ -17,8 +17,8 @@ dotenv.load_dotenv()
 
 # ── Proxy endpoints ───────────────────────────────────────────────────────────
 WORKER_BASE = os.getenv(
-    "KIWI_PROXY_URL",
-    "https://",
+    "WORKER_URL",
+    "",
 ).rstrip("/")
 
 CDN_PROXY_URL = os.getenv(
@@ -344,101 +344,68 @@ def proxy_video_sources(
     headers: Optional[Dict[str, str]] = None,
     provider: Optional[str] = None,
 ) -> Dict[str, Any]:
-
+    """
+    Route video links and subtitles through appropriate proxies.
+    Modifies the input dictionary in-place.
+    """
     if not isinstance(data, dict):
         return data
 
     if headers is None:
         headers = {"referer": "https://kwik.cx/"}
 
-    def _pick(
-        url: str,
-        for_subtitles: bool = False,
-    ) -> str:
-
+    def _pick(url: str, for_subtitles: bool = False) -> str:
         if not url or _is_already_proxied(url):
             return url
-
-        # subtitles ALWAYS use cdn-eu
         if for_subtitles:
             return encode_proxy(url, headers) or url
-
         return _route_proxy(url, provider, headers)
 
-    # ── sources ──────────────────────────────────────────────────────────────
-    sources = data.get("sources")
+    # ── video_link ──────────────────────────────────────────────────────────
+    if data.get("video_link"):
+        data["video_link"] = _pick(data["video_link"])
 
+    # ── sources / video_sources ──────────────────────────────────────────────
+    sources = data.get("sources") or data.get("video_sources")
     if isinstance(sources, dict):
-
         for k in ("file", "url"):
             if sources.get(k):
                 sources[k] = _pick(sources[k])
-
     elif isinstance(sources, list):
-
         for s in sources:
             if isinstance(s, dict):
-
                 for k in ("file", "url"):
                     if s.get(k):
                         s[k] = _pick(s[k])
 
     # ── hls_sources ──────────────────────────────────────────────────────────
     hls = data.get("hls_sources")
-
     if isinstance(hls, list):
-
         for s in hls:
             if isinstance(s, dict):
-
                 for k in ("file", "url"):
                     if s.get(k):
                         s[k] = _pick(s[k])
+        # Rebuild video_link if missing
+        if hls and not data.get("video_link"):
+            data["video_link"] = hls[0].get("url") or hls[0].get("file")
 
-        # rebuild video_link
-        if hls:
-            data["video_link"] = (
-                hls[0].get("url")
-                or hls[0].get("file")
-                or data.get("video_link")
-            )
-
-    # ── tracks / subtitles ──────────────────────────────────────────────────
-    if isinstance(data.get("tracks"), list):
-
-        for track in data["tracks"]:
-
+    # ── tracks / subtitle_tracks ───────────────────────────────────────────
+    tracks = data.get("tracks") or data.get("subtitle_tracks")
+    if isinstance(tracks, list):
+        for track in tracks:
             if not isinstance(track, dict):
                 continue
-
             if track.get("lang") and not track.get("label"):
                 track["label"] = track["lang"]
-
             if not track.get("kind"):
-
-                ll = (
-                    track.get("lang")
-                    or track.get("label")
-                    or ""
-                ).lower()
-
-                track["kind"] = (
-                    "metadata"
-                    if "thumbnail" in ll
-                    else "subtitles"
-                )
-
+                ll = (track.get("lang") or track.get("label") or "").lower()
+                track["kind"] = "metadata" if "thumbnail" in ll else "subtitles"
             for k in ("file", "url"):
                 if track.get(k):
-                    track[k] = _pick(
-                        track[k],
-                        for_subtitles=True,
-                    )
-
+                    track[k] = _pick(track[k], for_subtitles=True)
         try:
-            data["tracks"].sort(
-                key=sort_subtitle_priority
-            )
+            tracks.sort(key=sort_subtitle_priority)
         except Exception:
             pass
 

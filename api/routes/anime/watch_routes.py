@@ -20,6 +20,7 @@ from flask import (
 from urllib.parse import parse_qs
 
 from ...models.watchlist import get_watchlist_entry
+from ...providers.video_utils import WORKER_BASE, proxy_video_sources
 
 watch_routes_bp = Blueprint("watch_routes", __name__)
 
@@ -246,6 +247,10 @@ def _fetch_video_only(
         video_data = _parse_video_raw(None)
 
     # Only report capabilities for the provider we actually fetched
+    # Apply backend proxying so the frontend doesn't need to know the WORKER_URL
+    video_data = proxy_video_sources(video_data, provider=server)
+    
+    # Recalculate capabilities based on proxied data
     capabilities = {}
     if server:
         has_hls = bool(video_data.get("hls_sources"))
@@ -958,6 +963,9 @@ def get_watch_sources():
         "provider_capabilities": provider_capabilities,
         "available": has_sources,
     }
+    
+    # Apply backend proxying for AJAX response
+    response_data = proxy_video_sources(response_data, provider=provider_name)
 
     # Signal error to frontend when provider has no sources
     if not has_sources:

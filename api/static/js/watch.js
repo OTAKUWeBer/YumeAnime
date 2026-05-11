@@ -633,15 +633,9 @@ function showNoSourcesMessage() {
     if (pa) pa.innerHTML = '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0d0d;gap:12px"><span style="color:#ef4444;font-size:.95rem;font-weight:600">No streams available</span><span style="color:#64748b;font-size:.82rem">Try another server or check back later.</span></div>';
 }
 
-// ── Proxy Wrapping ────────────────────────────────────────────────
-const WORKER_BASE = 'https:///p/';
+// ── Proxy Wrapping (Now handled by backend) ──────────────────────
 function proxyUrl(url, referer) {
-    if (!url || url.startsWith('blob:')) return url;
-    if (url.startsWith(WORKER_BASE) || url.startsWith('https:///proxy')) return url;
-    var ref = referer || '';
-    var payload = url + '\0' + ref;
-    var b64u = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return WORKER_BASE + b64u;
+    return url;
 }
 
 // ── applyVideoSources (replaces old Vidstack version) ────────────
