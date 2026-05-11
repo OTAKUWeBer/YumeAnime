@@ -96,13 +96,13 @@
 }
 
 .view-btn:hover {
-    color: var(--text-primary);
+    color: #ff3e3e;
 }
 
 .view-btn.active {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
+    background: rgba(255, 62, 62, 0.1);
+    color: #ff3e3e;
+    box-shadow: 0 0 10px rgba(255, 62, 62, 0.1);
 }
 
 .episode-search-wrapper {
@@ -179,7 +179,8 @@
 }
 
 .episode-sidebar-list[data-view="list"] .episode-sidebar-item:hover {
-    background: var(--bg-surface-hover);
+    background: rgba(255, 62, 62, 0.08);
+    color: #ff3e3e;
 }
 
 .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current {
@@ -291,7 +292,8 @@
 
 .episode-sidebar-list[data-view="grid"] .episode-sidebar-item:hover {
     transform: translateY(-2px);
-    border-color: var(--text-primary);
+    border-color: #ff3e3e;
+    color: #ff3e3e;
 }
 
 .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.current {

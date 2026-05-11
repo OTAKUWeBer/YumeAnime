@@ -553,7 +553,9 @@ h6 {
     gap: var(--space-sm);
     font-size: 1.25rem;
     font-weight: 700;
-    letter-spacing: -0.03em;
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -1px;
+    text-transform: uppercase;
     color: var(--text-primary);
 }
 
@@ -615,12 +617,12 @@ h6 {
 }
 
 .sidebar-link:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.05);
+    color: #ff3e3e;
+    background: rgba(255, 62, 62, 0.05);
 }
 
 .sidebar-link:hover svg {
-    color: var(--text-primary);
+    color: #ff3e3e;
 }
 
 .sidebar-link.active {
