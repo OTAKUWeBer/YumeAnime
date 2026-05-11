@@ -1,0 +1,295 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Privacy Policy - YumeZone{% endblock %}
+{% block meta_description %}Privacy Policy for YumeZone. Learn how we handle your data and protect your privacy.{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --lp-bg: #000000;
+    --lp-text: #ffffff;
+    --lp-accent: #ff3e3e;
+    --lp-surface: #0a0a0a;
+    --lp-border: #1a1a1a;
+}
+
+.legal-page {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--lp-bg);
+    color: var(--lp-text);
+    min-height: 100vh;
+}
+
+.legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.legal-header {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--lp-border);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.legal-logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--lp-text);
+}
+
+.legal-nav {
+    display: flex;
+    gap: 30px;
+}
+
+.legal-nav a {
+    text-decoration: none;
+    color: #888;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.legal-nav a:hover {
+    color: #fff;
+}
+
+.legal-content {
+    padding: 80px 0 120px;
+}
+
+.legal-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--lp-accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+}
+
+.legal-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.legal-updated {
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 60px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--lp-border);
+}
+
+.legal-section {
+    margin-bottom: 48px;
+}
+
+.legal-section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 16px;
+    color: #fff;
+}
+
+.legal-section p,
+.legal-section li {
+    color: #999;
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.legal-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+}
+
+.legal-section ul li {
+    padding-left: 20px;
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.legal-section ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lp-accent);
+}
+
+.legal-footer {
+    padding: 60px 0;
+    border-top: 1px solid var(--lp-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-left: 40px;
+    padding-right: 40px;
+}
+
+.legal-footer-copy {
+    color: #444;
+    font-size: 0.9rem;
+}
+
+.legal-footer-nav {
+    display: flex;
+    gap: 15px;
+}
+
+.legal-footer-nav a {
+    text-decoration: none;
+    color: #888;
+    font-weight: 500;
+    transition: color 0.3s;
+    font-size: 0.9rem;
+}
+
+.legal-footer-nav a:hover {
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .legal-container,
+    .legal-header,
+    .legal-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .legal-header {
+        height: 80px;
+    }
+
+    .legal-footer {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+    <header class="legal-header">
+        <a href="/" class="legal-logo">YumeZone</a>
+        <nav class="legal-nav">
+            <a href="/home">Browse</a>
+            <a href="/">Home</a>
+        </nav>
+    </header>
+
+    <div class="legal-container">
+        <div class="legal-content">
+            <span class="legal-badge">Legal</span>
+            <h1 class="legal-title">Privacy<br>Policy</h1>
+            <p class="legal-updated">Last updated — May 2026</p>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">1. Information We Collect</h2>
+                <p>YumeZone collects minimal data necessary to provide the Service:</p>
+                <ul>
+                    <li><strong style="color: #ccc;">Account Data:</strong> Username, email address, and hashed password when you create an account</li>
+                    <li><strong style="color: #ccc;">AniList Integration:</strong> If you connect your AniList account, we receive your public profile information and anime/manga lists</li>
+                    <li><strong style="color: #ccc;">Local Storage:</strong> Watch history, preferences, and playback progress are stored locally in your browser</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">2. How We Use Your Data</h2>
+                <p>Your data is used exclusively to:</p>
+                <ul>
+                    <li>Provide and maintain your account functionality</li>
+                    <li>Synchronize your anime and manga progress with AniList</li>
+                    <li>Deliver a personalized browsing experience</li>
+                    <li>Improve the platform based on usage patterns</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">3. Data We Do Not Collect</h2>
+                <p>YumeZone does not:</p>
+                <ul>
+                    <li>Track your browsing activity across other websites</li>
+                    <li>Sell, rent, or share your personal information with third parties</li>
+                    <li>Use advertising trackers or analytics that identify individual users</li>
+                    <li>Store payment information (the Service is entirely free)</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">4. Cookies & Local Storage</h2>
+                <p>We use session cookies to maintain your login state and local storage to save your preferences and watch history. These are essential for the Service to function and are not used for tracking purposes.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">5. Third-Party Services</h2>
+                <p>YumeZone integrates with third-party services that have their own privacy policies:</p>
+                <ul>
+                    <li><strong style="color: #ccc;">AniList:</strong> For anime/manga list synchronization</li>
+                    <li><strong style="color: #ccc;">Cloudflare:</strong> For security and performance (Turnstile verification)</li>
+                    <li><strong style="color: #ccc;">Third-party video hosts:</strong> Content is streamed from external servers with their own data practices</li>
+                </ul>
+                <p>We recommend reviewing the privacy policies of these services.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">6. Data Security</h2>
+                <p>We implement reasonable security measures to protect your data, including password hashing, secure session management, and HTTPS encryption. However, no method of transmission over the internet is 100% secure.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">7. Data Deletion</h2>
+                <p>You may request deletion of your account and associated data at any time. Local storage data (watch history, preferences) can be cleared through your browser settings. To request account deletion, contact us via our Discord community.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">8. Children's Privacy</h2>
+                <p>YumeZone is not directed at children under the age of 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact us so we can take appropriate action.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">9. Changes to This Policy</h2>
+                <p>We may update this Privacy Policy from time to time. Changes will be reflected on this page with an updated revision date. Continued use of the Service constitutes acceptance of the updated policy.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">10. Contact</h2>
+                <p>For privacy-related questions or data deletion requests, reach us through our <a href="https://discord.gg/SmxmsCZyRc" target="_blank" style="color: var(--lp-accent); text-decoration: none;">Discord community</a> or via our <a href="https://github.com/OTAKUWeBer/YumeZone" target="_blank" style="color: var(--lp-accent); text-decoration: none;">GitHub repository</a>.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="legal-footer">
+        <div class="legal-logo" style="font-size: 1.2rem;">YumeZone</div>
+        <div class="legal-footer-copy">© 2026 YumeZone. Built for the community.</div>
+        <div class="legal-footer-nav">
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/dmca">DMCA</a>
+        </div>
+    </footer>
+</div>
+{% endblock %}

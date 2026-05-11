@@ -1,0 +1,286 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Terms of Service - YumeZone{% endblock %}
+{% block meta_description %}Terms of Service for YumeZone. Read our terms and conditions for using the platform.{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --lp-bg: #000000;
+    --lp-text: #ffffff;
+    --lp-accent: #ff3e3e;
+    --lp-surface: #0a0a0a;
+    --lp-border: #1a1a1a;
+}
+
+.legal-page {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--lp-bg);
+    color: var(--lp-text);
+    min-height: 100vh;
+}
+
+.legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.legal-header {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--lp-border);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.legal-logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--lp-text);
+}
+
+.legal-nav {
+    display: flex;
+    gap: 30px;
+}
+
+.legal-nav a {
+    text-decoration: none;
+    color: #888;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.legal-nav a:hover {
+    color: #fff;
+}
+
+.legal-content {
+    padding: 80px 0 120px;
+}
+
+.legal-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--lp-accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+}
+
+.legal-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.legal-updated {
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 60px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--lp-border);
+}
+
+.legal-section {
+    margin-bottom: 48px;
+}
+
+.legal-section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 16px;
+    color: #fff;
+}
+
+.legal-section p,
+.legal-section li {
+    color: #999;
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.legal-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+}
+
+.legal-section ul li {
+    padding-left: 20px;
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.legal-section ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lp-accent);
+}
+
+.legal-footer {
+    padding: 60px 0;
+    border-top: 1px solid var(--lp-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-left: 40px;
+    padding-right: 40px;
+}
+
+.legal-footer-copy {
+    color: #444;
+    font-size: 0.9rem;
+}
+
+.legal-footer-nav {
+    display: flex;
+    gap: 15px;
+}
+
+.legal-footer-nav a {
+    text-decoration: none;
+    color: #888;
+    font-weight: 500;
+    transition: color 0.3s;
+    font-size: 0.9rem;
+}
+
+.legal-footer-nav a:hover {
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .legal-container,
+    .legal-header,
+    .legal-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .legal-header {
+        height: 80px;
+    }
+
+    .legal-footer {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+    <header class="legal-header">
+        <a href="/" class="legal-logo">YumeZone</a>
+        <nav class="legal-nav">
+            <a href="/home">Browse</a>
+            <a href="/">Home</a>
+        </nav>
+    </header>
+
+    <div class="legal-container">
+        <div class="legal-content">
+            <span class="legal-badge">Legal</span>
+            <h1 class="legal-title">Terms of<br>Service</h1>
+            <p class="legal-updated">Last updated — May 2026</p>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">1. Acceptance of Terms</h2>
+                <p>By accessing and using YumeZone ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">2. Description of Service</h2>
+                <p>YumeZone is a free, open-source anime discovery platform that acts as a search engine and directory. The Service connects users to media hosted on non-affiliated, third-party services. YumeZone does not host, upload, or store any video or manga content on its own servers.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">3. User Accounts</h2>
+                <p>When creating an account, you agree to:</p>
+                <ul>
+                    <li>Provide accurate and truthful information</li>
+                    <li>Maintain the security of your account credentials</li>
+                    <li>Accept responsibility for all activity under your account</li>
+                    <li>Not create multiple accounts for abusive purposes</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">4. Acceptable Use</h2>
+                <p>You agree not to:</p>
+                <ul>
+                    <li>Use the Service for any unlawful purpose</li>
+                    <li>Attempt to reverse-engineer, decompile, or tamper with the platform</li>
+                    <li>Scrape, crawl, or use automated tools to access the Service without permission</li>
+                    <li>Interfere with the operation of the Service or its infrastructure</li>
+                    <li>Impersonate any person or entity</li>
+                    <li>Harass, abuse, or threaten other users</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">5. Third-Party Content</h2>
+                <p>All video and media content accessible through YumeZone is hosted by third-party services. YumeZone is not responsible for the accuracy, legality, or quality of this content. Your use of third-party content is subject to the respective terms and policies of those providers.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">6. Intellectual Property</h2>
+                <p>The YumeZone name, logo, and original source code are the property of the YumeZone project. The platform is open-source and available under its respective license on GitHub. All anime and manga titles, artwork, and trademarks belong to their respective owners.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">7. Disclaimer of Warranties</h2>
+                <p>The Service is provided "as is" without warranties of any kind, either express or implied. We do not guarantee that the Service will be uninterrupted, error-free, or free of harmful components.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">8. Limitation of Liability</h2>
+                <p>YumeZone and its contributors shall not be held liable for any direct, indirect, incidental, or consequential damages arising from your use of the Service, including but not limited to loss of data, unauthorized access, or service interruptions.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">9. Modifications</h2>
+                <p>We reserve the right to modify these Terms at any time. Continued use of the Service after changes constitutes acceptance of the updated Terms. It is your responsibility to review these Terms periodically.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2 class="legal-section-title">10. Contact</h2>
+                <p>For questions regarding these Terms, you may reach us through our <a href="https://discord.gg/SmxmsCZyRc" target="_blank" style="color: var(--lp-accent); text-decoration: none;">Discord community</a> or via our <a href="https://github.com/OTAKUWeBer/YumeZone" target="_blank" style="color: var(--lp-accent); text-decoration: none;">GitHub repository</a>.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="legal-footer">
+        <div class="legal-logo" style="font-size: 1.2rem;">YumeZone</div>
+        <div class="legal-footer-copy">© 2026 YumeZone. Built for the community.</div>
+        <div class="legal-footer-nav">
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/dmca">DMCA</a>
+        </div>
+    </footer>
+</div>
+{% endblock %}

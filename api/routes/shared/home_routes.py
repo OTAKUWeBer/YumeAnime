@@ -62,3 +62,21 @@ def home():
 def history():
     """Watch history page — reads from localStorage client-side"""
     return render_template("shared/history.html", info="Watch History")
+
+
+@home_routes_bp.route("/terms", methods=["GET"])
+def terms():
+    """Terms of Service page"""
+    return render_template("shared/terms.html", info="Terms of Service")
+
+
+@home_routes_bp.route("/privacy", methods=["GET"])
+def privacy():
+    """Privacy Policy page"""
+    return render_template("shared/privacy.html", info="Privacy Policy")
+
+
+@home_routes_bp.route("/dmca", methods=["GET"])
+def dmca():
+    """DMCA Disclaimer page"""
+    return render_template("shared/dmca.html", info="DMCA Disclaimer")
