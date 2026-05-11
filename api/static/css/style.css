@@ -821,13 +821,14 @@ h6 {
 }
 
 .btn-primary {
-    background: var(--text-primary);
-    color: var(--bg-primary);
+    background: var(--badge-sub);
+    color: #fff;
 }
 
 .btn-primary:hover {
-    background: var(--text-secondary);
-    transform: translateY(-1px);
+    background: #e63535;
+    transform: translateY(-1.5px);
+    box-shadow: 0 0 20px rgba(255, 62, 62, 0.4);
 }
 
 .btn-secondary {

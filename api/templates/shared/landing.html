@@ -121,20 +121,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
-    color: #000;
+    background: var(--lp-accent);
+    color: #fff;
     padding: 24px 48px;
     font-size: 1.2rem;
     font-weight: 600;
     text-decoration: none;
     border-radius: 4px;
-    transition: transform 0.3s, background 0.3s, color 0.3s;
+    transition: transform 0.3s, background 0.3s, box-shadow 0.3s;
 }
 
 .lp-main-btn:hover {
-    transform: scale(1.02);
-    background: #f0f0f0;
-    color: #000;
+    transform: scale(1.02) translateY(-2px);
+    background: #e63535;
+    box-shadow: 0 0 30px rgba(255, 62, 62, 0.4);
+    color: #fff;
 }
 
 /* Features */
