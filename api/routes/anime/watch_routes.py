@@ -758,7 +758,7 @@ def watch(anime_id, ep_number):
             provider_capabilities=provider_capabilities,
             provider_capabilities_map=_PC,
             sorted_providers=sorted(
-                [p for p in (providers_map or {}).keys() if p in _PP],
+                [p for p in (set((providers_map or {}).keys()) | ({"zoro"} if (mal_id or anilist_id) else set())) if p in _PP],
                 key=lambda p: _PP.index(p),
             ),
             mal_id=mal_id,
@@ -864,7 +864,7 @@ def get_watch_sources():
 
     # Resolve provider
     provider_name = provider or default_provider
-    if provider_name not in providers_map:
+    if provider_name not in providers_map and provider_name != "zoro":
         provider_name = default_provider
 
     # Find episode ID for this provider (uses float comparison now)
@@ -878,17 +878,17 @@ def get_watch_sources():
         if resolved:
             episode_id = resolved["episode_id"]
 
-    if not episode_id:
+    if not episode_id and provider_name != "zoro":
         return jsonify({"error": f"Episode {ep_number} not found"}), 404
 
     # Build full slug
-    if episode_id.startswith("watch/"):
+    if episode_id and episode_id.startswith("watch/"):
         parts = episode_id.split("/")
         if len(parts) >= 5:
             parts[3] = lang
         full_slug = "/".join(parts)
     else:
-        full_slug = episode_id
+        full_slug = episode_id or str(ep_number)
 
     # Determine server
     selected_server = provider_name

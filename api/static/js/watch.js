@@ -177,6 +177,7 @@ function attachPlayerControls(shell, vid) {
 
     const cfg = window.WATCH_CONFIG || {};
     let skipTarget = null;
+    let _isDragging = false;
 
     // Skip intro/outro
     vid.addEventListener('timeupdate', () => {
@@ -218,7 +219,7 @@ function attachPlayerControls(shell, vid) {
     const resumeKey = `yumeResume_${cfg.animeId||''}_ep${cfg.episodeNumber||''}`;
     let _lastSave = 0;
     vid.addEventListener('timeupdate', ()=>{
-        if (!vid.duration) return;
+        if (!vid.duration || _isDragging) return;
         const pct = (vid.currentTime/vid.duration)*100;
         if (seekSlider) { seekSlider.value=pct; seekSlider.style.setProperty('--pct',pct+'%'); }
         if (playBar)    playBar.style.width = pct+'%';
@@ -259,7 +260,27 @@ function attachPlayerControls(shell, vid) {
         } 
     });
 
-    seekSlider?.addEventListener('input', ()=>{ if(vid.duration) vid.currentTime=(seekSlider.value/100)*vid.duration; seekSlider.style.setProperty('--pct',seekSlider.value+'%'); });
+    seekSlider?.addEventListener('input', ()=>{ 
+        if(!vid.duration) return;
+        const pct = parseFloat(seekSlider.value);
+        const ct = (pct/100) * vid.duration;
+        
+        // Immediate UI feedback
+        seekSlider.style.setProperty('--pct', pct + '%');
+        if (playBar) playBar.style.width = pct + '%';
+        if (timeEl)  timeEl.textContent  = `${fmt(ct)} / ${fmt(vid.duration)}`;
+        
+        // Scrub video
+        vid.currentTime = ct;
+    });
+
+    const startDrag = () => { _isDragging = true; };
+    const endDrag   = () => { _isDragging = false; };
+    seekSlider?.addEventListener('mousedown',  startDrag);
+    seekSlider?.addEventListener('touchstart', startDrag);
+    seekSlider?.addEventListener('mouseup',    endDrag);
+    seekSlider?.addEventListener('touchend',   endDrag);
+    seekSlider?.addEventListener('change',     endDrag); // Backup
     progWrap?.addEventListener('mousemove', e=>{
         if(!vid.duration||!tooltip) return;
         const r=progWrap.getBoundingClientRect(), f=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));

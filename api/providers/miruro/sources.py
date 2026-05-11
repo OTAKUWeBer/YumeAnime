@@ -146,11 +146,31 @@ class MiruroSourcesService:
 
             # --- Zoro provider: direct megaplay.buzz embed ---
             if _normalize_provider(provider) == "zoro":
-                ep_num_match = re.search(r"(\d+)$", slug)
-                ep_number = int(ep_num_match.group(1)) if ep_num_match else None
+                ep_number = None
+                if slug:
+                    ep_num_match = re.search(r"(\d+)$", slug)
+                    ep_number = int(ep_num_match.group(1)) if ep_num_match else None
+                
+                # If no slug, try extracting from the end of episode_id if it's numeric
+                if ep_number is None and str(episode_id).isdigit():
+                    ep_number = int(episode_id)
+                
+                # If still no ep_number but it's in the watch/ format
+                if ep_number is None and parsed:
+                    ep_num_match = re.search(r"(\d+)$", parsed["slug"])
+                    ep_number = int(ep_num_match.group(1)) if ep_num_match else None
+                
+                embed_url = None
+                
+                # Method 1: Use AniList ID + Episode Number (Documented primary method)
+                if anilist_id and ep_number is not None:
+                    # language must be 'sub' or 'dub'
+                    lang = category.lower() if category.lower() in ["sub", "dub"] else "sub"
+                    embed_url = f"https://megaplay.buzz/stream/ani/{anilist_id}/{ep_number}/{lang}"
+                    logger.info(f"[MiruroSources] Megaplay (AniList) embed: {embed_url}")
 
-                embed_ep_id = None
-                if ep_number is not None and anilist_id:
+                # Method 2: Fallback to internal episode ID resolution if AniList fails
+                if not embed_url and ep_number is not None and anilist_id:
                     try:
                         episodes_resp = await self.client._get(f"episodes/{anilist_id}")
                         if episodes_resp:
@@ -167,20 +187,19 @@ class MiruroSourcesService:
                                     ep_url = ep.get("url", "")
                                     if "?ep=" in ep_url:
                                         embed_ep_id = ep_url.split("?ep=")[1]
-                                    break
+                                        embed_url = f"https://megaplay.buzz/stream/s-2/{embed_ep_id}/{category}"
+                                        break
                     except Exception as e:
-                        logger.warning(f"[MiruroSources] Failed to fetch zoro ep ID: {e}")
+                        logger.warning(f"[MiruroSources] Failed to fetch zoro ep ID fallback: {e}")
 
-                if not embed_ep_id:
+                if not embed_url:
                     logger.warning(
-                        f"[MiruroSources] Could not resolve zoro ep ID for slug={slug}, ep_number={ep_number}"
+                        f"[MiruroSources] Could not resolve Megaplay embed for slug={slug}, ep_number={ep_number}"
                     )
                     return {
                         "error": "no_sources",
-                        "message": "Could not resolve zoro episode ID for embed",
+                        "message": "Could not resolve Megaplay (Zoro) embed",
                     }
-
-                embed_url = f"https://megaplay.buzz/stream/s-2/{embed_ep_id}/{category}"
                 logger.info(f"[MiruroSources] Zoro embed: {embed_url}")
                 embed_sources = [
                     {
