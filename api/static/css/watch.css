@@ -2368,6 +2368,8 @@ media-player [data-media-buffering] media-buffering-indicator circle {
     font-family: inherit;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
 }
 .yz-player * { box-sizing: border-box; }
 .yz-player video { width:100%; height:100%; display:block; background:#000; }

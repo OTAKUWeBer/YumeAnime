@@ -346,8 +346,11 @@ function attachPlayerControls(shell, vid) {
     // ── Right-click to skip 10s ──
     shell.addEventListener('contextmenu', function(e) {
         e.preventDefault(); // Prevent default browser context menu
-        vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
-        showCtrls();
+        // Only skip on desktop; long-press on mobile shouldn't skip (only double-tap)
+        if (navigator.maxTouchPoints === 0) {
+            vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
+            showCtrls();
+        }
     });
 
     // Controls auto-hide
