@@ -18,7 +18,27 @@ auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
 
-
+@auth_bp.route('/anilist/login')
+def anilist_login():
+    """Initiate AniList OAuth login/signup for non-logged-in users."""
+    # If user is already logged in, redirect to home
+    if 'username' in session and '_id' in session:
+        return redirect(url_for('home_routes.home'))
+    
+    # Generate a random state parameter for security
+    state = secrets.token_urlsafe(32)
+    session['oauth_state'] = state
+    
+    # Build the authorization URL
+    params = {
+        'client_id': Config.ANILIST_CLIENT_ID,
+        'redirect_uri': Config.ANILIST_REDIRECT_URI,
+        'response_type': 'code',
+        'state': state
+    }
+    
+    auth_url = f"https://anilist.co/api/v2/oauth/authorize?{urlencode(params)}"
+    return redirect(auth_url)
 
 
 @auth_bp.route('/anilist/link')
@@ -178,6 +198,11 @@ def anilist_callback():
             session['anilist_authenticated'] = True
             session['anilist_id'] = user_info['id']
             session['avatar'] = user_info.get('avatar', {}).get('large') or user_info.get('avatar', {}).get('medium')
+            # Sync password_version so validate_session_version doesn't clear the session
+            if existing_anilist_user:
+                session['password_version'] = existing_anilist_user.get('password_version', 0)
+            else:
+                session['password_version'] = 0
             session.permanent = True
 
             current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")

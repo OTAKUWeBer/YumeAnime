@@ -264,6 +264,16 @@ async function handleSignup(e) {
     }
 }
 
+// AniList OAuth login button handler
+document.addEventListener('DOMContentLoaded', () => {
+    const anilistBtns = document.querySelectorAll('#anilistLoginBtn');
+    anilistBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            window.location.href = '/auth/anilist/login';
+        });
+    });
+});
+
 // Close modal on Escape
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeLoginModal();
