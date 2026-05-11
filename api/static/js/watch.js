@@ -240,6 +240,7 @@ function attachPlayerControls(shell, vid) {
         let buf=0; for(let i=0;i<vid.buffered.length;i++) if(vid.buffered.start(i)<=vid.currentTime) buf=vid.buffered.end(i);
         bufBar.style.width = ((buf/vid.duration)*100)+'%';
     });
+    vid.addEventListener('loadedmetadata', renderIntroOutroSegments);
     vid.addEventListener('canplay', ()=>{ 
         renderIntroOutroSegments();
         try {
