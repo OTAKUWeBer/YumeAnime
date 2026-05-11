@@ -99,7 +99,7 @@ Ready to run YumeZone locally? Follow these steps:
     # ==============================================================================
     # Streaming & Scraping Services
     # ==============================================================================
-    MIRURO_API_URL="https://api.your-domain.com/"
+    API_URL="https://api.your-domain.com/"
     PROXY_URL="https://proxy.your-domain.com/proxy/"
 
     # ==============================================================================
