@@ -2,6 +2,8 @@
 
 {% block title %}YumeZone - The Pure Anime Experience{% endblock %}
 {% block meta_description %}High-performance anime streaming. No ads, no fluff, just the content you love. Built for the modern fan.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
 
 {% block extra_css %}
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@900&display=swap" rel="stylesheet">

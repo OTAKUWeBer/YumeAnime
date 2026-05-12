@@ -1,7 +1,10 @@
 {% extends "shared/base.html" %}
 
 {% block title %}Profile & Watchlist - {{ username }} - YumeZone{% endblock %}
-{% block meta_description %}Manage your anime watchlist and view your profile{% endblock %}
+{% block meta_description %}Manage your anime watchlist and view your profile on YumeZone.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{{ user.avatar or url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watchlist.css') }}">

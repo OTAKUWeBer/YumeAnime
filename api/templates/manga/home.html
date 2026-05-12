@@ -1,10 +1,19 @@
 {% extends "shared/base.html" %}
 
-{% block title %}Manga - YumeZone{% endblock %}
-{% block meta_description %}Read manga online for free. Browse popular manga from Atsumaru.{% endblock %}
+{% block title %}{% if search_query %}Search: {{ search_query }} - {% endif %}Manga - YumeZone{% endblock %}
+{% block meta_description %}{% if search_query %}Search results for "{{ search_query }}" on YumeZone Manga.{% else %}Read manga online for free. Browse popular and trending manga titles on YumeZone.{% endif %}{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
-{% block og_image %}{% if manga_data %}{% set first_section = manga_data.values()|first %}{% if first_section.entries %}{{ first_section.entries[0].cover|manga_cover(manga_referer) }}{% endif %}{% endif %}{% endblock %}
+{% block og_image %}
+    {% if search_results and search_results.entries %}
+        {{ search_results.entries[0].cover|manga_cover(manga_referer) }}
+    {% elif manga_data %}
+        {% set first_section = manga_data.values()|first %}
+        {% if first_section and first_section.entries %}
+            {{ first_section.entries[0].cover|manga_cover(manga_referer) }}
+        {% endif %}
+    {% endif %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/manga.css') }}">

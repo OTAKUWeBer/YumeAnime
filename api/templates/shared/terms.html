@@ -2,6 +2,9 @@
 
 {% block title %}Terms of Service - YumeZone{% endblock %}
 {% block meta_description %}Terms of Service for YumeZone. Read our terms and conditions for using the platform.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{{ url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}{% endblock %}
 
 {% block extra_css %}
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">

@@ -1,7 +1,10 @@
 {% extends "shared/base.html" %}
 
 {% block title %}Settings - YumeZone{% endblock %}
-{% block meta_description %}Manage your YumeZone account settings{% endblock %}
+{% block meta_description %}Manage your YumeZone account settings, playback preferences, and appearance.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{{ url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}{% endblock %}
 
 {% block content %}
 <div class="container">

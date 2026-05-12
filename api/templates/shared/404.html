@@ -1,6 +1,10 @@
 {% extends "shared/base.html" %}
 
 {% block title %}Error - YumeZone{% endblock %}
+{% block meta_description %}Oops! The page you're looking for on YumeZone could not be found.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{{ url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}{% endblock %}
 
 {% block content %}
 <div class="error-page">

@@ -1,8 +1,10 @@
 {% extends "shared/base.html" %}
 
 {% block title %}{{ genreName }} - YumeZone{% endblock %}
-{% block meta_description %}Browse {{ genreName }} anime on YumeZone. Find the best anime in this category.{% endblock
-%}
+{% block meta_description %}Browse {{ genreName }} anime on YumeZone. Find the best anime in this category.{% endblock %}
+{% block og_title %}{{ self.title() }}{% endblock %}
+{% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{% if animes and animes|length > 0 %}{{ animes[0].poster }}{% else %}{{ url_for('static', filename='images/logos/no-bg-logo.png', _external=True) }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container">
