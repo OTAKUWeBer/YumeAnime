@@ -96,14 +96,15 @@
 }
 
 .view-btn:hover {
-    color: #ff3e3e;
+    color: var(--text-primary);
 }
 
 .view-btn.active {
-    background: rgba(255, 62, 62, 0.1);
-    color: #ff3e3e;
-    box-shadow: 0 0 10px rgba(255, 62, 62, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
 }
+
 
 .episode-search-wrapper {
     position: relative;
@@ -179,9 +180,10 @@
 }
 
 .episode-sidebar-list[data-view="list"] .episode-sidebar-item:hover {
-    background: rgba(255, 62, 62, 0.08);
-    color: #ff3e3e;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
 }
+
 
 .episode-sidebar-list[data-view="list"] .episode-sidebar-item.current {
     background: var(--text-primary);
@@ -292,9 +294,10 @@
 
 .episode-sidebar-list[data-view="grid"] .episode-sidebar-item:hover {
     transform: translateY(-2px);
-    border-color: #ff3e3e;
-    color: #ff3e3e;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
 }
+
 
 .episode-sidebar-list[data-view="grid"] .episode-sidebar-item.current {
     background: var(--text-primary);
