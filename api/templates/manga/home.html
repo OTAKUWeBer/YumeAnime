@@ -4,6 +4,7 @@
 {% block meta_description %}Read manga online for free. Browse popular manga from Atsumaru.{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{% if manga_data %}{% set first_section = manga_data.values()|first %}{% if first_section.entries %}{{ first_section.entries[0].cover|manga_cover(manga_referer) }}{% endif %}{% endif %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/manga.css') }}">

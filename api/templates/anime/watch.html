@@ -4,7 +4,7 @@
 {% block meta_description %}Watch {{ anime_title }} Episode {{ Episode }} online in HD quality.{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
-{% block og_image %}{% if anime %}{{ anime.banner or anime.poster or anime.image }}{% endif %}{% endblock %}
+{% block og_image %}{{ episode_image or (anime.banner or anime.poster or anime.image if anime else '') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">

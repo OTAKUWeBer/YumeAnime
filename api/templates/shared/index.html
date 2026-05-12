@@ -4,6 +4,7 @@
 {% block meta_description %}Watch the latest anime online for free in HD. Discover trending, popular, and new anime series.{% endblock %}
 {% block og_title %}{{ self.title() }}{% endblock %}
 {% block og_description %}{{ self.meta_description() }}{% endblock %}
+{% block og_image %}{% if suggestions and suggestions.data and suggestions.data.spotlightAnimes %}{{ suggestions.data.spotlightAnimes[0].banner or suggestions.data.spotlightAnimes[0].poster }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container" style="position: relative;">

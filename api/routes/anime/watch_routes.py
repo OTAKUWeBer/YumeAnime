@@ -722,6 +722,7 @@ def watch(anime_id, ep_number):
     # can differ from the 1-based display numbering used in URLs.
     # The URL is the single source of truth for what the user is watching.
     episode_title = current_item.get("title")
+    episode_image = current_item.get("image")
     episode_number = ep_number  # ← always use URL value
     Episode = str(ep_number)  # ← always use URL value
 
@@ -780,6 +781,7 @@ def watch(anime_id, ep_number):
             Episode=Episode,
             episode_number=episode_number,
             episode_title=episode_title,
+            episode_image=episode_image,
             prev_episode_url=prev_episode_url,
             next_episode_url=next_episode_url,
             prev_episode_number=prev_episode_number,
