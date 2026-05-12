@@ -212,6 +212,8 @@ function attachPlayerControls(shell, vid) {
         muteBtn?.querySelector('.icon-muted')?.style.setProperty('display', m?'':'none');
         if(volSlider) volSlider.style.setProperty('--pct', (m?0:vid.volume*100)+'%');
     }
+    shell.syncMute = syncMute;
+
     volSlider?.addEventListener('input', ()=>{ vid.volume=parseFloat(volSlider.value); vid.muted=(volSlider.value==0); syncMute(); });
     muteBtn?.addEventListener('click', ()=>{ vid.muted=!vid.muted; if(!vid.muted&&vid.volume===0) vid.volume=0.5; if(volSlider) volSlider.value=vid.muted?0:vid.volume; syncMute(); });
 
@@ -293,55 +295,8 @@ function attachPlayerControls(shell, vid) {
     back10?.addEventListener('click', e=>{ e.stopPropagation(); vid.currentTime=Math.max(0,vid.currentTime-10); });
     fwd10?.addEventListener('click',  e=>{ e.stopPropagation(); vid.currentTime=Math.min(vid.duration||0,vid.currentTime+10); });
 
-    // ── Keyboard Shortcuts ──
-    document.addEventListener('keydown', function(e) {
-        // Ignore if user is typing in an input/textarea (like search or comments)
-        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-        
-        switch (e.key.toLowerCase()) {
-            case ' ':
-            case 'k':
-                e.preventDefault();
-                vid.paused ? vid.play() : vid.pause();
-                showCtrls();
-                break;
-            case 'f':
-                e.preventDefault();
-                fsBtn?.click();
-                break;
-            case 'arrowright':
-                e.preventDefault();
-                vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 10);
-                showCtrls();
-                break;
-            case 'arrowleft':
-                e.preventDefault();
-                vid.currentTime = Math.max(0, vid.currentTime - 10);
-                showCtrls();
-                break;
-            case 'arrowup':
-                e.preventDefault();
-                vid.volume = Math.min(1, vid.volume + 0.05);
-                vid.muted = (vid.volume === 0);
-                if (volSlider) volSlider.value = vid.volume;
-                syncMute();
-                showCtrls();
-                break;
-            case 'arrowdown':
-                e.preventDefault();
-                vid.volume = Math.max(0, vid.volume - 0.05);
-                vid.muted = (vid.volume === 0);
-                if (volSlider) volSlider.value = vid.volume;
-                syncMute();
-                showCtrls();
-                break;
-            case 'm':
-                e.preventDefault();
-                muteBtn?.click();
-                showCtrls();
-                break;
-        }
-    });
+    // Keyboard shortcuts handled globally at the end of file to prevent duplicates
+
 
     // ── Right-click to skip 10s ──
     shell.addEventListener('contextmenu', function(e) {
@@ -362,6 +317,8 @@ function attachPlayerControls(shell, vid) {
         clearTimeout(_ctrlTimer);
         if (!vid.paused) _ctrlTimer = setTimeout(()=>{ controls?.classList.add('yz-hidden'); shell.style.cursor='none'; if(settPanel) settPanel.style.display='none'; }, 3000);
     }
+    shell.showCtrls = showCtrls;
+
     shell.addEventListener('mousemove', ()=>{ if (Date.now() - _lastTouchTime < 500) return; showCtrls(); });
     shell.addEventListener('mouseenter', ()=>{ if (Date.now() - _lastTouchTime < 500) return; showCtrls(); });
 
@@ -444,15 +401,8 @@ function attachPlayerControls(shell, vid) {
         }
     });
 
-    // Keyboard shortcuts
-    document.addEventListener('keydown', e=>{
-        if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-        if (e.key===' '||e.key==='k') { e.preventDefault(); vid.paused?vid.play():vid.pause(); }
-        if (e.key==='ArrowRight') { e.preventDefault(); vid.currentTime=Math.min(vid.duration||0,vid.currentTime+5); }
-        if (e.key==='ArrowLeft')  { e.preventDefault(); vid.currentTime=Math.max(0,vid.currentTime-5); }
-        if (e.key==='m')          { vid.muted=!vid.muted; syncMute(); }
-        if (e.key==='f')          { fsBtn?.click(); }
-    });
+    // Keyboard shortcuts handled globally
+
 
     syncPlay(); syncMute();
     if (volSlider) { volSlider.value=vid.muted?0:vid.volume; volSlider.style.setProperty('--pct',(vid.muted?0:vid.volume*100)+'%'); }
@@ -793,7 +743,77 @@ function markEpisodeWatched() {
     doUpdate(1);
 }
 
-// ── Episode sidebar ───────────────────────────────────────────────
+// ── Global Keyboard Shortcuts ─────────────────────────────────────
+(function() {
+    let lastKeyTime = 0;
+    document.addEventListener('keydown', function(e) {
+        // Ignore if user is typing in an input/textarea/select
+        const active = document.activeElement;
+        if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return;
+        if (active && active.isContentEditable) return;
+
+        const vid = document.getElementById('yz-video');
+        if (!vid) return;
+        const shell = vid.closest('.yz-player');
+        if (!shell) return;
+
+        const key = e.key.toLowerCase();
+        
+        // Helper to show controls
+        const show = () => { if (shell.showCtrls) shell.showCtrls(); };
+
+        switch (key) {
+            case ' ':
+            case 'k':
+                e.preventDefault();
+                vid.paused ? vid.play() : vid.pause();
+                show();
+                break;
+            case 'f':
+                e.preventDefault();
+                const fsBtn = shell.querySelector('#yz-fs-btn');
+                if (fsBtn) fsBtn.click();
+                break;
+            case 'arrowright':
+            case 'l':
+                e.preventDefault();
+                vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + (key === 'l' ? 10 : 5));
+                show();
+                break;
+            case 'arrowleft':
+            case 'j':
+                e.preventDefault();
+                vid.currentTime = Math.max(0, vid.currentTime - (key === 'j' ? 10 : 5));
+                show();
+                break;
+            case 'arrowup':
+                e.preventDefault();
+                vid.volume = Math.min(1, vid.volume + 0.05);
+                vid.muted = (vid.volume === 0);
+                if (shell.syncMute) shell.syncMute();
+                const volSlider = shell.querySelector('#yz-vol');
+                if (volSlider) volSlider.value = vid.volume;
+                show();
+                break;
+            case 'arrowdown':
+                e.preventDefault();
+                vid.volume = Math.max(0, vid.volume - 0.05);
+                vid.muted = (vid.volume === 0);
+                if (shell.syncMute) shell.syncMute();
+                const volSlider2 = shell.querySelector('#yz-vol');
+                if (volSlider2) volSlider2.value = vid.volume;
+                show();
+                break;
+            case 'm':
+                e.preventDefault();
+                vid.muted = !vid.muted;
+                if (shell.syncMute) shell.syncMute();
+                show();
+                break;
+        }
+    });
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     var viewList = document.getElementById('view-list-btn');
     var viewGrid = document.getElementById('view-grid-btn');
