@@ -766,6 +766,7 @@ function saveWatchHistory(ct, dur) {
         localStorage.setItem(key, JSON.stringify({
             animeId: cfg.animeId, epNum: cfg.episodeNumber,
             animeName: cfg.animeName || '', poster: cfg.poster || '',
+            episodeImage: cfg.episodeImage || '',
             episodeTitle: cfg.episodeTitle || '',
             timestamp: ct, duration: dur, completed: dur > 0 && (ct/dur) >= 0.9,
             watchedAt: Date.now()

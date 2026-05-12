@@ -724,6 +724,7 @@
         sourceType: '{{ source_type or "hls" }}',
         animeName: {{ (anime.name or anime.title or anime_title or '') | tojson | safe }},
         poster: {{ (anime.get('coverImage') or anime.get('poster') or anime.get('image') or '') | tojson | safe }},
+        episodeImage: {{ (episode_image or '') | tojson | safe }},
         episodeTitle: {{ (episode_title or '') | tojson | safe }}
     };
 </script>

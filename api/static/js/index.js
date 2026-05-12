@@ -205,7 +205,8 @@
         card.title = entry.animeName || entry.animeId;
 
         const progress = (entry.duration > 0) ? Math.min((entry.timestamp / entry.duration) * 100, 100) : 0;
-        const posterSrc = entry.poster || `https://via.placeholder.com/320x180/111/333?text=${encodeURIComponent(entry.animeName || 'Anime')}`;
+        const posterSrc = entry.episodeImage || entry.poster || `https://via.placeholder.com/320x180/111/333?text=${encodeURIComponent(entry.animeName || 'Anime')}`;
+        const fallbackPoster = entry.poster || `https://via.placeholder.com/320x180/111/333?text=${encodeURIComponent(entry.animeName || 'Anime')}`;
 
         // Top info: remove button (and completed badge if any)
         let completedBadgeHTML = '';
@@ -232,7 +233,7 @@
         }
 
         card.innerHTML = `
-            <img src="${posterSrc}" alt="${entry.animeName || ''}" loading="lazy" class="cw-card-image" onerror="this.src='https://via.placeholder.com/320x180/111/333?text=No+Image'">
+            <img src="${posterSrc}" alt="${entry.animeName || ''}" loading="lazy" class="cw-card-image" onerror="if(this.src != '${fallbackPoster}') { this.src='${fallbackPoster}'; } else { this.src='https://via.placeholder.com/320x180/111/333?text=No+Image'; }">
             <div class="cw-play-button" aria-label="Play Episode">
                 <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 512 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM188.3 147.1c-7.6 4.2-12.3 12.3-12.3 20.9l0 176c0 8.7 4.7 16.7 12.3 20.9s16.8 4.1 24.3-.5l144-88c7.1-4.4 11.5-12.1 11.5-20.5s-4.4-16.1-11.5-20.5l-144-88c-7.4-4.5-16.7-4.7-24.3-.5z"></path></svg>
             </div>

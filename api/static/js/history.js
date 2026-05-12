@@ -74,7 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createCardHTML(entry) {
         const progress = (entry.duration > 0) ? Math.min((entry.timestamp / entry.duration) * 100, 100) : 0;
-        const posterSrc = entry.poster || `https://via.placeholder.com/320x180/111/333?text=${encodeURIComponent(entry.animeName || 'Anime')}`;
+        const posterSrc = entry.episodeImage || entry.poster || `https://via.placeholder.com/320x180/111/333?text=${encodeURIComponent(entry.animeName || 'Anime')}`;
+        const fallbackPoster = entry.poster || `https://via.placeholder.com/320x180/111/333?text=${encodeURIComponent(entry.animeName || 'Anime')}`;
         
         const isCompleted = entry.completed;
         const timeAgoText = timeAgo(entry.watchedAt);
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="anime-card history-card" data-key="${entry._key}">
                 <a href="/watch/${entry.animeId}/ep-${entry.epNum}" class="history-card-poster-link">
                     <div class="anime-card-poster" style="aspect-ratio: 16/9;">
-                        <img src="${posterSrc}" alt="${entry.animeName || ''}" loading="lazy">
+                        <img src="${posterSrc}" alt="${entry.animeName || ''}" loading="lazy" onerror="if(this.src != '${fallbackPoster}') { this.src='${fallbackPoster}'; } else { this.src='https://via.placeholder.com/320x180/111/333?text=No+Image'; }">
                         
                         <div class="history-card-badges">
                             <span class="history-badge ep">EP ${entry.epNum}</span>
