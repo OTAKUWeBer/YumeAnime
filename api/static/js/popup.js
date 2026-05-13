@@ -18,11 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Force reflow
             void popupOverlay.offsetWidth;
             popupOverlay.classList.add('active');
+            // Lock body scroll
+            document.body.style.overflow = 'hidden';
         }, 500);
     }
     
     const closePopup = () => {
         popupOverlay.classList.remove('active');
+        // Restore body scroll
+        document.body.style.overflow = '';
         setTimeout(() => {
             popupOverlay.classList.add('hidden');
         }, 300); // Matches CSS transition duration
