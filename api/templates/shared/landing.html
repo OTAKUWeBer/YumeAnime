@@ -50,10 +50,32 @@
 }
 
 .lp-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-size: 1.8rem;
     font-weight: 700;
     letter-spacing: -1px;
     text-transform: uppercase;
+}
+
+.lp-logo img {
+    height: 48px;
+    width: auto;
+}
+
+.lp-logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.lp-logo-sub {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--lp-accent);
+    margin-top: 4px;
+    font-weight: 500;
 }
 
 .lp-nav {
@@ -222,7 +244,7 @@
 
 @media (max-width: 768px) {
     .lp-container {
-        padding: 0 24px;
+        padding: 0 16px;
     }
     
     .lp-header {
@@ -243,20 +265,45 @@
 }
 
 @media (max-width: 480px) {
+    .lp-container {
+        padding: 0 12px;
+    }
+    
     .lp-logo {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
+        gap: 8px;
+    }
+    
+    .lp-logo img {
+        height: 36px;
+    }
+
+    .lp-logo-sub {
+        font-size: 0.55rem;
+        letter-spacing: 1px;
     }
     
     .lp-nav {
         gap: 12px;
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
     }
     
     .lp-nav a {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
     }
     
-    .lp-nav a:not(:first-child) {
-        display: none; /* Keep only 'Anime' link or just the logo link */
+    .lp-nav a {
+        display: none;
+    }
+
+    .lp-nav a:nth-child(1),
+    .lp-nav a:nth-child(2) {
+        display: block;
     }
 
     .lp-title {
@@ -323,7 +370,12 @@
     <div class="lp-container">
         <!-- Header -->
         <header class="lp-header">
-            <div class="lp-logo">YumeZone</div>
+            <div class="lp-logo">
+                <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeZone Logo">
+                <div class="lp-logo-text">
+                    <span>YumeZone</span>
+                </div>
+            </div>
             <nav class="lp-nav">
                 <a href="/home">Anime</a>
                 <a href="/manga">Manga</a>
@@ -377,7 +429,12 @@
 
         <!-- Footer -->
         <footer class="lp-footer">
-            <div class="lp-logo" style="font-size: 1.2rem;">YumeZone</div>
+            <div class="lp-logo" style="font-size: 1.2rem;">
+                <img src="{{ url_for('static', filename='images/logos/no-bg-logo.png') }}" alt="YumeZone Logo" style="height: 32px;">
+                <div class="lp-logo-text">
+                    <span>YumeZone</span>
+                </div>
+            </div>
             <div class="lp-footer-copy">© 2026 YumeZone. Built for the community.</div>
             <div class="lp-nav" style="gap: 15px;">
                 <a href="/terms">Terms</a>
