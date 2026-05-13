@@ -30,6 +30,16 @@
     padding: 0 40px;
 }
 
+/* Hide global components for landing */
+.navbar, .sidebar-toggle {
+    display: none !important;
+}
+
+.main-content {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
 /* Header */
 .lp-header {
     height: 100px;
@@ -207,6 +217,102 @@
     }
     .lp-hero-jp {
         font-size: 10rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .lp-container {
+        padding: 0 24px;
+    }
+    
+    .lp-header {
+        height: 80px;
+    }
+    
+    .lp-nav {
+        gap: 15px;
+    }
+    
+    .lp-nav a:not(:first-child):not(:last-child) {
+        display: none; /* Keep only Anime and Discord/GitHub on small tablets */
+    }
+
+    .lp-hero {
+        padding: 80px 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .lp-logo {
+        font-size: 1.4rem;
+    }
+    
+    .lp-nav {
+        gap: 12px;
+    }
+    
+    .lp-nav a {
+        font-size: 0.9rem;
+    }
+    
+    .lp-nav a:not(:first-child) {
+        display: none; /* Keep only 'Anime' link or just the logo link */
+    }
+
+    .lp-title {
+        font-size: 3.5rem;
+        letter-spacing: -2px;
+        margin-bottom: 24px;
+        text-align: center;
+    }
+    
+    .lp-hero-jp {
+        font-size: 6rem;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .lp-description {
+        font-size: 1.1rem;
+        text-align: center;
+        margin: 0 auto 32px;
+    }
+    
+    .lp-hero-grid {
+        text-align: center;
+        gap: 40px;
+    }
+    
+    .lp-cta-group {
+        align-items: center;
+    }
+    
+    .lp-main-btn {
+        width: 100%;
+        padding: 18px 24px;
+        font-size: 1.1rem;
+    }
+    
+    .lp-feature-item {
+        padding: 40px 24px;
+    }
+    
+    .lp-feature-title {
+        font-size: 1.6rem;
+    }
+    
+    .lp-footer {
+        flex-direction: column;
+        gap: 32px;
+        text-align: center;
+        padding: 60px 0;
+    }
+    
+    .lp-footer .lp-nav {
+        justify-content: center;
+        flex-wrap: wrap;
     }
 }
 </style>
