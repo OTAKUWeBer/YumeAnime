@@ -129,6 +129,152 @@
         --success: #10b981;
     }
 
+    /* Studio Link Pill */
+    .studio-link-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all var(--transition-fast);
+    }
+
+    .studio-link-pill:hover {
+        background: rgba(255, 62, 62, 0.1);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-1px);
+    }
+
+    .studio-tag {
+        background: rgba(34, 197, 94, 0.08) !important;
+        border-color: rgba(34, 197, 94, 0.2) !important;
+        color: var(--success) !important;
+        font-weight: 700;
+        backdrop-filter: blur(4px);
+    }
+
+    .studio-tag:hover {
+        background: var(--success) !important;
+        border-color: var(--success) !important;
+        color: #fff !important;
+        box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+        transform: translateY(-3px) scale(1.02);
+    }
+
+    /* ===== Stats Section ===== */
+    .anime-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        margin-bottom: var(--space-xl);
+        padding: 16px 0;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        transition: transform 0.2s ease;
+    }
+
+    .stat-item:hover {
+        transform: translateY(-2px);
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+        color: var(--success);
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .stat-label svg {
+        width: 10px;
+        height: 10px;
+        stroke: var(--success);
+        stroke-width: 3;
+    }
+
+    /* Quick Meta List (under poster) */
+    .quick-meta-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-top: var(--space-xl);
+        padding: var(--space-md);
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+    }
+
+    .quick-meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .quick-meta-item .label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        color: var(--success);
+        font-weight: 800;
+        letter-spacing: 1.5px;
+    }
+
+    .quick-meta-item .value {
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        font-weight: 600;
+        line-height: 1.4;
+    }
+
+    @media (max-width: 992px) {
+        .quick-meta-list {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .quick-meta-item .value {
+            font-size: 0.85rem;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .anime-stats {
+            gap: 16px;
+            justify-content: space-between;
+        }
+        
+        .stat-item {
+            min-width: calc(50% - 10px);
+        }
+
+        .stat-value {
+            font-size: 0.95rem;
+        }
+    }
+
     /* ===== Tab System ===== */
     .info-tabs {
         display: flex;

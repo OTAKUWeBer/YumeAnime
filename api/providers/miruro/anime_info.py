@@ -93,6 +93,16 @@ class MiruroAnimeInfoService:
         start_date = resp.get("startDate", {}) or {}
         end_date = resp.get("endDate", {}) or {}
         aired = self._format_date_range(start_date, end_date)
+        
+        def format_single_date(d):
+            if not d.get("year"): return ""
+            months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            m = months[d["month"] - 1] if d.get("month") else ""
+            day = d.get("day", "")
+            return f"{m} {day}, {d['year']}".strip(", ")
+
+        aired_start = format_single_date(start_date)
+        aired_end = format_single_date(end_date)
 
         # Season info
         season = resp.get("season") or ""
@@ -144,6 +154,7 @@ class MiruroAnimeInfoService:
             "duration": f"{resp.get('duration', '')} min" if resp.get("duration") else "",
             "isAdult": resp.get("isAdult", False),
             "type": resp.get("format") or "",
+            "source": (resp.get("source") or "").replace("_", " ").title(),
             "rating": str(resp.get("averageScore") or "") if resp.get("averageScore") else "",
             "quality": "",
             "total_sub_episodes": total_episodes,
@@ -152,6 +163,8 @@ class MiruroAnimeInfoService:
             "japanese": title.get("native") or "",
             "synonyms": ", ".join(resp.get("synonyms", []) or []),
             "aired": aired,
+            "aired_start": aired_start,
+            "aired_end": aired_end,
             "premiered": premiered,
             "studios": studios_list,
             "producers": [],
@@ -173,6 +186,7 @@ class MiruroAnimeInfoService:
                 },
                 "type": resp.get("format") or "",
                 "duration": f"{resp.get('duration', '')} min" if resp.get("duration") else "",
+                "source": (resp.get("source") or "").replace("_", " ").title(),
             },
             # Extra fields from Miruro
             "bannerImage": resp.get("bannerImage") or "",

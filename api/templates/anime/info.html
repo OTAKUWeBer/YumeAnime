@@ -54,11 +54,38 @@
                 <!-- Poster -->
                 <div class="anime-poster">
                     <img src="{{ anime.poster or anime.image }}" alt="{{ anime.name or anime.title }}">
+                    
+                    <div class="quick-meta-list">
+                        {% if anime.aired_start %}
+                        <div class="quick-meta-item">
+                            <span class="label">Started</span>
+                            <span class="value">{{ anime.aired_start }}</span>
+                        </div>
+                        {% endif %}
+                        {% if anime.aired_end %}
+                        <div class="quick-meta-item">
+                            <span class="label">Finished</span>
+                            <span class="value">{{ anime.aired_end }}</span>
+                        </div>
+                        {% elif anime.status == 'Currently Airing' %}
+                        <div class="quick-meta-item">
+                            <span class="label">Finished</span>
+                            <span class="value">?</span>
+                        </div>
+                        {% endif %}
+                        {% if anime.stats and anime.stats.source %}
+                        <div class="quick-meta-item">
+                            <span class="label">Source</span>
+                            <span class="value">{{ anime.stats.source }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Details -->
                 <div class="anime-details">
                     <h1 class="anime-title">{{ anime.name or anime.title }}</h1>
+
                     {% if anime.jname or anime.japanese_title %}
                     <p class="anime-alt-title">{{ anime.jname or anime.japanese_title }}</p>
                     {% endif %}
@@ -67,11 +94,9 @@
                     <div class="anime-stats">
                         {% if anime.stats and anime.stats.rating %}
                         <div class="stat-item">
-                            <div class="stat-value" style="color: var(--warning);">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-                                    style="vertical-align: middle;">
-                                    <polygon
-                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            <div class="stat-value">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" style="vertical-align: middle; margin-right: 2px;">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                                 </svg>
                                 {{ (anime.stats.rating|float / 10) | round(1) }}
                             </div>
@@ -81,19 +106,39 @@
                         {% if anime.stats and anime.stats.type %}
                         <div class="stat-item">
                             <div class="stat-value">{{ anime.stats.type }}</div>
-                            <div class="stat-label">Type</div>
+                            <div class="stat-label">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                                    <line x1="7" y1="2" x2="7" y2="22"></line>
+                                    <line x1="17" y1="2" x2="17" y2="22"></line>
+                                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                                </svg>
+                                Type
+                            </div>
                         </div>
                         {% endif %}
                         {% if anime.stats and anime.stats.duration %}
                         <div class="stat-item">
                             <div class="stat-value">{{ anime.stats.duration }}</div>
-                            <div class="stat-label">Duration</div>
+                            <div class="stat-label">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                Duration
+                            </div>
                         </div>
                         {% endif %}
                         {% if anime.status %}
                         <div class="stat-item">
-                            <div class="stat-label">Status</div>
-                            <div class="stat-value">{{ anime.status }}</div>
+                            <div class="stat-value">{{ anime.status | title }}</div>
+                            <div class="stat-label">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                Status
+                            </div>
                         </div>
                         {% endif %}
                     </div>
@@ -209,6 +254,14 @@
                     <!-- Genres -->
                     {% if anime.genres %}
                     <div class="anime-genres">
+                        {% if anime.studios and anime.studios|length > 0 %}
+                        <a href="/studio/{{ anime.studios[0].id }}" class="genre-tag studio-tag">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px; vertical-align: middle;">
+                                <path d="M3 21v-4m0 0V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            </svg>
+                            {{ anime.studios[0].name }}
+                        </a>
+                        {% endif %}
                         {% for genre in anime.genres %}
                         <a href="/genre/{{ genre | lower | replace(' ', '-') }}" class="genre-tag">{{ genre }}</a>
                         {% endfor %}
@@ -298,44 +351,6 @@
                         <p>{{ anime.description or anime.synopsis or 'No description available.' }}</p>
                     </div>
 
-                    <!-- Additional Info -->
-                    {% if anime.moreInfo %}
-                    <div class="anime-more-info" style="margin-bottom: var(--space-xl);">
-                        <div
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
-                            {% if anime.studios %}
-                            <div>
-                                <span class="text-muted text-sm">Studios:</span>
-                                <span>
-                                    {% for studio in anime.studios %}
-                                    <a href="/studio/{{ studio.id }}" class="studio-link" style="color: var(--text-primary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-primary)'">
-                                        {{ studio.name }}
-                                    </a>{% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                </span>
-                            </div>
-                            {% endif %}
-                            {% if anime.moreInfo.producers and anime.moreInfo.producers | length > 0 %}
-                            <div>
-                                <span class="text-muted text-sm">Producers:</span>
-                                <span>{{ anime.moreInfo.producers | join(', ') }}</span>
-                            </div>
-                            {% endif %}
-                            {% if anime.moreInfo.premiered %}
-                            <div>
-                                <span class="text-muted text-sm">Premiered:</span>
-                                <span>{{ anime.moreInfo.premiered }}</span>
-                            </div>
-                            {% endif %}
-                            {% if anime.moreInfo.aired %}
-                            <div>
-                                <span class="text-muted text-sm">Aired:</span>
-                                <span>{{ anime.moreInfo.aired }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
