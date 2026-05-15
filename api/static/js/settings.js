@@ -137,9 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (newPassword.length < 6) {
+            if (newPassword.length < 6 || newPassword.length > 30) {
                 if (pwdErrorMsg) {
-                    pwdErrorMsg.textContent = 'New password must be at least 6 characters long.';
+                    pwdErrorMsg.textContent = newPassword.length > 30 ? 'New password is too long (max 30 chars).' : 'New password must be at least 6 characters long.';
                     pwdErrorMsg.style.display = 'block';
                 }
                 return;

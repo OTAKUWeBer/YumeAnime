@@ -11,7 +11,7 @@ function validateEmail(email) {
 }
 
 function validatePassword(password) {
-    return password && password.length >= 6;
+    return password && password.length >= 6 && password.length <= 30;
 }
 
 // Dropdown toggle
@@ -202,6 +202,14 @@ async function handleLogin(e) {
         return;
     }
 
+    if (username.length > 20 || password.length > 30) {
+        errorDiv.textContent = 'Invalid username or password.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Sign In';
+        return;
+    }
+
     if (password.length < 6) {
         errorDiv.textContent = 'Invalid username or password.';
         errorDiv.style.display = 'block';
@@ -272,8 +280,8 @@ async function handleSignup(e) {
         return;
     }
 
-    if (username.length < 3) {
-        errorDiv.textContent = 'Username must be at least 3 characters long.';
+    if (username.length < 3 || username.length > 20) {
+        errorDiv.textContent = 'Username must be between 3 and 20 characters long.';
         errorDiv.style.display = 'block';
         btn.disabled = false;
         btnText.textContent = 'Create Account';
@@ -288,8 +296,8 @@ async function handleSignup(e) {
         return;
     }
 
-    if (!validateEmail(email)) {
-        errorDiv.textContent = 'Please enter a valid email address.';
+    if (!validateEmail(email) || email.length > 50) {
+        errorDiv.textContent = email.length > 50 ? 'Email address is too long.' : 'Please enter a valid email address.';
         errorDiv.style.display = 'block';
         btn.disabled = false;
         btnText.textContent = 'Create Account';
@@ -297,7 +305,7 @@ async function handleSignup(e) {
     }
 
     if (!validatePassword(password)) {
-        errorDiv.textContent = 'Password must be at least 6 characters long.';
+        errorDiv.textContent = password.length > 30 ? 'Password is too long (max 30 chars).' : 'Password must be at least 6 characters long.';
         errorDiv.style.display = 'block';
         btn.disabled = false;
         btnText.textContent = 'Create Account';
@@ -471,8 +479,8 @@ async function handleForgotPassword(e) {
     btnText.textContent = 'Sending...';
     errorDiv.style.display = 'none';
 
-    if (!validateEmail(email)) {
-        errorDiv.textContent = 'Please enter a valid email address.';
+    if (!validateEmail(email) || email.length > 50) {
+        errorDiv.textContent = email.length > 50 ? 'Email address is too long.' : 'Please enter a valid email address.';
         errorDiv.style.display = 'block';
         btn.disabled = false;
         btnText.textContent = 'Send Reset Code';
@@ -623,7 +631,7 @@ async function handleResetPassword(e) {
     }
 
     if (!validatePassword(newPassword)) {
-        errorDiv.textContent = 'Password must be at least 6 characters long.';
+        errorDiv.textContent = newPassword.length > 30 ? 'Password is too long (max 30 chars).' : 'Password must be at least 6 characters long.';
         errorDiv.style.display = 'block';
         return;
     }

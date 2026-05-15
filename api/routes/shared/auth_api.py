@@ -42,14 +42,17 @@ def signup():
     if not username or not email or not password:
         return jsonify({'success': False, 'message': 'All fields are required.'}), 400
     
-    if len(username) < 3:
-        return jsonify({'success': False, 'message': 'Username must be at least 3 characters long.'}), 400
+    if len(username) < 3 or len(username) > 20:
+        return jsonify({'success': False, 'message': 'Username must be between 3 and 20 characters long.'}), 400
     
     if ' ' in username:
         return jsonify({'success': False, 'message': 'Username cannot contain spaces.'}), 400
         
-    if len(password) < 6:
-        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'}), 400
+    if len(password) < 6 or len(password) > 30:
+        return jsonify({'success': False, 'message': 'Password must be between 6 and 30 characters long.'}), 400
+    
+    if len(email) > 50:
+        return jsonify({'success': False, 'message': 'Email address is too long.'}), 400
     
     if user_exists(username):
         return jsonify({'success': False, 'message': 'Username already exists. Please choose a different one.'}), 409
@@ -106,7 +109,7 @@ def login():
     if not username or not password:
         return jsonify({'success': False, 'message': 'Username and password are required.'}), 400
     
-    if len(password) < 6:
+    if len(password) < 6 or len(password) > 30 or len(username) > 20:
         return jsonify({'success': False, 'message': 'Invalid username or password.'}), 401
     
     try:
@@ -212,8 +215,8 @@ def change_password_route():
     if not current_password or not new_password:
         return jsonify({'success': False, 'message': 'Current and new passwords are required.'}), 400
     
-    if len(new_password) < 6:
-        return jsonify({'success': False, 'message': 'New password must be at least 6 characters long.'}), 400
+    if len(new_password) < 6 or len(new_password) > 30:
+        return jsonify({'success': False, 'message': 'New password must be between 6 and 30 characters long.'}), 400
     
     try:
         user_id = session.get('_id')
@@ -247,6 +250,9 @@ def forgot_password():
 
     if not email:
         return jsonify({'success': False, 'message': 'Email is required.'}), 400
+    
+    if len(email) > 50:
+        return jsonify({'success': False, 'message': 'Email address is too long.'}), 400
     
     email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(email_pattern, email):
@@ -287,6 +293,9 @@ def verify_reset_code_endpoint():
     if not email or not code:
         return jsonify({'success': False, 'message': 'Email and code are required.'}), 400
 
+    if len(email) > 50:
+        return jsonify({'success': False, 'message': 'Email address is too long.'}), 400
+
     if not re.fullmatch(r'\d{6}', code):
         return jsonify({'success': False, 'message': 'Code must be exactly 6 digits.'}), 400
 
@@ -314,8 +323,11 @@ def reset_password_endpoint():
     if not email or not code or not new_password:
         return jsonify({'success': False, 'message': 'All fields are required.'}), 400
 
-    if len(new_password) < 6:
-        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'}), 400
+    if len(email) > 50:
+        return jsonify({'success': False, 'message': 'Email address is too long.'}), 400
+
+    if len(new_password) < 6 or len(new_password) > 30:
+        return jsonify({'success': False, 'message': 'Password must be between 6 and 30 characters long.'}), 400
 
     # Verify the session-bound token
     if not token or token != session.get('reset_token') or email != session.get('reset_email'):
