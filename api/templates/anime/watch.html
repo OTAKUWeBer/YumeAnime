@@ -463,8 +463,11 @@
 
                 <div class="tag-list">
                     {% for genre in anime.get('genres', []) %}
-                    <span class="tag-pill">{{ genre }}</span>
+                    <a href="/genre/{{ genre | lower | replace(' ', '-') }}" class="tag-pill genre-link">
+                        {{ genre }}
+                    </a>
                     {% endfor %}
+
                     {% if anime.get('studios') and anime.get('studios')|length > 0 %}
                     <span class="tag-pill" style="background: rgba(255,255,255,0.1); color: var(--text-secondary);">
                         Studio: {{ anime.get('studios')[0] }}
