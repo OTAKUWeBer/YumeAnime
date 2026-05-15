@@ -31,7 +31,7 @@ def signup():
     """User registration endpoint"""
     data = request.get_json()
     username = data.get('username', '').strip()
-    email = data.get('email', '').strip()
+    email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     turnstile_token = data.get('cf_turnstile_response')
     
@@ -44,6 +44,9 @@ def signup():
     
     if len(username) < 3:
         return jsonify({'success': False, 'message': 'Username must be at least 3 characters long.'}), 400
+    
+    if ' ' in username:
+        return jsonify({'success': False, 'message': 'Username cannot contain spaces.'}), 400
         
     if len(password) < 6:
         return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'}), 400
@@ -54,7 +57,7 @@ def signup():
     if email_exists(email):
         return jsonify({'success': False, 'message': 'Email already registered. Please use a different email or try logging in.'}), 409
     
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(email_pattern, email):
         return jsonify({'success': False, 'message': 'Please enter a valid email address.'}), 400
     
@@ -104,7 +107,7 @@ def login():
         return jsonify({'success': False, 'message': 'Username and password are required.'}), 400
     
     if len(password) < 6:
-        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'}), 400
+        return jsonify({'success': False, 'message': 'Invalid username or password.'}), 401
     
     try:
         user = get_user(username, password)
@@ -244,6 +247,10 @@ def forgot_password():
 
     if not email:
         return jsonify({'success': False, 'message': 'Email is required.'}), 400
+    
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return jsonify({'success': False, 'message': 'Please enter a valid email address.'}), 400
 
     # Check if user exists, return explicit error if not found (per user request)
     user = get_user_by_email(email)

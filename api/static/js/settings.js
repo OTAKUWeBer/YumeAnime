@@ -129,6 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentPassword = document.getElementById('current-password').value;
             const newPassword = document.getElementById('new-password').value;
             
+            if (!currentPassword || !newPassword) {
+                if (pwdErrorMsg) {
+                    pwdErrorMsg.textContent = 'Both current and new passwords are required.';
+                    pwdErrorMsg.style.display = 'block';
+                }
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                if (pwdErrorMsg) {
+                    pwdErrorMsg.textContent = 'New password must be at least 6 characters long.';
+                    pwdErrorMsg.style.display = 'block';
+                }
+                return;
+            }
+
             const payload = { current_password: currentPassword, new_password: newPassword };
 
             const btn = document.getElementById('submit-password-btn');

@@ -4,6 +4,16 @@ let otpTimerInterval = null;
 let currentResetEmail = '';
 let currentResetToken = '';
 
+// Validation Helpers
+function validateEmail(email) {
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(String(email).toLowerCase());
+}
+
+function validatePassword(password) {
+    return password && password.length >= 6;
+}
+
 // Dropdown toggle
 function toggleDropdown(id) {
     const dropdown = document.getElementById(id);
@@ -181,6 +191,25 @@ async function handleLogin(e) {
     btnText.textContent = 'Signing in...';
     errorDiv.style.display = 'none';
 
+    const username = form.username.value.trim();
+    const password = form.password.value;
+
+    if (!username || !password) {
+        errorDiv.textContent = 'Username and password are required.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Sign In';
+        return;
+    }
+
+    if (password.length < 6) {
+        errorDiv.textContent = 'Invalid username or password.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Sign In';
+        return;
+    }
+
     try {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
@@ -230,6 +259,50 @@ async function handleSignup(e) {
     btn.disabled = true;
     btnText.textContent = 'Creating account...';
     errorDiv.style.display = 'none';
+
+    const username = form.username.value.trim();
+    const email = form.email.value.trim();
+    const password = form.password.value;
+
+    if (!username || !email || !password) {
+        errorDiv.textContent = 'All fields are required.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Create Account';
+        return;
+    }
+
+    if (username.length < 3) {
+        errorDiv.textContent = 'Username must be at least 3 characters long.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Create Account';
+        return;
+    }
+
+    if (username.includes(' ')) {
+        errorDiv.textContent = 'Username cannot contain spaces.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Create Account';
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        errorDiv.textContent = 'Please enter a valid email address.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Create Account';
+        return;
+    }
+
+    if (!validatePassword(password)) {
+        errorDiv.textContent = 'Password must be at least 6 characters long.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Create Account';
+        return;
+    }
 
     try {
         const response = await fetch('/api/auth/signup', {
@@ -398,6 +471,14 @@ async function handleForgotPassword(e) {
     btnText.textContent = 'Sending...';
     errorDiv.style.display = 'none';
 
+    if (!validateEmail(email)) {
+        errorDiv.textContent = 'Please enter a valid email address.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btnText.textContent = 'Send Reset Code';
+        return;
+    }
+
     try {
         const response = await fetch('/api/auth/forgot-password', {
             method: 'POST',
@@ -537,6 +618,12 @@ async function handleResetPassword(e) {
 
     if (newPassword !== confirmPassword) {
         errorDiv.textContent = 'Passwords do not match.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (!validatePassword(newPassword)) {
+        errorDiv.textContent = 'Password must be at least 6 characters long.';
         errorDiv.style.display = 'block';
         return;
     }
