@@ -38,7 +38,7 @@ class MiruroAnimeInfoService:
             startDate { year month day }
             endDate { year month day }
             synonyms
-            studios { nodes { name isAnimationStudio } }
+            studios { nodes { id name isAnimationStudio } }
             trailer { id site thumbnail }
             relations { edges { relationType node { id idMal title { romaji english native } coverImage { large extraLarge } format averageScore episodes } } }
             recommendations { nodes { mediaRecommendation { id title { romaji english native } coverImage { large extraLarge } format duration averageScore episodes } } }
@@ -82,7 +82,7 @@ class MiruroAnimeInfoService:
 
         # Extract studios list
         studios_list = [
-            s.get("name") for s in studios_nodes 
+            {"id": s.get("id"), "name": s.get("name")} for s in studios_nodes 
             if s.get("isAnimationStudio", True)
         ]
 
@@ -153,7 +153,7 @@ class MiruroAnimeInfoService:
             "synonyms": ", ".join(resp.get("synonyms", []) or []),
             "aired": aired,
             "premiered": premiered,
-            "studios": ", ".join(studios_list) if studios_list else None,
+            "studios": studios_list,
             "producers": [],
             "malScore": str(resp.get("meanScore") or "") if resp.get("meanScore") else None,
             "promotionalVideos": self._extract_trailer(resp),

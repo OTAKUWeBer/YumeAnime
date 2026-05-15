@@ -514,6 +514,13 @@ class UnifiedScraper:
             pass
         return {}
 
+    async def get_studio_details(self, studio_id: int, page: int = 1) -> Dict[str, Any]:
+        """Get studio details via AniList"""
+        try:
+            return await self.anilist_home.get_studio_details(studio_id, page)
+        except Exception:
+            return {"success": False, "message": "Failed to fetch studio details"}
+
     async def genre(self, name: str, page: int = 1) -> Dict[str, Any]:
         """Get anime by genre"""
         try:

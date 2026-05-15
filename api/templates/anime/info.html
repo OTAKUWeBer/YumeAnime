@@ -303,10 +303,16 @@
                     <div class="anime-more-info" style="margin-bottom: var(--space-xl);">
                         <div
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
-                            {% if anime.moreInfo.studios and anime.moreInfo.studios | length > 0 %}
+                            {% if anime.studios %}
                             <div>
                                 <span class="text-muted text-sm">Studios:</span>
-                                <span>{{ anime.moreInfo.studios | join(', ') }}</span>
+                                <span>
+                                    {% for studio in anime.studios %}
+                                    <a href="/studio/{{ studio.id }}" class="studio-link" style="color: var(--text-primary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-primary)'">
+                                        {{ studio.name }}
+                                    </a>{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
                             </div>
                             {% endif %}
                             {% if anime.moreInfo.producers and anime.moreInfo.producers | length > 0 %}

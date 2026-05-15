@@ -469,9 +469,15 @@
                     {% endfor %}
 
                     {% if anime.get('studios') and anime.get('studios')|length > 0 %}
-                    <span class="tag-pill" style="background: rgba(255,255,255,0.1); color: var(--text-secondary);">
-                        Studio: {{ anime.get('studios')[0] }}
-                    </span>
+                    <a href="/studio/{{ anime.get('studios')[0].id }}" class="tag-pill studio-link" style="background: rgba(255,255,255,0.1); color: var(--text-secondary); text-decoration: none; transition: all 0.2s;">
+                        Studio: {{ anime.get('studios')[0].name }}
+                    </a>
+                    <style>
+                        .studio-link:hover {
+                            background: rgba(255, 71, 87, 0.2) !important;
+                            color: #ff4757 !important;
+                        }
+                    </style>
                     {% endif %}
                 </div>
 

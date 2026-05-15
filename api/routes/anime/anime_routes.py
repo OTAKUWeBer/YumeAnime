@@ -117,3 +117,26 @@ async def anime_info(anime_id: str):
         user_watched_episodes=user_watched_episodes
     )
 
+
+@anime_routes_bp.route('/studio/<int:studio_id>')
+async def studio_page(studio_id: int):
+    """Studio details page"""
+    page = request.args.get('page', 1, type=int)
+    
+    get_studio_method = getattr(current_app.ha_scraper, "get_studio_details", None)
+    if not get_studio_method:
+        return "Studio fetch function not found", 500
+        
+    result = await get_studio_method(studio_id, page)
+    
+    if not result or not result.get("success"):
+        return f"Studio not found: {result.get('message', 'Unknown error')}", 404
+        
+    return render_template(
+        "anime/studio.html",
+        studio=result.get("studio"),
+        animes=result.get("animes"),
+        page_info=result.get("pageInfo"),
+        current_page=page
+    )
+

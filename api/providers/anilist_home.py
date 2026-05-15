@@ -275,3 +275,82 @@ class AnilistHomeService:
             "data": {key: value for key, value in data.items()},
             "counts": {key: len(value) for key, value in data.items()},
         }
+
+    async def get_studio_details(self, studio_id: int, page: int = 1) -> Dict[str, Any]:
+        """Fetch studio information and its media list from AniList GraphQL"""
+        query = '''
+        query ($id: Int, $page: Int, $perPage: Int) {
+          Studio(id: $id) {
+            id
+            name
+            isAnimationStudio
+            siteUrl
+            favourites
+            media(sort: POPULARITY_DESC, page: $page, perPage: $perPage) {
+              nodes {
+                id
+                title { romaji english native }
+                coverImage { extraLarge large }
+                bannerImage
+                episodes
+                nextAiringEpisode { episode }
+                format
+                duration
+                averageScore
+                isAdult
+                genres
+              }
+              pageInfo {
+                total
+                hasNextPage
+                lastPage
+                currentPage
+              }
+            }
+          }
+        }
+        '''
+        try:
+            data = await self._fetch_anilist_data(query, {"id": studio_id, "page": page, "perPage": 24})
+            if not data or "Studio" not in data:
+                return {"success": False, "message": "Studio not found"}
+
+            studio = data["Studio"]
+            media_list = studio.get("media", {}).get("nodes", [])
+            page_info = studio.get("media", {}).get("pageInfo", {})
+
+            def filter_adult(items):
+                return [
+                    item for item in items
+                    if not item.get("isAdult", False) and "Hentai" not in item.get("genres", [])
+                ]
+
+            filtered_media = filter_adult(media_list)
+            
+            # Remove duplicates by ID
+            seen_ids = set()
+            unique_media = []
+            for item in filtered_media:
+                media_id = item.get("id")
+                if media_id not in seen_ids:
+                    seen_ids.add(media_id)
+                    unique_media.append(item)
+            
+            normalized_animes = [self._normalize_anime(item) for item in unique_media]
+            annotated_animes = self._annotate_episodes_count(normalized_animes)
+
+            return {
+                "success": True,
+                "studio": {
+                    "id": studio.get("id"),
+                    "name": studio.get("name"),
+                    "isAnimationStudio": studio.get("isAnimationStudio"),
+                    "siteUrl": studio.get("siteUrl"),
+                    "favourites": studio.get("favourites"),
+                },
+                "animes": annotated_animes,
+                "pageInfo": page_info
+            }
+        except Exception as e:
+            logger.error(f"[AniListHome] Error fetching studio {studio_id}: {e}")
+            return {"success": False, "message": str(e)}

@@ -1,0 +1,149 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ studio.name }} - Studio - YumeZone{% endblock %}
+
+{% block extra_css %}
+<style>
+    .studio-header-simple {
+        padding: 40px 0 20px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 40px;
+    }
+
+    .studio-name-simple {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .modern-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 25px;
+    }
+
+    @media (max-width: 640px) {
+        .modern-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+    }
+
+    .modern-card {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        aspect-ratio: 2/3;
+        background: #111;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-decoration: none;
+    }
+
+    .modern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .card-content-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 15px;
+    }
+
+    .card-title-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        line-height: 1.2;
+        margin-bottom: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .card-meta {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.7);
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .modern-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        margin: 50px 0;
+    }
+
+    .nav-btn {
+        padding: 10px 20px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(.disabled) {
+        background: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .nav-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header class="studio-header-simple">
+        <h1 class="studio-name-simple">{{ studio.name }}</h1>
+    </header>
+
+    <div class="modern-grid">
+        {% for anime in animes %}
+        <a href="/anime/{{ anime.id }}" class="modern-card">
+            <img src="{{ anime.poster }}" alt="{{ anime.name }}" class="card-image" loading="lazy">
+            <div class="card-content-overlay">
+                <h3 class="card-title-text">{{ anime.name }}</h3>
+                <div class="card-meta">
+                    <span>{{ anime.type }}</span>
+                    {% if anime.rating %}
+                    <span style="color: #fbbf24;">★ {{ (anime.rating / 10) | round(1) }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if page_info and (page_info.hasNextPage or current_page > 1) %}
+    <div class="modern-pagination">
+        <a href="?page={{ current_page - 1 }}" class="nav-btn {% if current_page <= 1 %}disabled{% endif %}" {% if current_page <= 1 %}onclick="return false;"{% endif %}>
+            Previous
+        </a>
+        <span class="page-indicator">Page {{ current_page }}</span>
+        <a href="?page={{ current_page + 1 }}" class="nav-btn {% if not page_info.hasNextPage %}disabled{% endif %}" {% if not page_info.hasNextPage %}onclick="return false;"{% endif %}>
+            Next
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
