@@ -131,6 +131,7 @@ function buildCustomPlayer(playerArea, video) {
     if (cfg.outro) globalTimestamps.outro = cfg.outro;
     
     attachPlayerControls(shell, video);
+    bindWatchTogetherVideo(video);
 }
 
 // ── Render Segments ───────────────────────────────────────────────
@@ -480,6 +481,7 @@ function playEmbed(url) {
         + 'referrerpolicy="origin" ' + sb + ' style="width:100%;height:100%;border:none;display:block"></iframe>'
         + '</div>';
     saveWatchHistory(0, 0);
+    notifyWatchTogetherEmbedMode();
 }
 
 // ── HLS fatal → trigger provider fallback ─────────────────────────
@@ -588,6 +590,428 @@ function showNoSourcesMessage() {
 }
 
 // ── Proxy Wrapping (Now handled by backend) ──────────────────────
+// Watch Together
+var WatchTogether = {
+    roomId: null,
+    clientId: null,
+    roomUrl: '',
+    lastSeq: 0,
+    isHost: false,
+    pollTimer: null,
+    applyingRemote: false,
+    pendingPlayback: null,
+    lastSentAt: 0,
+    lastTimeSyncAt: 0
+};
+
+function getWatchTogetherVideo() {
+    return document.getElementById('yz-video');
+}
+
+function getWatchTogetherClientId() {
+    if (WatchTogether.clientId) return WatchTogether.clientId;
+    try {
+        var stored = localStorage.getItem('yumeWatchTogetherClientId');
+        if (stored) {
+            WatchTogether.clientId = stored;
+            return stored;
+        }
+        var generated = 'wt_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('yumeWatchTogetherClientId', generated);
+        WatchTogether.clientId = generated;
+        return generated;
+    } catch (e) {
+        WatchTogether.clientId = WatchTogether.clientId || ('wt_' + Math.random().toString(36).slice(2));
+        return WatchTogether.clientId;
+    }
+}
+
+function getWatchTogetherName() {
+    var comments = window.COMMENTS_CONFIG || {};
+    if (comments.username) return comments.username;
+    try {
+        var stored = localStorage.getItem('yumeWatchTogetherName');
+        if (stored) return stored;
+    } catch (e) {}
+    return 'Guest';
+}
+
+function getWatchTogetherRoomUrl(roomId) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('room', roomId);
+    return url.toString();
+}
+
+function setWatchTogetherUrl(roomId) {
+    if (!window.history || !window.history.replaceState) return;
+    var url = new URL(window.location.href);
+    if (roomId) url.searchParams.set('room', roomId);
+    else url.searchParams.delete('room');
+    window.history.replaceState({}, '', url.toString());
+}
+
+function getWatchTogetherPayload(eventName) {
+    var cfg = window.WATCH_CONFIG || {};
+    var vid = getWatchTogetherVideo();
+    return {
+        client_id: getWatchTogetherClientId(),
+        display_name: getWatchTogetherName(),
+        anime_id: cfg.animeId,
+        episode_number: cfg.episodeNumber,
+        current_time: vid ? vid.currentTime || 0 : 0,
+        duration: vid && isFinite(vid.duration) ? vid.duration : 0,
+        paused: vid ? vid.paused : true,
+        playback_rate: vid ? vid.playbackRate || 1 : 1,
+        event: eventName || 'sync'
+    };
+}
+
+function setWatchTogetherStatus(message, type) {
+    var status = document.getElementById('watchTogetherStatus');
+    if (!status) return;
+    status.textContent = message || 'Ready';
+    status.classList.toggle('error', type === 'error');
+    status.classList.toggle('success', type === 'success');
+}
+
+function openWatchTogetherModal() {
+    var modal = document.getElementById('watchTogetherModal');
+    if (!modal) return;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeWatchTogetherModal() {
+    var modal = document.getElementById('watchTogetherModal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function renderWatchTogetherRoom(room) {
+    if (!room) return;
+    WatchTogether.roomId = room.id;
+    WatchTogether.roomUrl = getWatchTogetherRoomUrl(room.id);
+    WatchTogether.isHost = !!(room.members || []).find(function(member) {
+        return member.is_self && member.is_host;
+    });
+
+    var trigger = document.getElementById('watchTogetherBtn');
+    var active = document.getElementById('watchTogetherActive');
+    var code = document.getElementById('watchTogetherCode');
+    var role = document.getElementById('watchTogetherRole');
+    var link = document.getElementById('watchTogetherLink');
+    var count = document.getElementById('watchTogetherCount');
+    var members = document.getElementById('watchTogetherMembers');
+    var start = document.getElementById('watchTogetherStart');
+    var leave = document.getElementById('watchTogetherLeave');
+
+    if (trigger) trigger.classList.add('active');
+    if (active) active.hidden = false;
+    if (code) code.textContent = room.id;
+    if (role) role.textContent = WatchTogether.isHost ? 'Host' : 'Viewer';
+    if (link) link.value = WatchTogether.roomUrl;
+    if (count) count.textContent = String((room.members || []).length);
+    if (start) start.hidden = true;
+    if (leave) leave.hidden = false;
+
+    if (members) {
+        members.innerHTML = '';
+        (room.members || []).forEach(function(member) {
+            var item = document.createElement('div');
+            item.className = 'watch-together-member' + (member.is_host ? ' host' : '');
+            var name = document.createElement('span');
+            name.textContent = member.name + (member.is_self ? ' (You)' : '');
+            item.appendChild(name);
+            members.appendChild(item);
+        });
+    }
+}
+
+function resetWatchTogetherUi() {
+    var trigger = document.getElementById('watchTogetherBtn');
+    var active = document.getElementById('watchTogetherActive');
+    var start = document.getElementById('watchTogetherStart');
+    var leave = document.getElementById('watchTogetherLeave');
+    if (trigger) trigger.classList.remove('active');
+    if (active) active.hidden = true;
+    if (start) { start.hidden = false; start.disabled = false; start.textContent = 'Start Room'; }
+    if (leave) leave.hidden = true;
+    setWatchTogetherStatus('Ready');
+}
+
+function handleWatchTogetherRoom(room) {
+    if (!room) return;
+    renderWatchTogetherRoom(room);
+
+    var playback = room.playback || {};
+    var seq = Number(playback.seq || 0);
+    if (seq > WatchTogether.lastSeq) {
+        WatchTogether.lastSeq = seq;
+        if (playback.updated_by !== WatchTogether.clientId) {
+            applyWatchTogetherPlayback(playback, room.server_time);
+        }
+    }
+}
+
+function applyWatchTogetherPlayback(playback, serverTime) {
+    var vid = getWatchTogetherVideo();
+    if (!vid) {
+        WatchTogether.pendingPlayback = { playback: playback, serverTime: serverTime };
+        return;
+    }
+    if (vid.readyState === 0) {
+        WatchTogether.pendingPlayback = { playback: playback, serverTime: serverTime };
+        return;
+    }
+
+    var rate = Number(playback.playback_rate || 1);
+    var target = Number(playback.current_time || 0);
+    if (!playback.paused && playback.updated_at && serverTime) {
+        target += Math.max(0, Number(serverTime) - Number(playback.updated_at)) * rate;
+    }
+    if (isFinite(vid.duration) && vid.duration > 0) {
+        target = Math.min(Math.max(target, 0), Math.max(0, vid.duration - 0.2));
+    }
+
+    WatchTogether.applyingRemote = true;
+    try {
+        if (Math.abs((vid.playbackRate || 1) - rate) > 0.01) {
+            vid.playbackRate = rate;
+        }
+        if (Math.abs((vid.currentTime || 0) - target) > 1.25 || playback.event === 'seek') {
+            vid.currentTime = target;
+        }
+        if (playback.paused) {
+            if (!vid.paused) vid.pause();
+        } else if (vid.paused) {
+            vid.play().catch(function() {
+                setWatchTogetherStatus('Tap play to sync', 'error');
+            });
+        }
+    } finally {
+        setTimeout(function() {
+            WatchTogether.applyingRemote = false;
+        }, 700);
+    }
+}
+
+function sendWatchTogetherState(eventName, force) {
+    if (!WatchTogether.roomId || WatchTogether.applyingRemote) return;
+    if (eventName === 'timeupdate' && !WatchTogether.isHost) return;
+
+    var now = Date.now();
+    if (!force && now - WatchTogether.lastSentAt < 900) return;
+    WatchTogether.lastSentAt = now;
+
+    fetch('/api/watch-together/rooms/' + encodeURIComponent(WatchTogether.roomId) + '/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getWatchTogetherPayload(eventName))
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success && data.room) handleWatchTogetherRoom(data.room);
+        else if (data.error) setWatchTogetherStatus(data.error, 'error');
+    })
+    .catch(function() {
+        setWatchTogetherStatus('Room connection lost', 'error');
+    });
+}
+
+function bindWatchTogetherVideo(video) {
+    if (!video || video._watchTogetherBound) return;
+    video._watchTogetherBound = true;
+
+    video.addEventListener('play', function() { sendWatchTogetherState('play', true); });
+    video.addEventListener('pause', function() { sendWatchTogetherState('pause', true); });
+    video.addEventListener('seeked', function() { sendWatchTogetherState('seek', true); });
+    video.addEventListener('ratechange', function() { sendWatchTogetherState('ratechange', true); });
+    video.addEventListener('timeupdate', function() {
+        if (!WatchTogether.roomId || !WatchTogether.isHost) return;
+        var now = Date.now();
+        if (now - WatchTogether.lastTimeSyncAt > 15000) {
+            WatchTogether.lastTimeSyncAt = now;
+            sendWatchTogetherState('timeupdate', false);
+        }
+    });
+    video.addEventListener('loadedmetadata', function() {
+        if (!WatchTogether.pendingPlayback) return;
+        var pending = WatchTogether.pendingPlayback;
+        WatchTogether.pendingPlayback = null;
+        applyWatchTogetherPlayback(pending.playback, pending.serverTime);
+    });
+}
+
+function notifyWatchTogetherEmbedMode() {
+    if (!WatchTogether.roomId) return;
+    setWatchTogetherStatus('Internal player required for sync', 'error');
+}
+
+function startWatchTogetherPolling() {
+    clearInterval(WatchTogether.pollTimer);
+    pollWatchTogetherState();
+    WatchTogether.pollTimer = setInterval(pollWatchTogetherState, 1800);
+}
+
+function pollWatchTogetherState() {
+    if (!WatchTogether.roomId) return;
+    fetch('/api/watch-together/rooms/' + encodeURIComponent(WatchTogether.roomId) + '/state?client_id=' + encodeURIComponent(getWatchTogetherClientId()))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success && data.room) {
+            handleWatchTogetherRoom(data.room);
+        } else if (data.error) {
+            stopWatchTogether(false);
+            setWatchTogetherStatus(data.error, 'error');
+        }
+    })
+    .catch(function() {
+        setWatchTogetherStatus('Room connection lost', 'error');
+    });
+}
+
+function createWatchTogetherRoom() {
+    var start = document.getElementById('watchTogetherStart');
+    var vid = getWatchTogetherVideo();
+    if (!vid) {
+        setWatchTogetherStatus('Internal player required for sync', 'error');
+        return;
+    }
+    if (start) { start.disabled = true; start.textContent = 'Starting...'; }
+    setWatchTogetherStatus('Starting room...');
+
+    fetch('/api/watch-together/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getWatchTogetherPayload('created'))
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!data.success) throw data;
+        WatchTogether.clientId = data.client_id || WatchTogether.clientId;
+        handleWatchTogetherRoom(data.room);
+        setWatchTogetherUrl(data.room.id);
+        startWatchTogetherPolling();
+        setWatchTogetherStatus('Room ready', 'success');
+        showToast('Watch Together room ready', 'success');
+    })
+    .catch(function(err) {
+        setWatchTogetherStatus((err && err.error) || 'Could not start room', 'error');
+        if (start) { start.disabled = false; start.textContent = 'Start Room'; }
+    });
+}
+
+function joinWatchTogetherRoom(roomId, silent) {
+    var cleanRoomId = String(roomId || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!cleanRoomId) return;
+    WatchTogether.roomId = cleanRoomId;
+    setWatchTogetherStatus('Joining room...');
+
+    fetch('/api/watch-together/rooms/' + encodeURIComponent(cleanRoomId) + '/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getWatchTogetherPayload('join'))
+    })
+    .then(function(r) { return r.json().then(function(data) { if (!r.ok) throw data; return data; }); })
+    .then(function(data) {
+        WatchTogether.clientId = data.client_id || WatchTogether.clientId;
+        WatchTogether.lastSeq = 0;
+        handleWatchTogetherRoom(data.room);
+        setWatchTogetherUrl(data.room.id);
+        startWatchTogetherPolling();
+        setWatchTogetherStatus('Joined room', 'success');
+        if (!silent) showToast('Joined Watch Together room', 'success');
+    })
+    .catch(function(err) {
+        WatchTogether.roomId = null;
+        resetWatchTogetherUi();
+        setWatchTogetherStatus((err && err.error) || 'Could not join room', 'error');
+        openWatchTogetherModal();
+    });
+}
+
+function copyWatchTogetherLink() {
+    var input = document.getElementById('watchTogetherLink');
+    if (!input || !input.value) return;
+    var value = input.value;
+    function copied() {
+        setWatchTogetherStatus('Link copied', 'success');
+        showToast('Room link copied', 'success');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(copied).catch(function() {
+            input.focus();
+            input.select();
+            try { document.execCommand('copy'); copied(); } catch (e) {}
+        });
+    } else {
+        input.focus();
+        input.select();
+        try { document.execCommand('copy'); copied(); } catch (e) {}
+    }
+}
+
+function stopWatchTogether(callServer) {
+    var roomId = WatchTogether.roomId;
+    clearInterval(WatchTogether.pollTimer);
+    WatchTogether.pollTimer = null;
+    WatchTogether.roomId = null;
+    WatchTogether.roomUrl = '';
+    WatchTogether.lastSeq = 0;
+    WatchTogether.isHost = false;
+    WatchTogether.pendingPlayback = null;
+    setWatchTogetherUrl(null);
+    resetWatchTogetherUi();
+
+    if (callServer !== false && roomId) {
+        fetch('/api/watch-together/rooms/' + encodeURIComponent(roomId) + '/leave', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: getWatchTogetherClientId() }),
+            keepalive: true
+        }).catch(function() {});
+    }
+}
+
+function initWatchTogetherUi() {
+    var trigger = document.getElementById('watchTogetherBtn');
+    var close = document.getElementById('watchTogetherClose');
+    var modal = document.getElementById('watchTogetherModal');
+    var start = document.getElementById('watchTogetherStart');
+    var copy = document.getElementById('watchTogetherCopy');
+    var leave = document.getElementById('watchTogetherLeave');
+
+    getWatchTogetherClientId();
+    if (trigger) trigger.addEventListener('click', openWatchTogetherModal);
+    if (close) close.addEventListener('click', closeWatchTogetherModal);
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeWatchTogetherModal();
+        });
+    }
+    if (start) start.addEventListener('click', createWatchTogetherRoom);
+    if (copy) copy.addEventListener('click', copyWatchTogetherLink);
+    if (leave) leave.addEventListener('click', function() {
+        stopWatchTogether(true);
+        setWatchTogetherStatus('Left room');
+    });
+
+    var cfg = window.WATCH_CONFIG || {};
+    if (cfg.watchTogetherRoom) {
+        openWatchTogetherModal();
+        setTimeout(function() {
+            joinWatchTogetherRoom(cfg.watchTogetherRoom, true);
+        }, 350);
+    }
+
+    window.addEventListener('beforeunload', function() {
+        if (!WatchTogether.roomId || !navigator.sendBeacon) return;
+        var body = JSON.stringify({ client_id: getWatchTogetherClientId() });
+        navigator.sendBeacon('/api/watch-together/rooms/' + encodeURIComponent(WatchTogether.roomId) + '/leave', new Blob([body], { type: 'application/json' }));
+    });
+}
+
 function proxyUrl(url, referer) {
     return url;
 }
@@ -905,6 +1329,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     tick(); setInterval(tick, 1000);
 });
+
+document.addEventListener('DOMContentLoaded', initWatchTogetherUi);
 
 // ── DOMContentLoaded — init everything ───────────────────────────
 document.addEventListener('DOMContentLoaded', function() {

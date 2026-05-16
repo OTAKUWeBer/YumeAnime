@@ -1365,6 +1365,263 @@ media-player:not(:defined) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.premium-action-btn.watch-together-trigger.active {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.38);
+    color: #d1fae5;
+}
+
+.watch-together-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.watch-together-modal.is-open {
+    display: flex;
+}
+
+.watch-together-panel {
+    width: min(440px, 100%);
+    background: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+    padding: 18px;
+    color: var(--text-primary);
+}
+
+.watch-together-header,
+.watch-together-code-row,
+.watch-together-link-row,
+.watch-together-members-head,
+.watch-together-actions {
+    display: flex;
+    align-items: center;
+}
+
+.watch-together-header {
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.watch-together-kicker,
+.watch-together-link-label,
+.watch-together-members-head {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.watch-together-header h3 {
+    margin: 2px 0 0;
+    font-size: 1.2rem;
+    line-height: 1.2;
+}
+
+.watch-together-icon-btn {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.watch-together-icon-btn:hover {
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.watch-together-status {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+}
+
+.watch-together-status.error {
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, 0.28);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.watch-together-status.success {
+    color: #d1fae5;
+    border-color: rgba(16, 185, 129, 0.28);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.watch-together-active {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.watch-together-active[hidden] {
+    display: none;
+}
+
+.watch-together-code-row {
+    gap: 8px;
+}
+
+.watch-together-code {
+    font-family: var(--font-mono, monospace);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #fff;
+}
+
+.watch-together-role {
+    margin-left: auto;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.16);
+    color: #bfdbfe;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.watch-together-link-label {
+    display: block;
+    margin-bottom: -4px;
+}
+
+.watch-together-link-row {
+    gap: 8px;
+}
+
+.watch-together-link {
+    min-width: 0;
+    flex: 1;
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.24);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.watch-together-copy,
+.watch-together-primary,
+.watch-together-secondary {
+    height: 38px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.watch-together-copy {
+    padding: 0 12px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+}
+
+.watch-together-members-head {
+    justify-content: space-between;
+    margin-top: 2px;
+}
+
+.watch-together-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 34px;
+}
+
+.watch-together-member {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.watch-together-member::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #10b981;
+    flex: 0 0 auto;
+}
+
+.watch-together-member.host {
+    color: #fff;
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+.watch-together-member span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.watch-together-actions {
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.watch-together-primary,
+.watch-together-secondary {
+    padding: 0 16px;
+}
+
+.watch-together-primary {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+.watch-together-primary:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.watch-together-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.watch-together-secondary:hover,
+.watch-together-copy:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--text-primary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .watch-layout {
@@ -1817,10 +2074,13 @@ media-player:not(:defined) {
     .watch-nav-bar {
         padding: 8px 10px;
         gap: 8px;
+        flex-wrap: wrap;
     }
 
     .watch-nav-right {
         gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 
     .lang-toggle {
@@ -1883,7 +2143,8 @@ media-player:not(:defined) {
 
 /* ── Tiny phones ≤ 360px: icon-only report ──────────────────── */
 @media (max-width: 360px) {
-    .premium-action-btn .report-label {
+    .premium-action-btn .report-label,
+    .premium-action-btn .watch-together-label {
         display: none;
     }
 

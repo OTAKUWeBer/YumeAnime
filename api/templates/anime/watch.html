@@ -169,6 +169,18 @@
                             {% endif %}
                         </div>
 
+                        <!-- Watch Together Button -->
+                        <button id="watchTogetherBtn" class="premium-action-btn watch-together-trigger" type="button" title="Watch together">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <span class="watch-together-label">Together</span>
+                        </button>
+
                         <!-- Report Issue Button -->
                         <button id="quickReportBtn" class="premium-action-btn" onclick="if(window.openFixModal) window.openFixModal()" title="Report playback issue">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -705,6 +717,52 @@
     </div>
 </div>
 
+<!-- Watch Together Modal -->
+<div id="watchTogetherModal" class="watch-together-modal" aria-hidden="true">
+    <div class="watch-together-panel" role="dialog" aria-modal="true" aria-labelledby="watchTogetherTitle">
+        <div class="watch-together-header">
+            <div>
+                <span class="watch-together-kicker">Room</span>
+                <h3 id="watchTogetherTitle">Watch Together</h3>
+            </div>
+            <button id="watchTogetherClose" class="watch-together-icon-btn" type="button" title="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div id="watchTogetherStatus" class="watch-together-status">Ready</div>
+
+        <div id="watchTogetherActive" class="watch-together-active" hidden>
+            <div class="watch-together-code-row">
+                <span class="watch-together-code-label">Code</span>
+                <span id="watchTogetherCode" class="watch-together-code">--------</span>
+                <span id="watchTogetherRole" class="watch-together-role">Viewer</span>
+            </div>
+
+            <label class="watch-together-link-label" for="watchTogetherLink">Room link</label>
+            <div class="watch-together-link-row">
+                <input id="watchTogetherLink" class="watch-together-link" type="text" readonly value="">
+                <button id="watchTogetherCopy" class="watch-together-copy" type="button">Copy</button>
+            </div>
+
+            <div class="watch-together-members-head">
+                <span>Viewers</span>
+                <span id="watchTogetherCount">0</span>
+            </div>
+            <div id="watchTogetherMembers" class="watch-together-members"></div>
+        </div>
+
+        <div class="watch-together-actions">
+            <button id="watchTogetherStart" class="watch-together-primary" type="button">Start Room</button>
+            <button id="watchTogetherLeave" class="watch-together-secondary" type="button" hidden>Leave</button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div id="toastContainer"
     style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;">
@@ -734,7 +792,8 @@
         animeName: {{ (anime.name or anime.title or anime_title or '') | tojson | safe }},
         poster: {{ (anime.get('coverImage') or anime.get('poster') or anime.get('image') or '') | tojson | safe }},
         episodeImage: {{ (episode_image or '') | tojson | safe }},
-        episodeTitle: {{ (episode_title or '') | tojson | safe }}
+        episodeTitle: {{ (episode_title or '') | tojson | safe }},
+        watchTogetherRoom: {{ request.args.get('room', '') | tojson | safe }}
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
