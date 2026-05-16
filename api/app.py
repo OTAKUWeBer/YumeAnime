@@ -10,7 +10,7 @@ load_dotenv(override=False)
 
 from api.core.config import Config
 from api.providers import UnifiedScraper
-from api.routes.anime import anime_routes_bp, watch_routes_bp, catalog_routes_bp, anilist_api_bp, themes_api_bp
+from api.routes.anime import anime_routes_bp, watch_routes_bp, watch_together_bp, catalog_routes_bp, anilist_api_bp, themes_api_bp
 from api.routes.manga import manga_routes_bp, manga_api_bp
 from api.routes.shared import auth_bp, watchlist_bp, api_bp, home_routes_bp, search_routes_bp
 from api.core.extensions import limiter
@@ -90,6 +90,7 @@ def create_app():
     app.register_blueprint(search_routes_bp)
     app.register_blueprint(anime_routes_bp)
     app.register_blueprint(watch_routes_bp)
+    app.register_blueprint(watch_together_bp)
     app.register_blueprint(catalog_routes_bp)
     app.register_blueprint(themes_api_bp)
     app.register_blueprint(manga_routes_bp)

@@ -10,6 +10,8 @@ users_collection_name = os.getenv("users_collection", "users")
 watchlist_collection_name = os.getenv("watchlist_collection", "watchlist")
 comments_collection_name = os.getenv("comments_collection", "comments")
 episode_reactions_collection_name = os.getenv("episode_reactions_collection", "episode_reactions")
+watch_together_rooms_collection_name = os.getenv("watch_together_rooms_collection", "watch_together_rooms")
+watch_together_messages_collection_name = os.getenv("watch_together_messages_collection", "watch_together_messages")
 
 # Centralized MongoDB connection with optimizations
 mongodb_uri = os.getenv("MONGODB_URI")
@@ -26,3 +28,5 @@ users_collection = db[users_collection_name]
 watchlist_collection = db[watchlist_collection_name]
 comments_collection = db[comments_collection_name]
 episode_reactions_collection = db[episode_reactions_collection_name]
+watch_together_rooms_collection = db[watch_together_rooms_collection_name]
+watch_together_messages_collection = db[watch_together_messages_collection_name]

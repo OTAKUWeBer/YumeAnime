@@ -1,0 +1,63 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Create Watch Room - YumeZone{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/watch_together.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="wt-create-shell">
+    <section class="wt-create-panel">
+        <div class="wt-create-head">
+            <span class="wt-kicker">Watch Together</span>
+            <h1>Create Room</h1>
+        </div>
+
+        <form id="wt-create-form" class="wt-create-form">
+            <label>
+                <span>Anime ID</span>
+                <input id="wt-create-anime" name="anime_id" type="text" autocomplete="off" required>
+            </label>
+
+            <div class="wt-create-grid">
+                <label>
+                    <span>Episode</span>
+                    <input id="wt-create-episode" name="episode_number" type="number" min="1" step="1" value="1" required>
+                </label>
+
+                <label>
+                    <span>Language</span>
+                    <select id="wt-create-language" name="language">
+                        <option value="sub">SUB</option>
+                        <option value="dub">DUB</option>
+                    </select>
+                </label>
+            </div>
+
+
+
+            {% if not is_logged_in %}
+            <label>
+                <span>Name</span>
+                <input id="wt-create-name" name="display_name" type="text" maxlength="32" autocomplete="nickname" required>
+            </label>
+            {% endif %}
+
+            <div id="wt-create-status" class="wt-form-status"></div>
+            <button class="wt-primary-btn" type="submit">Create Room</button>
+        </form>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.WT_CREATE_CONFIG = {
+        isLoggedIn: {% if is_logged_in %}true{% else %}false{% endif %},
+        username: {{ username | tojson | safe }},
+        avatar: {{ avatar | tojson | safe }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/watch_together_create.js') }}"></script>
+{% endblock %}

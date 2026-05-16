@@ -10,6 +10,7 @@ from ...models.comments import (
     get_episode_reaction, toggle_episode_reaction,
 )
 from ...core.db_connector import comments_collection
+from ...utils.moderation import contains_banned_words as shared_contains_banned_words
 from bson import ObjectId
 from datetime import datetime, timezone
 import re
@@ -64,6 +65,9 @@ def contains_banned_words(text: str) -> bool:
     if _CONTEXT_PATTERN.search(text):
         return True
     return False
+
+
+contains_banned_words = shared_contains_banned_words
 
 def _require_auth():
     """Return (user_id, username, avatar) if logged in, else None."""

@@ -1,0 +1,89 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ room.anime_title or 'Watch Room' }} - YumeZone{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/watch_together.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="wt-room-shell">
+    <section class="wt-room-main">
+        <div class="wt-room-top">
+            <div class="wt-title-wrap">
+                <span class="wt-kicker">Room {{ room.room_id }}</span>
+                <h1>{{ room.anime_title or 'Watch Together' }}</h1>
+                <p>Episode {{ room.episode_number }}{% if room.episode_title %} &middot; {{ room.episode_title }}{% endif %}</p>
+            </div>
+
+            <div class="wt-room-actions">
+                <a class="wt-ghost-btn" href="/watch/{{ room.anime_id }}/ep-{{ room.episode_number }}">Episode</a>
+                <button id="wt-copy-link" class="wt-ghost-btn" type="button">Copy Link</button>
+            </div>
+        </div>
+
+        <div class="wt-player-wrap">
+            <video id="wt-video" controls playsinline preload="metadata" poster="{{ room.episode_image or room.poster }}"></video>
+            <div id="wt-loading" class="wt-player-state">Loading HLS</div>
+            <button id="wt-skip" class="wt-skip-btn" type="button" hidden>Skip</button>
+        </div>
+
+        <div class="wt-sync-strip">
+            <div>
+                <span id="wt-provider-label">Server</span>
+                <div id="wt-provider-pills" class="wt-provider-pills"></div>
+            </div>
+            <div class="wt-sync-meta">
+                <span id="wt-sync-status">Syncing</span>
+
+            </div>
+        </div>
+    </section>
+
+    <aside class="wt-room-side">
+        <section class="wt-panel">
+            <div class="wt-panel-head">
+                <span>Viewers</span>
+                <span id="wt-member-count">0</span>
+            </div>
+            <div id="wt-members" class="wt-members"></div>
+        </section>
+
+        <section class="wt-panel wt-chat-panel">
+            <div class="wt-panel-head">
+                <span>Chat</span>
+                <span id="wt-chat-count">0</span>
+            </div>
+            <div id="wt-chat-list" class="wt-chat-list"></div>
+            <form id="wt-chat-form" class="wt-chat-form">
+                <input id="wt-chat-input" type="text" maxlength="500" autocomplete="off" placeholder="Message">
+                <button type="submit">Send</button>
+            </form>
+        </section>
+    </aside>
+</main>
+
+{% if not is_logged_in %}
+<div id="wt-name-modal" class="wt-name-modal" aria-hidden="true">
+    <form id="wt-name-form" class="wt-name-card">
+        <span class="wt-kicker">Join Room</span>
+        <h2>Name</h2>
+        <input id="wt-name-input" type="text" maxlength="32" autocomplete="nickname" required>
+        <button class="wt-primary-btn" type="submit">Join</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.WT_ROOM_CONFIG = {
+        room: {{ room | tojson | safe }},
+        isLoggedIn: {% if is_logged_in %}true{% else %}false{% endif %},
+        username: {{ username | tojson | safe }},
+        avatar: {{ avatar | tojson | safe }}
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script src="{{ url_for('static', filename='js/watch_together_room.js') }}"></script>
+{% endblock %}

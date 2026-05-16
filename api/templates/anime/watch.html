@@ -717,15 +717,15 @@
     </div>
 </div>
 
-<!-- Watch Together Modal -->
-<div id="watchTogetherModal" class="watch-together-modal" aria-hidden="true">
-    <div class="watch-together-panel" role="dialog" aria-modal="true" aria-labelledby="watchTogetherTitle">
+<!-- Watch Together Room Create Modal -->
+<div id="wtQuickCreateModal" class="watch-together-modal" aria-hidden="true">
+    <div class="watch-together-panel" role="dialog" aria-modal="true" aria-labelledby="wtQuickCreateTitle">
         <div class="watch-together-header">
             <div>
                 <span class="watch-together-kicker">Room</span>
-                <h3 id="watchTogetherTitle">Watch Together</h3>
+                <h3 id="wtQuickCreateTitle">Watch Together</h3>
             </div>
-            <button id="watchTogetherClose" class="watch-together-icon-btn" type="button" title="Close">
+            <button id="wtQuickCreateClose" class="watch-together-icon-btn" type="button" title="Close">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -734,32 +734,24 @@
             </button>
         </div>
 
-        <div id="watchTogetherStatus" class="watch-together-status">Ready</div>
+        <div id="wtQuickStatus" class="watch-together-status">Create a link-only room for this episode.</div>
 
-        <div id="watchTogetherActive" class="watch-together-active" hidden>
-            <div class="watch-together-code-row">
-                <span class="watch-together-code-label">Code</span>
-                <span id="watchTogetherCode" class="watch-together-code">--------</span>
-                <span id="watchTogetherRole" class="watch-together-role">Viewer</span>
+        <form id="wtQuickCreateForm" class="watch-together-form">
+            {% if not is_logged_in %}
+            <label class="watch-together-field">
+                <span>Display name</span>
+                <input id="wtQuickName" class="watch-together-input" type="text" maxlength="40"
+                    placeholder="Guest name" autocomplete="nickname">
+            </label>
+            {% endif %}
+
+
+
+            <div class="watch-together-actions">
+                <button id="wtQuickCreateCancel" class="watch-together-secondary" type="button">Cancel</button>
+                <button id="wtQuickCreateSubmit" class="watch-together-primary" type="submit">Create Room</button>
             </div>
-
-            <label class="watch-together-link-label" for="watchTogetherLink">Room link</label>
-            <div class="watch-together-link-row">
-                <input id="watchTogetherLink" class="watch-together-link" type="text" readonly value="">
-                <button id="watchTogetherCopy" class="watch-together-copy" type="button">Copy</button>
-            </div>
-
-            <div class="watch-together-members-head">
-                <span>Viewers</span>
-                <span id="watchTogetherCount">0</span>
-            </div>
-            <div id="watchTogetherMembers" class="watch-together-members"></div>
-        </div>
-
-        <div class="watch-together-actions">
-            <button id="watchTogetherStart" class="watch-together-primary" type="button">Start Room</button>
-            <button id="watchTogetherLeave" class="watch-together-secondary" type="button" hidden>Leave</button>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -793,7 +785,8 @@
         poster: {{ (anime.get('coverImage') or anime.get('poster') or anime.get('image') or '') | tojson | safe }},
         episodeImage: {{ (episode_image or '') | tojson | safe }},
         episodeTitle: {{ (episode_title or '') | tojson | safe }},
-        watchTogetherRoom: {{ request.args.get('room', '') | tojson | safe }}
+        username: {{ (session.get('username') or '') | tojson | safe }},
+        avatar: {{ (session.get('avatar') or '') | tojson | safe }}
     };
 </script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
