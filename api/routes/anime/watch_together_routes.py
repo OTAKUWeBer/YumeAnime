@@ -15,6 +15,7 @@ from .watch_routes import (
     _resolve_episode,
     _scavenge_intro_outro,
 )
+from ...core.extensions import limiter
 
 
 watch_together_bp = Blueprint("watch_together", __name__)
@@ -202,11 +203,20 @@ def room_page(room_id):
 
 
 @watch_together_bp.route("/api/watch-together/rooms", methods=["POST"])
+@limiter.limit("3 per minute")
 def create_room_api():
     data = request.get_json(silent=True) or {}
     anime_id = _clean_anime_id(data.get("anime_id"))
-    if not anime_id:
-        return _json_error("Anime id is required")
+    if not anime_id or len(anime_id) > 128:
+        return _json_error("Invalid anime id")
+    
+    ep_number = data.get("episode_number")
+    try:
+        if ep_number is not None:
+            float(ep_number) # Validate it's a number
+    except (ValueError, TypeError):
+        return _json_error("Invalid episode number")
+
     identity = _identity(data)
 
     try:
@@ -245,6 +255,7 @@ def create_room_api():
 
 
 @watch_together_bp.route("/api/watch-together/rooms/<room_id>/join", methods=["POST"])
+@limiter.limit("10 per minute")
 def join_room_api(room_id):
     data = request.get_json(silent=True) or {}
     identity = _identity(data)
@@ -296,6 +307,7 @@ def room_snapshot_api(room_id):
 
 
 @watch_together_bp.route("/api/watch-together/rooms/<room_id>/events", methods=["POST"])
+@limiter.limit("60 per minute")
 def room_event_api(room_id):
     data = request.get_json(silent=True) or {}
     identity = _identity(data)
@@ -310,7 +322,12 @@ def room_event_api(room_id):
     if not room:
         return _json_error("Room not found", 404)
 
+    # Security: Only host can control playback and servers
+    is_host = (identity["client_id"] == room.get("host_id"))
+
     if event_type in ("play", "pause", "seek", "ratechange"):
+        if not is_host:
+            return _json_error("Only the room host can control playback", 403)
         room = wt.update_playback(
             room,
             identity["client_id"],
@@ -319,6 +336,8 @@ def room_event_api(room_id):
             event_type,
         )
     elif event_type == "server_change":
+        if not is_host:
+            return _json_error("Only the room host can change the server", 403)
         room = wt.update_provider(
             room,
             str(data.get("provider") or ""),

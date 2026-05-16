@@ -13,6 +13,7 @@ from ..core.db_connector import (
 ROOM_TTL_SECONDS = 6 * 60 * 60
 MEMBER_TTL_SECONDS = 90
 MAX_CHAT_MESSAGES = 200
+MAX_ROOM_MEMBERS = 20
 ROOM_ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _indexes_ready = False
 
@@ -50,6 +51,7 @@ def clean_client_id(client_id):
 
 def clean_display_name(name, fallback="Guest"):
     cleaned = re.sub(r"\s+", " ", str(name or "")).strip()
+    cleaned = re.sub(r"[^\w\s\-\.\(\)\[\]]", "", cleaned) # Basic anti-XSS/malformed
     return (cleaned or fallback)[:32]
 
 
@@ -255,6 +257,11 @@ def touch_room(room_id, client_id=None, display_name=None, avatar=None, extend_m
     if client_id:
         client_id = clean_client_id(client_id)
         existing = (room.get("members") or {}).get(client_id, {})
+        
+        # Check member limit for NEW members
+        if not existing and len(room.get("members") or {}) >= MAX_ROOM_MEMBERS:
+            return room
+
         update[f"members.{client_id}"] = {
             "id": client_id,
             "name": clean_display_name(display_name or existing.get("name")),
@@ -349,6 +356,8 @@ def add_chat_message(room, client_id, display_name, avatar, body):
         return room, None
     if len(body) > 500:
         body = body[:500]
+    # Basic HTML escaping for safety
+    body = body.replace("<", "&lt;").replace(">", "&gt;")
     now = utcnow()
     expires_at = room_expiry(now)
     room = watch_together_rooms_collection.find_one_and_update(
