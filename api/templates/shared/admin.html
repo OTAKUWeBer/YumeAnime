@@ -1,0 +1,264 @@
+{% extends "shared/base.html" %}
+{% block title %}Admin Panel — YumeZone{% endblock %}
+{% block meta_description %}YumeZone Admin Panel — Manage users, reports, and platform settings{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout" id="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="admin-sidebar">
+        <div class="admin-sidebar-header">
+            <div class="admin-brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Admin Panel</span>
+            </div>
+            <span class="admin-role-badge role-{{ admin_role }}">{{ admin_role|upper }}</span>
+        </div>
+
+        <nav class="admin-nav">
+            <button class="admin-nav-item active" data-tab="dashboard" id="nav-dashboard">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Dashboard</span>
+            </button>
+            <button class="admin-nav-item" data-tab="users" id="nav-users">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Users</span>
+            </button>
+            <button class="admin-nav-item" data-tab="reports" id="nav-reports">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                <span>Reports</span>
+                <span class="admin-badge" id="pending-reports-badge" style="display:none;"></span>
+            </button>
+            <button class="admin-nav-item" data-tab="logs" id="nav-logs">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span>Activity Log</span>
+            </button>
+        </nav>
+
+        <div class="admin-sidebar-footer">
+            <a href="/" class="admin-nav-item admin-back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                <span>Back to Site</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Mobile Header -->
+        <div class="admin-mobile-header">
+            <button class="admin-mobile-toggle" id="admin-mobile-toggle">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <span class="admin-mobile-title">Admin Panel</span>
+            <span class="admin-role-badge role-{{ admin_role }}">{{ admin_role|upper }}</span>
+        </div>
+
+        <!-- ═══════════════════ DASHBOARD TAB ═══════════════════ -->
+        <section class="admin-tab active" id="tab-dashboard">
+            <div class="admin-tab-header">
+                <h1>Dashboard</h1>
+                <p class="admin-tab-subtitle">Overview of your platform activity</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card stat-primary"><div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-content"><span class="stat-value" id="stat-total-users">—</span><span class="stat-label">Total Users</span></div></div>
+                <div class="stat-card stat-success"><div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div class="stat-content"><span class="stat-value" id="stat-new-today">—</span><span class="stat-label">New Today</span></div></div>
+                <div class="stat-card stat-info"><div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="stat-content"><span class="stat-value" id="stat-total-comments">—</span><span class="stat-label">Total Comments</span></div></div>
+                <div class="stat-card stat-warning"><div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div><div class="stat-content"><span class="stat-value" id="stat-pending-reports">—</span><span class="stat-label">Pending Reports</span></div></div>
+                <div class="stat-card stat-danger"><div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div><div class="stat-content"><span class="stat-value" id="stat-banned">—</span><span class="stat-label">Banned Users</span></div></div>
+                <div class="stat-card stat-accent"><div class="stat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="stat-content"><span class="stat-value" id="stat-new-week">—</span><span class="stat-label">New This Week</span></div></div>
+            </div>
+
+            <!-- Charts + Role Distribution Row -->
+            <div class="admin-grid-2">
+                <div class="admin-card">
+                    <h3 class="admin-card-title">User Signups — Last 7 Days</h3>
+                    <div class="chart-container" id="signup-chart"></div>
+                </div>
+                <div class="admin-card">
+                    <h3 class="admin-card-title">Role Distribution</h3>
+                    <div class="role-distribution" id="role-distribution"></div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="admin-grid-2">
+                <div class="admin-card">
+                    <h3 class="admin-card-title">Recent Users</h3>
+                    <div class="admin-list" id="recent-users-list">
+                        <div class="admin-empty">Loading...</div>
+                    </div>
+                </div>
+                <div class="admin-card">
+                    <h3 class="admin-card-title">Recent Moderation Actions</h3>
+                    <div class="admin-list" id="recent-logs-list">
+                        <div class="admin-empty">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════ USERS TAB ═══════════════════ -->
+        <section class="admin-tab" id="tab-users">
+            <div class="admin-tab-header">
+                <h1>User Management</h1>
+                <p class="admin-tab-subtitle">Search, view, and manage user accounts</p>
+            </div>
+
+            <div class="admin-toolbar">
+                <div class="admin-search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" id="user-search-input" placeholder="Search by username, email, or ID..." autocomplete="off">
+                </div>
+                <div class="admin-filters">
+                    <select id="user-role-filter" class="admin-select">
+                        <option value="">All Roles</option>
+                        <option value="user">User</option>
+                        <option value="mod">Moderator</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="admin-table-container">
+                <table class="admin-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <tr><td colspan="5" class="admin-empty">Search for users or browse all</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-pagination" id="users-pagination"></div>
+        </section>
+
+        <!-- ═══════════════════ REPORTS TAB ═══════════════════ -->
+        <section class="admin-tab" id="tab-reports">
+            <div class="admin-tab-header">
+                <h1>Reports</h1>
+                <p class="admin-tab-subtitle">Review and moderate flagged content</p>
+            </div>
+
+            <div class="admin-toolbar">
+                <div class="admin-filters">
+                    <select id="report-status-filter" class="admin-select">
+                        <option value="">All Status</option>
+                        <option value="pending" selected>Pending</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="ignored">Ignored</option>
+                    </select>
+                    <select id="report-reason-filter" class="admin-select">
+                        <option value="">All Reasons</option>
+                        <option value="spam">Spam</option>
+                        <option value="harassment">Harassment</option>
+                        <option value="nsfw">NSFW</option>
+                        <option value="hate_speech">Hate Speech</option>
+                        <option value="misinformation">Misinformation</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="report-count-badges" id="report-count-badges"></div>
+            </div>
+
+            <div class="reports-list" id="reports-list">
+                <div class="admin-empty">Loading reports...</div>
+            </div>
+
+            <div class="admin-pagination" id="reports-pagination"></div>
+        </section>
+
+        <!-- ═══════════════════ LOGS TAB ═══════════════════ -->
+        <section class="admin-tab" id="tab-logs">
+            <div class="admin-tab-header">
+                <h1>Activity Log</h1>
+                <p class="admin-tab-subtitle">Track all moderation actions and system events</p>
+            </div>
+
+            <div class="admin-table-container">
+                <table class="admin-table" id="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Actor</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>Details</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-tbody">
+                        <tr><td colspan="5" class="admin-empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-pagination" id="logs-pagination"></div>
+        </section>
+    </main>
+</div>
+
+<!-- User Detail Modal -->
+<div class="admin-modal-backdrop" id="user-detail-modal" style="display:none;">
+    <div class="admin-modal">
+        <div class="admin-modal-header">
+            <h2 id="modal-username">User Details</h2>
+            <button class="admin-modal-close" onclick="closeModal('user-detail-modal')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="admin-modal-body" id="modal-user-body">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="admin-modal-backdrop" id="confirm-modal" style="display:none;">
+    <div class="admin-modal admin-modal-sm">
+        <div class="admin-modal-header">
+            <h2 id="confirm-title">Confirm Action</h2>
+            <button class="admin-modal-close" onclick="closeModal('confirm-modal')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="admin-modal-body">
+            <p id="confirm-message">Are you sure?</p>
+            <div class="admin-modal-note-group" id="confirm-note-group" style="display:none;">
+                <label class="admin-label">Note (optional)</label>
+                <textarea id="confirm-note" class="admin-textarea" rows="2" placeholder="Add a note..."></textarea>
+            </div>
+            <div class="admin-modal-duration-group" id="confirm-duration-group" style="display:none;">
+                <label class="admin-label">Duration (hours)</label>
+                <input type="number" id="confirm-duration" class="admin-input" value="24" min="1" max="8760">
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button class="admin-btn admin-btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+            <button class="admin-btn admin-btn-danger" id="confirm-action-btn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="admin-toast-container" id="admin-toast-container"></div>
+
+<script>
+    const ADMIN_ROLE = "{{ admin_role }}";
+    const ADMIN_USER_ID = "{{ admin_user_id }}";
+</script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

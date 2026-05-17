@@ -171,6 +171,16 @@ class CommentsManager {
         const replyBtnHTML = isReply ? '' : `
             <button class="comment-reply-toggle" data-comment-id="${comment._id}">Reply</button>`;
 
+        const showReport = this.isLoggedIn && !comment.deleted && (
+            (comment.author_id && String(comment.author_id) !== String(this.userId)) ||
+            (!comment.author_id && comment.author !== this.username)
+        );
+        const reportBtnHTML = showReport ? `
+            <button class="comment-report-btn" data-comment-id="${comment._id}" title="Report this comment">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                <span>Report</span>
+            </button>` : '';
+
         const isOwner = !comment.deleted && this.isLoggedIn && (
             (comment.author_id && String(comment.author_id) === String(this.userId)) ||
             (!comment.author_id && comment.author === this.username && comment.author !== 'Anonymous')
@@ -216,6 +226,7 @@ class CommentsManager {
                     <span class="comment-dislike-count">${comment.dislike_count ?? 0}</span>
                 </button>
                 ${replyBtnHTML}
+                ${reportBtnHTML}
             </div>
             ${!isReply ? `<div class="reply-form-container" id="reply-form-${comment._id}" style="display:none;"></div>` : ''}
             ${repliesWrapperHTML}
@@ -230,6 +241,12 @@ class CommentsManager {
         const replyToggle = wrapper.querySelector('.comment-reply-toggle');
         if (replyToggle) {
             replyToggle.addEventListener('click', () => this._toggleReplyForm(comment._id, wrapper));
+        }
+
+        // Bind Report click
+        const reportBtn = wrapper.querySelector('.comment-report-btn');
+        if (reportBtn) {
+            reportBtn.addEventListener('click', () => this._openReportModal(comment._id));
         }
 
         // Bind Edit/Delete
@@ -828,6 +845,149 @@ class CommentsManager {
         el.classList.remove('count-pulse');
         void el.offsetWidth; // reflow
         el.classList.add('count-pulse');
+    }
+
+    _openReportModal(commentId) {
+        if (!this.isLoggedIn) {
+            if (typeof openLoginModal === 'function') {
+                openLoginModal();
+            } else {
+                this._showToast('Please sign in to report comments.', 'error');
+            }
+            return;
+        }
+
+        let modal = document.getElementById('comment-report-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'comment-report-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.85);
+                backdrop-filter: blur(5px);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            `;
+            modal.innerHTML = `
+                <div style="background: #121212; padding: 25px; border-radius: 12px; width: 90%; max-width: 440px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.08); transform: scale(0.9); transition: transform 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff4757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                            Report Comment
+                        </h3>
+                        <button id="report-modal-close" style="background: none; border: none; color: #a1a1aa; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+
+                    <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.4;">
+                        Select a reason for reporting this comment. Abuse of the report system may result in action against your account.
+                    </p>
+
+                    <form id="comment-report-form" style="display: flex; flex-direction: column; gap: 12px;">
+                        <input type="hidden" id="report-comment-id" value="">
+                        
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="color: #cbd5e1; font-size: 0.85rem; font-weight: 600;">Reason</label>
+                            <select id="report-reason" style="background: #1e1e1e; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;">
+                                <option value="Spam">Spam / Advertising</option>
+                                <option value="Harassment">Harassment / Bullying</option>
+                                <option value="NSFW">Inappropriate / NSFW</option>
+                                <option value="Hate speech">Hate Speech</option>
+                                <option value="Misinformation">Misinformation</option>
+                                <option value="Other">Other / Violation of Terms</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                            <label style="color: #cbd5e1; font-size: 0.85rem; font-weight: 600;">Details (Optional)</label>
+                            <textarea id="report-details" rows="3" placeholder="Provide additional details..." style="background: #1e1e1e; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-size: 0.9rem; resize: none; outline: none; transition: border-color 0.2s;"></textarea>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 15px;">
+                            <button type="button" id="report-modal-cancel" style="background: none; border: none; color: #a1a1aa; font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 8px 16px; border-radius: 6px; transition: color 0.2s;">Cancel</button>
+                            <button type="submit" id="report-modal-submit" style="background: #ff4757; color: white; border: none; font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 8px 20px; border-radius: 8px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);">Submit Report</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Bind events
+            const closeBtn = modal.querySelector('#report-modal-close');
+            const cancelBtn = modal.querySelector('#report-modal-cancel');
+            const form = modal.querySelector('#comment-report-form');
+            const reasonSelect = modal.querySelector('#report-reason');
+            const detailsTextarea = modal.querySelector('#report-details');
+
+            const closeModal = () => {
+                modal.style.opacity = '0';
+                modal.firstElementChild.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 200);
+            };
+
+            closeBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const cId = modal.querySelector('#report-comment-id').value;
+                const reason = reasonSelect.value;
+                const details = detailsTextarea.value.trim();
+
+                const submitBtn = modal.querySelector('#report-modal-submit');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+
+                try {
+                    const r = await fetch(`/api/admin/report-comment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            comment_id: cId,
+                            reason: reason,
+                            details: details
+                        })
+                    });
+                    const d = await r.json();
+                    if (!r.ok) {
+                        this._showToast(d.message || 'Failed to submit report.', 'error');
+                        return;
+                    }
+                    this._showToast('Comment reported successfully. Thank you!', 'success');
+                    closeModal();
+                } catch (_) {
+                    this._showToast('Network error, please try again.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Report';
+                }
+            });
+        }
+
+        // Show modal
+        modal.querySelector('#report-comment-id').value = commentId;
+        modal.querySelector('#report-details').value = '';
+        modal.querySelector('#report-reason').value = 'Spam';
+
+        modal.style.display = 'flex';
+        // force reflow
+        void modal.offsetWidth;
+        modal.style.opacity = '1';
+        modal.firstElementChild.style.transform = 'scale(1)';
     }
 
     _showToast(msg, type = 'info') {

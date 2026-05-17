@@ -201,8 +201,10 @@ def anilist_callback():
             # Sync password_version so validate_session_version doesn't clear the session
             if existing_anilist_user:
                 session['password_version'] = existing_anilist_user.get('password_version', 0)
+                session['role'] = existing_anilist_user.get('role', 'user')
             else:
                 session['password_version'] = 0
+                session['role'] = 'user'
             session.permanent = True
 
             current_app.logger.info(f"User {username} (ID: {user_id}) logged in via AniList successfully")

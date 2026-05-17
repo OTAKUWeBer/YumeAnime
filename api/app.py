@@ -11,6 +11,7 @@ load_dotenv(override=False)
 from api.core.config import Config
 from api.providers import UnifiedScraper
 from api.routes.anime import anime_routes_bp, watch_routes_bp, watch_together_bp, catalog_routes_bp, anilist_api_bp, themes_api_bp
+from api.routes.shared.admin_routes import admin_bp
 from api.routes.manga import manga_routes_bp, manga_api_bp
 from api.routes.shared import auth_bp, watchlist_bp, api_bp, home_routes_bp, search_routes_bp
 from api.core.extensions import limiter
@@ -97,6 +98,23 @@ def create_app():
     app.register_blueprint(auth_bp,      url_prefix='/auth')
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp,       url_prefix='/api')
+    app.register_blueprint(admin_bp)
+
+    # Run role migration once on startup
+    with app.app_context():
+        try:
+            from api.models.admin import migrate_roles
+            migrate_roles()
+        except Exception:
+            pass
+
+    @app.context_processor
+    def inject_user_role():
+        """Make user_role available in all templates."""
+        role = 'user'
+        if '_id' in session:
+            role = session.get('role', 'user')
+        return dict(user_role=role)
 
     @app.before_request
     def check_urgent_announcement():

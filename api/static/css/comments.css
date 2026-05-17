@@ -466,6 +466,31 @@
     background: rgba(255,255,255,0.06);
 }
 
+.comment-report-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 999px;
+    transition: color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.comment-report-btn:hover {
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+}
+
+.comment-report-btn svg {
+    flex-shrink: 0;
+}
+
+
 /* ── Replies ────────────────────────────────────────────────── */
 .comment-replies {
     margin-left: 46px;

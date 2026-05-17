@@ -72,6 +72,7 @@ def signup():
         session['_id'] = user_id
         session['avatar'] = None  # New users have no avatar yet
         session['password_version'] = 0
+        session['role'] = 'user'
         session.permanent = True
         
         current_app.logger.info(f"User {username} signed up successfully with ID {user_id}")
@@ -120,6 +121,7 @@ def login():
             session['_id'] = user['_id']
             session['password_version'] = user.get('password_version', 0)
             session['avatar'] = user.get('avatar')  # Sync avatar to session
+            session['role'] = user.get('role', 'user')
             session['anilist_authenticated'] = bool(user.get('anilist_id'))
             if user.get('anilist_id'):
                 session['anilist_id'] = user.get('anilist_id')
