@@ -104,10 +104,19 @@ def create_app():
 
     @app.context_processor
     def inject_user_role():
-        """Make user_role available in all templates."""
+        """Make user_role available in all templates dynamically."""
         role = 'user'
         if '_id' in session:
-            role = session.get('role', 'user')
+            try:
+                from api.core.db_connector import users_collection
+                user = users_collection.find_one({"_id": session["_id"]}, {"role": 1})
+                if user:
+                    role = user.get("role", "user")
+                    session["role"] = role
+                else:
+                    role = session.get('role', 'user')
+            except Exception:
+                role = session.get('role', 'user')
         return dict(user_role=role)
 
     @app.before_request
