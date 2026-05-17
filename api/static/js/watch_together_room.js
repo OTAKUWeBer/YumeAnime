@@ -75,10 +75,10 @@
 
         if (!video) return;
 
-        // Toggle native controls: host gets full controls, guests get none
-        video.controls = isHost;
+        // Everyone gets native controls (fullscreen, volume, etc.)
+        video.controls = true;
 
-        // Manage the guest overlay
+        // Manage the guest badge (small non-blocking indicator)
         var overlay = document.getElementById('wt-guest-overlay');
         if (!isHost) {
             if (!overlay) {

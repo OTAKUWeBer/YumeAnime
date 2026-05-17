@@ -165,30 +165,26 @@
     cursor: pointer;
 }
 
-/* Guest overlay – blocks non-host video interaction */
+/* Guest badge – small indicator, does NOT block controls */
 .wt-guest-overlay {
     position: absolute;
-    inset: 0;
+    top: 10px;
+    left: 10px;
     z-index: 6;
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: rgba(0, 0, 0, 0.12);
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 0.82rem;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.02em;
-    pointer-events: all;
-    cursor: default;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-}
-
-.wt-guest-overlay:hover {
+    pointer-events: none;
     opacity: 1;
-    background: rgba(0, 0, 0, 0.4);
+    transition: opacity 0.4s ease;
 }
 
 .wt-guest-overlay.is-hidden {
@@ -196,7 +192,7 @@
 }
 
 .wt-guest-overlay-icon {
-    font-size: 1.5rem;
+    font-size: 0.85rem;
     line-height: 1;
 }
 
