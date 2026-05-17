@@ -574,27 +574,4 @@ def get_user_admin_detail(user_id):
     return detail
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Migration helper
-# ─────────────────────────────────────────────────────────────────────────────
 
-def migrate_roles():
-    """
-    One-time migration: set all users without a role to 'user',
-    and set 'weber' to 'admin'.
-    """
-    # Set all users without a role to 'user'
-    users_collection.update_many(
-        {"role": {"$exists": False}},
-        {"$set": {"role": "user"}},
-    )
-    # Set weber as admin
-    users_collection.update_many(
-        {"username": {"$regex": "^weber$", "$options": "i"}},
-        {"$set": {"role": "admin"}},
-    )
-    # Ensure is_banned field exists
-    users_collection.update_many(
-        {"is_banned": {"$exists": False}},
-        {"$set": {"is_banned": False}},
-    )

@@ -14,7 +14,7 @@ from ...models.admin import (
     ban_user, unban_user, mute_user, unmute_user, is_user_banned,
     get_dashboard_stats, search_users_admin, get_user_admin_detail,
     create_report, get_reports, get_report, resolve_report, ignore_report,
-    get_report_counts, get_audit_logs, log_action, migrate_roles,
+    get_report_counts, get_audit_logs, log_action,
     VALID_ROLES, REPORT_REASONS,
 )
 from ...models.comments import delete_comment
@@ -507,18 +507,4 @@ def api_report_comment():
     return jsonify({"success": False, "message": "Failed to submit report"}), 500
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# API: Migration (admin only, one-time use)
-# ─────────────────────────────────────────────────────────────────────────────
 
-@admin_api_bp.route("/migrate-roles", methods=["POST"])
-@require_admin
-def api_migrate_roles(**kwargs):
-    """Run role migration. Sets all users to 'user' role, weber to admin."""
-    try:
-        migrate_roles()
-        log_action(session["_id"], session["username"], "migrate_roles", details="Ran role migration")
-        return jsonify({"success": True, "message": "Migration completed"})
-    except Exception as e:
-        logger.error(f"Migration error: {e}")
-        return jsonify({"success": False, "message": str(e)}), 500

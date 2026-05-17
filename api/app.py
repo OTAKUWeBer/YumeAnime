@@ -100,13 +100,7 @@ def create_app():
     app.register_blueprint(api_bp,       url_prefix='/api')
     app.register_blueprint(admin_bp)
 
-    # Run role migration once on startup
-    with app.app_context():
-        try:
-            from api.models.admin import migrate_roles
-            migrate_roles()
-        except Exception:
-            pass
+
 
     @app.context_processor
     def inject_user_role():
