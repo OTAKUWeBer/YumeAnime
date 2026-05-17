@@ -97,12 +97,13 @@ def new_room_id():
             return room_id
 
 
-def _member_doc(client_id, display_name, avatar=None, now=None):
+def _member_doc(client_id, display_name, avatar=None, user_id=None, now=None):
     now = now or utcnow()
     return {
         "id": client_id,
         "name": clean_display_name(display_name),
         "avatar": avatar,
+        "user_id": user_id or "",
         "joined_at": now,
         "last_seen": now,
     }
@@ -114,6 +115,7 @@ def _serialize_member(member, host_id=None, client_id=None):
         "id": member_id,
         "name": member.get("name") or "Guest",
         "avatar": member.get("avatar"),
+        "user_id": member.get("user_id") or "",
         "is_host": member_id == host_id,
         "is_self": member_id == client_id,
         "last_seen": iso(member.get("last_seen")),
@@ -197,7 +199,8 @@ def create_room(
         client_id,
         creator.get("display_name"),
         creator.get("avatar"),
-        now,
+        user_id=creator.get("user_id") or "",
+        now=now,
     )
     metadata = metadata or {}
     doc = {
@@ -244,7 +247,7 @@ def get_room(room_id):
     )
 
 
-def touch_room(room_id, client_id=None, display_name=None, avatar=None, extend_messages=False):
+def touch_room(room_id, client_id=None, display_name=None, avatar=None, user_id=None, extend_messages=False):
     room = get_room(room_id)
     if not room:
         return None
@@ -254,24 +257,40 @@ def touch_room(room_id, client_id=None, display_name=None, avatar=None, extend_m
         "updated_at": now,
         "expires_at": expires_at,
     }
+    unset = {}
     if client_id:
         client_id = clean_client_id(client_id)
         existing = (room.get("members") or {}).get(client_id, {})
-        
+
         # Check member limit for NEW members
         if not existing and len(room.get("members") or {}) >= MAX_ROOM_MEMBERS:
             return room
+
+        # Deduplicate logged-in users: remove old member entries with same
+        # user_id but different client_id so the same account only appears once.
+        if user_id:
+            for mid, member in (room.get("members") or {}).items():
+                if mid != client_id and member.get("user_id") == user_id:
+                    unset[f"members.{mid}"] = ""
+                    # If the host entry is being replaced, migrate host_id
+                    if room.get("host_id") == mid:
+                        update["host_id"] = client_id
 
         update[f"members.{client_id}"] = {
             "id": client_id,
             "name": clean_display_name(display_name or existing.get("name")),
             "avatar": avatar if avatar is not None else existing.get("avatar"),
+            "user_id": user_id or existing.get("user_id") or "",
             "joined_at": existing.get("joined_at", now),
             "last_seen": now,
         }
+
+    mongo_ops = {"$set": update}
+    if unset:
+        mongo_ops["$unset"] = unset
     room = watch_together_rooms_collection.find_one_and_update(
         {"room_id": room["room_id"]},
-        {"$set": update},
+        mongo_ops,
         return_document=ReturnDocument.AFTER,
     )
     if extend_messages:

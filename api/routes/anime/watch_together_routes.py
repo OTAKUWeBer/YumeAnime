@@ -46,9 +46,6 @@ def _identity(data):
     }
 
 
-
-
-
 def _anime_slug_from_title(title):
     if not title:
         return None
@@ -264,6 +261,7 @@ def join_room_api(room_id):
         identity["client_id"],
         identity["display_name"],
         identity["avatar"],
+        user_id=identity["user_id"],
         extend_messages=True,
     )
     if not room:
@@ -281,6 +279,7 @@ def join_room_api(room_id):
 def room_snapshot_api(room_id):
     client_id = wt.clean_client_id(request.args.get("client_id"))
     display_name = request.args.get("display_name")
+    user_id = str(session.get("_id") or "")
     if session.get("username"):
         display_name = session.get("username")
     since_chat_seq = request.args.get("since_chat_seq", 0)
@@ -293,6 +292,7 @@ def room_snapshot_api(room_id):
         client_id,
         display_name,
         session.get("avatar"),
+        user_id=user_id,
         extend_messages=False,
     )
     if not room:
@@ -311,12 +311,13 @@ def room_snapshot_api(room_id):
 def room_event_api(room_id):
     data = request.get_json(silent=True) or {}
     identity = _identity(data)
-    event_type = str(data.get("type") or "").strip()
+    event_type = str(data.get("type") or "").strip().lower()
     room = wt.touch_room(
         room_id,
         identity["client_id"],
         identity["display_name"],
         identity["avatar"],
+        user_id=identity["user_id"],
         extend_messages=True,
     )
     if not room:
@@ -325,7 +326,9 @@ def room_event_api(room_id):
     # Security: Only host can control playback and servers
     is_host = (identity["client_id"] == room.get("host_id"))
 
-    if event_type in ("play", "pause", "seek", "ratechange"):
+    if event_type in ("play", "pause", "seek", "seeked", "ratechange"):
+        if event_type == "seeked":
+            event_type = "seek"
         if not is_host:
             return _json_error("Only the room host can control playback", 403)
         room = wt.update_playback(
@@ -368,10 +371,15 @@ def room_event_api(room_id):
                 "room": _room_snapshot(room, identity["client_id"], data.get("since_chat_seq", 0)),
             }
         )
-    elif event_type == "heartbeat":
+    elif event_type in ("heartbeat", "sync", ""):
+        # heartbeat / sync / empty → just touch the room, no state change
         pass
     else:
-        return _json_error("Unsupported room event", 400)
+        current_app.logger.warning(
+            "[WatchTogether] unrecognised event type %r from %s",
+            event_type,
+            identity["client_id"],
+        )
 
     return jsonify(
         {
@@ -385,7 +393,11 @@ def room_event_api(room_id):
 @watch_together_bp.route("/api/watch-together/rooms/<room_id>/source", methods=["GET"])
 def room_source_api(room_id):
     client_id = wt.clean_client_id(request.args.get("client_id"))
-    room = wt.touch_room(room_id, client_id, request.args.get("display_name"), session.get("avatar"))
+    display_name = request.args.get("display_name")
+    if session.get("username"):
+        display_name = session.get("username")
+    user_id = str(session.get("_id") or "")
+    room = wt.touch_room(room_id, client_id, display_name, session.get("avatar"), user_id=user_id)
     if not room:
         return _json_error("Room not found", 404)
 

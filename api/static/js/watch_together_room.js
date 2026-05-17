@@ -138,6 +138,11 @@
         .then(function (response) {
             return response.json().then(function (data) {
                 if (!response.ok || !data.success) throw data;
+                // Keep client_id in sync with server
+                if (data.client_id && data.client_id !== clientIdValue) {
+                    clientIdValue = data.client_id;
+                    try { localStorage.setItem('yume_watch_together_client_id', data.client_id); } catch (e) {}
+                }
                 return data;
             });
         })
@@ -146,11 +151,12 @@
             return data;
         })
         .catch(function (error) {
-            // Don't show errors for permission denials to non-host (they shouldn't send these)
+            // Friendly messages instead of raw API errors
             if (error && error.message && error.message.indexOf('host') !== -1) {
                 setStatus('Host controls playback');
             } else {
-                setStatus((error && (error.message || error.error)) || 'Room update failed');
+                // Don't show confusing raw errors to users
+                setStatus('Sync paused');
             }
             throw error;
         });
@@ -378,6 +384,8 @@
     }
 
     function fallbackProvider() {
+        // Only the host can change servers
+        if (!isHost) return;
         var providers = room.hls_providers || [];
         if (!providers.length) return;
         var index = providers.indexOf(currentProvider);
@@ -486,11 +494,15 @@
             });
         })
         .then(function (data) {
+            // Sync client_id with server (server may have cleaned/mapped it)
+            if (data.client_id && data.client_id !== clientIdValue) {
+                clientIdValue = data.client_id;
+                try { localStorage.setItem('yume_watch_together_client_id', data.client_id); } catch (e) {}
+            }
             applySnapshot(data.room);
             loadSource(true);
             clearInterval(pollTimer);
             clearInterval(heartbeatTimer);
-            // Poll every 500ms for faster sync (was 1000ms)
             pollTimer = setInterval(poll, 500);
             heartbeatTimer = setInterval(function () {
                 postEvent('heartbeat').catch(function () {});
