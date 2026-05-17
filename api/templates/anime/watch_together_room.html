@@ -23,7 +23,7 @@
         </div>
 
         <div class="wt-player-wrap">
-            <video id="wt-video" controls playsinline preload="metadata" poster="{{ room.episode_image or room.poster }}"></video>
+            <video id="wt-video" playsinline preload="metadata" poster="{{ room.episode_image or room.poster }}"></video>
             <div id="wt-loading" class="wt-player-state">Loading HLS</div>
             <button id="wt-skip" class="wt-skip-btn" type="button" hidden>Skip</button>
         </div>

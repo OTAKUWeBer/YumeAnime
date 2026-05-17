@@ -16,7 +16,9 @@
     var intro = null;
     var outro = null;
     var skipTarget = null;
+    var isHost = false;
 
+    /* ── Formatting ── */
     function fmt(seconds) {
         if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
         var h = Math.floor(seconds / 3600);
@@ -25,6 +27,7 @@
         return h ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') : m + ':' + String(s).padStart(2, '0');
     }
 
+    /* ── Identity helpers ── */
     function clientId() {
         if (clientIdValue) return clientIdValue;
         try {
@@ -52,6 +55,7 @@
         return displayName;
     }
 
+    /* ── UI helpers ── */
     function setStatus(text) {
         var el = document.getElementById('wt-sync-status');
         if (el) el.textContent = text || 'Syncing';
@@ -64,6 +68,53 @@
         el.classList.toggle('is-hidden', show === false);
     }
 
+    /* ── Host / guest control enforcement ── */
+    function updateHostState(roomData) {
+        var previousHost = isHost;
+        isHost = (clientId() === roomData.host_id);
+
+        if (!video) return;
+
+        // Toggle native controls: host gets full controls, guests get none
+        video.controls = isHost;
+
+        // Manage the guest overlay
+        var overlay = document.getElementById('wt-guest-overlay');
+        if (!isHost) {
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'wt-guest-overlay';
+                overlay.className = 'wt-guest-overlay';
+                overlay.innerHTML = '<span class="wt-guest-overlay-icon">🔒</span><span>Host controls playback</span>';
+                var wrap = document.querySelector('.wt-player-wrap');
+                if (wrap) wrap.appendChild(overlay);
+            }
+            overlay.classList.remove('is-hidden');
+        } else if (overlay) {
+            overlay.classList.add('is-hidden');
+        }
+
+        // Provider pills: disable for non-hosts
+        var pills = document.querySelectorAll('.wt-provider-pill');
+        pills.forEach(function (pill) {
+            pill.disabled = !isHost;
+            pill.style.pointerEvents = isHost ? '' : 'none';
+            pill.style.opacity = isHost ? '' : '0.5';
+        });
+
+        // Skip button: only host can skip
+        var skip = document.getElementById('wt-skip');
+        if (skip) {
+            skip.style.display = isHost ? '' : 'none';
+        }
+
+        // If host status changed, show a brief status
+        if (previousHost !== isHost && previousHost !== false) {
+            setStatus(isHost ? 'You are the host' : 'Host controls playback');
+        }
+    }
+
+    /* ── Network helpers ── */
     function payload(type, extra) {
         var base = {
             type: type,
@@ -95,11 +146,17 @@
             return data;
         })
         .catch(function (error) {
-            setStatus((error && (error.message || error.error)) || 'Room update failed');
+            // Don't show errors for permission denials to non-host (they shouldn't send these)
+            if (error && error.message && error.message.indexOf('host') !== -1) {
+                setStatus('Host controls playback');
+            } else {
+                setStatus((error && (error.message || error.error)) || 'Room update failed');
+            }
             throw error;
         });
     }
 
+    /* ── Provider labels ── */
     function providerLabel(provider) {
         var names = {
             'kiwi': 'Miku',
@@ -123,7 +180,12 @@
             button.type = 'button';
             button.textContent = providerLabel(provider);
             button.dataset.provider = provider;
+            // Only host can switch providers
+            button.disabled = !isHost;
+            button.style.pointerEvents = isHost ? '' : 'none';
+            button.style.opacity = isHost ? '' : '0.5';
             button.addEventListener('click', function () {
+                if (!isHost) return;
                 if (provider === currentProvider) return;
                 postEvent('server_change', { provider: provider });
             });
@@ -141,7 +203,9 @@
             var item = document.createElement('div');
             item.className = 'wt-member' + (member.is_host ? ' host' : '');
             var text = document.createElement('span');
-            text.textContent = member.name + (member.is_self ? ' (You)' : '');
+            var label = member.name + (member.is_self ? ' (You)' : '');
+            if (member.is_host) label += ' ★';
+            text.textContent = label;
             item.appendChild(text);
             members.appendChild(item);
         });
@@ -156,7 +220,7 @@
             if (message.seq <= sinceChatSeq) return;
             sinceChatSeq = message.seq;
             var item = document.createElement('div');
-            item.className = 'wt-chat-message';
+            item.className = 'wt-chat-message' + (message.is_system ? ' wt-chat-system' : '');
             var head = document.createElement('div');
             head.className = 'wt-chat-author';
             var author = document.createElement('span');
@@ -179,7 +243,7 @@
     }
 
 
-
+    /* ── Playback sync ── */
     function effectivePosition(playback, serverTime) {
         var position = Number(playback.position || 0);
         var rate = Number(playback.rate || 1);
@@ -194,6 +258,7 @@
         if (!force && playback.seq <= lastPlaybackSeq) return;
         lastPlaybackSeq = playback.seq;
 
+        // Host originated this event — no need to re-apply to host
         if (playback.updated_by === clientId() && !force) return;
 
         var target = effectivePosition(playback, serverTime);
@@ -203,19 +268,28 @@
 
         applyingRemote = true;
         try {
+            // Sync playback rate
             if (Math.abs((video.playbackRate || 1) - (playback.rate || 1)) > 0.01) {
                 video.playbackRate = playback.rate || 1;
             }
+
             var drift = Math.abs((video.currentTime || 0) - target);
-            if (drift > 1.25 || playback.event === 'seek' || force) {
+
+            // TIGHTER thresholds for faster sync:
+            // Hard seek if drift > 0.8s (was 1.25s) or on explicit seek/force
+            if (drift > 0.8 || playback.event === 'seek' || force) {
                 video.currentTime = target;
-            } else if (!playback.paused && drift > 0.45) {
+            }
+            // Soft correction: gentle speed nudge for 0.3s–0.8s drift (was 0.45s–1.25s)
+            else if (!playback.paused && drift > 0.3) {
                 var direction = (video.currentTime || 0) < target ? 1 : -1;
-                video.playbackRate = Math.max(0.75, Math.min(1.25, (playback.rate || 1) + direction * 0.06));
+                video.playbackRate = Math.max(0.8, Math.min(1.2, (playback.rate || 1) + direction * 0.08));
                 setTimeout(function () {
                     if (video && !applyingRemote) video.playbackRate = playback.rate || 1;
-                }, 1800);
+                }, 1200);
             }
+
+            // Sync play/pause state
             if (playback.paused) {
                 if (!video.paused) video.pause();
             } else if (video.paused) {
@@ -224,13 +298,15 @@
                 });
             }
         } finally {
-            setTimeout(function () { applyingRemote = false; }, 600);
+            // Shorter guard window (200ms, was 600ms) so next poll can correct faster
+            setTimeout(function () { applyingRemote = false; }, 200);
         }
     }
 
     function applySnapshot(roomData) {
         if (!roomData) return;
         room = roomData;
+        updateHostState(roomData);
         renderMembers(roomData);
         renderProviders(roomData);
         appendMessages(roomData.messages || []);
@@ -240,9 +316,14 @@
         }
         applyPlayback(roomData.playback, roomData.server_time, false);
         var by = roomData.playback && roomData.playback.updated_by_name;
-        setStatus(by ? 'Synced by ' + by : 'Synced');
+        if (isHost) {
+            setStatus('You are the host');
+        } else {
+            setStatus(by ? 'Synced · ' + by : 'Synced');
+        }
     }
 
+    /* ── Source loading ── */
     function loadSource(forcePlayback) {
         if (sourceLoading) return;
         sourceLoading = true;
@@ -261,7 +342,7 @@
                 attachHls(src);
                 setLoading('', false);
                 if (forcePlayback && room.playback) {
-                    setTimeout(function () { applyPlayback(room.playback, room.server_time, true); }, 350);
+                    setTimeout(function () { applyPlayback(room.playback, room.server_time, true); }, 250);
                 }
             })
             .catch(function () {
@@ -315,7 +396,10 @@
         postEvent('server_change', { provider: next }).catch(function () {});
     }
 
+    /* ── Playback event dispatcher (host only) ── */
     function sendPlayback(type) {
+        // Non-hosts NEVER send playback events
+        if (!isHost) return;
         if (applyingRemote) return;
         postEvent(type).catch(function () {});
     }
@@ -326,8 +410,9 @@
         video.addEventListener('seeked', function () { sendPlayback('seek'); });
         video.addEventListener('ratechange', function () { sendPlayback('ratechange'); });
         video.addEventListener('timeupdate', function () {
+            // Skip button only visible for host
             var skip = document.getElementById('wt-skip');
-            if (!skip) return;
+            if (!skip || !isHost) return;
             var cur = video.currentTime || 0;
             skipTarget = null;
             if (intro && cur >= intro.start && cur <= intro.end) {
@@ -339,17 +424,40 @@
             }
             skip.hidden = !skipTarget;
         });
+
         var skip = document.getElementById('wt-skip');
         if (skip) {
             skip.addEventListener('click', function () {
+                if (!isHost) return;
                 if (skipTarget !== null) {
                     video.currentTime = skipTarget;
                     sendPlayback('seek');
                 }
             });
         }
+
+        // Block non-host clicks on the video element itself (prevents tap-to-play on mobile)
+        video.addEventListener('click', function (e) {
+            if (!isHost) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+
+        // Block keyboard space/k to toggle play for non-hosts
+        document.addEventListener('keydown', function (e) {
+            if (!isHost && video) {
+                if (e.code === 'Space' || e.key === 'k' || e.key === 'K') {
+                    // Check if focus is on chat input — allow space in chat
+                    var active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+                    e.preventDefault();
+                }
+            }
+        });
     }
 
+    /* ── Polling ── */
     function poll() {
         fetch('/api/watch-together/rooms/' + encodeURIComponent(room.room_id) + '/snapshot?client_id=' + encodeURIComponent(clientId()) + '&display_name=' + encodeURIComponent(getDisplayName()) + '&since_chat_seq=' + encodeURIComponent(sinceChatSeq))
             .then(function (response) { return response.json(); })
@@ -364,6 +472,7 @@
             });
     }
 
+    /* ── Join ── */
     function join() {
         return fetch('/api/watch-together/rooms/' + encodeURIComponent(room.room_id) + '/join', {
             method: 'POST',
@@ -381,7 +490,8 @@
             loadSource(true);
             clearInterval(pollTimer);
             clearInterval(heartbeatTimer);
-            pollTimer = setInterval(poll, 1000);
+            // Poll every 500ms for faster sync (was 1000ms)
+            pollTimer = setInterval(poll, 500);
             heartbeatTimer = setInterval(function () {
                 postEvent('heartbeat').catch(function () {});
             }, 60000);
@@ -391,6 +501,7 @@
         });
     }
 
+    /* ── Name gate for guests ── */
     function initNameGate() {
         var modal = document.getElementById('wt-name-modal');
         var form = document.getElementById('wt-name-form');
@@ -417,6 +528,7 @@
         });
     }
 
+    /* ── Chat ── */
     function bindChat() {
         var form = document.getElementById('wt-chat-form');
         var input = document.getElementById('wt-chat-input');
@@ -432,6 +544,7 @@
         });
     }
 
+    /* ── Copy link ── */
     function bindCopy() {
         var btn = document.getElementById('wt-copy-link');
         if (!btn) return;
@@ -446,10 +559,13 @@
         });
     }
 
+    /* ── Init ── */
     document.addEventListener('DOMContentLoaded', function () {
         video = document.getElementById('wt-video');
         if (!video || !room.room_id) return;
         currentProvider = room.provider;
+        // Initially disable controls until we know host status
+        video.controls = false;
         renderProviders(room);
         bindVideo();
         bindChat();

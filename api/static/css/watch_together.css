@@ -165,6 +165,41 @@
     cursor: pointer;
 }
 
+/* Guest overlay – blocks non-host video interaction */
+.wt-guest-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.12);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    pointer-events: all;
+    cursor: default;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.wt-guest-overlay:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.wt-guest-overlay.is-hidden {
+    display: none;
+}
+
+.wt-guest-overlay-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
 .wt-sync-strip {
     justify-content: space-between;
     gap: 14px;
