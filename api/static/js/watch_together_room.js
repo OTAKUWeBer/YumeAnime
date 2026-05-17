@@ -413,10 +413,58 @@
     }
 
     function bindVideo() {
-        video.addEventListener('play', function () { sendPlayback('play'); });
-        video.addEventListener('pause', function () { sendPlayback('pause'); });
-        video.addEventListener('seeked', function () { sendPlayback('seek'); });
-        video.addEventListener('ratechange', function () { sendPlayback('ratechange'); });
+        // Play/pause/seek/rate: host sends events, non-host reverts immediately
+        video.addEventListener('play', function () {
+            if (applyingRemote) return;
+            if (!isHost) {
+                // Revert: if server says paused, pause back
+                if (room.playback && room.playback.paused) {
+                    applyingRemote = true;
+                    video.pause();
+                    setTimeout(function () { applyingRemote = false; }, 200);
+                }
+                return;
+            }
+            sendPlayback('play');
+        });
+        video.addEventListener('pause', function () {
+            if (applyingRemote) return;
+            if (!isHost) {
+                // Revert: if server says playing, resume
+                if (room.playback && !room.playback.paused) {
+                    applyingRemote = true;
+                    video.play().catch(function () {});
+                    setTimeout(function () { applyingRemote = false; }, 200);
+                }
+                return;
+            }
+            sendPlayback('pause');
+        });
+        video.addEventListener('seeked', function () {
+            if (applyingRemote) return;
+            if (!isHost) {
+                // Revert: snap back to server position
+                applyingRemote = true;
+                if (room.playback && room.server_time) {
+                    var target = effectivePosition(room.playback, room.server_time);
+                    if (Number.isFinite(target)) video.currentTime = target;
+                }
+                setTimeout(function () { applyingRemote = false; }, 200);
+                return;
+            }
+            sendPlayback('seek');
+        });
+        video.addEventListener('ratechange', function () {
+            if (applyingRemote) return;
+            if (!isHost) {
+                // Revert playback rate
+                applyingRemote = true;
+                video.playbackRate = (room.playback && room.playback.rate) || 1;
+                setTimeout(function () { applyingRemote = false; }, 200);
+                return;
+            }
+            sendPlayback('ratechange');
+        });
         video.addEventListener('timeupdate', function () {
             // Skip button only visible for host
             var skip = document.getElementById('wt-skip');
@@ -452,15 +500,21 @@
             }
         }, true);
 
-        // Block keyboard space/k to toggle play for non-hosts
+        // Block keyboard shortcuts for non-hosts (play/pause, seeking, speed)
         document.addEventListener('keydown', function (e) {
             if (!isHost && video) {
-                if (e.code === 'Space' || e.key === 'k' || e.key === 'K') {
-                    // Check if focus is on chat input — allow space in chat
-                    var active = document.activeElement;
-                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
-                    e.preventDefault();
-                }
+                var active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+                var blocked = (
+                    e.code === 'Space' ||
+                    e.key === 'k' || e.key === 'K' ||
+                    e.key === 'j' || e.key === 'J' ||
+                    e.key === 'l' || e.key === 'L' ||
+                    e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+                    e.key === 'Home' || e.key === 'End' ||
+                    (e.key >= '0' && e.key <= '9' && !e.ctrlKey && !e.metaKey && !e.altKey)
+                );
+                if (blocked) e.preventDefault();
             }
         });
     }
@@ -541,18 +595,42 @@
     }
 
     /* ── Chat ── */
+    function showChatError(msg) {
+        var list = document.getElementById('wt-chat-list');
+        if (!list) return;
+        var item = document.createElement('div');
+        item.className = 'wt-chat-message wt-chat-system';
+        var body = document.createElement('div');
+        body.className = 'wt-chat-body';
+        body.style.color = '#fca5a5';
+        body.textContent = msg || 'Message failed to send';
+        item.appendChild(body);
+        list.appendChild(item);
+        list.scrollTop = list.scrollHeight;
+        setTimeout(function () { if (item.parentNode) item.parentNode.removeChild(item); }, 5000);
+    }
+
     function bindChat() {
         var form = document.getElementById('wt-chat-form');
         var input = document.getElementById('wt-chat-input');
+        var sendBtn = form ? form.querySelector('button[type="submit"]') : null;
         if (!form || !input) return;
         form.addEventListener('submit', function (event) {
             event.preventDefault();
             var body = input.value.trim();
             if (!body) return;
+            if (sendBtn) sendBtn.disabled = true;
             input.value = '';
-            postEvent('chat', { body: body }).catch(function () {
-                input.value = body;
-            });
+            postEvent('chat', { body: body })
+                .then(function () {
+                    if (sendBtn) sendBtn.disabled = false;
+                })
+                .catch(function (err) {
+                    input.value = body;
+                    if (sendBtn) sendBtn.disabled = false;
+                    var msg = (err && err.message) || 'Message failed to send';
+                    showChatError(msg);
+                });
         });
     }
 
