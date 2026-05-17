@@ -76,7 +76,7 @@
 /* Main content */
 .admin-main {
     flex:1; margin-left:var(--admin-sidebar-w); padding:28px 32px;
-    max-width:1200px; width:100%;
+    max-width:1600px; width:100%;
 }
 .admin-mobile-header { display:none; }
 
@@ -90,7 +90,7 @@
 .admin-tab-subtitle { color:var(--admin-text-muted); font-size:14px; margin:0; }
 
 /* Stats Grid */
-.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; margin-bottom:24px; }
 .stat-card {
     background:var(--admin-surface); border:1px solid var(--admin-border);
     border-radius:var(--admin-radius); padding:20px; display:flex; align-items:center; gap:16px;
@@ -229,6 +229,8 @@
 .status-pending { background:var(--admin-warning-soft); color:var(--admin-warning); }
 .status-resolved { background:var(--admin-success-soft); color:var(--admin-success); }
 .status-ignored { background:var(--admin-surface-3); color:var(--admin-text-muted); }
+.status-comment { background:var(--admin-info-soft); color:var(--admin-info); }
+.status-reply { background:var(--admin-accent-soft); color:var(--admin-accent); }
 
 /* Pagination */
 .admin-pagination { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:20px; padding:12px 0; }

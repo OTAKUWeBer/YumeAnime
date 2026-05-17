@@ -62,6 +62,33 @@
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+    function formatAction(action) {
+        const mapping = {
+            ban: 'Banned user',
+            unban: 'Unbanned user',
+            mute: 'Muted user',
+            unmute: 'Unmuted user',
+            post_comment: 'Posted comment',
+            post_reply: 'Posted reply',
+            delete_comment: 'Deleted comment',
+            resolve_report: 'Resolved report',
+            ignore_report: 'Ignored report',
+            set_role: 'Updated role'
+        };
+        return mapping[action] || action;
+    }
+
+    function actionBadgeClass(action) {
+        if (action?.includes('ban')) return 'status-banned';
+        if (action?.includes('mute')) return 'status-muted';
+        if (action === 'post_comment') return 'status-comment';
+        if (action === 'post_reply') return 'status-reply';
+        if (action?.includes('delete')) return 'status-banned';
+        if (action?.includes('resolve')) return 'status-active';
+        if (action?.includes('ignore')) return 'status-ignored';
+        return 'status-active';
+    }
+
     function pagination(container, page, pages, cb) {
         const el = document.getElementById(container);
         if (!el || pages <= 1) { if (el) el.innerHTML = ''; return; }
@@ -152,11 +179,19 @@
     function renderRecentLogs(logs) {
         const c = $('#recent-logs-list');
         if (!logs.length) { c.innerHTML = '<div class="admin-empty">No recent actions</div>'; return; }
-        c.innerHTML = logs.map(l => `
-            <div class="admin-list-item">
-                <div class="admin-list-info"><span class="admin-list-name">${esc(l.actor_username)}</span><span class="admin-list-meta">${esc(l.action)} ${l.target_username ? '→ ' + esc(l.target_username) : ''}</span></div>
-                <span class="admin-list-meta">${timeAgo(l.created_at)}</span>
-            </div>`).join('');
+        c.innerHTML = logs.map(l => {
+            const formatted = formatAction(l.action);
+            const target = l.target_username ? ` → <strong>${esc(l.target_username)}</strong>` : '';
+            const details = l.details ? ` (${esc(l.details)})` : '';
+            return `
+                <div class="admin-list-item">
+                    <div class="admin-list-info">
+                        <span class="admin-list-name"><strong>${esc(l.actor_username)}</strong></span>
+                        <span class="admin-list-meta">${formatted}${target}${details}</span>
+                    </div>
+                    <span class="admin-list-meta" style="white-space:nowrap">${timeAgo(l.created_at)}</span>
+                </div>`;
+        }).join('');
     }
 
     // ── Users ───────────────────────────────────────────────────
@@ -330,14 +365,18 @@
     function renderLogs(logs) {
         const tbody = $('#logs-tbody');
         if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" class="admin-empty">No logs yet</td></tr>'; return; }
-        tbody.innerHTML = logs.map(l => `
-            <tr>
-                <td><strong>${esc(l.actor_username)}</strong></td>
-                <td><span class="status-badge status-${l.action?.includes('ban')?'banned':l.action?.includes('mute')?'muted':'active'}">${esc(l.action)}</span></td>
-                <td>${l.target_username ? esc(l.target_username) : '—'}</td>
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.details)}</td>
-                <td>${timeAgo(l.created_at)}</td>
-            </tr>`).join('');
+        tbody.innerHTML = logs.map(l => {
+            const formatted = formatAction(l.action);
+            const badgeClass = actionBadgeClass(l.action);
+            return `
+                <tr>
+                    <td><strong>${esc(l.actor_username)}</strong></td>
+                    <td><span class="status-badge ${badgeClass}">${esc(formatted)}</span></td>
+                    <td>${l.target_username ? esc(l.target_username) : '—'}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.details)}">${esc(l.details)}</td>
+                    <td>${timeAgo(l.created_at)}</td>
+                </tr>`;
+        }).join('');
     }
 
     // ── Modal helpers ───────────────────────────────────────────

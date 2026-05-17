@@ -127,6 +127,22 @@ def create_comment(
 
     result = comments_collection.insert_one(doc)
     doc["_id"] = result.inserted_id
+
+    # Log the commenting action in the audit logs
+    try:
+        from api.models.admin import log_action
+        action_name = "post_reply" if parent_id else "post_comment"
+        details_str = f"Posted reply on '{anime_id}', Ep {episode_number}" if parent_id else f"Posted comment on '{anime_id}', Ep {episode_number}"
+        log_action(
+            actor_id=str(author_id) if author_id else "anonymous",
+            actor_username=author,
+            action=action_name,
+            target_id=str(result.inserted_id),
+            details=details_str
+        )
+    except Exception:
+        pass
+
     return _serialize_comment(doc)
 
 
