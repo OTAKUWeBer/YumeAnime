@@ -189,7 +189,9 @@ def anilist_callback():
                 # Create new user
                 current_app.logger.info(f"Creating new user from AniList: {user_info['name']}")
                 user_id = create_anilist_user(user_info, access_token)
-                username = user_info['name']
+                # Fetch actual created user to get the sanitized unique username
+                created_user = get_user_by_id(user_id)
+                username = created_user['username'] if created_user else user_info['name'].replace(' ', '_')
 
             # Set session
             session.clear()

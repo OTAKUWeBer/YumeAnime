@@ -43,8 +43,17 @@ def create_anilist_user(anilist_user_info, access_token):
     """Create a new user from AniList OAuth data."""
     _id = generate_unique_id()
     
-    # Extract user information from AniList data
-    username = anilist_user_info['name']
+    # Extract user information from AniList data and ensure no spaces
+    raw_username = anilist_user_info['name']
+    username = raw_username.replace(' ', '_')
+    
+    # Ensure username uniqueness
+    base_name = username
+    counter = 1
+    while users_collection.find_one({"username": username}) is not None:
+        username = f"{base_name}_{counter}"
+        counter += 1
+
     anilist_id = anilist_user_info['id']
     avatar = anilist_user_info.get('avatar', {}).get('large') or anilist_user_info.get('avatar', {}).get('medium')
     

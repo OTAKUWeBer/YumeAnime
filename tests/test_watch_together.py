@@ -233,7 +233,7 @@ class WatchTogetherApiTest(unittest.TestCase):
 
         pause = self.client.post(
             f"/api/watch-together/rooms/{room_id}/events",
-            json={"type": "pause", "client_id": "guest-1111", "display_name": "Mina", "position": 18},
+            json={"type": "pause", "client_id": "host-1234", "display_name": "Host", "position": 18},
         ).get_json()["room"]
         self.assertTrue(pause["playback"]["paused"])
         self.assertGreater(pause["playback"]["seq"], play["playback"]["seq"])
@@ -242,7 +242,7 @@ class WatchTogetherApiTest(unittest.TestCase):
         room_id = self.create_room()
         changed = self.client.post(
             f"/api/watch-together/rooms/{room_id}/events",
-            json={"type": "server_change", "client_id": "guest-1111", "display_name": "Mina", "provider": "bee"},
+            json={"type": "server_change", "client_id": "host-1234", "display_name": "Host", "provider": "bee"},
         ).get_json()["room"]
         self.assertEqual(changed["provider"], "bee")
 

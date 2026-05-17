@@ -355,6 +355,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Live username availability and format checker
+document.addEventListener('DOMContentLoaded', () => {
+    const signupUsername = document.getElementById('signup-username');
+    const statusDiv = document.getElementById('username-status');
+    
+    if (signupUsername && statusDiv) {
+        let debounceTimeout;
+        
+        signupUsername.addEventListener('input', () => {
+            const val = signupUsername.value.trim();
+            statusDiv.style.display = 'none';
+            statusDiv.textContent = '';
+            
+            if (val.length === 0) {
+                return;
+            }
+            
+            if (val.length < 3) {
+                statusDiv.textContent = 'Username must be at least 3 characters.';
+                statusDiv.style.color = '#ff4d4d'; // Soft error red
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            if (val.includes(' ')) {
+                statusDiv.textContent = 'Username cannot contain spaces.';
+                statusDiv.style.color = '#ff4d4d';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            statusDiv.textContent = 'Checking availability...';
+            statusDiv.style.color = '#888'; // Muted text
+            statusDiv.style.display = 'block';
+            
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(val)}`);
+                    const data = await res.json();
+                    
+                    // Prevent state race conditions if user typed more characters in the meantime
+                    if (signupUsername.value.trim() !== val) return;
+                    
+                    if (data.available) {
+                        statusDiv.textContent = '✓ Username is available!';
+                        statusDiv.style.color = '#2ecc71'; // Beautiful success green
+                    } else {
+                        statusDiv.textContent = data.message || 'Username is not available.';
+                        statusDiv.style.color = '#ff4d4d';
+                    }
+                } catch (e) {
+                    console.error('Error checking username availability:', e);
+                }
+            }, 400);
+        });
+    }
+});
+
 // Close modal on Escape
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeLoginModal();

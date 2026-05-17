@@ -15,6 +15,7 @@ These endpoints protect critical account security actions. They are heavily rate
 | `/api/auth/forgot-password` | `POST` | **3 per minute** | Requests a 6-digit verification code to the user's email. |
 | `/api/auth/verify-reset-code`| `POST` | **5 per minute** | Validates the 6-digit numeric reset code. |
 | `/api/auth/reset-password` | `POST` | **3 per minute** | Resets user password after verification. |
+| `/api/auth/check-username` | `GET` | **60 per minute** | Real-time username availability checker. |
 
 ---
 

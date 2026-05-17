@@ -91,6 +91,26 @@ def signup():
         return jsonify({'success': False, 'message': 'Failed to create account. Please try again.'}), 500
 
 
+@auth_api_bp.route('/check-username', methods=['GET'])
+@limiter.limit("60 per minute")
+def check_username():
+    """Check if a username is available in real-time"""
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'available': False, 'message': 'Username is required.'}), 400
+        
+    if len(username) < 3 or len(username) > 20:
+        return jsonify({'available': False, 'message': 'Username must be between 3 and 20 characters.'}), 200
+        
+    if ' ' in username:
+        return jsonify({'available': False, 'message': 'Username cannot contain spaces.'}), 200
+        
+    if user_exists(username):
+        return jsonify({'available': False, 'message': 'Username is already taken.'}), 200
+        
+    return jsonify({'available': True, 'message': 'Username is available!'}), 200
+
+
 @auth_api_bp.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():

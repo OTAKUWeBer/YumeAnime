@@ -592,8 +592,9 @@
                 <form id="signup-form" onsubmit="handleSignup(event)">
                     <div class="form-group">
                         <label class="form-label">Username</label>
-                        <input type="text" class="form-input" name="username" required placeholder="Choose a username"
+                        <input type="text" class="form-input" id="signup-username" name="username" required placeholder="Choose a username"
                             minlength="3">
+                        <div id="username-status" class="text-sm" style="margin-top: 4px; display: none; font-weight: 500;"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Email</label>
