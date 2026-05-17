@@ -189,13 +189,14 @@ def api_set_role(**kwargs):
         return jsonify({"success": False, "message": f"User already has role '{new_role}'"}), 400
 
     if set_user_role(target_id, new_role):
+        target = get_user_admin_detail(target_id)
         log_action(
             session["_id"], session["username"],
             f"role_change:{old_role}->{new_role}",
-            target_id,
+            target_id=target_id,
+            target_username=target.get("username") if target else None,
             details=f"Changed role from {old_role} to {new_role}",
         )
-        target = get_user_admin_detail(target_id)
         return jsonify({"success": True, "message": f"Role updated to {new_role}", "user": target})
     return jsonify({"success": False, "message": "Failed to update role"}), 500
 
@@ -230,12 +231,14 @@ def api_ban_user(**kwargs):
         action_label = "unban"
 
     if success:
+        target = get_user_admin_detail(target_id)
         log_action(
             session["_id"], session["username"],
-            action_label, target_id,
+            action_label,
+            target_id=target_id,
+            target_username=target.get("username") if target else None,
             details=f"User {action_label}ned",
         )
-        target = get_user_admin_detail(target_id)
         return jsonify({"success": True, "message": f"User {action_label}ned", "user": target})
     return jsonify({"success": False, "message": f"Failed to {action_label}"}), 500
 
@@ -270,12 +273,14 @@ def api_mute_user(**kwargs):
         action_label = "unmuted"
 
     if success:
+        target = get_user_admin_detail(target_id)
         log_action(
             session["_id"], session["username"],
-            action, target_id,
+            action,
+            target_id=target_id,
+            target_username=target.get("username") if target else None,
             details=f"User {action_label} for {duration}h" if action == "mute" else f"User {action_label}",
         )
-        target = get_user_admin_detail(target_id)
         return jsonify({"success": True, "message": f"User {action_label}", "user": target})
     return jsonify({"success": False, "message": f"Failed to {action}"}), 500
 
