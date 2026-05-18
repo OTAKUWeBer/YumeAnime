@@ -5,6 +5,7 @@ Direct replacement for Miruro API calls
 import asyncio
 import logging
 import time
+import re
 from typing import Dict, Any, List
 import aiohttp
 
@@ -70,7 +71,6 @@ class AnilistHomeService:
         desc = item.get("description") or ""
         # Strip HTML tags from AniList descriptions
         if desc and "<" in desc:
-            import re
             desc = re.sub(r"<[^>]+>", "", desc)
         base["description"] = desc
         base["genres"] = item.get("genres") or []

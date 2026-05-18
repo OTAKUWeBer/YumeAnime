@@ -3,6 +3,7 @@ Unified scraper - uses AniList GraphQL directly for home data, Miruro for episod
 """
 
 import logging
+import re
 from typing import Optional, Dict, Any, Union
 from urllib.parse import parse_qs
 
@@ -213,7 +214,6 @@ class UnifiedScraper:
         Also supports: '108465?ep=animepahe:4171:47277:1'
         Returns (miruro_ep_id, anilist_id) or (None, None)
         """
-        import re
 
         print(f"[UnifiedScraper] _parse_miruro_ep input: {ep_id_str}")
 
@@ -265,7 +265,6 @@ class UnifiedScraper:
 
 
         # Detect AnimeX-routed episodes by the `watch/ax/...` slug pattern.
-        import re
         is_ax = "/ax/" in f"/{ep_id_str}/"
 
         if is_ax:
@@ -418,13 +417,12 @@ class UnifiedScraper:
             try:
                 # Derive provider from the ep_id slug if not explicitly passed.
                 # Format: watch/{provider}/{anilist_id}/{category}/{slug}
-                import re as _re
-                _m = _re.match(r"watch/([^/]+)/\d+/", ep_id_str)
+                _m = re.match(r"watch/([^/]+)/\d+/", ep_id_str)
                 provider = server or (_m.group(1) if _m else "kiwi")
 
                 # Extract episode number for metadata caching
                 slug_tail = ep_id_str.split("/")[-1]
-                num_match = _re.search(r"(\d+(?:\.\d+)?)$", slug_tail)
+                num_match = re.search(r"(\d+(?:\.\d+)?)$", slug_tail)
                 ep_num = None
                 if num_match:
                     try:

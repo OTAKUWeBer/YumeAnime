@@ -5,6 +5,7 @@ Handles trending, popular, and recent anime via separate endpoints
 import time
 import asyncio
 import logging
+import re
 from typing import Dict, Any, List
 from .base import MiruroBaseClient
 
@@ -68,7 +69,6 @@ class MiruroHomeService:
         desc = item.get("description") or ""
         # Strip HTML tags from AniList descriptions
         if desc and "<" in desc:
-            import re
             desc = re.sub(r"<[^>]+>", "", desc)
         base["description"] = desc
         base["genres"] = item.get("genres") or []

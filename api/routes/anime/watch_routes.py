@@ -5,6 +5,8 @@ Server, language, and provider are resolved internally (not in URL).
 
 import asyncio
 import re
+import logging
+import time
 from flask import (
     Blueprint,
     request,
@@ -99,7 +101,6 @@ def _resolve_episode(episodes_data, ep_number, preferred_provider=None):
         if 0 <= positional_idx < len(sorted_eps):
             target_item = sorted_eps[positional_idx]
             target_idx = positional_idx
-            import logging
 
             logging.getLogger(__name__).warning(
                 f"[Watch] Exact ep match failed for {ep_number}, "
@@ -421,8 +422,7 @@ def watch(anime_id, ep_number):
         elif anime and isinstance(anime, dict):
             title = anime.get("title") or anime.get("name")
             if title:
-                import re as regex
-                anime_slug = regex.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
+                anime_slug = re.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
         
         # Use global EPS_CACHE to avoid session size limits
         all_episodes = EPS_CACHE.get(str(fetch_id))
@@ -471,13 +471,12 @@ def watch(anime_id, ep_number):
         if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
             needs_fallback = True
         else:
-            import time as _time
             airing_ts = next_episode_schedule.get("airingTimestamp")
             try:
                 ts_secs = int(airing_ts)
                 if ts_secs > 9_999_999_999:
                     ts_secs //= 1000
-                if ts_secs < int(_time.time()):
+                if ts_secs < int(time.time()):
                     needs_fallback = True
             except (ValueError, TypeError):
                 needs_fallback = True
@@ -666,13 +665,12 @@ def watch(anime_id, ep_number):
     if not next_episode_schedule or not next_episode_schedule.get("airingTimestamp"):
         needs_fallback = True
     else:
-        import time as _time
         airing_ts = next_episode_schedule.get("airingTimestamp")
         try:
             ts_secs = int(airing_ts)
             if ts_secs > 9_999_999_999:  # milliseconds → seconds
                 ts_secs //= 1000
-            if ts_secs < int(_time.time()):
+            if ts_secs < int(time.time()):
                 needs_fallback = True
         except (ValueError, TypeError):
             needs_fallback = True
@@ -890,8 +888,7 @@ def get_watch_sources():
             if isinstance(info, dict):
                 title = info.get("title") or info.get("name")
                 if title:
-                    import re as regex
-                    anime_slug = regex.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
+                    anime_slug = re.sub(r'[^\w\s-]', '', title.lower()).replace(' ', '-').strip('-')
 
     # Fetch episodes with anime_slug for anidap provider discovery
     try:

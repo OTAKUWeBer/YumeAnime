@@ -3,6 +3,8 @@ Catalog browsing functionality for Miruro API
 Handles genre, category, and schedule queries
 """
 import logging
+import aiohttp
+import time
 from typing import Dict, Any
 from .base import MiruroBaseClient
 
@@ -49,7 +51,6 @@ class MiruroCatalogService:
         """Execute a GraphQL query against AniList API as fallback"""
         url = "https://graphql.anilist.co"
         try:
-            import aiohttp
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json={"query": query, "variables": variables}) as resp:
                     if resp.status == 200:
@@ -241,7 +242,6 @@ class MiruroCatalogService:
 
     async def schedule(self, date: str = None) -> Dict[str, Any]:
         """Get anime airing schedule via AniList GraphQL endpoint"""
-        import time
         now = int(time.time())
         query = '''
         query ($page: Int, $perPage: Int, $airingAt_greater: Int, $airingAt_lesser: Int) {

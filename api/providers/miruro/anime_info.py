@@ -466,7 +466,6 @@ class MiruroAnimeInfoService:
           }
         }
         '''
-        import aiohttp
         resp = None
         timeout = aiohttp.ClientTimeout(total=5)
         try:

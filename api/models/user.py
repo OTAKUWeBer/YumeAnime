@@ -1,5 +1,6 @@
 import random
 import time as _time
+import re as _re
 from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw
 import logging
@@ -129,7 +130,6 @@ def get_user_by_id(_id):
 
 def get_user_by_email(email):
     """Get user by email (case-insensitive)."""
-    import re as _re
     return users_collection.find_one({"email": _re.compile(f'^{_re.escape(email)}$', _re.IGNORECASE)})
 
 def user_exists(username):

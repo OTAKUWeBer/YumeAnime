@@ -3,6 +3,7 @@ Search functionality for Miruro API
 Handles search queries and autocomplete suggestions
 """
 import logging
+import aiohttp
 from typing import Dict, Any, Optional
 from .base import MiruroBaseClient
 
@@ -99,7 +100,6 @@ class MiruroSearchService:
           }
         }
         '''
-        import aiohttp
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -161,7 +161,6 @@ class MiruroSearchService:
           }
         }
         '''
-        import aiohttp
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -238,7 +237,6 @@ class MiruroSearchService:
           }
         }
         '''
-        import aiohttp
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(

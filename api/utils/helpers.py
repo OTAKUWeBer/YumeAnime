@@ -8,6 +8,7 @@ import logging
 import time
 import asyncio
 import inspect
+import aiohttp
 from threading import Lock
 from typing import Dict, Any
 
@@ -171,7 +172,6 @@ async def fetch_anilist_next_episode(anilist_id: int = None, mal_id: int = None,
         return {}
     
     try:
-        import aiohttp
         async with aiohttp.ClientSession() as session:
             for query, variables in queries_to_try:
                 async with session.post('https://graphql.anilist.co', json={'query': query, 'variables': variables}) as resp:
