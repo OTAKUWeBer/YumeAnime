@@ -7,6 +7,7 @@ import asyncio
 import re
 import logging
 import time
+import aiohttp
 from flask import (
     Blueprint,
     request,
@@ -603,7 +604,6 @@ def watch(anime_id, ep_number):
 
     if anilist_id:
         try:
-            import aiohttp
             async def check_hindi():
                 embed_url = f"https://anixtv.in/anime-watch?action=hindi_1_player&id={anilist_id}&season=1&episode={ep_number}"
                 async with aiohttp.ClientSession() as session:

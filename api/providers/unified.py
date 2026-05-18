@@ -10,6 +10,7 @@ from urllib.parse import parse_qs
 from .miruro import MiruroScraper
 from .anilist_home import AnilistHomeService
 from .animex import AnimexScraper
+from .mal_fallback import MalFallbackService
 # from .kuudere import KuudereScraper
 
 
@@ -25,10 +26,11 @@ class UnifiedScraper:
         self.miruro = MiruroScraper()
         self.anilist_home = AnilistHomeService()
         self.animex = AnimexScraper()
+        self.mal_fallback = MalFallbackService()
         # self.kuudere = KuudereScraper()
         self._metadata_cache = {}  # (anilist_id, ep_num) -> {"intro": ..., "outro": ...}
 
-        logger.info("[UnifiedScraper] Initialized with AniList GraphQL + Miruro")
+        logger.info("[UnifiedScraper] Initialized with AniList GraphQL + Miruro + Jikan fallback")
 
 
     # =========================================================================
@@ -58,10 +60,42 @@ class UnifiedScraper:
         try:
             logger.info("[UnifiedScraper] Home: Falling back to Miruro API")
             miruro_result = await self.miruro.home()
-            if miruro_result and miruro_result.get("success"):
+            if (
+                miruro_result
+                and miruro_result.get("success")
+                and any(
+                    miruro_result.get("data", {}).get(k)
+                    for k in [
+                        "trendingAnimes",
+                        "mostPopularAnimes",
+                        "latestEpisodeAnimes",
+                    ]
+                )
+            ):
                 return miruro_result
         except Exception as e:
             logger.warning(f"[UnifiedScraper] Home: Miruro fallback failed: {e}")
+
+        # Third tier: Jikan (MAL) fallback
+        try:
+            logger.info("[UnifiedScraper] Home: Falling back to Jikan (MAL)")
+            mal_result = await self.mal_fallback.home()
+            if (
+                mal_result
+                and mal_result.get("success")
+                and any(
+                    mal_result.get("data", {}).get(k)
+                    for k in [
+                        "trendingAnimes",
+                        "mostPopularAnimes",
+                        "latestEpisodeAnimes",
+                    ]
+                )
+            ):
+                logger.debug("[UnifiedScraper] Home: Jikan (MAL) succeeded")
+                return mal_result
+        except Exception as e:
+            logger.warning(f"[UnifiedScraper] Home: Jikan (MAL) fallback failed: {e}")
 
         return {"success": False, "data": {}}
 
@@ -98,8 +132,20 @@ class UnifiedScraper:
                     f"[UnifiedScraper] AnimeInfo Miruro failed for {anime_id}: {e}"
                 )
 
-        # Fallback: Miruro search API is dead (returns 500), so we disable the search fallback
-        # and just return empty if the ID wasn't numeric or if the info fetch failed.
+        # Third tier: Jikan (MAL) fallback for anime info
+        if str(anime_id).isdigit():
+            try:
+                result = await self.mal_fallback.get_anime_info_by_anilist_id(int(anime_id))
+                if result and result.get("title"):
+                    logger.debug(
+                        f"[UnifiedScraper] AnimeInfo (Jikan MAL fallback, anilistId={anime_id}): OK"
+                    )
+                    return result
+            except Exception as e:
+                logger.warning(
+                    f"[UnifiedScraper] AnimeInfo Jikan fallback failed for {anime_id}: {e}"
+                )
+
         return {}
 
     # =========================================================================
