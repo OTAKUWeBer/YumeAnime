@@ -255,6 +255,7 @@ class UnifiedScraper:
         language: str = "sub",
         server: Optional[str] = None,
         anilist_id: Optional[int] = None,
+        ep_number: Optional[Union[int, float]] = None,
     ) -> Dict[str, Any]:
 
         ep_id_str = str(ep_id)
@@ -262,6 +263,52 @@ class UnifiedScraper:
 
         if parsed_anilist_id:
             anilist_id = parsed_anilist_id
+
+        if server == "anixtv" or language == "hindi":
+            if not anilist_id:
+                return {
+                    "error": "no_sources",
+                    "message": "AnixTv: missing anilist_id.",
+                }
+            ep_num = ep_number
+            if ep_num is None:
+                num_match = re.search(r"(\d+(?:\.\d+)?)\s*$", ep_id_str)
+                if num_match:
+                    try:
+                        f_num = float(num_match.group(1))
+                        ep_num = int(f_num) if f_num.is_integer() else f_num
+                    except ValueError:
+                        pass
+            if ep_num is None:
+                ep_num = 1
+
+            embed_url = f"https://anixtv.in/anime-watch?action=hindi_1_player&id={anilist_id}&season=1&episode={ep_num}"
+
+            try:
+                import aiohttp
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(embed_url, timeout=5) as resp:
+                        text = await resp.text()
+                        if "We couldn't find a Hindi Dub" in text or "Error: Could not map" in text or "<iframe" not in text:
+                            return {
+                                "error": "no_sources",
+                                "message": "Hindi dub is not available for this episode on AnixTv.",
+                            }
+            except Exception as e:
+                logger.warning(f"[UnifiedScraper] AnixTv verification failed: {e}")
+
+            return {
+                "video_link": embed_url,
+                "subtitle_tracks": [],
+                "intro": None,
+                "outro": None,
+                "video_sources": [],
+                "available_qualities": [],
+                "embed_sources": [{"url": embed_url, "name": "AnixTv"}],
+                "hls_sources": [],
+                "source_type": "embed",
+                "source_provider": "anixtv",
+            }
 
 
         # Detect AnimeX-routed episodes by the `watch/ax/...` slug pattern.

@@ -229,7 +229,7 @@ def _parse_video_raw(raw):
 
 
 def _fetch_video_only(
-    full_slug, lang, server, anilist_id, providers_map
+    full_slug, lang, server, anilist_id, providers_map, ep_number=None
 ):
     """
     Fetch video data for the selected provider ONLY.
@@ -238,7 +238,7 @@ def _fetch_video_only(
     """
     try:
         raw = asyncio.run(
-            current_app.ha_scraper.video(full_slug, lang, server, anilist_id)
+            current_app.ha_scraper.video(full_slug, lang, server, anilist_id, ep_number=ep_number)
         )
         video_data = _parse_video_raw(raw)
     except Exception as e:
@@ -596,6 +596,31 @@ def watch(anime_id, ep_number):
     except Exception as e:
         current_app.logger.warning(f"Error checking dub locally: {e}")
 
+    # ── Check hindi availability ──
+    hindi_available = False
+    if not anilist_id and anime_id_clean.isdigit():
+        anilist_id = int(anime_id_clean)
+
+    if anilist_id:
+        try:
+            import aiohttp
+            async def check_hindi():
+                embed_url = f"https://anixtv.in/anime-watch?action=hindi_1_player&id={anilist_id}&season=1&episode={ep_number}"
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(embed_url, timeout=7) as resp:
+                        text = await resp.text()
+                        if "We couldn't find a Hindi Dub" not in text and "Error: Could not map" not in text and "<iframe" in text:
+                            return True
+                return False
+
+            try:
+                loop = asyncio.get_running_loop()
+                hindi_available = loop.run_until_complete(check_hindi())
+            except RuntimeError:
+                hindi_available = asyncio.run(check_hindi())
+        except Exception as e:
+            current_app.logger.warning(f"Error checking hindi availability: {e}")
+
     # If dub requested but not available, fall back to sub
     if lang == "dub" and not dub_available:
         lang = "sub"
@@ -615,7 +640,7 @@ def watch(anime_id, ep_number):
 
     # ── Fetch video data for selected provider only (no scanning) ──
     video_data, provider_capabilities = _fetch_video_only(
-        full_slug, lang, selected_server, anilist_id, providers_map
+        full_slug, lang, selected_server, anilist_id, providers_map, ep_number=ep_number
     )
 
     # Scavenge for intro/outro from other providers if missing
@@ -788,6 +813,7 @@ def watch(anime_id, ep_number):
             lang=lang,
             episodes=all_episodes,
             dub_available=dub_available,
+            hindi_available=hindi_available,
             selected_server=selected_server,
             available_servers=available_servers,
             next_episode_schedule=next_episode_schedule,
@@ -801,7 +827,7 @@ def watch(anime_id, ep_number):
             provider_capabilities=provider_capabilities,
             provider_capabilities_map=_PC,
             sorted_providers=sorted(
-                [p for p in (set((providers_map or {}).keys()) | ({"zoro"} if (mal_id or anilist_id) else set())) if p in _PP],
+                [p for p in (set((providers_map or {}).keys()) | ({"zoro", "anixtv"} if (mal_id or anilist_id) and hindi_available else ({"zoro"} if (mal_id or anilist_id) else set()))) if p in _PP],
                 key=lambda p: _PP.index(p),
             ),
             mal_id=mal_id,
@@ -906,7 +932,7 @@ def get_watch_sources():
 
     # Resolve provider
     provider_name = provider or default_provider
-    if provider_name not in providers_map and provider_name != "zoro":
+    if provider_name not in providers_map and provider_name not in ("zoro", "anixtv"):
         provider_name = default_provider
 
     # Find episode ID for this provider (uses float comparison now)
@@ -920,7 +946,7 @@ def get_watch_sources():
         if resolved:
             episode_id = resolved["episode_id"]
 
-    if not episode_id and provider_name != "zoro":
+    if not episode_id and provider_name not in ("zoro", "anixtv"):
         return jsonify({"error": f"Episode {ep_number} not found"}), 404
 
     # Build full slug
@@ -940,7 +966,7 @@ def get_watch_sources():
 
     # Fetch video data for selected provider only (no scanning)
     video_data, provider_capabilities = _fetch_video_only(
-        full_slug, lang, selected_server, anilist_id, providers_map
+        full_slug, lang, selected_server, anilist_id, providers_map, ep_number=ep_number
     )
 
     # Scavenge for intro/outro from other providers if missing

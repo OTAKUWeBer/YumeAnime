@@ -499,7 +499,7 @@ function onHlsFatal() {
 }
 
 // ── Provider fallback system ──────────────────────────────────────
-var _PROVIDER_PRIORITY = ['kiwi','ax-mimi','ax-wave','ax-shiro','ax-yuki','ax-zen','bee','zoro'];
+var _PROVIDER_PRIORITY = ['kiwi','ax-mimi','ax-wave','ax-shiro','ax-yuki','ax-zen','bee','zoro','anixtv'];
 var PROVIDER_DISPLAY_NAMES = {
     "kiwi":      "Miku",
     "ax-mimi":   "Shinra",
@@ -509,6 +509,7 @@ var PROVIDER_DISPLAY_NAMES = {
     "ax-zen":    "Senku",
     "bee":       "Hachi",
     "zoro":      "Megaplay",
+    "anixtv":    "Hindi",
 };
 
 function applyServerDisplayNames() {

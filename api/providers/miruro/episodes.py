@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Provider preference order — ONLY working servers (others are filtered out of the watch page)
 PROVIDER_PRIORITY = [
-    "kiwi", "ax-mimi", "ax-wave", "ax-shiro", "ax-yuki", "ax-zen", "bee", "zoro",
+    "kiwi", "ax-mimi", "ax-wave", "ax-shiro", "ax-yuki", "ax-zen", "bee", "zoro", "anixtv",
 ]
 
 # Which stream types each provider supports.
@@ -28,6 +28,7 @@ PROVIDER_CAPABILITIES = {
     "ax-zen":    {"hls": True,  "embed": False},
     "bee":       {"hls": True,  "embed": False},
     "zoro":      {"hls": False, "embed": True},   # Megaplay embed only
+    "anixtv":    {"hls": False, "embed": True},   # AnixTv Hindi embed
 }
 
 
