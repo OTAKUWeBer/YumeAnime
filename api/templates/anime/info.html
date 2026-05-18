@@ -449,7 +449,7 @@
                     {% else %}
                     <div class="season-badge"
                         style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);">
-                        {{ (entry.relation or "SEASON") | upper }}</div>
+                        {{ entry.badge or (entry.relation or "SEASON") | upper }}</div>
                     {% endif %}
                     <img src="{{ entry.poster or entry.image }}" alt="{{ entry.name or entry.title }}" loading="lazy">
                     <div class="season-overlay">

@@ -3,6 +3,7 @@ Anime information fetching for Miruro API
 Handles detailed anime data including relations and characters
 """
 import logging
+import aiohttp
 from typing import Dict, Any, List, Optional
 from .base import MiruroBaseClient
 
@@ -40,14 +41,13 @@ class MiruroAnimeInfoService:
             synonyms
             studios { nodes { id name isAnimationStudio } }
             trailer { id site thumbnail }
-            relations { edges { relationType node { id idMal title { romaji english native } coverImage { large extraLarge } format averageScore episodes } } }
+            relations { edges { relationType node { id idMal title { romaji english native } coverImage { large extraLarge } format averageScore episodes seasonYear startDate { year } } } }
             recommendations { nodes { mediaRecommendation { id title { romaji english native } coverImage { large extraLarge } format duration averageScore episodes } } }
             characters { edges { role node { id name { first last full } image { large medium } } voiceActors(language: JAPANESE) { id name { first last full } image { large medium } language: languageV2 } } }
             nextAiringEpisode { airingAt timeUntilAiring episode }
           }
         }
         '''
-        import aiohttp
         resp = None
         timeout = aiohttp.ClientTimeout(total=5)
         try:
@@ -112,7 +112,7 @@ class MiruroAnimeInfoService:
         # Relations
         raw_relations = resp.get("relations", {}) or {}
         raw_edges = raw_relations.get("edges", []) if isinstance(raw_relations, dict) else []
-        related, prequels, sequels = self._normalize_relations(raw_edges)
+        related, prequels, sequels = await self._normalize_relations(raw_edges, root_id=resp.get("id"))
 
         # Recommendations
         raw_recs = resp.get("recommendations", {}) or {}
@@ -222,46 +222,147 @@ class MiruroAnimeInfoService:
             return f"{s} to ?"
         return f"{s} to {e}"
 
-    def _normalize_relations(self, edges: List[Dict]) -> tuple:
-        """Normalize relation edges from AniList format"""
+    def _build_relation_entry(self, edge: Dict) -> Optional[Dict]:
+        if not isinstance(edge, dict):
+            return None
+        node = edge.get("node") or {}
+        rel_type = edge.get("relationType") or ""
+        node_title = node.get("title", {}) or {}
+        node_cover = node.get("coverImage", {}) or {}
+
+        fmt = (node.get("format") or "").replace("_", " ").upper()
+        if fmt == "TV": fmt = "TV"
+        elif fmt == "TV SHORT": fmt = "TV SHORT"
+
+        episodes = node.get("episodes")
+
+        parts = [fmt] if fmt else []
+        if episodes and episodes > 1 and fmt != "MOVIE":
+            parts.append(f"{episodes} EPS")
+
+        badge = " · ".join(parts) if parts else (rel_type.replace("_", " ").upper() or "SEASON")
+
+        entry = {
+            "id": str(node.get("id", "")),
+            "anilistId": node.get("id"),
+            "malId": node.get("idMal"),
+            "name": node_title.get("english") or node_title.get("romaji") or "",
+            "jname": node_title.get("native") or "",
+            "poster": node_cover.get("large") or node_cover.get("extraLarge") or "",
+            "type": node.get("format") or "",
+            "rating": node.get("averageScore"),
+            "episodes_sub": node.get("episodes") or 0,
+            "episodes_dub": 0,
+            "relation": rel_type.replace("_", " ").title(),
+            "badge": badge,
+        }
+
+        # Skip non-anime relations (manga, novel, one-shot)
+        entry_type = str(entry.get("type") or "").lower()
+        if "manga" in entry_type or "novel" in entry_type or "one-shot" in entry_type:
+            return None
+
+        return entry
+
+    async def _fetch_direct_relations(self, anilist_id: int) -> List[Dict]:
+        query = '''
+        query ($id: Int) {
+          Media(id: $id, type: ANIME) {
+            relations {
+              edges {
+                relationType
+                node {
+                  id idMal title { romaji english native } coverImage { large extraLarge } format averageScore episodes seasonYear startDate { year }
+                }
+              }
+            }
+          }
+        }
+        '''
+        timeout = aiohttp.ClientTimeout(total=5)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    "https://graphql.anilist.co",
+                    json={"query": query, "variables": {"id": int(anilist_id)}}
+                ) as r:
+                    if r.status == 200:
+                        data = await r.json()
+                        return data.get("data", {}).get("Media", {}).get("relations", {}).get("edges", [])
+        except Exception as e:
+            logger.error(f"Anilist relations fetch failed for {anilist_id}: {e}")
+        return []
+
+    async def _normalize_relations(self, edges: List[Dict], root_id: Optional[int] = None) -> tuple:
+        """Normalize relation edges from AniList format, traversing prequels and sequels fully."""
         related = []
         prequels = []
         sequels = []
 
+        # 1. First collect direct relations for the 'related' list (spin-offs, side stories, etc.)
         for edge in edges:
-            if not isinstance(edge, dict):
-                continue
-            node = edge.get("node") or {}
-            rel_type = edge.get("relationType") or ""
-            node_title = node.get("title", {}) or {}
-            node_cover = node.get("coverImage", {}) or {}
+            entry = self._build_relation_entry(edge)
+            if entry:
+                related.append(entry)
 
-            entry = {
-                "id": str(node.get("id", "")),
-                "anilistId": node.get("id"),
-                "malId": node.get("idMal"),
-                "name": node_title.get("english") or node_title.get("romaji") or "",
-                "jname": node_title.get("native") or "",
-                "poster": node_cover.get("large") or node_cover.get("extraLarge") or "",
-                "type": node.get("format") or "",
-                "rating": node.get("averageScore"),
-                "episodes_sub": node.get("episodes") or 0,
-                "episodes_dub": 0,
-                "relation": rel_type.replace("_", " ").title(),
-            }
-            
-            # Skip non-anime relations (manga, novel, one-shot)
-            entry_type = str(entry.get("type") or "").lower()
-            if "manga" in entry_type or "novel" in entry_type or "one-shot" in entry_type:
-                continue
+        root_id_str = str(root_id) if root_id else ""
 
-            related.append(entry)
+        # 2. Traverse all prequels (backward in time)
+        seen_prequel_ids = {root_id_str} if root_id_str else set()
+        curr_p_edges = [e for e in edges if isinstance(e, dict) and (e.get("relationType") or "").upper() == "PREQUEL"]
 
-            rel_lower = rel_type.lower()
-            if "prequel" in rel_lower:
+        while curr_p_edges:
+            next_p_edges = []
+            for edge in curr_p_edges:
+                node = edge.get("node") or {}
+                node_id = str(node.get("id", ""))
+                if not node_id or node_id in seen_prequel_ids:
+                    continue
+                seen_prequel_ids.add(node_id)
+
+                entry = self._build_relation_entry(edge)
+                if not entry:
+                    continue
+
                 prequels.append(entry)
-            elif "sequel" in rel_lower:
+
+                # Fetch direct relations of this prequel node to find its prequels
+                sub_edges = await self._fetch_direct_relations(int(node_id))
+                for ne in sub_edges:
+                    if isinstance(ne, dict) and (ne.get("relationType") or "").upper() == "PREQUEL":
+                        next_p_edges.append(ne)
+
+            curr_p_edges = next_p_edges
+
+        # Reverse prequels so they are in chronological order (earliest first)
+        prequels.reverse()
+
+        # 3. Traverse all sequels (forward in time)
+        seen_sequel_ids = {root_id_str} if root_id_str else set()
+        curr_s_edges = [e for e in edges if isinstance(e, dict) and (e.get("relationType") or "").upper() == "SEQUEL"]
+
+        while curr_s_edges:
+            next_s_edges = []
+            for edge in curr_s_edges:
+                node = edge.get("node") or {}
+                node_id = str(node.get("id", ""))
+                if not node_id or node_id in seen_sequel_ids:
+                    continue
+                seen_sequel_ids.add(node_id)
+
+                entry = self._build_relation_entry(edge)
+                if not entry:
+                    continue
+
                 sequels.append(entry)
+
+                # Fetch direct relations of this sequel node to find its sequels
+                sub_edges = await self._fetch_direct_relations(int(node_id))
+                for ne in sub_edges:
+                    if isinstance(ne, dict) and (ne.get("relationType") or "").upper() == "SEQUEL":
+                        next_s_edges.append(ne)
+
+            curr_s_edges = next_s_edges
 
         return related, prequels, sequels
 

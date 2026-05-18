@@ -510,6 +510,13 @@
                 {% endif %}
                 {% endfor %}
 
+                {# Add current anime #}
+                {% set current_entry = {"id": anime.anilistId or anime.id, "name": anime.title or anime.name, "poster": anime.poster, "isCurrent": true} %}
+                {% if (current_entry.id|string) not in seen_season_ids %}
+                {% set _ = all_seasons.append(current_entry) %}
+                {% set _ = seen_season_ids.append(current_entry.id|string) %}
+                {% endif %}
+
                 {% for s in anime.sequels %}
                 {% if (s.id|string) not in seen_season_ids %}
                 {% set _ = all_seasons.append(s) %}
@@ -517,12 +524,16 @@
                 {% endif %}
                 {% endfor %}
 
-                {% if all_seasons|length > 0 %}
-                <div class="section-heading">Relations</div>
+                {% if all_seasons|length > 1 %}
+                <div class="section-heading">Franchise Seasons</div>
                 <div class="relations-grid">
                     {% for rel in all_seasons %}
-                    <a href="/anime/{{ rel.id }}" class="relation-card" title="{{ rel.name or rel.title }}">
-                        <span class="relation-type">{{ (rel.relation or "Related") | upper }}</span>
+                    <a href="/anime/{{ rel.id }}" class="relation-card {% if rel.isCurrent is defined and rel.isCurrent %}current{% endif %}" title="{{ rel.name or rel.title }}">
+                        {% if rel.isCurrent is defined and rel.isCurrent %}
+                        <span class="relation-type" style="background: var(--primary-color, #ff3e3e); color: white;">CURRENT</span>
+                        {% else %}
+                        <span class="relation-type">{{ rel.badge or (rel.relation or "Related") | upper }}</span>
+                        {% endif %}
                         <img src="{{ rel.image or rel.poster or 'https://via.placeholder.com/200x300?text=No+Image' }}"
                             alt="{{ rel.name or rel.title }}" loading="lazy">
                         <div class="relation-title-wrap">
