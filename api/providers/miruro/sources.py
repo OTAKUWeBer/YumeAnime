@@ -245,10 +245,25 @@ class MiruroSourcesService:
                 "message": "Failed to fetch sources from Miruro API",
             }
 
-        raw_streams = resp.get("streams", []) or resp.get("sources", []) or []
+        raw_streams = (
+            resp.get("streams", [])
+            or resp.get("sources", [])
+            or resp.get("ssub", {}).get("streams", [])
+            or resp.get("ddub", {}).get("streams", [])
+            or resp.get("sub", {}).get("streams", [])
+            or resp.get("dub", {}).get("streams", [])
+            or []
+        )
 
         # Subtitles: always use cdn-eu, never kiwi worker
-        subtitles = resp.get("subtitles", []) or []
+        subtitles = (
+            resp.get("subtitles", [])
+            or resp.get("ssub", {}).get("subtitles", [])
+            or resp.get("ddub", {}).get("subtitles", [])
+            or resp.get("sub", {}).get("subtitles", [])
+            or resp.get("dub", {}).get("subtitles", [])
+            or []
+        )
         tracks = []
         for sub in subtitles:
             if isinstance(sub, dict):
@@ -270,8 +285,18 @@ class MiruroSourcesService:
                         }
                     )
 
-        intro = resp.get("intro") or {}
-        outro = resp.get("outro") or {}
+        intro = (
+            resp.get("intro")
+            or resp.get("ssub", {}).get("intro")
+            or resp.get("ddub", {}).get("intro")
+            or {}
+        )
+        outro = (
+            resp.get("outro")
+            or resp.get("ssub", {}).get("outro")
+            or resp.get("ddub", {}).get("outro")
+            or {}
+        )
         download = resp.get("download") or ""
 
         # Separate HLS and embed streams

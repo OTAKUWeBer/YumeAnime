@@ -43,7 +43,7 @@ class MiruroEpisodesService:
             return None
 
         best_name = None
-        best_count = -1
+        best_count = 0
 
         for name in PROVIDER_PRIORITY:
             if name not in providers:
@@ -57,7 +57,7 @@ class MiruroEpisodesService:
                 best_count = sub_count
                 best_name = name
 
-        if best_name:
+        if best_name and best_count > 0:
             return best_name
 
         # Fallback: any provider with data, still picking the one with most episodes

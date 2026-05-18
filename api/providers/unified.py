@@ -159,6 +159,20 @@ class UnifiedScraper:
                         f"[UnifiedScraper] episodes() merged AnimeX servers for "
                         f"anilist_id={anime_id}: {list(ax_blocks.keys())}"
                     )
+
+                    # Ensure default_provider is a working streaming server from PROVIDER_PRIORITY
+                    from .miruro.episodes import PROVIDER_PRIORITY
+                    best_default = None
+                    for p_name in PROVIDER_PRIORITY:
+                        if p_name in providers_map:
+                            p_data = providers_map[p_name]
+                            if isinstance(p_data, dict):
+                                eps = p_data.get("episodes", {}) or {}
+                                if len(eps.get("sub", []) or []) > 0 or len(eps.get("dub", []) or []) > 0:
+                                    best_default = p_name
+                                    break
+                    if best_default:
+                        result["default_provider"] = best_default
             except Exception as e:
                 logger.warning(f"[UnifiedScraper] episodes() AnimeX merge failed: {e}")
 
